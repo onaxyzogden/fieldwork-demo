@@ -1,0 +1,439 @@
+/* Light palette: warm white surfaces, forest ink, and honey accents. */
+:root[data-theme="light"] {
+  color-scheme: light;
+  color: #24352e;
+  background: #f4f5f0;
+  --bg: #f4f5f0;
+  --panel: #fffefa;
+  --line: #dce2d8;
+  --muted: #606e63;
+  --amber: #e9b66d;
+  --green: #356649;
+}
+:root[data-theme="light"] .sidebar {
+  background: #eef1e9;
+  border-color: #d7dfd1;
+  box-shadow: none;
+}
+:root[data-theme="light"] .brand {
+  color: #20362b;
+}
+:root[data-theme="light"] .brand-dot {
+  color: #a26616;
+}
+:root[data-theme="light"] .brand-icon {
+  background: #eac183;
+  color: #35412d;
+}
+:root[data-theme="light"] .workspace {
+  background: #f8f9f4;
+  border-color: #d4ddce;
+}
+:root[data-theme="light"] .nav-caption,
+:root[data-theme="light"] .eyebrow,
+:root[data-theme="light"] .scenario-strip > span {
+  color: #627353;
+}
+:root[data-theme="light"] nav button {
+  color: #586a5b;
+}
+:root[data-theme="light"] nav button:hover {
+  background: #e2e9db;
+}
+:root[data-theme="light"] nav button.active {
+  background: #f7e8c9;
+  color: #654918;
+  border-color: #e5d0a2;
+}
+:root[data-theme="light"] .nav-count {
+  background: #e9cf9c;
+  color: #624513;
+}
+:root[data-theme="light"] .avatar {
+  background: #e0e9d9;
+  color: #3e6043;
+  border-color: #c4d4ba;
+}
+:root[data-theme="light"] .avatar.amber {
+  background: #f8e5c4;
+  color: #76551b;
+  border-color: #e4cca2;
+}
+:root[data-theme="light"] .demo-bar {
+  background: #e9ede1;
+  color: #46573f;
+  border-color: #d6ddcd;
+}
+:root[data-theme="light"] .demo-extra {
+  color: #63705b;
+}
+:root[data-theme="light"] .demo-dot {
+  background: #916419;
+}
+:root[data-theme="light"] .role-switch {
+  background: #f9faf5;
+}
+:root[data-theme="light"] .role-switch button {
+  color: #53644e;
+}
+:root[data-theme="light"] .role-switch button.chosen {
+  background: #e5ebda;
+  color: #32452a;
+}
+:root[data-theme="light"] .topbar {
+  background: #fffefa;
+  color: #677467;
+}
+:root[data-theme="light"] .topbar strong {
+  color: #263c2f;
+}
+:root[data-theme="light"] .icon-button {
+  color: #52664e;
+}
+:root[data-theme="light"] .scenario-strip button,
+:root[data-theme="light"] .portal-tabs button {
+  background: #fffefa;
+  color: #53664d;
+  border-color: #d4decb;
+}
+:root[data-theme="light"] .scenario-strip button.selected,
+:root[data-theme="light"] .scenario-strip button:hover,
+:root[data-theme="light"] .portal-tabs button.selected {
+  background: #f7e8c9;
+  color: #6c4b18;
+  border-color: #d9be88;
+}
+:root[data-theme="light"] .primary {
+  background: #e9b66d;
+  color: #332a1c;
+  border-color: #d8a153;
+}
+:root[data-theme="light"] .primary:hover {
+  background: #efc58b;
+  border-color: #b78435;
+}
+:root[data-theme="light"] .secondary {
+  background: #eef2e7;
+  color: #354e31;
+  border-color: #c6d3bc;
+}
+:root[data-theme="light"] .secondary:hover {
+  background: #e0e8d6;
+  border-color: #9bb18b;
+}
+:root[data-theme="light"] .text-button:hover,
+:root[data-theme="light"] .amber-text,
+:root[data-theme="light"] .wave {
+  color: #8b601a;
+}
+:root[data-theme="light"] .stat {
+  background: linear-gradient(125deg, #fffefa, #f1f5e9);
+  border-color: #d9e1d2;
+}
+:root[data-theme="light"] .stat .row,
+:root[data-theme="light"] .stat svg {
+  color: #607251;
+}
+:root[data-theme="light"] .panel {
+  box-shadow: 0 2px 4px #293e2010;
+}
+:root[data-theme="light"] .count {
+  background: #e6ecd9;
+  color: #526940;
+}
+:root[data-theme="light"] .request-row:hover {
+  background: #f1f5ea;
+}
+:root[data-theme="light"] .request-row p span {
+  color: #66775d;
+}
+:root[data-theme="light"] .request-icon {
+  background: #eaf0df;
+  color: #58713d;
+  border-color: #d2dfbf;
+}
+:root[data-theme="light"] .request-icon.danger {
+  background: #fae8dd;
+  color: #984c2b;
+  border-color: #e8c7b0;
+}
+:root[data-theme="light"] .badge {
+  background: #f8ebcc;
+  color: #79591b;
+  border-color: #e5d2a4;
+}
+:root[data-theme="light"] .badge.green {
+  background: #e5efdc;
+  color: #3f652e;
+  border-color: #c3d9b5;
+}
+:root[data-theme="light"] .badge.red {
+  background: #fae6dc;
+  color: #934728;
+  border-color: #e6c1ad;
+}
+:root[data-theme="light"] .insight {
+  background: linear-gradient(115deg, #f3edda, #eff3e6);
+}
+:root[data-theme="light"] .insight-icon {
+  background: #eee3c3;
+  color: #7d6731;
+  border-color: #d8c895;
+}
+:root[data-theme="light"] .insight .eyebrow {
+  color: #766a3a;
+}
+:root[data-theme="light"] input,
+:root[data-theme="light"] textarea,
+:root[data-theme="light"] select {
+  background: #fffefa;
+  color: #2a3d2d;
+  border-color: #c5d1bd;
+}
+:root[data-theme="light"] input::placeholder,
+:root[data-theme="light"] textarea::placeholder {
+  color: #718168;
+}
+:root[data-theme="light"] input:focus,
+:root[data-theme="light"] textarea:focus,
+:root[data-theme="light"] select:focus {
+  border-color: #95702d;
+  box-shadow: 0 0 0 3px #caa86222;
+}
+:root[data-theme="light"] .search {
+  background: #f9faf4;
+  border-color: #d3ddc9;
+}
+:root[data-theme="light"] .search input {
+  background: transparent;
+}
+:root[data-theme="light"] .queue-item.selected {
+  background: #f8ecd2;
+  border-color: #d9c293;
+}
+:root[data-theme="light"] .queue-item:hover {
+  background: #edf3e4;
+}
+:root[data-theme="light"] .reason {
+  background: #eef4e6;
+  border-color: #d1dfc4;
+  color: #4c6540;
+}
+:root[data-theme="light"] .warning {
+  background: #fbede3;
+  border-color: #e2c4ae;
+  color: #8b4c2c;
+}
+:root[data-theme="light"] .photo-add {
+  color: #526b43;
+  border-color: #abbc9a;
+}
+:root[data-theme="light"] .mini-field,
+:root[data-theme="light"] .field,
+:root[data-theme="light"] .intake-task label {
+  color: #526347;
+}
+:root[data-theme="light"] .segmented {
+  background: #f1f4eb;
+  border-color: #c6d3b9;
+}
+:root[data-theme="light"] .segmented .chosen {
+  background: #e5eacb;
+  color: #506129;
+}
+:root[data-theme="light"] .provider-card {
+  background: #f6f8f0;
+  border-color: #ccd9bf;
+}
+:root[data-theme="light"] .provider-card.selected {
+  background: #f7ecd4;
+  border-color: #b79854;
+}
+:root[data-theme="light"] .provider-card > svg {
+  color: #83601a;
+}
+:root[data-theme="light"] .slot {
+  background: #f5f8ee;
+  border-color: #c9d8bb;
+}
+:root[data-theme="light"] .slot.selected,
+:root[data-theme="light"] .slot:hover {
+  background: #fbedd1;
+  border-color: #b4974a;
+}
+:root[data-theme="light"] .slot .eyebrow {
+  color: #876820;
+}
+:root[data-theme="light"] .visit-card {
+  background: #f5f8ed;
+  border-color: #cddbc0;
+}
+:root[data-theme="light"] .quote {
+  background: linear-gradient(120deg, #f5f0db, #f0f5e7);
+}
+:root[data-theme="light"] .customer-heading .eyebrow {
+  color: #93691e;
+}
+:root[data-theme="light"] .stepper:before {
+  background: #ccd7bd;
+}
+:root[data-theme="light"] .stepper b {
+  background: #eef3e5;
+  color: #5c7049;
+  border-color: #bdcca9;
+}
+:root[data-theme="light"] .stepper .done b {
+  background: #e9bc76;
+  color: #443317;
+  border-color: #caa45e;
+}
+:root[data-theme="light"] .stepper .done small {
+  color: #765c2a;
+}
+:root[data-theme="light"] .intake-task textarea {
+  background: #fffefa;
+  border-color: #c6d4b9;
+}
+:root[data-theme="light"] .add-task {
+  color: #826126;
+  border-color: #b9c7a8;
+}
+:root[data-theme="light"] .add-task:hover {
+  background: #f1f4e7;
+}
+:root[data-theme="light"] .help {
+  color: #667852;
+}
+:root[data-theme="light"] .check-circle,
+:root[data-theme="light"] .success-icon {
+  background: #e6efd7;
+  border-color: #b4cb9e;
+  color: #4a702e;
+}
+:root[data-theme="light"] .summary-input {
+  background: transparent;
+}
+:root[data-theme="light"] .note {
+  background: #eff3e3;
+  border-color: #d0ddbc;
+  color: #50613b;
+}
+:root[data-theme="light"] .status-track > div {
+  color: #728064;
+}
+:root[data-theme="light"] .status-track .complete {
+  color: #46682f;
+}
+:root[data-theme="light"] .offer-pay {
+  background: #f1f1df;
+  border-color: #d5ddbb;
+}
+:root[data-theme="light"] .offer-pay h1 {
+  color: #7b591c;
+}
+:root[data-theme="light"] .offer-facts svg {
+  color: #73804d;
+}
+:root[data-theme="light"] .payment-method {
+  background: #f0f4e6;
+  border-color: #c7d6b5;
+}
+:root[data-theme="light"] .payment-method > svg:last-child {
+  color: #82601c;
+}
+:root[data-theme="light"] .modal-backdrop {
+  background: #26322166;
+}
+:root[data-theme="light"] .modal {
+  box-shadow: 0 25px 80px #27331d33;
+}
+:root[data-theme="light"] .toast {
+  background: #edf4de;
+  color: #3b552a;
+  border-color: #a9bd8b;
+  box-shadow: 0 8px 30px #3a4b2426;
+}
+:root[data-theme="light"] .dispatch-inbox {
+  background: #fbf3e6;
+  border-color: #e4c99e;
+}
+:root[data-theme="light"] .dispatch-alert {
+  background: #fff8ec;
+  border-color: #d9b887;
+}
+:root[data-theme="light"] .dispatch-alert strong {
+  color: #8a4e21;
+}
+:root[data-theme="light"] .dispatch-alert p {
+  color: #725f49;
+}
+:root[data-theme="light"] .dispatch-setting {
+  background: #f7efd9;
+  border-color: #dac996;
+}
+:root[data-theme="light"] .notification-link.unread {
+  background: #faf0d9;
+  border-left-color: #ad7e30;
+}
+:root[data-theme="light"] .notification-link:hover {
+  background: #f1e8cb;
+}
+:root[data-theme="light"] .route-summary {
+  color: #596b45;
+}
+:root[data-theme="light"] footer {
+  color: #627057;
+}
+:root[data-theme="light"] .brand-mini {
+  color: #415535;
+}
+:root[data-theme="light"] .route-map {
+  background: #e5edde;
+  border-color: #c4d1b6;
+}
+:root[data-theme="light"] .map-label {
+  background: #fffff3eb;
+  color: #586f42;
+}
+:root[data-theme="light"] .map-expand {
+  background: #fffff5;
+  color: #486432;
+  border-color: #b4c59d;
+}
+:root[data-theme="light"] .route-map svg [fill="#222d28"] {
+  fill: #e8eede;
+}
+:root[data-theme="light"] .route-map svg [stroke="#38413b"] {
+  stroke: #ced8c1;
+}
+:root[data-theme="light"] .route-map svg [stroke="#505245"] {
+  stroke: #c1c8ac;
+}
+:root[data-theme="light"] .route-map svg [fill="#243b3d"] {
+  fill: #cedfe0;
+}
+:root[data-theme="light"] .route-map svg [stroke="#e4b367"] {
+  stroke: #a27b32;
+}
+:root[data-theme="light"] .route-map svg text {
+  fill: #596e49;
+}
+:root[data-theme="light"] .route-map svg circle {
+  fill: #e9bc76;
+  stroke: #fff8e9;
+}
+@media (max-width: 600px) {
+  .topbar > .row:last-child {
+    gap: 0;
+    flex-shrink: 0;
+  }
+  .topbar > .row:first-child {
+    gap: 3px;
+  }
+  .topbar > .row:first-child > span {
+    display: none;
+  }
+  :root[data-theme="light"] .sidebar.open {
+    box-shadow: 20px 0 50px #27371d33;
+  }
+}
