@@ -53,3 +53,11 @@ Push changes to `main`. GitHub Actions installs dependencies, runs tests, builds
 - `src/dispatch.ts`: decline handling, replacement offers, and operator notifications.
 - `src/style.css`, `src/light.css`: responsive layouts and themes.
 - `src/*.test.ts`: regression tests.
+
+## Typography verification
+
+Shared rem sizing is defined in `src/typography.css`: body/form values 16px, introductory text 18px, headings 32–40/28–30/24px, labels 14px, compact captions 12px. Body line height is 1.6; headings and labels use 1.5. Layouts wrap and stack around larger text without page-wide overflow clipping.
+
+Checked all three roles in both themes at 320, 390, 461, 768, and 1280px, including intake steps, request detail, routes, contractor offers/assignments, and a completed simulated booking. Checkout was checked at those widths and 640px. No horizontal page overflow was found in these checks. All 26 regression tests and the production build pass.
+
+Browser zoom remains unrestricted. A 640px viewport checks the reflow width equivalent to 200% zoom on a 1280px window; actual browser-chrome 200% zoom was unavailable in the automated browser and remains a manual verification item.

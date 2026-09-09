@@ -59,6 +59,7 @@ import "@fontsource/manrope/600.css";
 import "@fontsource/manrope/700.css";
 import "./style.css";
 import "./light.css";
+import "./typography.css";
 import {
   migrateDispatch,
   dispatchStatus,

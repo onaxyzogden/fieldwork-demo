@@ -1,0 +1,514 @@
+:root {
+  font-size: 100%;
+  --text-body: 1rem;
+  --text-intro: 1.125rem;
+  --text-label: 0.875rem;
+  --text-caption: 0.75rem;
+  --text-h1: 2rem;
+  --text-h2: 1.75rem;
+  --text-h3: 1.5rem;
+  --text-brand: 1.75rem;
+}
+body {
+  font-size: var(--text-body);
+  line-height: 1.6;
+}
+h1,
+h2,
+h3,
+h4 {
+  line-height: 1.5;
+}
+h1,
+.heading h1,
+.customer-heading h1,
+.offer-pay h1 {
+  font-size: var(--text-h1);
+}
+h2,
+.modal h2,
+.roster h2,
+.panel h2 {
+  font-size: var(--text-h2);
+}
+h3,
+.panel-title h3,
+.insight h3,
+.route-stop h3 {
+  font-size: var(--text-h3);
+}
+h4 {
+  font-size: var(--text-intro);
+}
+p,
+textarea,
+input,
+select,
+.summary-input {
+  font-size: var(--text-body);
+  line-height: 1.6;
+}
+.heading p,
+.customer-heading p {
+  font-size: var(--text-intro);
+}
+small,
+label,
+button,
+.text-button,
+.topbar,
+.detail-meta,
+.mini-field,
+.field,
+.workspace strong,
+.workspace small,
+.profile strong,
+.profile small,
+.service-zone,
+.service-zone small,
+.route-caption strong,
+.assignment-row,
+.reason,
+.note,
+.help,
+.event small,
+.offer-facts,
+.route-summary,
+footer,
+.status-track,
+.provider-card strong,
+.provider-card small,
+.slot strong,
+.slot small,
+.request-row strong,
+.queue-item strong,
+.visit-card strong,
+.dispatch-alert strong,
+.dispatch-alert small,
+.dispatch-setting label,
+.offer-pay h1 small,
+.quote h2 small,
+.payment-method strong {
+  font-size: var(--text-label);
+  line-height: 1.5;
+}
+.request-row strong,
+.queue-item strong,
+.task-review strong,
+.confirm-task strong,
+.visit-card strong,
+.offer-facts b,
+.notification-link strong,
+.event strong {
+  font-size: var(--text-body);
+  line-height: 1.6;
+}
+.badge,
+.count,
+.nav-count,
+.notification-count,
+.map-label,
+.eyebrow,
+.nav-caption,
+.scenario-strip > span,
+.demo-bar,
+.demo-extra,
+.stepper small,
+.stepper b,
+.avatar,
+.avatar.small,
+.slot .eyebrow,
+.insight .eyebrow,
+.brand-mini {
+  font-size: var(--text-caption);
+  line-height: 1.5;
+}
+.avatar.large {
+  font-size: var(--text-intro);
+}
+.brand {
+  font-size: var(--text-brand);
+  line-height: 1.5;
+}
+.price-total b,
+.stat h2,
+.pulse b {
+  font-size: var(--text-h2);
+  line-height: 1.5;
+}
+.price-total small,
+.offer-pay small {
+  font-size: var(--text-label);
+  line-height: 1.5;
+}
+/* Larger type gets room to reflow; fixed-height chrome must grow with zoom. */
+.demo-bar,
+.topbar {
+  height: auto;
+  min-height: 3.5rem;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  padding-top: 0.5rem;
+  padding-bottom: 0.5rem;
+}
+.role-switch {
+  flex-shrink: 0;
+}
+.role-switch button {
+  font-size: var(--text-label);
+  padding: 0.5rem 0.75rem;
+}
+.sidebar {
+  width: 17rem;
+  overflow-y: auto;
+}
+.shell {
+  margin-left: 17rem;
+}
+.workspace {
+  gap: 0.5rem;
+  margin: 1.5rem 0;
+}
+.workspace > div:not(.avatar) {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.sidebar-bottom {
+  padding-top: 1rem;
+}
+.profile {
+  min-width: 0;
+}
+.profile > div:last-child {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.service-zone {
+  line-height: 1.6;
+}
+.panel-title,
+.heading {
+  gap: 1rem;
+}
+.panel-title > div:first-child {
+  flex: 1 1 14rem;
+}
+.panel-title > .text-button {
+  flex: 0 1 auto;
+}
+.stats {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+.stat .row {
+  align-items: flex-start;
+}
+.stat .row > span {
+  flex: 1;
+}
+.pulse > div {
+  min-width: 0;
+}
+.pulse span {
+  font-size: var(--text-label);
+  line-height: 1.5;
+}
+.request-row .row.between > strong {
+  flex: 1 1 10rem;
+}
+.request-row .row.between > svg {
+  margin-left: auto;
+}
+.request-row .badge {
+  max-width: 100%;
+}
+.detail-meta {
+  flex-wrap: wrap;
+}
+.detail-meta > span {
+  flex: 1 1 12rem;
+}
+.task-review .row.between > label {
+  flex: 1 1 14rem;
+}
+.task-review .row.between > label strong {
+  min-width: 0;
+}
+.mini-field input[type="number"] {
+  width: 8rem;
+}
+.mini-field select {
+  width: 100%;
+  max-width: 100%;
+}
+.slot strong {
+  font-size: var(--text-body);
+}
+.visit-card .row.between > strong {
+  flex: 1 1 15rem;
+}
+.route-toolbar {
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) auto;
+}
+.route-stop > .grow {
+  flex: 1 1 16rem;
+}
+.route-stop > button,
+.route-stop > a {
+  flex: 0 1 auto;
+}
+.account-row {
+  gap: 1rem;
+}
+.account-row select {
+  max-width: 100%;
+}
+.offer-pay {
+  gap: 1rem;
+}
+.confirm-task .grow {
+  flex-basis: 12rem;
+}
+.summary-input {
+  font-size: var(--text-body);
+}
+.modal {
+  width: 38rem;
+  max-width: 100%;
+}
+.modal > .row.between {
+  gap: 1rem;
+}
+.modal .provider-card {
+  align-items: flex-start;
+}
+.modal input,
+.modal select,
+.modal textarea {
+  font-size: var(--text-body);
+}
+.toast {
+  font-size: var(--text-body);
+  line-height: 1.6;
+}
+.notification-count {
+  min-width: 1.25rem;
+}
+.stepper {
+  gap: 0.5rem;
+  margin-left: 0;
+  margin-right: 0;
+}
+.stepper > span {
+  flex: 1;
+  min-width: 0;
+  text-align: center;
+}
+.stepper b {
+  width: 2rem;
+  height: 2rem;
+}
+.stepper:before {
+  top: 1rem;
+}
+.field {
+  width: 100%;
+}
+.primary,
+.secondary,
+.icon-button,
+.text-button,
+.photo-add {
+  min-height: 2.75rem;
+}
+@media (min-width: 48rem) {
+  :root {
+    --text-h1: 2.25rem;
+    --text-h2: 1.875rem;
+  }
+}
+@media (min-width: 90rem) {
+  :root {
+    --text-h1: 2.5rem;
+  }
+}
+@media (max-width: 75rem) {
+  .dashboard-grid,
+  .bottom-grid,
+  .requests-layout {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .queue {
+    position: static;
+  }
+  .stats {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .slot-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+@media (max-width: 56.25rem) {
+  .sidebar {
+    transform: translateX(-100%);
+    width: 17rem;
+    max-width: 85vw;
+    z-index: 20;
+  }
+  .sidebar.open {
+    transform: translateX(0);
+  }
+  .shell {
+    margin-left: 0;
+  }
+  .mobile-menu {
+    display: block;
+  }
+  .topbar {
+    padding-left: 1rem;
+    padding-right: 1rem;
+  }
+  .topbar .row {
+    gap: 0.35rem;
+  }
+  .topbar > .row:first-child {
+    flex: 1;
+    min-width: 0;
+  }
+  .topbar > .row:first-child > span,
+  .topbar .top-date,
+  .topbar > .row:last-child > .avatar {
+    display: none;
+  }
+  .topbar > .row:last-child {
+    flex-shrink: 0;
+    flex-wrap: nowrap;
+    gap: 0;
+  }
+  .topbar > .row:first-child > strong {
+    font-size: var(--text-label);
+  }
+  .route-toolbar {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .route-toolbar > button {
+    grid-column: auto;
+  }
+  .intake > .row:has(.field) {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .route-stop {
+    display: grid;
+    grid-template-columns: 2rem minmax(0, 1fr);
+  }
+  .route-stop > .grow {
+    grid-column: 2;
+  }
+  .route-stop > button,
+  .route-stop > a {
+    grid-column: 1/-1;
+    justify-content: center;
+  }
+  .demo-bar {
+    padding: 0.5rem 1rem;
+  }
+  .demo-bar > span {
+    flex: 1 1 100%;
+    font-size: var(--text-caption);
+  }
+  .role-switch {
+    width: 100%;
+  }
+  .role-switch button {
+    flex: 1;
+    min-height: 2.75rem;
+  }
+  .scenario-strip button {
+    flex: 1 1 10rem;
+    min-height: 2.75rem;
+  }
+  .heading {
+    align-items: flex-start;
+    flex-wrap: wrap;
+  }
+  .heading > div {
+    flex: 1 1 18rem;
+  }
+  .heading > .primary {
+    min-height: 2.75rem;
+  }
+  .dispatch-inbox > .row {
+    align-items: flex-start;
+  }
+  .dispatch-inbox h3 {
+    flex: 1 1 14rem;
+  }
+  .provider-card {
+    flex-wrap: wrap;
+  }
+  .panel-title {
+    align-items: flex-start;
+  }
+  .panel-title .text-button {
+    white-space: normal;
+  }
+}
+@media (max-width: 30rem) {
+  .stats,
+  .roster {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .pulse {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 1rem;
+  }
+  .pulse > div {
+    border-right: 0;
+    border-bottom: 1px solid var(--line);
+    padding: 0 0 1rem;
+  }
+  .pulse > div:last-child {
+    border: 0;
+    padding: 0;
+  }
+  .pulse span {
+    margin-top: 0;
+  }
+  .panel,
+  .intake,
+  .offer {
+    padding: 1rem;
+  }
+  .request-list {
+    margin-left: -1rem;
+    margin-right: -1rem;
+  }
+  .request-row {
+    padding: 1rem;
+  }
+  .insight {
+    flex-wrap: wrap;
+  }
+  .insight > div:last-child {
+    flex: 1 1 100%;
+  }
+  .account-row > * {
+    flex: 1 1 100%;
+  }
+  .stepper {
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 0.75rem;
+  }
+  .stepper > span {
+    flex: 0 1 4rem;
+  }
+  .stepper:before {
+    display: none;
+  }
+  .modal {
+    padding: 1rem;
+  }
+  .offer-facts {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
