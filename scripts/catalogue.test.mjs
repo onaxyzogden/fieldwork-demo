@@ -1,0 +1,11 @@
+import {test} from 'node:test';import assert from 'node:assert/strict';import {parseCsv,compile} from './catalogue.mjs';
+const row={id:'sink',title:'Sink',pattern:'sink',exclude:'',priority:'50',availability:'Review first',qualification:'Review',category:'Plumbing',example:'sink'};
+const qs=[1,2,3].map(n=>({issue_id:'sink',id:'q'+n,label:'Question '+n,options:''}));
+test('CSV handles commas, quotes and multiline text',()=>assert.equal(parseCsv('id,label\n1,"A, ""quoted""\nquestion"\n')[0].label,'A, "quoted"\nquestion'));
+test('invalid CSV fails',()=>assert.throws(()=>parseCsv('id,label\n1,"open')));
+test('duplicate IDs fail',()=>assert.throws(()=>compile([row,row],qs)));
+test('orphan questions fail',()=>assert.throws(()=>compile([row],[...qs,{issue_id:'missing',id:'q',label:'test'}])));
+test('empty questions fail',()=>assert.throws(()=>compile([row],[])));
+test('invalid policy fails',()=>assert.throws(()=>compile([{...row,availability:'yes'}],qs)));
+test('invalid regular expression fails',()=>assert.throws(()=>compile([{...row,pattern:'['}],qs)));
+test('duplicate question IDs fail',()=>assert.throws(()=>compile([row],[...qs,qs[0]])));

@@ -80,8 +80,15 @@ import {
 const KEY = "fieldwork-demo-v1";
 function TaskAnswers({ task }: { task: Task }) {
   const rows = questionAnswers(task);
+  const policy = getIssue(task.description);
   return (
     <>
+      {policy.availability === "Referral only" && (
+        <p className="warning">
+          Referral only: this service is not bookable through the demo. The
+          operator can review the request and advise on the next step.
+        </p>
+      )}
       {reportedConcern(task) && (
         <p className="warning">
           Reported condition needs operator attention. Review the customer’s
@@ -136,12 +143,19 @@ function ClarificationFields({
   );
   return (
     <>
-      {(task.restricted || issue.review) && (
+      {issue.availability === "Referral only" && (
         <p className="warning">
-          Yousef will review the scope and arrange the right provider before an
-          appointment is confirmed.
+          We can record this for referral review, but this service is not
+          available for booking through the platform.
         </p>
       )}
+      {issue.availability !== "Referral only" &&
+        (task.restricted || issue.review) && (
+          <p className="warning">
+            Yousef will review the scope and arrange the right provider before
+            an appointment is confirmed.
+          </p>
+        )}
       {multiple.length > 0 && (
         <p className="note">
           This may describe more than one problem: {issue.title} and{" "}
@@ -332,6 +346,9 @@ function App() {
   }, [modal]);
   const r = s.requests.find((r) => r.id === active) || s.requests[0];
   const tasks = s.tasks.filter((t) => t.requestId === r.id && !t.mergedInto);
+  const hasReferral = tasks.some(
+    (t) => getIssue(t.description).availability === "Referral only",
+  );
   const visits = s.visits.filter((v) => v.requestId === r.id);
   const quote = s.quotes.find(
     (q) => q.requestId === r.id && q.status !== "Superseded",
@@ -2344,35 +2361,41 @@ function App() {
                         ) : (
                           <>
                             <span className="badge">Request to Book</span>
-                            <h3>Tell us what works for you.</h3>
+                            <h3>
+                              {hasReferral
+                                ? "Send this for referral review."
+                                : "Tell us what works for you."}
+                            </h3>
                             <p>
-                              We’ll review the work, choose the right provider,
-                              and send a quote. These are preferences, not
-                              confirmed appointments.
+                              {hasReferral
+                                ? "This request includes a service we do not book through the platform. Yousef can review it and advise on next steps; submitting does not reserve an appointment or promise a referral."
+                                : "We’ll review the work, choose the right provider, and send a quote. These are preferences, not confirmed appointments."}
                             </p>
-                            <label className="field">
-                              Preferred days and time window
-                              <select
-                                value={r.timing}
-                                onChange={(e) =>
-                                  update((d) => {
-                                    d.requests.find(
-                                      (x) => x.id === r.id,
-                                    )!.timing = e.target.value;
-                                  })
-                                }
-                              >
-                                {[
-                                  "Weekdays · flexible",
-                                  "Weekdays · 9 AM–12 PM",
-                                  "Weekdays · 1–5 PM",
-                                  "Any day · flexible",
-                                  "Before the end of next week",
-                                ].map((x) => (
-                                  <option key={x}>{x}</option>
-                                ))}
-                              </select>
-                            </label>
+                            {!hasReferral && (
+                              <label className="field">
+                                Preferred days and time window
+                                <select
+                                  value={r.timing}
+                                  onChange={(e) =>
+                                    update((d) => {
+                                      d.requests.find(
+                                        (x) => x.id === r.id,
+                                      )!.timing = e.target.value;
+                                    })
+                                  }
+                                >
+                                  {[
+                                    "Weekdays · flexible",
+                                    "Weekdays · 9 AM–12 PM",
+                                    "Weekdays · 1–5 PM",
+                                    "Any day · flexible",
+                                    "Before the end of next week",
+                                  ].map((x) => (
+                                    <option key={x}>{x}</option>
+                                  ))}
+                                </select>
+                              </label>
+                            )}
                             <button
                               className="primary full"
                               onClick={() => {
@@ -2392,7 +2415,10 @@ function App() {
                                 setStep(5);
                               }}
                             >
-                              Submit request <ArrowRight size={17} />
+                              {hasReferral
+                                ? "Submit for referral review"
+                                : "Submit request"}{" "}
+                              <ArrowRight size={17} />
                             </button>
                           </>
                         )}
@@ -2411,7 +2437,9 @@ function App() {
                         <p>
                           {r.status === "Confirmed"
                             ? "We look forward to taking care of your home."
-                            : "Yousef will review your tasks and coordinate the next steps. Your appointment is not confirmed yet."}
+                            : hasReferral
+                              ? "Your request has been recorded for referral review. No appointment has been booked."
+                              : "Yousef will review your tasks and coordinate the next steps. Your appointment is not confirmed yet."}
                         </p>
                         <button
                           className="primary"

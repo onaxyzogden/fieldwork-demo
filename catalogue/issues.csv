@@ -1,0 +1,82 @@
+id,title,pattern,exclude,priority,availability,qualification,source_rows,legacy_flags,example,category
+sink-drain,Clogged sink,\bsink\b.*\b(clog|block|slow|back|drains? slowly|(?:will not|won.t|not) drain)|\b(clogged|blocked|slow.draining)\b.*\bsink\b,,50,Review first,Operator must assess scope and provider qualifications,,,sink is clogged,Plumbing
+bath-drain,Clogged bath or shower,\b(bath|bathtub|tub|shower)\b.*\b(clog|block|slow|drain)|\b(clogged|blocked)\b.*\b(bath|tub|shower)\b,,50,Review first,Operator must assess scope and provider qualifications,,,shower drains slowly,Plumbing
+toilet-block,Blocked or overflowing toilet,\btoilet\b.*\b(clog|block|overflow|flush|back)|\b(clogged|blocked|overflowing)\b.*\btoilet\b,,50,Review first,Operator must assess scope and provider qualifications,17,no,clogged toilet,Plumbing
+toilet-running,Running toilet,\btoilet\b.*\b(run|refill)|\brunning\b.*\btoilet\b,,50,Review first,Operator must assess scope and provider qualifications,,,running toilet,Plumbing
+fixture-replace,Faucet or fixture replacement,\b(replace|replacement|install|new)\b.*\b(faucet|tap|sink|toilet)\b|\b(faucet|tap|sink|toilet)\b.*\b(replace|replacement|install)\b,,50,Review first,Operator must assess scope and provider qualifications,,,replace faucet,Plumbing
+sink-leak,Leak under sink,\b(leak|leaking|water)\b.*\b(under|underneath|beneath|sink)\b|\bsink\b.*\b(leak|leaking)\b,,50,Review first,Operator must assess scope and provider qualifications,,,sink leaking underneath,Plumbing
+faucet-leak,Leaking faucet,\b(faucet|tap)\b.*\b(drip|leak)|\b(dripping|leaking)\b.*\b(faucet|tap)\b,,50,Review first,Operator must assess scope and provider qualifications,16,no,leaking faucet,Plumbing
+door-adjust,Door sticking or not latching,\bdoor\b.*\b(stick|rub|close|latch)|\b(sticking|rubbing)\b.*\bdoor\b|\bsqueak\w* hinge\b,,50,Offered,Normal scope and provider checks,1,no,door is sticking,Handyman
+door-hardware,"Loose handle, lock, or hinge",\b(handle|lock|hinge)\b.*\b(loose|broken|repair|replace)|\b(loose|broken)\b.*\b(handle|lock|hinge)\b|\b(?:door knob|deadbolt|hinge replace)\b,,50,Offered,Normal scope and provider checks,2,no,loose door handle,Handyman
+cabinet,Cabinet door or drawer problem,\b(cabinet|drawer)\b.*\b(stuck|loose|damage|broken|misalign|align|repair|fix)|\b(stuck|loose|broken)\b.*\b(cabinet|drawer)\b,,50,Offered,Normal scope and provider checks,28,no,cabinet is misaligned,Carpentry
+damp,Water stain or damp wall/ceiling,\b(water stain|damp|wet|sagging)\b.*\b(wall|ceiling)\b|\b(wall|ceiling)\b.*\b(wet|damp|water stain|sagging)\b,,50,Review first,Operator must assess scope and provider qualifications,,,damp ceiling,Specialist
+drywall,Drywall hole or crack,\bdrywall\b|\b(hole|crack|dent)\b.*\bwall\b,,50,Offered,Normal scope and provider checks,5,no,hole in wall,Handyman
+paint,Painting or touch-up,\b(paint|painting|touch.up)\b,,50,Offered,Normal scope and provider checks,6,no,paint,Handyman
+shelves,Shelf installation,\bshel(f|ves|ving)\b,,50,Offered,Normal scope and provider checks,8,no,shelf,Installation
+tv,TV mounting,\b(tv|television)\b,,50,Offered,Normal scope and provider checks,9,no,tv,Installation
+hanging,Picture or mirror hanging,\b(picture|mirror|artwork)\b,,50,Offered,Normal scope and provider checks,11,no,hang picture,Installation
+curtains,Curtains or blinds,\b(curtain|curtains|blind|blinds)\b,,50,Offered,Normal scope and provider checks,10,no,curtain rod,Installation
+assembly,Furniture assembly,\b(assembl\w*|ikea|wardrobe|furniture)\b|\b(?:put together|dresser|bed frame)\b,,50,Offered,Normal scope and provider checks,13,no,assemble,Assembly
+accessory,Loose towel bar or bathroom accessory,\b(towel (bar|rack)|toilet.paper holder|bathroom accessory)\b,,50,Offered,Normal scope and provider checks,31,no,towel bar,Handyman
+sealant,Caulk or sealant replacement,\b(caulk|caulking|sealant)\b,,50,Offered,Normal scope and provider checks,18,no,caulk,Plumbing
+fence,Fence or gate repair,\b(fence|gate)\b,,50,Offered,Normal scope and provider checks,24,no,fence,Exterior
+deck,Deck or step repair,\b(deck|steps|railing)\b,,50,Offered,Normal scope and provider checks,23,no,deck,Exterior
+outlet,Outlet or switch problem,\b(outlet|socket|switch)\b,,50,Review first,Operator must assess scope and provider qualifications,20,yes,outlet,Electrical
+lighting,Light fixture or ceiling fan,\b(?:light fixture|ceiling fan|ceiling light|pendant light|install light|light fitting|install fan|fan installation)\b,,50,Review first,Operator must assess scope and provider qualifications,12|36,maybe,replace ceiling fan,Installation
+wiring,"Breaker, wiring, or circuit request",\b(breaker|wiring|circuit|electrical)\b,,50,Review first,Operator must assess scope and provider qualifications,21|22,yes,breaker tripping,Electrical
+door-install,Doors - Installation,\b(?:screen\ door\ install|install\ door|storm\ door|new\ door)\b,,70,Review first,Scope and qualifications must be checked by operator; source flag is unverified,3,no,new door,Handyman
+garage-door,Doors - Garage Door,\b(?:garage\ opener|garage\ door|off\ track)\b,,70,Review first,Scope and qualifications must be checked by operator; source flag is unverified,4,maybe,garage door,Handyman
+wallpaper,Walls - Wallpaper,\b(?:install\ wallpaper|remove\ wallpaper|wallpaper)\b,,70,Offered,Scope and qualifications must be checked by operator; source flag is unverified,7,no,wallpaper,Handyman
+closet,Storage,\b(?:closet (?:system|organizer|shelving)|storage unit|shelving unit)\b,,70,Offered,Scope and qualifications must be checked by operator; source flag is unverified,14|47,no,storage unit,Assembly
+outdoor-assembly,Outdoor Furniture,\b(?:patio furniture|outdoor furniture|gazebo|shed assembly)\b,,70,Offered,Scope and qualifications must be checked by operator; source flag is unverified,15,no,patio furniture,Assembly
+pipe-leak,Pipe Repair,\b(?:pipe\ under\ floor|burst\ pipe|pipe\ leak)\b,,70,Referral only,Scope and qualifications must be checked by operator; source flag is unverified,19,yes,pipe leak,Plumbing
+gutter,Gutter,\b(?:gutter\ cleaning|gutter\ repair|eavestrough|gutter)\b,,70,Review first,Scope and qualifications must be checked by operator; source flag is unverified,25,maybe,gutter,Exterior
+siding,Siding,\b(?:siding\ repair|vinyl\ siding|siding)\b,,70,Review first,Scope and qualifications must be checked by operator; source flag is unverified,26,no,siding,Exterior
+trim,Trim/Baseboard,\b(?:baseboard|trim)\b,,70,Offered,Scope and qualifications must be checked by operator; source flag is unverified,27,no,trim,Carpentry
+flooring,General Flooring Repair,\b(?:squeaky\ floor|loose\ tile|floorboard|laminate|tile)\b,\b(?:backsplash|grout)\b,70,Offered,Scope and qualifications must be checked by operator; source flag is unverified,29,no,tile,Flooring
+window,Window Repair,\b(?:window\ won't\ open|weatherstripping|window\ seal|window)\b,\b(?:curtain|blinds|weatherstripping)\b,70,Offered,Scope and qualifications must be checked by operator; source flag is unverified,30,no,window,Windows
+childproof,Childproofing,\b(?:cabinet\ lock|outlet\ cover|childproof|baby\ gate)\b,,70,Offered,Scope and qualifications must be checked by operator; source flag is unverified,32,no,baby gate,Handyman
+grab-bar,Safety/Accessibility - Grab Bars,\b(?:bathroom\ safety|aging\ in\ place|safety\ bar|grab\ bar)\b,,70,Review first,Scope and qualifications must be checked by operator; source flag is unverified,33,no,grab bar,Handyman
+handrail,Handrail/Railing,\b(?:stair\ railing|loose\ railing|handrail|railing)\b,,70,Review first,Scope and qualifications must be checked by operator; source flag is unverified,34,no,handrail,Carpentry
+stairs,Stairs,\b(?:squeaky\ stairs|creaky\ stairs|loose\ stair|stair\ tread)\b,,70,Review first,Scope and qualifications must be checked by operator; source flag is unverified,35,no,squeaky stairs,Carpentry
+doorbell,Doorbell,\b(?:video\ doorbell|ring\ doorbell|doorbell)\b,,70,Review first,Scope and qualifications must be checked by operator; source flag is unverified,37,maybe,doorbell,Handyman
+smart-device,Smart Home Device Install,\b(?:smart\ thermostat|smart\ lock|smart\ home|ecobee|nest)\b,,70,Review first,Scope and qualifications must be checked by operator; source flag is unverified,38,maybe,smart lock,Handyman
+mailbox,Mailbox,\b(?:install\ mailbox|repair\ mailbox|mailbox)\b,,70,Offered,Scope and qualifications must be checked by operator; source flag is unverified,39,no,mailbox,Exterior
+house-numbers,House Numbers,\b(?:address\ plaque|house\ numbers|address\ sign)\b,,70,Offered,Scope and qualifications must be checked by operator; source flag is unverified,40,no,house numbers,Exterior
+pressure-wash,Pressure Washing,\b(?:driveway\ cleaning|pressure\ wash|power\ wash)\b,,70,Offered,Scope and qualifications must be checked by operator; source flag is unverified,41,no,pressure wash,Exterior
+grout,Grout Repair,\b(?:moldy\ grout|tile\ grout|regrout|grout)\b,,70,Offered,Scope and qualifications must be checked by operator; source flag is unverified,42,no,grout,Flooring
+shower-head,Shower Fixture,\b(?:replace\ shower\ head|shower\ head)\b,,70,Offered,Scope and qualifications must be checked by operator; source flag is unverified,43,no,shower head,Plumbing
+furniture-repair,Furniture Repair,\b(?:wobbly (?:chair|table)|loose chair leg|furniture repair)\b,,70,Offered,Scope and qualifications must be checked by operator; source flag is unverified,44,no,wobbly chair,Handyman
+shed-repair,Shed Repair,\b(?:shed\ repair|shed\ door|shed\ roof)\b,\bshed assembly\b,70,Offered,Scope and qualifications must be checked by operator; source flag is unverified,45,no,shed repair,Exterior
+playground,Playground/Swing Set,\b(?:play\ structure|playground|swing\ set)\b,,70,Review first,Scope and qualifications must be checked by operator; source flag is unverified,46,no,playground,Assembly
+cabinet-lighting,Under-Cabinet Lighting,\b(?:under\ cabinet\ lighting|cabinet\ lights)\b,,70,Review first,Scope and qualifications must be checked by operator; source flag is unverified,48,maybe,under cabinet lighting,Electrical
+pet-door,Pet Door Installation,\b(?:pet\ door|dog\ door|cat\ door)\b,,70,Review first,Scope and qualifications must be checked by operator; source flag is unverified,49,no,pet door,Handyman
+weatherstrip,Weatherstripping/Draft Sealing,\b(?:weatherstripping|door sweep|draft sealing|draught sealing)\b,,70,Offered,Scope and qualifications must be checked by operator; source flag is unverified,50,no,weatherstripping,Handyman
+basketball,Basketball Hoop,\b(?:basketball\ hoop|install\ hoop)\b,,70,Review first,Scope and qualifications must be checked by operator; source flag is unverified,51,no,basketball hoop,Assembly
+detector,Smoke/CO Detector,\b(?:carbon\ monoxide\ detector|smoke\ detector|co\ detector)\b,,70,Review first,Scope and qualifications must be checked by operator; source flag is unverified,52,maybe,smoke detector,Handyman
+pergola,Pergola/Arbor,\b(?:build\ pergola|pergola|arbor)\b,,70,Review first,Scope and qualifications must be checked by operator; source flag is unverified,53,no,pergola,Exterior
+appliance,Installation/Hookup,\b(?:washer\ dryer\ install|dishwasher\ install|appliance\ install|appliance\ hookup)\b,,70,Review first,Scope and qualifications must be checked by operator; source flag is unverified,54,maybe,dishwasher install,Appliances
+countertop,Countertop,\b(?:countertop\ replacement|chip\ in\ countertop|countertop\ repair|countertop)\b,,70,Review first,Scope and qualifications must be checked by operator; source flag is unverified,55,maybe,countertop,Carpentry
+backsplash,Backsplash,\b(?:install\ backsplash|tile\ backsplash|backsplash)\b,,70,Offered,Scope and qualifications must be checked by operator; source flag is unverified,56,no,backsplash,Installation
+dryer-vent,Dryer Vent Cleaning,\b(?:dryer\ vent|lint\ trap)\b,\b(?:cover|cap|flapper)\b,70,Offered,Scope and qualifications must be checked by operator; source flag is unverified,57,no,dryer vent,Handyman
+roof,Roof Repair,\b(?:roof\ repair|roof\ leak|shingle|roof)\b,,70,Referral only,Scope and qualifications must be checked by operator; source flag is unverified,58,yes,roof,Exterior
+soffit,Soffit/Fascia,\b(?:soffit\ repair|soffit|fascia)\b,,70,Review first,Scope and qualifications must be checked by operator; source flag is unverified,59,maybe,soffit,Exterior
+driveway,Driveway,\b(?:driveway\ sealing|driveway\ crack|seal\ driveway)\b,,70,Offered,Scope and qualifications must be checked by operator; source flag is unverified,60,no,driveway crack,Exterior
+pavers,Walkway/Patio,\b(?:walkway\ repair|patio\ stone|loose\ paver|paver)\b,,70,Offered,Scope and qualifications must be checked by operator; source flag is unverified,61,no,paver,Exterior
+retaining-wall,Retaining Wall,\b(?:retaining\ wall|garden\ wall)\b,,70,Referral only,Scope and qualifications must be checked by operator; source flag is unverified,62,maybe,retaining wall,Exterior
+irrigation,Irrigation/Sprinkler,\b(?:irrigation\ system|sprinkler)\b,,70,Referral only,Scope and qualifications must be checked by operator; source flag is unverified,63,yes,sprinkler,Exterior
+awning,Awning,\b(?:install\ awning|awning\ repair|awning)\b,,70,Review first,Scope and qualifications must be checked by operator; source flag is unverified,64,no,awning,Exterior
+closet-door,Closet Door,\b(?:sliding\ door|closet\ door|bifold\ door|mirror\ door)\b,,70,Offered,Scope and qualifications must be checked by operator; source flag is unverified,65,no,closet door,Handyman
+panelling,Molding/Paneling,\b(?:crown\ molding|wall\ paneling|wainscoting|accent\ wall)\b,\bpaint(?:ing)?\b,70,Offered,Scope and qualifications must be checked by operator; source flag is unverified,66,no,crown molding,Carpentry
+staining,Staining/Sealing,\b(?:fence\ staining|fence\ painting|deck\ staining|deck\ sealing)\b,,70,Offered,Scope and qualifications must be checked by operator; source flag is unverified,67,no,deck staining,Exterior
+garage-storage,Garage Organization,\b(?:garage\ organization|overhead\ storage|garage\ shelving|pegboard)\b,,70,Review first,Scope and qualifications must be checked by operator; source flag is unverified,68,no,garage shelving,Installation
+nursery,Nursery/Baby Furniture,\b(?:baby\ furniture\ assembly|nursery\ furniture|crib)\b,,70,Review first,Scope and qualifications must be checked by operator; source flag is unverified,69,no,crib,Assembly
+office,Home Office Setup,\b(?:home\ office\ setup|cable\ management|desk\ assembly)\b,,70,Offered,Scope and qualifications must be checked by operator; source flag is unverified,70,no,desk assembly,Assembly
+gym,Exercise Equipment,\b(?:exercise\ equipment|treadmill\ assembly|gym\ equipment|weight\ bench)\b,,70,Offered,Scope and qualifications must be checked by operator; source flag is unverified,71,no,exercise equipment,Assembly
+water-heater,Water Heater,\b(?:hot\ water\ tank|water\ heater)\b,,70,Referral only,Scope and qualifications must be checked by operator; source flag is unverified,72,yes,water heater,Plumbing
+sump,Sump Pump,\b(?:basement\ flooding|water\ in\ basement|sump\ pump)\b,,70,Referral only,Scope and qualifications must be checked by operator; source flag is unverified,73,yes,sump pump,Plumbing
+hvac,General,\b(?:air\ conditioner|ac\ not\ working|furnace|hvac)\b,,70,Referral only,Scope and qualifications must be checked by operator; source flag is unverified,74,yes,furnace,HVAC
+board,Whiteboard/Corkboard,\b(?:mount\ board|whiteboard|corkboard)\b,,70,Offered,Scope and qualifications must be checked by operator; source flag is unverified,75,no,whiteboard,Installation
+flagpole,Flag Pole,\b(?:flagpole\ install|flag\ pole)\b,,70,Offered,Scope and qualifications must be checked by operator; source flag is unverified,76,no,flag pole,Exterior
+junk,Junk Removal,\b(?:old\ furniture\ removal|junk\ removal|haul\ away)\b,,70,Referral only,Scope and qualifications must be checked by operator; source flag is unverified,77,no,junk removal,Handyman
+vent-cover,Vent Cover Repair/Replacement,\b(?:bathroom\ vent\ cover|vent\ cover\ missing|vent\ cover\ broken|dryer\ vent\ cover|exterior\ vent|vent\ flapper|vent\ cover|vent\ cap)\b,,70,Offered,Scope and qualifications must be checked by operator; source flag is unverified,78,no,vent cover,Exterior

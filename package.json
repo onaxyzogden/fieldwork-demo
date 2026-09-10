@@ -5,8 +5,10 @@
   "type": "module",
   "scripts": {
     "dev": "vite --host 127.0.0.1",
-    "build": "tsc && vite build",
-    "test": "vitest run"
+    "build": "npm run catalogue:check && tsc && vite build",
+    "test": "npm run catalogue:check && node --test scripts/catalogue.test.mjs && vitest run src",
+    "catalogue:generate": "node scripts/catalogue.mjs",
+    "catalogue:check": "node scripts/catalogue.mjs --check"
   },
   "dependencies": {
     "@fontsource/dm-sans": "^5.3.0",

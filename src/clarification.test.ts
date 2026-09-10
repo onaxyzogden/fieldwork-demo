@@ -1,3 +1,4 @@
+import catalogue from "./catalogue.generated.json";
 import { describe, it, expect } from "vitest";
 import {
   getIssue,
@@ -7,7 +8,7 @@ import {
   needsClarificationReview,
   matchIssues,
 } from "./clarification";
-import { classify, instantEligible, seed, reconcile } from "./model";
+import { classify, instantEligible, seed, reconcile, eligible } from "./model";
 const examples: [string, string][] = [
   ["sink-drain", "sink is clogged"],
   ["bath-drain", "shower drains slowly"],
@@ -39,8 +40,8 @@ describe("issue catalogue", () => {
   it.each(examples)("recognizes %s", (id, text) =>
     expect(getIssue(text).id).toBe(id),
   );
-  it("has 25 unique issues with three or four initial questions", () => {
-    expect(new Set(issues.map((i) => i.id)).size).toBe(25);
+  it("has 81 unique issues with three or four initial questions", () => {
+    expect(new Set(issues.map((i) => i.id)).size).toBe(81);
     expect(
       issues.every((i) => i.questions.length >= 3 && i.questions.length <= 4),
     ).toBe(true);
@@ -135,3 +136,44 @@ it("keeps multi-door and exterior scope out of fixed-price Instant Book", () => 
   t.answers = { "door-adjust:location": "Exterior" };
   expect(instantEligible([t])).toBe(false);
 });
+
+describe("expanded matrix matching", () => {
+  it.each(catalogue.map((i) => [i.id, i.example]))(
+    "matches %s example",
+    (id, text) => expect(getIssue(text).id).toBe(id),
+  );
+  it.each(["leak", "loose", "patch", "draft", "tripping"])(
+    "does not classify generic word %s",
+    (text) => expect(getIssue(text).id).toBe("unknown"),
+  );
+  it.each([
+    ["roof is leaking", "roof"],
+    ["loose stair railing", "handrail"],
+    ["replace dryer vent cover", "vent-cover"],
+    ["deck staining", "staining"],
+    ["install ceiling fan", "lighting"],
+    ["closet system", "closet"],
+    ["patch driveway crack", "driveway"],
+  ])("disambiguates %s", (text, id) => expect(getIssue(text).id).toBe(id));
+  it("keeps every source row traceable", () => {
+    const rows = new Set(
+      catalogue.flatMap((i) => i.source_rows.split("|").filter(Boolean)),
+    );
+    expect(rows.size).toBe(78);
+  });
+});
+
+it("does not allow referral services to become assignments after review", () => {
+  for (const description of ["roof repair", "furnace repair", "junk removal"]) {
+    const t = {
+      ...seed().tasks[0],
+      ...classify(description),
+      description,
+      reviewed: true,
+    };
+    expect(eligible("yousef", [t])).toBe(false);
+    expect(instantEligible([t])).toBe(false);
+  }
+});
+it("excludes explicitly negated service clauses", () =>
+  expect(getIssue("no roof work; door is sticking").id).toBe("door-adjust"));

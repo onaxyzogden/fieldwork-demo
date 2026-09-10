@@ -1,0 +1,269 @@
+issue_id,id,label,options
+sink-drain,location,Which sink is affected?,Kitchen|Bathroom|Laundry|Other|Not sure
+sink-drain,drainage,What happens when water drains?,Drains slowly|Completely blocked|Water backs up|Not sure
+sink-drain,other,"Are other sinks, toilets, or drains affected?","No, only this fixture|Yes, other fixtures too|Not sure"
+sink-drain,tried,"What has already been tried, including any drain-cleaning product?",
+bath-drain,fixture,Is this a bathtub or shower?,Bathtub|Shower|Combined bath and shower|Not sure
+bath-drain,drainage,Does water drain slowly or remain standing?,Drains slowly|Remains standing|Backs up|Not sure
+bath-drain,other,"Are other sinks, toilets, or drains affected?","No, only this fixture|Yes, other fixtures too|Not sure"
+bath-drain,tried,"What has already been tried, including any drain-cleaning product?",
+toilet-block,symptom,What is happening?,Blocked|Drains slowly|Overflowing|Not sure
+toilet-block,spill,Is water currently spilling onto the floor?,Yes|No|Not sure
+toilet-block,other,"Are other sinks, toilets, or drains affected?","No, only this fixture|Yes, other fixtures too|Not sure"
+toilet-block,start,"When did this start, and was anything unusual flushed?",
+toilet-running,frequency,Does water run continuously or occasionally?,Continuously|Occasionally|Not sure
+toilet-running,refill,Does the tank refill without flushing?,Yes|No|Not sure
+toilet-running,outside,Is there water outside the toilet?,Yes|No|Not sure
+toilet-running,count,How many toilets are affected?,
+fixture-replace,items,"What needs replacing, and how many?",
+fixture-replace,supplied,Are the products and installation hardware already available?,Yes|Some parts only|No|Not sure
+fixture-replace,model,What is the model or product link? A photo is also helpful.,
+fixture-replace,connections,Are connections or the fixture location changing?,Like-for-like replacement|Connections or location changing|Not sure
+sink-leak,source,Where is water visible?,Supply connection|Drain pipe|Unknown location|Not sure
+sink-leak,frequency,When does the leak happen?,Continuously|Only when the sink is used|Not sure
+sink-leak,spread,Is the water contained or spreading?,Contained|Spreading|Not sure
+sink-leak,damage,Is there visible cabinet or floor damage?,Yes|No|Not sure
+faucet-leak,location,Which fixture and room?,
+faucet-leak,source,Where does the water appear?,Spout|Handle or base|Underneath|Not sure
+faucet-leak,frequency,"Does it happen when the tap is off, on, or both?",Off|On|Both|Not sure
+faucet-leak,preference,Would you prefer repair or replacement?,Repair|Replacement|Please advise|Not sure
+door-adjust,location,Is it an interior or exterior door?,Interior|Exterior|Not sure
+door-adjust,symptom,What is the door doing?,Rubbing or sticking|Not latching|Will not close|Not sure
+door-adjust,damage,Is the door or frame visibly damaged?,No visible damage|Damaged or cracked|Not sure
+door-adjust,count,How many doors are affected?,
+door-hardware,part,Which part is loose or broken?,Handle|Lock|Hinge|Not sure
+door-hardware,location,Is it on an interior or exterior door?,Interior|Exterior|Not sure
+door-hardware,secure,Can the door currently close and lock?,Yes|Closes but cannot lock|Cannot close|Not sure
+door-hardware,supplied,Are the products and installation hardware already available?,Yes|Some parts only|No|Not sure
+cabinet,symptom,What is wrong?,Misaligned|Loose|Stuck|Damaged|Not sure
+cabinet,count,How many doors or drawers are affected?,
+cabinet,parts,"Are hinges, runners, or handles broken or missing?",
+cabinet,photo,Can you add a photo using the photo button below?,Photo available|No photo available|Not sure
+damp,location,Where is the affected area?,
+damp,condition,What is its current condition?,Wet or spreading|Old dry stain|Not sure
+damp,source,Is the source known or already repaired?,Source unknown|Known but not repaired|Already repaired|Not sure
+damp,sagging,Is there visible sagging or bulging?,Yes|No|Not sure
+drywall,damage,What kind of damage is it?,Hole|Crack|Dent|Peeling|Not sure
+drywall,size,"Approximately how large is it, and how many areas?",
+drywall,damp,Is there dampness or staining?,Yes|No|Not sure
+drywall,finish,What finish would you like?,Patch only|Patch and paint|Not sure
+paint,surfaces,Which surfaces and how many rooms or areas?,
+paint,size,What are the approximate dimensions?,
+paint,prep,Are repairs or stain treatment needed first?,Yes|No|Not sure
+paint,paint,Is matching paint available?,Yes|No|Not sure
+shelves,count,"How many shelves, and what sizes?",
+shelves,load,What will the shelves hold?,
+shelves,wall,What is the wall made of?,Drywall|Plaster|Brick or concrete|Tile|Not sure
+shelves,supplied,Are the products and installation hardware already available?,Yes|Some parts only|No|Not sure
+tv,model,What size and model is the TV?,
+tv,mount,Is a compatible mount available?,Yes|No|Not sure
+tv,wall,What is the wall made of?,Drywall|Plaster|Brick or concrete|Tile|Not sure
+tv,cables,What cable work is requested?,None|Surface cable cover|Conceal cables inside wall|New electrical outlet|Not sure
+hanging,count,How many items need hanging?,
+hanging,size,What are their approximate sizes and weights?,
+hanging,wall,What is the wall made of?,Drywall|Plaster|Brick or concrete|Tile|Not sure
+hanging,supplied,Are the products and installation hardware already available?,Yes|Some parts only|No|Not sure
+curtains,count,How many windows?,
+curtains,work,What work is needed?,Install|Replace|Repair|Not sure
+curtains,products,Are the products purchased and sized?,Yes|No|Not sure
+curtains,height,What is the approximate installation height?,
+assembly,items,"Which items need assembling, and how many?",
+assembly,model,Can you provide product links or models?,
+assembly,parts,"Are all boxes, parts, and instructions available?",Yes|Some are missing|Not sure
+assembly,extra,Is wall anchoring or moving existing furniture needed?,Neither|Wall anchoring|Moving furniture|Both|Not sure
+accessory,items,Which accessory and how many?,
+accessory,damage,What is the problem?,Loose|Broken|Pulled out of wall|Not sure
+accessory,wall,What is the wall made of?,Drywall|Plaster|Brick or concrete|Tile|Not sure
+accessory,supplied,Are the products and installation hardware already available?,Yes|Some parts only|No|Not sure
+sealant,location,Where is the sealant?,Tub|Shower|Sink|Other|Not sure
+sealant,condition,What is wrong with it?,Cracked|Missing|Discoloured|Not sure
+sealant,leak,Is there active leakage or soft/damaged material nearby?,Yes|No|Not sure
+sealant,size,Approximately how much needs replacing?,
+fence,part,Which part needs repair?,Panel|Post|Hinge|Latch|Not sure
+fence,count,How many sections are affected?,
+fence,material,What material is it?,Wood|Metal|Vinyl|Not sure
+fence,stable,"Is anything leaning, detached, or unstable?",Yes|No|Not sure
+deck,part,Which parts are affected?,Boards|Steps|Railings|Supports|Not sure
+deck,count,How many areas need repair?,
+deck,stable,"Is there visible rot, movement, or instability?",Yes|No|Not sure
+deck,photo,Can you add an overview photo and a close-up?,Photos available|No photos available|Not sure
+outlet,symptom,What is wrong?,Not working|Loose|Damaged|Intermittent|Not sure
+outlet,count,How many are affected?,
+outlet,hazard,"Have you noticed heat, a burning smell, sparks, or discolouration?",Yes|No|Not sure
+outlet,breaker,Is a related breaker repeatedly tripping?,Yes|No|Not sure
+lighting,work,What work is needed?,Repair|Replace|New installation|Not sure
+lighting,existing,Is there an existing fixture at that location?,Yes|No|Not sure
+lighting,height,What is the ceiling height?,
+lighting,model,Is the replacement purchased? Please share its model or link.,
+wiring,symptom,What change or symptom prompted the request?,
+wiring,location,Which rooms or fixtures are affected?,
+wiring,frequency,Is the problem ongoing or intermittent?,Ongoing|Intermittent|Not sure
+wiring,hazard,"Have you noticed heat, burning smells, sparks, or repeated trips?",Yes|No|Not sure
+door-install,q1,Interior or exterior door?,
+door-install,q2,Do you have the door already or need one purchased?,
+door-install,extent,"How many items or areas are affected, and what is their approximate size?",
+garage-door,q1,"Is it the opener, the track, or the springs?",
+garage-door,extent,"How many items or areas are affected, and what is their approximate size?",
+garage-door,details,"What materials, model, or product details can you share? A photo is also helpful.",
+wallpaper,q1,Removal or installation?,
+wallpaper,q2,How many walls?,
+wallpaper,extent,"How many items or areas are affected, and what is their approximate size?",
+closet,q1,What type of unit?,
+closet,q2,Where will it go?,
+closet,extent,"How many items or areas are affected, and what is their approximate size?",
+outdoor-assembly,q1,What item?,
+outdoor-assembly,q2,Should it be assembled on-site or moved after assembly?,
+outdoor-assembly,extent,"How many items or areas are affected, and what is their approximate size?",
+pipe-leak,location,Where is the leaking pipe or water visible?,Under a fixture|Wall or ceiling|Under the floor|Other|Not sure
+pipe-leak,symptom,"Is water currently leaking, contained, or spreading?",No active leak|Contained leak|Spreading water|Not sure
+pipe-leak,active,"When did it start, and what damage is visible?",
+gutter,q1,Cleaning or repair?,
+gutter,q2,Single-story or two-story home?,
+gutter,extent,"How many items or areas are affected, and what is their approximate size?",
+siding,q1,What's the issue?,
+siding,q2,Approximate area affected?,
+siding,extent,"How many items or areas are affected, and what is their approximate size?",
+trim,q1,Repair or replace?,
+trim,q2,Approximate length?,
+trim,extent,"How many items or areas are affected, and what is their approximate size?",
+flooring,q1,What type of flooring?,
+flooring,q2,Approximate area affected?,
+flooring,extent,"How many items or areas are affected, and what is their approximate size?",
+window,q1,"Is it a screen, seal, or frame issue?",
+window,q2,How many windows?,
+window,extent,"How many items or areas are affected, and what is their approximate size?",
+childproof,q1,Which areas of the home?,
+childproof,q2,How many items?,
+childproof,extent,"How many items or areas are affected, and what is their approximate size?",
+grab-bar,q1,"Which room(s) - bathroom, hallway, stairs?",
+grab-bar,q2,Wall type if known?,
+grab-bar,extent,"How many items or areas are affected, and what is their approximate size?",
+handrail,q1,Interior or exterior?,
+handrail,q2,"Is it loose, broken, or missing entirely?",
+handrail,extent,"How many items or areas are affected, and what is their approximate size?",
+stairs,q1,How many stairs are affected?,
+stairs,q2,Loose tread or just noise?,
+stairs,extent,"How many items or areas are affected, and what is their approximate size?",
+doorbell,q1,Wired or battery/wireless doorbell?,
+doorbell,q2,Replacing existing or new install?,
+doorbell,extent,"How many items or areas are affected, and what is their approximate size?",
+smart-device,q1,Which device?,
+smart-device,q2,Replacing an existing wired device or a new install?,
+smart-device,extent,"How many items or areas are affected, and what is their approximate size?",
+mailbox,q1,Repair or full replacement?,
+mailbox,q2,Post-mounted or wall-mounted?,
+mailbox,extent,"How many items or areas are affected, and what is their approximate size?",
+house-numbers,q1,How many numbers/letters?,
+house-numbers,q2,Wall or post mounted?,
+house-numbers,extent,"How many items or areas are affected, and what is their approximate size?",
+pressure-wash,q1,"Which surface - driveway, deck, siding, patio?",
+pressure-wash,q2,Approximate area?,
+pressure-wash,extent,"How many items or areas are affected, and what is their approximate size?",
+grout,q1,"Which area - shower, tub, floor?",
+grout,q2,Approximate area affected?,
+grout,extent,"How many items or areas are affected, and what is their approximate size?",
+shower-head,q1,Just the shower head or the full fixture?,
+shower-head,extent,"How many items or areas are affected, and what is their approximate size?",
+shower-head,details,"What materials, model, or product details can you share? A photo is also helpful.",
+furniture-repair,q1,What item?,
+furniture-repair,q2,What's loose or broken?,
+furniture-repair,extent,"How many items or areas are affected, and what is their approximate size?",
+shed-repair,q1,"What's the issue - door, roof, walls?",
+shed-repair,q2,Approximate size of shed?,
+shed-repair,extent,"How many items or areas are affected, and what is their approximate size?",
+playground,q1,New assembly or repair of an existing structure?,
+playground,extent,"How many items or areas are affected, and what is their approximate size?",
+playground,details,"What materials, model, or product details can you share? A photo is also helpful.",
+cabinet-lighting,q1,Is this a plug-in/battery strip or a hardwired install?,
+cabinet-lighting,extent,"How many items or areas are affected, and what is their approximate size?",
+cabinet-lighting,details,"What materials, model, or product details can you share? A photo is also helpful.",
+pet-door,q1,Installing in a door or a wall?,
+pet-door,extent,"How many items or areas are affected, and what is their approximate size?",
+pet-door,details,"What materials, model, or product details can you share? A photo is also helpful.",
+weatherstrip,q1,"Doors, windows, or both?",
+weatherstrip,q2,How many?,
+weatherstrip,extent,"How many items or areas are affected, and what is their approximate size?",
+basketball,q1,"In-ground, wall-mounted, or portable?",
+basketball,extent,"How many items or areas are affected, and what is their approximate size?",
+basketball,details,"What materials, model, or product details can you share? A photo is also helpful.",
+detector,q1,Battery replacement or full unit install/replacement?,
+detector,q2,Hardwired or battery-only unit?,
+detector,extent,"How many items or areas are affected, and what is their approximate size?",
+pergola,q1,Kit assembly or custom build?,
+pergola,q2,Approximate size?,
+pergola,extent,"How many items or areas are affected, and what is their approximate size?",
+appliance,q1,Which appliance?,
+appliance,q2,Are existing water/power connections already in place?,
+appliance,extent,"How many items or areas are affected, and what is their approximate size?",
+countertop,q1,"Repair, resealing, or full replacement?",
+countertop,q2,"What material (laminate, granite, quartz, butcher block)?",
+countertop,extent,"How many items or areas are affected, and what is their approximate size?",
+backsplash,q1,Peel-and-stick or tiled backsplash?,
+backsplash,q2,Approximate area (linear feet)?,
+backsplash,extent,"How many items or areas are affected, and what is their approximate size?",
+dryer-vent,q1,When was it last cleaned?,
+dryer-vent,q2,Any noticeable drying issues (clothes taking longer)?,
+dryer-vent,extent,"How many items or areas are affected, and what is their approximate size?",
+roof,location,What have you noticed?,Water entering the home|Missing or damaged shingles|Other visible damage|Not sure
+roof,symptom,"Where is it visible, and is water entering now?",
+roof,active,How many storeys is the home? Photos from an accessible location are optional.,
+soffit,q1,"What's the issue - damage, gaps, or full replacement?",
+soffit,q2,Approximate length affected?,
+soffit,extent,"How many items or areas are affected, and what is their approximate size?",
+driveway,q1,Crack sealing or full sealcoating?,
+driveway,q2,Approximate driveway size?,
+driveway,extent,"How many items or areas are affected, and what is their approximate size?",
+pavers,q1,How many pavers/stones are affected?,
+pavers,q2,"Sinking, loose, or cracked?",
+pavers,extent,"How many items or areas are affected, and what is their approximate size?",
+retaining-wall,location,What is wrong with the wall?,Leaning|Cracked|Loose blocks|Collapsed section|Not sure
+retaining-wall,symptom,"What are its approximate height, length, and material?",
+retaining-wall,active,"Is nearby ground, a path, or another structure affected?",Yes|No|Not sure
+irrigation,location,What is the irrigation problem?,Leak|Broken sprinkler head|Zone not working|Controller problem|Not sure
+irrigation,symptom,How many heads or zones are affected?,
+irrigation,active,Is water currently flowing or pooling where it should not?,Yes|No|Not sure
+awning,q1,Retractable or fixed awning?,
+awning,q2,Approximate size?,
+awning,extent,"How many items or areas are affected, and what is their approximate size?",
+closet-door,q1,"What's the issue - off track, won't close, damaged panel?",
+closet-door,extent,"How many items or areas are affected, and what is their approximate size?",
+closet-door,details,"What materials, model, or product details can you share? A photo is also helpful.",
+panelling,q1,What type of installation?,
+panelling,q2,Approximate linear feet or wall area?,
+panelling,extent,"How many items or areas are affected, and what is their approximate size?",
+staining,q1,Deck or fence?,
+staining,q2,Approximate square footage?,
+staining,extent,"How many items or areas are affected, and what is their approximate size?",
+garage-storage,q1,"What type of storage - shelving, pegboard, overhead racks?",
+garage-storage,q2,Approximate garage size?,
+garage-storage,extent,"How many items or areas are affected, and what is their approximate size?",
+nursery,q1,What item needs assembling?,
+nursery,q2,Do you have all parts and instructions?,
+nursery,extent,"How many items or areas are affected, and what is their approximate size?",
+office,q1,What needs assembling or organizing?,
+office,extent,"How many items or areas are affected, and what is their approximate size?",
+office,details,"What materials, model, or product details can you share? A photo is also helpful.",
+gym,q1,What item?,
+gym,q2,Approximate weight/size?,
+gym,extent,"How many items or areas are affected, and what is their approximate size?",
+water-heater,location,What problem have you noticed?,No hot water|Not enough hot water|Visible leak|Unusual noise|Not sure
+water-heater,symptom,"Is it a tank or tankless unit, and what fuel or power source does it use if known?",
+water-heater,active,"Where is the unit, and is water spreading around it?",
+sump,location,What is happening in the basement?,Water rising|Pump not running|Pump running continuously|Other|Not sure
+sump,symptom,"Where is the water, and is its level changing?",
+sump,active,"When did it start, and is it associated with recent rain?",
+hvac,location,Is this a heating or cooling problem?,Heating|Cooling|Both|Not sure
+hvac,symptom,"Which system is affected, and what symptoms have you noticed?",
+hvac,active,Does it affect the whole home or particular rooms?,Whole home|Some rooms|Not sure
+board,q1,How many boards?,
+board,q2,Approximate size?,
+board,extent,"How many items or areas are affected, and what is their approximate size?",
+flagpole,q1,Ground-mounted or wall-mounted?,
+flagpole,extent,"How many items or areas are affected, and what is their approximate size?",
+flagpole,details,"What materials, model, or product details can you share? A photo is also helpful.",
+junk,q1,What items need to be removed?,
+junk,q2,Approximate volume (few items vs. truckload)?,
+junk,extent,"How many items or areas are affected, and what is their approximate size?",
+vent-cover,q1,Which vent is affected?,Dryer|Bathroom exhaust|Kitchen exhaust|Other|Not sure
+vent-cover,q2,What is wrong with the cover?,Damaged|Missing|Flapper stuck|Not sure
+vent-cover,extent,"How many covers, and how high are they above the ground?",

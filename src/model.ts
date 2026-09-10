@@ -224,13 +224,11 @@ export function classify(description: string) {
     return {
       issueId: intakeIssue.id,
       summary: intakeIssue.title,
-      category: /sink|toilet|faucet|bath|fixture/.test(intakeIssue.id)
-        ? "Plumbing / Investigation"
-        : "Specialist / Review",
+      category: `${intakeIssue.category || "Specialist"} / ${intakeIssue.title}`,
       duration: 90,
       confidence: 0.9,
       reason: `INTAKE · ${intakeIssue.title} · operator scope review required`,
-      restricted: false,
+      restricted: intakeIssue.category === "Electrical",
       reviewed: false,
     };
   const candidates = rules
@@ -267,15 +265,26 @@ export function classify(description: string) {
         restricted: false,
         reviewed: true,
       }
-    : {
-        summary: "Tell us a little more",
-        category: "Needs Review",
-        duration: 60,
-        confidence: 0.25,
-        reason: "No phrase combination cleared confidence threshold (0.80)",
-        restricted: false,
-        reviewed: false,
-      };
+    : intakeIssue.id !== "unknown"
+      ? {
+          summary: intakeIssue.title,
+          category: `${intakeIssue.category || "Handyman"} / ${intakeIssue.title}`,
+          duration: 90,
+          confidence: 0.85,
+          reason: `CATALOGUE · ${intakeIssue.id} · scope and duration require review`,
+          restricted: intakeIssue.category === "Electrical",
+          reviewed: false,
+          issueId: intakeIssue.id,
+        }
+      : {
+          summary: "Tell us a little more",
+          category: "Needs Review",
+          duration: 60,
+          confidence: 0.25,
+          reason: "No phrase combination cleared confidence threshold (0.80)",
+          restricted: false,
+          reviewed: false,
+        };
 }
 export function seed(): State {
   const clock = Date.now();
@@ -561,6 +570,7 @@ export function eligible(providerId: string, tasks: Task[]) {
   if (!p) return false;
   return tasks.every(
     (t) =>
+      getIssue(t.description).availability !== "Referral only" &&
       t.reviewed &&
       (!t.restricted || p.eligible) &&
       (t.restricted ||

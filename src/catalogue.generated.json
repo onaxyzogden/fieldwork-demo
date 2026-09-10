@@ -1,0 +1,2758 @@
+[
+  {
+    "id": "sink-drain",
+    "title": "Clogged sink",
+    "pattern": "\\bsink\\b.*\\b(clog|block|slow|back|drains? slowly|(?:will not|won.t|not) drain)|\\b(clogged|blocked|slow.draining)\\b.*\\bsink\\b",
+    "exclude": "",
+    "priority": 50,
+    "availability": "Review first",
+    "qualification": "Operator must assess scope and provider qualifications",
+    "source_rows": "",
+    "legacy_flags": "",
+    "example": "sink is clogged",
+    "category": "Plumbing",
+    "questions": [
+      {
+        "id": "location",
+        "label": "Which sink is affected?",
+        "options": [
+          "Kitchen",
+          "Bathroom",
+          "Laundry",
+          "Other",
+          "Not sure"
+        ]
+      },
+      {
+        "id": "drainage",
+        "label": "What happens when water drains?",
+        "options": [
+          "Drains slowly",
+          "Completely blocked",
+          "Water backs up",
+          "Not sure"
+        ]
+      },
+      {
+        "id": "other",
+        "label": "Are other sinks, toilets, or drains affected?",
+        "options": [
+          "No, only this fixture",
+          "Yes, other fixtures too",
+          "Not sure"
+        ]
+      },
+      {
+        "id": "tried",
+        "label": "What has already been tried, including any drain-cleaning product?"
+      }
+    ]
+  },
+  {
+    "id": "bath-drain",
+    "title": "Clogged bath or shower",
+    "pattern": "\\b(bath|bathtub|tub|shower)\\b.*\\b(clog|block|slow|drain)|\\b(clogged|blocked)\\b.*\\b(bath|tub|shower)\\b",
+    "exclude": "",
+    "priority": 50,
+    "availability": "Review first",
+    "qualification": "Operator must assess scope and provider qualifications",
+    "source_rows": "",
+    "legacy_flags": "",
+    "example": "shower drains slowly",
+    "category": "Plumbing",
+    "questions": [
+      {
+        "id": "fixture",
+        "label": "Is this a bathtub or shower?",
+        "options": [
+          "Bathtub",
+          "Shower",
+          "Combined bath and shower",
+          "Not sure"
+        ]
+      },
+      {
+        "id": "drainage",
+        "label": "Does water drain slowly or remain standing?",
+        "options": [
+          "Drains slowly",
+          "Remains standing",
+          "Backs up",
+          "Not sure"
+        ]
+      },
+      {
+        "id": "other",
+        "label": "Are other sinks, toilets, or drains affected?",
+        "options": [
+          "No, only this fixture",
+          "Yes, other fixtures too",
+          "Not sure"
+        ]
+      },
+      {
+        "id": "tried",
+        "label": "What has already been tried, including any drain-cleaning product?"
+      }
+    ]
+  },
+  {
+    "id": "toilet-block",
+    "title": "Blocked or overflowing toilet",
+    "pattern": "\\btoilet\\b.*\\b(clog|block|overflow|flush|back)|\\b(clogged|blocked|overflowing)\\b.*\\btoilet\\b",
+    "exclude": "",
+    "priority": 50,
+    "availability": "Review first",
+    "qualification": "Operator must assess scope and provider qualifications",
+    "source_rows": "17",
+    "legacy_flags": "no",
+    "example": "clogged toilet",
+    "category": "Plumbing",
+    "questions": [
+      {
+        "id": "symptom",
+        "label": "What is happening?",
+        "options": [
+          "Blocked",
+          "Drains slowly",
+          "Overflowing",
+          "Not sure"
+        ]
+      },
+      {
+        "id": "spill",
+        "label": "Is water currently spilling onto the floor?",
+        "options": [
+          "Yes",
+          "No",
+          "Not sure"
+        ]
+      },
+      {
+        "id": "other",
+        "label": "Are other sinks, toilets, or drains affected?",
+        "options": [
+          "No, only this fixture",
+          "Yes, other fixtures too",
+          "Not sure"
+        ]
+      },
+      {
+        "id": "start",
+        "label": "When did this start, and was anything unusual flushed?"
+      }
+    ]
+  },
+  {
+    "id": "toilet-running",
+    "title": "Running toilet",
+    "pattern": "\\btoilet\\b.*\\b(run|refill)|\\brunning\\b.*\\btoilet\\b",
+    "exclude": "",
+    "priority": 50,
+    "availability": "Review first",
+    "qualification": "Operator must assess scope and provider qualifications",
+    "source_rows": "",
+    "legacy_flags": "",
+    "example": "running toilet",
+    "category": "Plumbing",
+    "questions": [
+      {
+        "id": "frequency",
+        "label": "Does water run continuously or occasionally?",
+        "options": [
+          "Continuously",
+          "Occasionally",
+          "Not sure"
+        ]
+      },
+      {
+        "id": "refill",
+        "label": "Does the tank refill without flushing?",
+        "options": [
+          "Yes",
+          "No",
+          "Not sure"
+        ]
+      },
+      {
+        "id": "outside",
+        "label": "Is there water outside the toilet?",
+        "options": [
+          "Yes",
+          "No",
+          "Not sure"
+        ]
+      },
+      {
+        "id": "count",
+        "label": "How many toilets are affected?"
+      }
+    ]
+  },
+  {
+    "id": "fixture-replace",
+    "title": "Faucet or fixture replacement",
+    "pattern": "\\b(replace|replacement|install|new)\\b.*\\b(faucet|tap|sink|toilet)\\b|\\b(faucet|tap|sink|toilet)\\b.*\\b(replace|replacement|install)\\b",
+    "exclude": "",
+    "priority": 50,
+    "availability": "Review first",
+    "qualification": "Operator must assess scope and provider qualifications",
+    "source_rows": "",
+    "legacy_flags": "",
+    "example": "replace faucet",
+    "category": "Plumbing",
+    "questions": [
+      {
+        "id": "items",
+        "label": "What needs replacing, and how many?"
+      },
+      {
+        "id": "supplied",
+        "label": "Are the products and installation hardware already available?",
+        "options": [
+          "Yes",
+          "Some parts only",
+          "No",
+          "Not sure"
+        ]
+      },
+      {
+        "id": "model",
+        "label": "What is the model or product link? A photo is also helpful."
+      },
+      {
+        "id": "connections",
+        "label": "Are connections or the fixture location changing?",
+        "options": [
+          "Like-for-like replacement",
+          "Connections or location changing",
+          "Not sure"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "sink-leak",
+    "title": "Leak under sink",
+    "pattern": "\\b(leak|leaking|water)\\b.*\\b(under|underneath|beneath|sink)\\b|\\bsink\\b.*\\b(leak|leaking)\\b",
+    "exclude": "",
+    "priority": 50,
+    "availability": "Review first",
+    "qualification": "Operator must assess scope and provider qualifications",
+    "source_rows": "",
+    "legacy_flags": "",
+    "example": "sink leaking underneath",
+    "category": "Plumbing",
+    "questions": [
+      {
+        "id": "source",
+        "label": "Where is water visible?",
+        "options": [
+          "Supply connection",
+          "Drain pipe",
+          "Unknown location",
+          "Not sure"
+        ]
+      },
+      {
+        "id": "frequency",
+        "label": "When does the leak happen?",
+        "options": [
+          "Continuously",
+          "Only when the sink is used",
+          "Not sure"
+        ]
+      },
+      {
+        "id": "spread",
+        "label": "Is the water contained or spreading?",
+        "options": [
+          "Contained",
+          "Spreading",
+          "Not sure"
+        ]
+      },
+      {
+        "id": "damage",
+        "label": "Is there visible cabinet or floor damage?",
+        "options": [
+          "Yes",
+          "No",
+          "Not sure"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "faucet-leak",
+    "title": "Leaking faucet",
+    "pattern": "\\b(faucet|tap)\\b.*\\b(drip|leak)|\\b(dripping|leaking)\\b.*\\b(faucet|tap)\\b",
+    "exclude": "",
+    "priority": 50,
+    "availability": "Review first",
+    "qualification": "Operator must assess scope and provider qualifications",
+    "source_rows": "16",
+    "legacy_flags": "no",
+    "example": "leaking faucet",
+    "category": "Plumbing",
+    "questions": [
+      {
+        "id": "location",
+        "label": "Which fixture and room?"
+      },
+      {
+        "id": "source",
+        "label": "Where does the water appear?",
+        "options": [
+          "Spout",
+          "Handle or base",
+          "Underneath",
+          "Not sure"
+        ]
+      },
+      {
+        "id": "frequency",
+        "label": "Does it happen when the tap is off, on, or both?",
+        "options": [
+          "Off",
+          "On",
+          "Both",
+          "Not sure"
+        ]
+      },
+      {
+        "id": "preference",
+        "label": "Would you prefer repair or replacement?",
+        "options": [
+          "Repair",
+          "Replacement",
+          "Please advise",
+          "Not sure"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "door-adjust",
+    "title": "Door sticking or not latching",
+    "pattern": "\\bdoor\\b.*\\b(stick|rub|close|latch)|\\b(sticking|rubbing)\\b.*\\bdoor\\b|\\bsqueak\\w* hinge\\b",
+    "exclude": "",
+    "priority": 50,
+    "availability": "Offered",
+    "qualification": "Normal scope and provider checks",
+    "source_rows": "1",
+    "legacy_flags": "no",
+    "example": "door is sticking",
+    "category": "Handyman",
+    "questions": [
+      {
+        "id": "location",
+        "label": "Is it an interior or exterior door?",
+        "options": [
+          "Interior",
+          "Exterior",
+          "Not sure"
+        ]
+      },
+      {
+        "id": "symptom",
+        "label": "What is the door doing?",
+        "options": [
+          "Rubbing or sticking",
+          "Not latching",
+          "Will not close",
+          "Not sure"
+        ]
+      },
+      {
+        "id": "damage",
+        "label": "Is the door or frame visibly damaged?",
+        "options": [
+          "No visible damage",
+          "Damaged or cracked",
+          "Not sure"
+        ]
+      },
+      {
+        "id": "count",
+        "label": "How many doors are affected?"
+      }
+    ]
+  },
+  {
+    "id": "door-hardware",
+    "title": "Loose handle, lock, or hinge",
+    "pattern": "\\b(handle|lock|hinge)\\b.*\\b(loose|broken|repair|replace)|\\b(loose|broken)\\b.*\\b(handle|lock|hinge)\\b|\\b(?:door knob|deadbolt|hinge replace)\\b",
+    "exclude": "",
+    "priority": 50,
+    "availability": "Offered",
+    "qualification": "Normal scope and provider checks",
+    "source_rows": "2",
+    "legacy_flags": "no",
+    "example": "loose door handle",
+    "category": "Handyman",
+    "questions": [
+      {
+        "id": "part",
+        "label": "Which part is loose or broken?",
+        "options": [
+          "Handle",
+          "Lock",
+          "Hinge",
+          "Not sure"
+        ]
+      },
+      {
+        "id": "location",
+        "label": "Is it on an interior or exterior door?",
+        "options": [
+          "Interior",
+          "Exterior",
+          "Not sure"
+        ]
+      },
+      {
+        "id": "secure",
+        "label": "Can the door currently close and lock?",
+        "options": [
+          "Yes",
+          "Closes but cannot lock",
+          "Cannot close",
+          "Not sure"
+        ]
+      },
+      {
+        "id": "supplied",
+        "label": "Are the products and installation hardware already available?",
+        "options": [
+          "Yes",
+          "Some parts only",
+          "No",
+          "Not sure"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "cabinet",
+    "title": "Cabinet door or drawer problem",
+    "pattern": "\\b(cabinet|drawer)\\b.*\\b(stuck|loose|damage|broken|misalign|align|repair|fix)|\\b(stuck|loose|broken)\\b.*\\b(cabinet|drawer)\\b",
+    "exclude": "",
+    "priority": 50,
+    "availability": "Offered",
+    "qualification": "Normal scope and provider checks",
+    "source_rows": "28",
+    "legacy_flags": "no",
+    "example": "cabinet is misaligned",
+    "category": "Carpentry",
+    "questions": [
+      {
+        "id": "symptom",
+        "label": "What is wrong?",
+        "options": [
+          "Misaligned",
+          "Loose",
+          "Stuck",
+          "Damaged",
+          "Not sure"
+        ]
+      },
+      {
+        "id": "count",
+        "label": "How many doors or drawers are affected?"
+      },
+      {
+        "id": "parts",
+        "label": "Are hinges, runners, or handles broken or missing?"
+      },
+      {
+        "id": "photo",
+        "label": "Can you add a photo using the photo button below?",
+        "options": [
+          "Photo available",
+          "No photo available",
+          "Not sure"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "damp",
+    "title": "Water stain or damp wall/ceiling",
+    "pattern": "\\b(water stain|damp|wet|sagging)\\b.*\\b(wall|ceiling)\\b|\\b(wall|ceiling)\\b.*\\b(wet|damp|water stain|sagging)\\b",
+    "exclude": "",
+    "priority": 50,
+    "availability": "Review first",
+    "qualification": "Operator must assess scope and provider qualifications",
+    "source_rows": "",
+    "legacy_flags": "",
+    "example": "damp ceiling",
+    "category": "Specialist",
+    "questions": [
+      {
+        "id": "location",
+        "label": "Where is the affected area?"
+      },
+      {
+        "id": "condition",
+        "label": "What is its current condition?",
+        "options": [
+          "Wet or spreading",
+          "Old dry stain",
+          "Not sure"
+        ]
+      },
+      {
+        "id": "source",
+        "label": "Is the source known or already repaired?",
+        "options": [
+          "Source unknown",
+          "Known but not repaired",
+          "Already repaired",
+          "Not sure"
+        ]
+      },
+      {
+        "id": "sagging",
+        "label": "Is there visible sagging or bulging?",
+        "options": [
+          "Yes",
+          "No",
+          "Not sure"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "drywall",
+    "title": "Drywall hole or crack",
+    "pattern": "\\bdrywall\\b|\\b(hole|crack|dent)\\b.*\\bwall\\b",
+    "exclude": "",
+    "priority": 50,
+    "availability": "Offered",
+    "qualification": "Normal scope and provider checks",
+    "source_rows": "5",
+    "legacy_flags": "no",
+    "example": "hole in wall",
+    "category": "Handyman",
+    "questions": [
+      {
+        "id": "damage",
+        "label": "What kind of damage is it?",
+        "options": [
+          "Hole",
+          "Crack",
+          "Dent",
+          "Peeling",
+          "Not sure"
+        ]
+      },
+      {
+        "id": "size",
+        "label": "Approximately how large is it, and how many areas?"
+      },
+      {
+        "id": "damp",
+        "label": "Is there dampness or staining?",
+        "options": [
+          "Yes",
+          "No",
+          "Not sure"
+        ]
+      },
+      {
+        "id": "finish",
+        "label": "What finish would you like?",
+        "options": [
+          "Patch only",
+          "Patch and paint",
+          "Not sure"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "paint",
+    "title": "Painting or touch-up",
+    "pattern": "\\b(paint|painting|touch.up)\\b",
+    "exclude": "",
+    "priority": 50,
+    "availability": "Offered",
+    "qualification": "Normal scope and provider checks",
+    "source_rows": "6",
+    "legacy_flags": "no",
+    "example": "paint",
+    "category": "Handyman",
+    "questions": [
+      {
+        "id": "surfaces",
+        "label": "Which surfaces and how many rooms or areas?"
+      },
+      {
+        "id": "size",
+        "label": "What are the approximate dimensions?"
+      },
+      {
+        "id": "prep",
+        "label": "Are repairs or stain treatment needed first?",
+        "options": [
+          "Yes",
+          "No",
+          "Not sure"
+        ]
+      },
+      {
+        "id": "paint",
+        "label": "Is matching paint available?",
+        "options": [
+          "Yes",
+          "No",
+          "Not sure"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "shelves",
+    "title": "Shelf installation",
+    "pattern": "\\bshel(f|ves|ving)\\b",
+    "exclude": "",
+    "priority": 50,
+    "availability": "Offered",
+    "qualification": "Normal scope and provider checks",
+    "source_rows": "8",
+    "legacy_flags": "no",
+    "example": "shelf",
+    "category": "Installation",
+    "questions": [
+      {
+        "id": "count",
+        "label": "How many shelves, and what sizes?"
+      },
+      {
+        "id": "load",
+        "label": "What will the shelves hold?"
+      },
+      {
+        "id": "wall",
+        "label": "What is the wall made of?",
+        "options": [
+          "Drywall",
+          "Plaster",
+          "Brick or concrete",
+          "Tile",
+          "Not sure"
+        ]
+      },
+      {
+        "id": "supplied",
+        "label": "Are the products and installation hardware already available?",
+        "options": [
+          "Yes",
+          "Some parts only",
+          "No",
+          "Not sure"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "tv",
+    "title": "TV mounting",
+    "pattern": "\\b(tv|television)\\b",
+    "exclude": "",
+    "priority": 50,
+    "availability": "Offered",
+    "qualification": "Normal scope and provider checks",
+    "source_rows": "9",
+    "legacy_flags": "no",
+    "example": "tv",
+    "category": "Installation",
+    "questions": [
+      {
+        "id": "model",
+        "label": "What size and model is the TV?"
+      },
+      {
+        "id": "mount",
+        "label": "Is a compatible mount available?",
+        "options": [
+          "Yes",
+          "No",
+          "Not sure"
+        ]
+      },
+      {
+        "id": "wall",
+        "label": "What is the wall made of?",
+        "options": [
+          "Drywall",
+          "Plaster",
+          "Brick or concrete",
+          "Tile",
+          "Not sure"
+        ]
+      },
+      {
+        "id": "cables",
+        "label": "What cable work is requested?",
+        "options": [
+          "None",
+          "Surface cable cover",
+          "Conceal cables inside wall",
+          "New electrical outlet",
+          "Not sure"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "hanging",
+    "title": "Picture or mirror hanging",
+    "pattern": "\\b(picture|mirror|artwork)\\b",
+    "exclude": "",
+    "priority": 50,
+    "availability": "Offered",
+    "qualification": "Normal scope and provider checks",
+    "source_rows": "11",
+    "legacy_flags": "no",
+    "example": "hang picture",
+    "category": "Installation",
+    "questions": [
+      {
+        "id": "count",
+        "label": "How many items need hanging?"
+      },
+      {
+        "id": "size",
+        "label": "What are their approximate sizes and weights?"
+      },
+      {
+        "id": "wall",
+        "label": "What is the wall made of?",
+        "options": [
+          "Drywall",
+          "Plaster",
+          "Brick or concrete",
+          "Tile",
+          "Not sure"
+        ]
+      },
+      {
+        "id": "supplied",
+        "label": "Are the products and installation hardware already available?",
+        "options": [
+          "Yes",
+          "Some parts only",
+          "No",
+          "Not sure"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "curtains",
+    "title": "Curtains or blinds",
+    "pattern": "\\b(curtain|curtains|blind|blinds)\\b",
+    "exclude": "",
+    "priority": 50,
+    "availability": "Offered",
+    "qualification": "Normal scope and provider checks",
+    "source_rows": "10",
+    "legacy_flags": "no",
+    "example": "curtain rod",
+    "category": "Installation",
+    "questions": [
+      {
+        "id": "count",
+        "label": "How many windows?"
+      },
+      {
+        "id": "work",
+        "label": "What work is needed?",
+        "options": [
+          "Install",
+          "Replace",
+          "Repair",
+          "Not sure"
+        ]
+      },
+      {
+        "id": "products",
+        "label": "Are the products purchased and sized?",
+        "options": [
+          "Yes",
+          "No",
+          "Not sure"
+        ]
+      },
+      {
+        "id": "height",
+        "label": "What is the approximate installation height?"
+      }
+    ]
+  },
+  {
+    "id": "assembly",
+    "title": "Furniture assembly",
+    "pattern": "\\b(assembl\\w*|ikea|wardrobe|furniture)\\b|\\b(?:put together|dresser|bed frame)\\b",
+    "exclude": "",
+    "priority": 50,
+    "availability": "Offered",
+    "qualification": "Normal scope and provider checks",
+    "source_rows": "13",
+    "legacy_flags": "no",
+    "example": "assemble",
+    "category": "Assembly",
+    "questions": [
+      {
+        "id": "items",
+        "label": "Which items need assembling, and how many?"
+      },
+      {
+        "id": "model",
+        "label": "Can you provide product links or models?"
+      },
+      {
+        "id": "parts",
+        "label": "Are all boxes, parts, and instructions available?",
+        "options": [
+          "Yes",
+          "Some are missing",
+          "Not sure"
+        ]
+      },
+      {
+        "id": "extra",
+        "label": "Is wall anchoring or moving existing furniture needed?",
+        "options": [
+          "Neither",
+          "Wall anchoring",
+          "Moving furniture",
+          "Both",
+          "Not sure"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "accessory",
+    "title": "Loose towel bar or bathroom accessory",
+    "pattern": "\\b(towel (bar|rack)|toilet.paper holder|bathroom accessory)\\b",
+    "exclude": "",
+    "priority": 50,
+    "availability": "Offered",
+    "qualification": "Normal scope and provider checks",
+    "source_rows": "31",
+    "legacy_flags": "no",
+    "example": "towel bar",
+    "category": "Handyman",
+    "questions": [
+      {
+        "id": "items",
+        "label": "Which accessory and how many?"
+      },
+      {
+        "id": "damage",
+        "label": "What is the problem?",
+        "options": [
+          "Loose",
+          "Broken",
+          "Pulled out of wall",
+          "Not sure"
+        ]
+      },
+      {
+        "id": "wall",
+        "label": "What is the wall made of?",
+        "options": [
+          "Drywall",
+          "Plaster",
+          "Brick or concrete",
+          "Tile",
+          "Not sure"
+        ]
+      },
+      {
+        "id": "supplied",
+        "label": "Are the products and installation hardware already available?",
+        "options": [
+          "Yes",
+          "Some parts only",
+          "No",
+          "Not sure"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "sealant",
+    "title": "Caulk or sealant replacement",
+    "pattern": "\\b(caulk|caulking|sealant)\\b",
+    "exclude": "",
+    "priority": 50,
+    "availability": "Offered",
+    "qualification": "Normal scope and provider checks",
+    "source_rows": "18",
+    "legacy_flags": "no",
+    "example": "caulk",
+    "category": "Plumbing",
+    "questions": [
+      {
+        "id": "location",
+        "label": "Where is the sealant?",
+        "options": [
+          "Tub",
+          "Shower",
+          "Sink",
+          "Other",
+          "Not sure"
+        ]
+      },
+      {
+        "id": "condition",
+        "label": "What is wrong with it?",
+        "options": [
+          "Cracked",
+          "Missing",
+          "Discoloured",
+          "Not sure"
+        ]
+      },
+      {
+        "id": "leak",
+        "label": "Is there active leakage or soft/damaged material nearby?",
+        "options": [
+          "Yes",
+          "No",
+          "Not sure"
+        ]
+      },
+      {
+        "id": "size",
+        "label": "Approximately how much needs replacing?"
+      }
+    ]
+  },
+  {
+    "id": "fence",
+    "title": "Fence or gate repair",
+    "pattern": "\\b(fence|gate)\\b",
+    "exclude": "",
+    "priority": 50,
+    "availability": "Offered",
+    "qualification": "Normal scope and provider checks",
+    "source_rows": "24",
+    "legacy_flags": "no",
+    "example": "fence",
+    "category": "Exterior",
+    "questions": [
+      {
+        "id": "part",
+        "label": "Which part needs repair?",
+        "options": [
+          "Panel",
+          "Post",
+          "Hinge",
+          "Latch",
+          "Not sure"
+        ]
+      },
+      {
+        "id": "count",
+        "label": "How many sections are affected?"
+      },
+      {
+        "id": "material",
+        "label": "What material is it?",
+        "options": [
+          "Wood",
+          "Metal",
+          "Vinyl",
+          "Not sure"
+        ]
+      },
+      {
+        "id": "stable",
+        "label": "Is anything leaning, detached, or unstable?",
+        "options": [
+          "Yes",
+          "No",
+          "Not sure"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "deck",
+    "title": "Deck or step repair",
+    "pattern": "\\b(deck|steps|railing)\\b",
+    "exclude": "",
+    "priority": 50,
+    "availability": "Offered",
+    "qualification": "Normal scope and provider checks",
+    "source_rows": "23",
+    "legacy_flags": "no",
+    "example": "deck",
+    "category": "Exterior",
+    "questions": [
+      {
+        "id": "part",
+        "label": "Which parts are affected?",
+        "options": [
+          "Boards",
+          "Steps",
+          "Railings",
+          "Supports",
+          "Not sure"
+        ]
+      },
+      {
+        "id": "count",
+        "label": "How many areas need repair?"
+      },
+      {
+        "id": "stable",
+        "label": "Is there visible rot, movement, or instability?",
+        "options": [
+          "Yes",
+          "No",
+          "Not sure"
+        ]
+      },
+      {
+        "id": "photo",
+        "label": "Can you add an overview photo and a close-up?",
+        "options": [
+          "Photos available",
+          "No photos available",
+          "Not sure"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "outlet",
+    "title": "Outlet or switch problem",
+    "pattern": "\\b(outlet|socket|switch)\\b",
+    "exclude": "",
+    "priority": 50,
+    "availability": "Review first",
+    "qualification": "Operator must assess scope and provider qualifications",
+    "source_rows": "20",
+    "legacy_flags": "yes",
+    "example": "outlet",
+    "category": "Electrical",
+    "questions": [
+      {
+        "id": "symptom",
+        "label": "What is wrong?",
+        "options": [
+          "Not working",
+          "Loose",
+          "Damaged",
+          "Intermittent",
+          "Not sure"
+        ]
+      },
+      {
+        "id": "count",
+        "label": "How many are affected?"
+      },
+      {
+        "id": "hazard",
+        "label": "Have you noticed heat, a burning smell, sparks, or discolouration?",
+        "options": [
+          "Yes",
+          "No",
+          "Not sure"
+        ]
+      },
+      {
+        "id": "breaker",
+        "label": "Is a related breaker repeatedly tripping?",
+        "options": [
+          "Yes",
+          "No",
+          "Not sure"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "lighting",
+    "title": "Light fixture or ceiling fan",
+    "pattern": "\\b(?:light fixture|ceiling fan|ceiling light|pendant light|install light|light fitting|install fan|fan installation)\\b",
+    "exclude": "",
+    "priority": 50,
+    "availability": "Review first",
+    "qualification": "Operator must assess scope and provider qualifications",
+    "source_rows": "12|36",
+    "legacy_flags": "maybe",
+    "example": "replace ceiling fan",
+    "category": "Installation",
+    "questions": [
+      {
+        "id": "work",
+        "label": "What work is needed?",
+        "options": [
+          "Repair",
+          "Replace",
+          "New installation",
+          "Not sure"
+        ]
+      },
+      {
+        "id": "existing",
+        "label": "Is there an existing fixture at that location?",
+        "options": [
+          "Yes",
+          "No",
+          "Not sure"
+        ]
+      },
+      {
+        "id": "height",
+        "label": "What is the ceiling height?"
+      },
+      {
+        "id": "model",
+        "label": "Is the replacement purchased? Please share its model or link."
+      }
+    ]
+  },
+  {
+    "id": "wiring",
+    "title": "Breaker, wiring, or circuit request",
+    "pattern": "\\b(breaker|wiring|circuit|electrical)\\b",
+    "exclude": "",
+    "priority": 50,
+    "availability": "Review first",
+    "qualification": "Operator must assess scope and provider qualifications",
+    "source_rows": "21|22",
+    "legacy_flags": "yes",
+    "example": "breaker tripping",
+    "category": "Electrical",
+    "questions": [
+      {
+        "id": "symptom",
+        "label": "What change or symptom prompted the request?"
+      },
+      {
+        "id": "location",
+        "label": "Which rooms or fixtures are affected?"
+      },
+      {
+        "id": "frequency",
+        "label": "Is the problem ongoing or intermittent?",
+        "options": [
+          "Ongoing",
+          "Intermittent",
+          "Not sure"
+        ]
+      },
+      {
+        "id": "hazard",
+        "label": "Have you noticed heat, burning smells, sparks, or repeated trips?",
+        "options": [
+          "Yes",
+          "No",
+          "Not sure"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "door-install",
+    "title": "Doors - Installation",
+    "pattern": "\\b(?:screen\\ door\\ install|install\\ door|storm\\ door|new\\ door)\\b",
+    "exclude": "",
+    "priority": 70,
+    "availability": "Review first",
+    "qualification": "Scope and qualifications must be checked by operator; source flag is unverified",
+    "source_rows": "3",
+    "legacy_flags": "no",
+    "example": "new door",
+    "category": "Handyman",
+    "questions": [
+      {
+        "id": "q1",
+        "label": "Interior or exterior door?"
+      },
+      {
+        "id": "q2",
+        "label": "Do you have the door already or need one purchased?"
+      },
+      {
+        "id": "extent",
+        "label": "How many items or areas are affected, and what is their approximate size?"
+      }
+    ]
+  },
+  {
+    "id": "garage-door",
+    "title": "Doors - Garage Door",
+    "pattern": "\\b(?:garage\\ opener|garage\\ door|off\\ track)\\b",
+    "exclude": "",
+    "priority": 70,
+    "availability": "Review first",
+    "qualification": "Scope and qualifications must be checked by operator; source flag is unverified",
+    "source_rows": "4",
+    "legacy_flags": "maybe",
+    "example": "garage door",
+    "category": "Handyman",
+    "questions": [
+      {
+        "id": "q1",
+        "label": "Is it the opener, the track, or the springs?"
+      },
+      {
+        "id": "extent",
+        "label": "How many items or areas are affected, and what is their approximate size?"
+      },
+      {
+        "id": "details",
+        "label": "What materials, model, or product details can you share? A photo is also helpful."
+      }
+    ]
+  },
+  {
+    "id": "wallpaper",
+    "title": "Walls - Wallpaper",
+    "pattern": "\\b(?:install\\ wallpaper|remove\\ wallpaper|wallpaper)\\b",
+    "exclude": "",
+    "priority": 70,
+    "availability": "Offered",
+    "qualification": "Scope and qualifications must be checked by operator; source flag is unverified",
+    "source_rows": "7",
+    "legacy_flags": "no",
+    "example": "wallpaper",
+    "category": "Handyman",
+    "questions": [
+      {
+        "id": "q1",
+        "label": "Removal or installation?"
+      },
+      {
+        "id": "q2",
+        "label": "How many walls?"
+      },
+      {
+        "id": "extent",
+        "label": "How many items or areas are affected, and what is their approximate size?"
+      }
+    ]
+  },
+  {
+    "id": "closet",
+    "title": "Storage",
+    "pattern": "\\b(?:closet (?:system|organizer|shelving)|storage unit|shelving unit)\\b",
+    "exclude": "",
+    "priority": 70,
+    "availability": "Offered",
+    "qualification": "Scope and qualifications must be checked by operator; source flag is unverified",
+    "source_rows": "14|47",
+    "legacy_flags": "no",
+    "example": "storage unit",
+    "category": "Assembly",
+    "questions": [
+      {
+        "id": "q1",
+        "label": "What type of unit?"
+      },
+      {
+        "id": "q2",
+        "label": "Where will it go?"
+      },
+      {
+        "id": "extent",
+        "label": "How many items or areas are affected, and what is their approximate size?"
+      }
+    ]
+  },
+  {
+    "id": "outdoor-assembly",
+    "title": "Outdoor Furniture",
+    "pattern": "\\b(?:patio furniture|outdoor furniture|gazebo|shed assembly)\\b",
+    "exclude": "",
+    "priority": 70,
+    "availability": "Offered",
+    "qualification": "Scope and qualifications must be checked by operator; source flag is unverified",
+    "source_rows": "15",
+    "legacy_flags": "no",
+    "example": "patio furniture",
+    "category": "Assembly",
+    "questions": [
+      {
+        "id": "q1",
+        "label": "What item?"
+      },
+      {
+        "id": "q2",
+        "label": "Should it be assembled on-site or moved after assembly?"
+      },
+      {
+        "id": "extent",
+        "label": "How many items or areas are affected, and what is their approximate size?"
+      }
+    ]
+  },
+  {
+    "id": "pipe-leak",
+    "title": "Pipe Repair",
+    "pattern": "\\b(?:pipe\\ under\\ floor|burst\\ pipe|pipe\\ leak)\\b",
+    "exclude": "",
+    "priority": 70,
+    "availability": "Referral only",
+    "qualification": "Scope and qualifications must be checked by operator; source flag is unverified",
+    "source_rows": "19",
+    "legacy_flags": "yes",
+    "example": "pipe leak",
+    "category": "Plumbing",
+    "questions": [
+      {
+        "id": "location",
+        "label": "Where is the leaking pipe or water visible?",
+        "options": [
+          "Under a fixture",
+          "Wall or ceiling",
+          "Under the floor",
+          "Other",
+          "Not sure"
+        ]
+      },
+      {
+        "id": "symptom",
+        "label": "Is water currently leaking, contained, or spreading?",
+        "options": [
+          "No active leak",
+          "Contained leak",
+          "Spreading water",
+          "Not sure"
+        ]
+      },
+      {
+        "id": "active",
+        "label": "When did it start, and what damage is visible?"
+      }
+    ]
+  },
+  {
+    "id": "gutter",
+    "title": "Gutter",
+    "pattern": "\\b(?:gutter\\ cleaning|gutter\\ repair|eavestrough|gutter)\\b",
+    "exclude": "",
+    "priority": 70,
+    "availability": "Review first",
+    "qualification": "Scope and qualifications must be checked by operator; source flag is unverified",
+    "source_rows": "25",
+    "legacy_flags": "maybe",
+    "example": "gutter",
+    "category": "Exterior",
+    "questions": [
+      {
+        "id": "q1",
+        "label": "Cleaning or repair?"
+      },
+      {
+        "id": "q2",
+        "label": "Single-story or two-story home?"
+      },
+      {
+        "id": "extent",
+        "label": "How many items or areas are affected, and what is their approximate size?"
+      }
+    ]
+  },
+  {
+    "id": "siding",
+    "title": "Siding",
+    "pattern": "\\b(?:siding\\ repair|vinyl\\ siding|siding)\\b",
+    "exclude": "",
+    "priority": 70,
+    "availability": "Review first",
+    "qualification": "Scope and qualifications must be checked by operator; source flag is unverified",
+    "source_rows": "26",
+    "legacy_flags": "no",
+    "example": "siding",
+    "category": "Exterior",
+    "questions": [
+      {
+        "id": "q1",
+        "label": "What's the issue?"
+      },
+      {
+        "id": "q2",
+        "label": "Approximate area affected?"
+      },
+      {
+        "id": "extent",
+        "label": "How many items or areas are affected, and what is their approximate size?"
+      }
+    ]
+  },
+  {
+    "id": "trim",
+    "title": "Trim/Baseboard",
+    "pattern": "\\b(?:baseboard|trim)\\b",
+    "exclude": "",
+    "priority": 70,
+    "availability": "Offered",
+    "qualification": "Scope and qualifications must be checked by operator; source flag is unverified",
+    "source_rows": "27",
+    "legacy_flags": "no",
+    "example": "trim",
+    "category": "Carpentry",
+    "questions": [
+      {
+        "id": "q1",
+        "label": "Repair or replace?"
+      },
+      {
+        "id": "q2",
+        "label": "Approximate length?"
+      },
+      {
+        "id": "extent",
+        "label": "How many items or areas are affected, and what is their approximate size?"
+      }
+    ]
+  },
+  {
+    "id": "flooring",
+    "title": "General Flooring Repair",
+    "pattern": "\\b(?:squeaky\\ floor|loose\\ tile|floorboard|laminate|tile)\\b",
+    "exclude": "\\b(?:backsplash|grout)\\b",
+    "priority": 70,
+    "availability": "Offered",
+    "qualification": "Scope and qualifications must be checked by operator; source flag is unverified",
+    "source_rows": "29",
+    "legacy_flags": "no",
+    "example": "tile",
+    "category": "Flooring",
+    "questions": [
+      {
+        "id": "q1",
+        "label": "What type of flooring?"
+      },
+      {
+        "id": "q2",
+        "label": "Approximate area affected?"
+      },
+      {
+        "id": "extent",
+        "label": "How many items or areas are affected, and what is their approximate size?"
+      }
+    ]
+  },
+  {
+    "id": "window",
+    "title": "Window Repair",
+    "pattern": "\\b(?:window\\ won't\\ open|weatherstripping|window\\ seal|window)\\b",
+    "exclude": "\\b(?:curtain|blinds|weatherstripping)\\b",
+    "priority": 70,
+    "availability": "Offered",
+    "qualification": "Scope and qualifications must be checked by operator; source flag is unverified",
+    "source_rows": "30",
+    "legacy_flags": "no",
+    "example": "window",
+    "category": "Windows",
+    "questions": [
+      {
+        "id": "q1",
+        "label": "Is it a screen, seal, or frame issue?"
+      },
+      {
+        "id": "q2",
+        "label": "How many windows?"
+      },
+      {
+        "id": "extent",
+        "label": "How many items or areas are affected, and what is their approximate size?"
+      }
+    ]
+  },
+  {
+    "id": "childproof",
+    "title": "Childproofing",
+    "pattern": "\\b(?:cabinet\\ lock|outlet\\ cover|childproof|baby\\ gate)\\b",
+    "exclude": "",
+    "priority": 70,
+    "availability": "Offered",
+    "qualification": "Scope and qualifications must be checked by operator; source flag is unverified",
+    "source_rows": "32",
+    "legacy_flags": "no",
+    "example": "baby gate",
+    "category": "Handyman",
+    "questions": [
+      {
+        "id": "q1",
+        "label": "Which areas of the home?"
+      },
+      {
+        "id": "q2",
+        "label": "How many items?"
+      },
+      {
+        "id": "extent",
+        "label": "How many items or areas are affected, and what is their approximate size?"
+      }
+    ]
+  },
+  {
+    "id": "grab-bar",
+    "title": "Safety/Accessibility - Grab Bars",
+    "pattern": "\\b(?:bathroom\\ safety|aging\\ in\\ place|safety\\ bar|grab\\ bar)\\b",
+    "exclude": "",
+    "priority": 70,
+    "availability": "Review first",
+    "qualification": "Scope and qualifications must be checked by operator; source flag is unverified",
+    "source_rows": "33",
+    "legacy_flags": "no",
+    "example": "grab bar",
+    "category": "Handyman",
+    "questions": [
+      {
+        "id": "q1",
+        "label": "Which room(s) - bathroom, hallway, stairs?"
+      },
+      {
+        "id": "q2",
+        "label": "Wall type if known?"
+      },
+      {
+        "id": "extent",
+        "label": "How many items or areas are affected, and what is their approximate size?"
+      }
+    ]
+  },
+  {
+    "id": "handrail",
+    "title": "Handrail/Railing",
+    "pattern": "\\b(?:stair\\ railing|loose\\ railing|handrail|railing)\\b",
+    "exclude": "",
+    "priority": 70,
+    "availability": "Review first",
+    "qualification": "Scope and qualifications must be checked by operator; source flag is unverified",
+    "source_rows": "34",
+    "legacy_flags": "no",
+    "example": "handrail",
+    "category": "Carpentry",
+    "questions": [
+      {
+        "id": "q1",
+        "label": "Interior or exterior?"
+      },
+      {
+        "id": "q2",
+        "label": "Is it loose, broken, or missing entirely?"
+      },
+      {
+        "id": "extent",
+        "label": "How many items or areas are affected, and what is their approximate size?"
+      }
+    ]
+  },
+  {
+    "id": "stairs",
+    "title": "Stairs",
+    "pattern": "\\b(?:squeaky\\ stairs|creaky\\ stairs|loose\\ stair|stair\\ tread)\\b",
+    "exclude": "",
+    "priority": 70,
+    "availability": "Review first",
+    "qualification": "Scope and qualifications must be checked by operator; source flag is unverified",
+    "source_rows": "35",
+    "legacy_flags": "no",
+    "example": "squeaky stairs",
+    "category": "Carpentry",
+    "questions": [
+      {
+        "id": "q1",
+        "label": "How many stairs are affected?"
+      },
+      {
+        "id": "q2",
+        "label": "Loose tread or just noise?"
+      },
+      {
+        "id": "extent",
+        "label": "How many items or areas are affected, and what is their approximate size?"
+      }
+    ]
+  },
+  {
+    "id": "doorbell",
+    "title": "Doorbell",
+    "pattern": "\\b(?:video\\ doorbell|ring\\ doorbell|doorbell)\\b",
+    "exclude": "",
+    "priority": 70,
+    "availability": "Review first",
+    "qualification": "Scope and qualifications must be checked by operator; source flag is unverified",
+    "source_rows": "37",
+    "legacy_flags": "maybe",
+    "example": "doorbell",
+    "category": "Handyman",
+    "questions": [
+      {
+        "id": "q1",
+        "label": "Wired or battery/wireless doorbell?"
+      },
+      {
+        "id": "q2",
+        "label": "Replacing existing or new install?"
+      },
+      {
+        "id": "extent",
+        "label": "How many items or areas are affected, and what is their approximate size?"
+      }
+    ]
+  },
+  {
+    "id": "smart-device",
+    "title": "Smart Home Device Install",
+    "pattern": "\\b(?:smart\\ thermostat|smart\\ lock|smart\\ home|ecobee|nest)\\b",
+    "exclude": "",
+    "priority": 70,
+    "availability": "Review first",
+    "qualification": "Scope and qualifications must be checked by operator; source flag is unverified",
+    "source_rows": "38",
+    "legacy_flags": "maybe",
+    "example": "smart lock",
+    "category": "Handyman",
+    "questions": [
+      {
+        "id": "q1",
+        "label": "Which device?"
+      },
+      {
+        "id": "q2",
+        "label": "Replacing an existing wired device or a new install?"
+      },
+      {
+        "id": "extent",
+        "label": "How many items or areas are affected, and what is their approximate size?"
+      }
+    ]
+  },
+  {
+    "id": "mailbox",
+    "title": "Mailbox",
+    "pattern": "\\b(?:install\\ mailbox|repair\\ mailbox|mailbox)\\b",
+    "exclude": "",
+    "priority": 70,
+    "availability": "Offered",
+    "qualification": "Scope and qualifications must be checked by operator; source flag is unverified",
+    "source_rows": "39",
+    "legacy_flags": "no",
+    "example": "mailbox",
+    "category": "Exterior",
+    "questions": [
+      {
+        "id": "q1",
+        "label": "Repair or full replacement?"
+      },
+      {
+        "id": "q2",
+        "label": "Post-mounted or wall-mounted?"
+      },
+      {
+        "id": "extent",
+        "label": "How many items or areas are affected, and what is their approximate size?"
+      }
+    ]
+  },
+  {
+    "id": "house-numbers",
+    "title": "House Numbers",
+    "pattern": "\\b(?:address\\ plaque|house\\ numbers|address\\ sign)\\b",
+    "exclude": "",
+    "priority": 70,
+    "availability": "Offered",
+    "qualification": "Scope and qualifications must be checked by operator; source flag is unverified",
+    "source_rows": "40",
+    "legacy_flags": "no",
+    "example": "house numbers",
+    "category": "Exterior",
+    "questions": [
+      {
+        "id": "q1",
+        "label": "How many numbers/letters?"
+      },
+      {
+        "id": "q2",
+        "label": "Wall or post mounted?"
+      },
+      {
+        "id": "extent",
+        "label": "How many items or areas are affected, and what is their approximate size?"
+      }
+    ]
+  },
+  {
+    "id": "pressure-wash",
+    "title": "Pressure Washing",
+    "pattern": "\\b(?:driveway\\ cleaning|pressure\\ wash|power\\ wash)\\b",
+    "exclude": "",
+    "priority": 70,
+    "availability": "Offered",
+    "qualification": "Scope and qualifications must be checked by operator; source flag is unverified",
+    "source_rows": "41",
+    "legacy_flags": "no",
+    "example": "pressure wash",
+    "category": "Exterior",
+    "questions": [
+      {
+        "id": "q1",
+        "label": "Which surface - driveway, deck, siding, patio?"
+      },
+      {
+        "id": "q2",
+        "label": "Approximate area?"
+      },
+      {
+        "id": "extent",
+        "label": "How many items or areas are affected, and what is their approximate size?"
+      }
+    ]
+  },
+  {
+    "id": "grout",
+    "title": "Grout Repair",
+    "pattern": "\\b(?:moldy\\ grout|tile\\ grout|regrout|grout)\\b",
+    "exclude": "",
+    "priority": 70,
+    "availability": "Offered",
+    "qualification": "Scope and qualifications must be checked by operator; source flag is unverified",
+    "source_rows": "42",
+    "legacy_flags": "no",
+    "example": "grout",
+    "category": "Flooring",
+    "questions": [
+      {
+        "id": "q1",
+        "label": "Which area - shower, tub, floor?"
+      },
+      {
+        "id": "q2",
+        "label": "Approximate area affected?"
+      },
+      {
+        "id": "extent",
+        "label": "How many items or areas are affected, and what is their approximate size?"
+      }
+    ]
+  },
+  {
+    "id": "shower-head",
+    "title": "Shower Fixture",
+    "pattern": "\\b(?:replace\\ shower\\ head|shower\\ head)\\b",
+    "exclude": "",
+    "priority": 70,
+    "availability": "Offered",
+    "qualification": "Scope and qualifications must be checked by operator; source flag is unverified",
+    "source_rows": "43",
+    "legacy_flags": "no",
+    "example": "shower head",
+    "category": "Plumbing",
+    "questions": [
+      {
+        "id": "q1",
+        "label": "Just the shower head or the full fixture?"
+      },
+      {
+        "id": "extent",
+        "label": "How many items or areas are affected, and what is their approximate size?"
+      },
+      {
+        "id": "details",
+        "label": "What materials, model, or product details can you share? A photo is also helpful."
+      }
+    ]
+  },
+  {
+    "id": "furniture-repair",
+    "title": "Furniture Repair",
+    "pattern": "\\b(?:wobbly (?:chair|table)|loose chair leg|furniture repair)\\b",
+    "exclude": "",
+    "priority": 70,
+    "availability": "Offered",
+    "qualification": "Scope and qualifications must be checked by operator; source flag is unverified",
+    "source_rows": "44",
+    "legacy_flags": "no",
+    "example": "wobbly chair",
+    "category": "Handyman",
+    "questions": [
+      {
+        "id": "q1",
+        "label": "What item?"
+      },
+      {
+        "id": "q2",
+        "label": "What's loose or broken?"
+      },
+      {
+        "id": "extent",
+        "label": "How many items or areas are affected, and what is their approximate size?"
+      }
+    ]
+  },
+  {
+    "id": "shed-repair",
+    "title": "Shed Repair",
+    "pattern": "\\b(?:shed\\ repair|shed\\ door|shed\\ roof)\\b",
+    "exclude": "\\bshed assembly\\b",
+    "priority": 70,
+    "availability": "Offered",
+    "qualification": "Scope and qualifications must be checked by operator; source flag is unverified",
+    "source_rows": "45",
+    "legacy_flags": "no",
+    "example": "shed repair",
+    "category": "Exterior",
+    "questions": [
+      {
+        "id": "q1",
+        "label": "What's the issue - door, roof, walls?"
+      },
+      {
+        "id": "q2",
+        "label": "Approximate size of shed?"
+      },
+      {
+        "id": "extent",
+        "label": "How many items or areas are affected, and what is their approximate size?"
+      }
+    ]
+  },
+  {
+    "id": "playground",
+    "title": "Playground/Swing Set",
+    "pattern": "\\b(?:play\\ structure|playground|swing\\ set)\\b",
+    "exclude": "",
+    "priority": 70,
+    "availability": "Review first",
+    "qualification": "Scope and qualifications must be checked by operator; source flag is unverified",
+    "source_rows": "46",
+    "legacy_flags": "no",
+    "example": "playground",
+    "category": "Assembly",
+    "questions": [
+      {
+        "id": "q1",
+        "label": "New assembly or repair of an existing structure?"
+      },
+      {
+        "id": "extent",
+        "label": "How many items or areas are affected, and what is their approximate size?"
+      },
+      {
+        "id": "details",
+        "label": "What materials, model, or product details can you share? A photo is also helpful."
+      }
+    ]
+  },
+  {
+    "id": "cabinet-lighting",
+    "title": "Under-Cabinet Lighting",
+    "pattern": "\\b(?:under\\ cabinet\\ lighting|cabinet\\ lights)\\b",
+    "exclude": "",
+    "priority": 70,
+    "availability": "Review first",
+    "qualification": "Scope and qualifications must be checked by operator; source flag is unverified",
+    "source_rows": "48",
+    "legacy_flags": "maybe",
+    "example": "under cabinet lighting",
+    "category": "Electrical",
+    "questions": [
+      {
+        "id": "q1",
+        "label": "Is this a plug-in/battery strip or a hardwired install?"
+      },
+      {
+        "id": "extent",
+        "label": "How many items or areas are affected, and what is their approximate size?"
+      },
+      {
+        "id": "details",
+        "label": "What materials, model, or product details can you share? A photo is also helpful."
+      }
+    ]
+  },
+  {
+    "id": "pet-door",
+    "title": "Pet Door Installation",
+    "pattern": "\\b(?:pet\\ door|dog\\ door|cat\\ door)\\b",
+    "exclude": "",
+    "priority": 70,
+    "availability": "Review first",
+    "qualification": "Scope and qualifications must be checked by operator; source flag is unverified",
+    "source_rows": "49",
+    "legacy_flags": "no",
+    "example": "pet door",
+    "category": "Handyman",
+    "questions": [
+      {
+        "id": "q1",
+        "label": "Installing in a door or a wall?"
+      },
+      {
+        "id": "extent",
+        "label": "How many items or areas are affected, and what is their approximate size?"
+      },
+      {
+        "id": "details",
+        "label": "What materials, model, or product details can you share? A photo is also helpful."
+      }
+    ]
+  },
+  {
+    "id": "weatherstrip",
+    "title": "Weatherstripping/Draft Sealing",
+    "pattern": "\\b(?:weatherstripping|door sweep|draft sealing|draught sealing)\\b",
+    "exclude": "",
+    "priority": 70,
+    "availability": "Offered",
+    "qualification": "Scope and qualifications must be checked by operator; source flag is unverified",
+    "source_rows": "50",
+    "legacy_flags": "no",
+    "example": "weatherstripping",
+    "category": "Handyman",
+    "questions": [
+      {
+        "id": "q1",
+        "label": "Doors, windows, or both?"
+      },
+      {
+        "id": "q2",
+        "label": "How many?"
+      },
+      {
+        "id": "extent",
+        "label": "How many items or areas are affected, and what is their approximate size?"
+      }
+    ]
+  },
+  {
+    "id": "basketball",
+    "title": "Basketball Hoop",
+    "pattern": "\\b(?:basketball\\ hoop|install\\ hoop)\\b",
+    "exclude": "",
+    "priority": 70,
+    "availability": "Review first",
+    "qualification": "Scope and qualifications must be checked by operator; source flag is unverified",
+    "source_rows": "51",
+    "legacy_flags": "no",
+    "example": "basketball hoop",
+    "category": "Assembly",
+    "questions": [
+      {
+        "id": "q1",
+        "label": "In-ground, wall-mounted, or portable?"
+      },
+      {
+        "id": "extent",
+        "label": "How many items or areas are affected, and what is their approximate size?"
+      },
+      {
+        "id": "details",
+        "label": "What materials, model, or product details can you share? A photo is also helpful."
+      }
+    ]
+  },
+  {
+    "id": "detector",
+    "title": "Smoke/CO Detector",
+    "pattern": "\\b(?:carbon\\ monoxide\\ detector|smoke\\ detector|co\\ detector)\\b",
+    "exclude": "",
+    "priority": 70,
+    "availability": "Review first",
+    "qualification": "Scope and qualifications must be checked by operator; source flag is unverified",
+    "source_rows": "52",
+    "legacy_flags": "maybe",
+    "example": "smoke detector",
+    "category": "Handyman",
+    "questions": [
+      {
+        "id": "q1",
+        "label": "Battery replacement or full unit install/replacement?"
+      },
+      {
+        "id": "q2",
+        "label": "Hardwired or battery-only unit?"
+      },
+      {
+        "id": "extent",
+        "label": "How many items or areas are affected, and what is their approximate size?"
+      }
+    ]
+  },
+  {
+    "id": "pergola",
+    "title": "Pergola/Arbor",
+    "pattern": "\\b(?:build\\ pergola|pergola|arbor)\\b",
+    "exclude": "",
+    "priority": 70,
+    "availability": "Review first",
+    "qualification": "Scope and qualifications must be checked by operator; source flag is unverified",
+    "source_rows": "53",
+    "legacy_flags": "no",
+    "example": "pergola",
+    "category": "Exterior",
+    "questions": [
+      {
+        "id": "q1",
+        "label": "Kit assembly or custom build?"
+      },
+      {
+        "id": "q2",
+        "label": "Approximate size?"
+      },
+      {
+        "id": "extent",
+        "label": "How many items or areas are affected, and what is their approximate size?"
+      }
+    ]
+  },
+  {
+    "id": "appliance",
+    "title": "Installation/Hookup",
+    "pattern": "\\b(?:washer\\ dryer\\ install|dishwasher\\ install|appliance\\ install|appliance\\ hookup)\\b",
+    "exclude": "",
+    "priority": 70,
+    "availability": "Review first",
+    "qualification": "Scope and qualifications must be checked by operator; source flag is unverified",
+    "source_rows": "54",
+    "legacy_flags": "maybe",
+    "example": "dishwasher install",
+    "category": "Appliances",
+    "questions": [
+      {
+        "id": "q1",
+        "label": "Which appliance?"
+      },
+      {
+        "id": "q2",
+        "label": "Are existing water/power connections already in place?"
+      },
+      {
+        "id": "extent",
+        "label": "How many items or areas are affected, and what is their approximate size?"
+      }
+    ]
+  },
+  {
+    "id": "countertop",
+    "title": "Countertop",
+    "pattern": "\\b(?:countertop\\ replacement|chip\\ in\\ countertop|countertop\\ repair|countertop)\\b",
+    "exclude": "",
+    "priority": 70,
+    "availability": "Review first",
+    "qualification": "Scope and qualifications must be checked by operator; source flag is unverified",
+    "source_rows": "55",
+    "legacy_flags": "maybe",
+    "example": "countertop",
+    "category": "Carpentry",
+    "questions": [
+      {
+        "id": "q1",
+        "label": "Repair, resealing, or full replacement?"
+      },
+      {
+        "id": "q2",
+        "label": "What material (laminate, granite, quartz, butcher block)?"
+      },
+      {
+        "id": "extent",
+        "label": "How many items or areas are affected, and what is their approximate size?"
+      }
+    ]
+  },
+  {
+    "id": "backsplash",
+    "title": "Backsplash",
+    "pattern": "\\b(?:install\\ backsplash|tile\\ backsplash|backsplash)\\b",
+    "exclude": "",
+    "priority": 70,
+    "availability": "Offered",
+    "qualification": "Scope and qualifications must be checked by operator; source flag is unverified",
+    "source_rows": "56",
+    "legacy_flags": "no",
+    "example": "backsplash",
+    "category": "Installation",
+    "questions": [
+      {
+        "id": "q1",
+        "label": "Peel-and-stick or tiled backsplash?"
+      },
+      {
+        "id": "q2",
+        "label": "Approximate area (linear feet)?"
+      },
+      {
+        "id": "extent",
+        "label": "How many items or areas are affected, and what is their approximate size?"
+      }
+    ]
+  },
+  {
+    "id": "dryer-vent",
+    "title": "Dryer Vent Cleaning",
+    "pattern": "\\b(?:dryer\\ vent|lint\\ trap)\\b",
+    "exclude": "\\b(?:cover|cap|flapper)\\b",
+    "priority": 70,
+    "availability": "Offered",
+    "qualification": "Scope and qualifications must be checked by operator; source flag is unverified",
+    "source_rows": "57",
+    "legacy_flags": "no",
+    "example": "dryer vent",
+    "category": "Handyman",
+    "questions": [
+      {
+        "id": "q1",
+        "label": "When was it last cleaned?"
+      },
+      {
+        "id": "q2",
+        "label": "Any noticeable drying issues (clothes taking longer)?"
+      },
+      {
+        "id": "extent",
+        "label": "How many items or areas are affected, and what is their approximate size?"
+      }
+    ]
+  },
+  {
+    "id": "roof",
+    "title": "Roof Repair",
+    "pattern": "\\b(?:roof\\ repair|roof\\ leak|shingle|roof)\\b",
+    "exclude": "",
+    "priority": 70,
+    "availability": "Referral only",
+    "qualification": "Scope and qualifications must be checked by operator; source flag is unverified",
+    "source_rows": "58",
+    "legacy_flags": "yes",
+    "example": "roof",
+    "category": "Exterior",
+    "questions": [
+      {
+        "id": "location",
+        "label": "What have you noticed?",
+        "options": [
+          "Water entering the home",
+          "Missing or damaged shingles",
+          "Other visible damage",
+          "Not sure"
+        ]
+      },
+      {
+        "id": "symptom",
+        "label": "Where is it visible, and is water entering now?"
+      },
+      {
+        "id": "active",
+        "label": "How many storeys is the home? Photos from an accessible location are optional."
+      }
+    ]
+  },
+  {
+    "id": "soffit",
+    "title": "Soffit/Fascia",
+    "pattern": "\\b(?:soffit\\ repair|soffit|fascia)\\b",
+    "exclude": "",
+    "priority": 70,
+    "availability": "Review first",
+    "qualification": "Scope and qualifications must be checked by operator; source flag is unverified",
+    "source_rows": "59",
+    "legacy_flags": "maybe",
+    "example": "soffit",
+    "category": "Exterior",
+    "questions": [
+      {
+        "id": "q1",
+        "label": "What's the issue - damage, gaps, or full replacement?"
+      },
+      {
+        "id": "q2",
+        "label": "Approximate length affected?"
+      },
+      {
+        "id": "extent",
+        "label": "How many items or areas are affected, and what is their approximate size?"
+      }
+    ]
+  },
+  {
+    "id": "driveway",
+    "title": "Driveway",
+    "pattern": "\\b(?:driveway\\ sealing|driveway\\ crack|seal\\ driveway)\\b",
+    "exclude": "",
+    "priority": 70,
+    "availability": "Offered",
+    "qualification": "Scope and qualifications must be checked by operator; source flag is unverified",
+    "source_rows": "60",
+    "legacy_flags": "no",
+    "example": "driveway crack",
+    "category": "Exterior",
+    "questions": [
+      {
+        "id": "q1",
+        "label": "Crack sealing or full sealcoating?"
+      },
+      {
+        "id": "q2",
+        "label": "Approximate driveway size?"
+      },
+      {
+        "id": "extent",
+        "label": "How many items or areas are affected, and what is their approximate size?"
+      }
+    ]
+  },
+  {
+    "id": "pavers",
+    "title": "Walkway/Patio",
+    "pattern": "\\b(?:walkway\\ repair|patio\\ stone|loose\\ paver|paver)\\b",
+    "exclude": "",
+    "priority": 70,
+    "availability": "Offered",
+    "qualification": "Scope and qualifications must be checked by operator; source flag is unverified",
+    "source_rows": "61",
+    "legacy_flags": "no",
+    "example": "paver",
+    "category": "Exterior",
+    "questions": [
+      {
+        "id": "q1",
+        "label": "How many pavers/stones are affected?"
+      },
+      {
+        "id": "q2",
+        "label": "Sinking, loose, or cracked?"
+      },
+      {
+        "id": "extent",
+        "label": "How many items or areas are affected, and what is their approximate size?"
+      }
+    ]
+  },
+  {
+    "id": "retaining-wall",
+    "title": "Retaining Wall",
+    "pattern": "\\b(?:retaining\\ wall|garden\\ wall)\\b",
+    "exclude": "",
+    "priority": 70,
+    "availability": "Referral only",
+    "qualification": "Scope and qualifications must be checked by operator; source flag is unverified",
+    "source_rows": "62",
+    "legacy_flags": "maybe",
+    "example": "retaining wall",
+    "category": "Exterior",
+    "questions": [
+      {
+        "id": "location",
+        "label": "What is wrong with the wall?",
+        "options": [
+          "Leaning",
+          "Cracked",
+          "Loose blocks",
+          "Collapsed section",
+          "Not sure"
+        ]
+      },
+      {
+        "id": "symptom",
+        "label": "What are its approximate height, length, and material?"
+      },
+      {
+        "id": "active",
+        "label": "Is nearby ground, a path, or another structure affected?",
+        "options": [
+          "Yes",
+          "No",
+          "Not sure"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "irrigation",
+    "title": "Irrigation/Sprinkler",
+    "pattern": "\\b(?:irrigation\\ system|sprinkler)\\b",
+    "exclude": "",
+    "priority": 70,
+    "availability": "Referral only",
+    "qualification": "Scope and qualifications must be checked by operator; source flag is unverified",
+    "source_rows": "63",
+    "legacy_flags": "yes",
+    "example": "sprinkler",
+    "category": "Exterior",
+    "questions": [
+      {
+        "id": "location",
+        "label": "What is the irrigation problem?",
+        "options": [
+          "Leak",
+          "Broken sprinkler head",
+          "Zone not working",
+          "Controller problem",
+          "Not sure"
+        ]
+      },
+      {
+        "id": "symptom",
+        "label": "How many heads or zones are affected?"
+      },
+      {
+        "id": "active",
+        "label": "Is water currently flowing or pooling where it should not?",
+        "options": [
+          "Yes",
+          "No",
+          "Not sure"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "awning",
+    "title": "Awning",
+    "pattern": "\\b(?:install\\ awning|awning\\ repair|awning)\\b",
+    "exclude": "",
+    "priority": 70,
+    "availability": "Review first",
+    "qualification": "Scope and qualifications must be checked by operator; source flag is unverified",
+    "source_rows": "64",
+    "legacy_flags": "no",
+    "example": "awning",
+    "category": "Exterior",
+    "questions": [
+      {
+        "id": "q1",
+        "label": "Retractable or fixed awning?"
+      },
+      {
+        "id": "q2",
+        "label": "Approximate size?"
+      },
+      {
+        "id": "extent",
+        "label": "How many items or areas are affected, and what is their approximate size?"
+      }
+    ]
+  },
+  {
+    "id": "closet-door",
+    "title": "Closet Door",
+    "pattern": "\\b(?:sliding\\ door|closet\\ door|bifold\\ door|mirror\\ door)\\b",
+    "exclude": "",
+    "priority": 70,
+    "availability": "Offered",
+    "qualification": "Scope and qualifications must be checked by operator; source flag is unverified",
+    "source_rows": "65",
+    "legacy_flags": "no",
+    "example": "closet door",
+    "category": "Handyman",
+    "questions": [
+      {
+        "id": "q1",
+        "label": "What's the issue - off track, won't close, damaged panel?"
+      },
+      {
+        "id": "extent",
+        "label": "How many items or areas are affected, and what is their approximate size?"
+      },
+      {
+        "id": "details",
+        "label": "What materials, model, or product details can you share? A photo is also helpful."
+      }
+    ]
+  },
+  {
+    "id": "panelling",
+    "title": "Molding/Paneling",
+    "pattern": "\\b(?:crown\\ molding|wall\\ paneling|wainscoting|accent\\ wall)\\b",
+    "exclude": "\\bpaint(?:ing)?\\b",
+    "priority": 70,
+    "availability": "Offered",
+    "qualification": "Scope and qualifications must be checked by operator; source flag is unverified",
+    "source_rows": "66",
+    "legacy_flags": "no",
+    "example": "crown molding",
+    "category": "Carpentry",
+    "questions": [
+      {
+        "id": "q1",
+        "label": "What type of installation?"
+      },
+      {
+        "id": "q2",
+        "label": "Approximate linear feet or wall area?"
+      },
+      {
+        "id": "extent",
+        "label": "How many items or areas are affected, and what is their approximate size?"
+      }
+    ]
+  },
+  {
+    "id": "staining",
+    "title": "Staining/Sealing",
+    "pattern": "\\b(?:fence\\ staining|fence\\ painting|deck\\ staining|deck\\ sealing)\\b",
+    "exclude": "",
+    "priority": 70,
+    "availability": "Offered",
+    "qualification": "Scope and qualifications must be checked by operator; source flag is unverified",
+    "source_rows": "67",
+    "legacy_flags": "no",
+    "example": "deck staining",
+    "category": "Exterior",
+    "questions": [
+      {
+        "id": "q1",
+        "label": "Deck or fence?"
+      },
+      {
+        "id": "q2",
+        "label": "Approximate square footage?"
+      },
+      {
+        "id": "extent",
+        "label": "How many items or areas are affected, and what is their approximate size?"
+      }
+    ]
+  },
+  {
+    "id": "garage-storage",
+    "title": "Garage Organization",
+    "pattern": "\\b(?:garage\\ organization|overhead\\ storage|garage\\ shelving|pegboard)\\b",
+    "exclude": "",
+    "priority": 70,
+    "availability": "Review first",
+    "qualification": "Scope and qualifications must be checked by operator; source flag is unverified",
+    "source_rows": "68",
+    "legacy_flags": "no",
+    "example": "garage shelving",
+    "category": "Installation",
+    "questions": [
+      {
+        "id": "q1",
+        "label": "What type of storage - shelving, pegboard, overhead racks?"
+      },
+      {
+        "id": "q2",
+        "label": "Approximate garage size?"
+      },
+      {
+        "id": "extent",
+        "label": "How many items or areas are affected, and what is their approximate size?"
+      }
+    ]
+  },
+  {
+    "id": "nursery",
+    "title": "Nursery/Baby Furniture",
+    "pattern": "\\b(?:baby\\ furniture\\ assembly|nursery\\ furniture|crib)\\b",
+    "exclude": "",
+    "priority": 70,
+    "availability": "Review first",
+    "qualification": "Scope and qualifications must be checked by operator; source flag is unverified",
+    "source_rows": "69",
+    "legacy_flags": "no",
+    "example": "crib",
+    "category": "Assembly",
+    "questions": [
+      {
+        "id": "q1",
+        "label": "What item needs assembling?"
+      },
+      {
+        "id": "q2",
+        "label": "Do you have all parts and instructions?"
+      },
+      {
+        "id": "extent",
+        "label": "How many items or areas are affected, and what is their approximate size?"
+      }
+    ]
+  },
+  {
+    "id": "office",
+    "title": "Home Office Setup",
+    "pattern": "\\b(?:home\\ office\\ setup|cable\\ management|desk\\ assembly)\\b",
+    "exclude": "",
+    "priority": 70,
+    "availability": "Offered",
+    "qualification": "Scope and qualifications must be checked by operator; source flag is unverified",
+    "source_rows": "70",
+    "legacy_flags": "no",
+    "example": "desk assembly",
+    "category": "Assembly",
+    "questions": [
+      {
+        "id": "q1",
+        "label": "What needs assembling or organizing?"
+      },
+      {
+        "id": "extent",
+        "label": "How many items or areas are affected, and what is their approximate size?"
+      },
+      {
+        "id": "details",
+        "label": "What materials, model, or product details can you share? A photo is also helpful."
+      }
+    ]
+  },
+  {
+    "id": "gym",
+    "title": "Exercise Equipment",
+    "pattern": "\\b(?:exercise\\ equipment|treadmill\\ assembly|gym\\ equipment|weight\\ bench)\\b",
+    "exclude": "",
+    "priority": 70,
+    "availability": "Offered",
+    "qualification": "Scope and qualifications must be checked by operator; source flag is unverified",
+    "source_rows": "71",
+    "legacy_flags": "no",
+    "example": "exercise equipment",
+    "category": "Assembly",
+    "questions": [
+      {
+        "id": "q1",
+        "label": "What item?"
+      },
+      {
+        "id": "q2",
+        "label": "Approximate weight/size?"
+      },
+      {
+        "id": "extent",
+        "label": "How many items or areas are affected, and what is their approximate size?"
+      }
+    ]
+  },
+  {
+    "id": "water-heater",
+    "title": "Water Heater",
+    "pattern": "\\b(?:hot\\ water\\ tank|water\\ heater)\\b",
+    "exclude": "",
+    "priority": 70,
+    "availability": "Referral only",
+    "qualification": "Scope and qualifications must be checked by operator; source flag is unverified",
+    "source_rows": "72",
+    "legacy_flags": "yes",
+    "example": "water heater",
+    "category": "Plumbing",
+    "questions": [
+      {
+        "id": "location",
+        "label": "What problem have you noticed?",
+        "options": [
+          "No hot water",
+          "Not enough hot water",
+          "Visible leak",
+          "Unusual noise",
+          "Not sure"
+        ]
+      },
+      {
+        "id": "symptom",
+        "label": "Is it a tank or tankless unit, and what fuel or power source does it use if known?"
+      },
+      {
+        "id": "active",
+        "label": "Where is the unit, and is water spreading around it?"
+      }
+    ]
+  },
+  {
+    "id": "sump",
+    "title": "Sump Pump",
+    "pattern": "\\b(?:basement\\ flooding|water\\ in\\ basement|sump\\ pump)\\b",
+    "exclude": "",
+    "priority": 70,
+    "availability": "Referral only",
+    "qualification": "Scope and qualifications must be checked by operator; source flag is unverified",
+    "source_rows": "73",
+    "legacy_flags": "yes",
+    "example": "sump pump",
+    "category": "Plumbing",
+    "questions": [
+      {
+        "id": "location",
+        "label": "What is happening in the basement?",
+        "options": [
+          "Water rising",
+          "Pump not running",
+          "Pump running continuously",
+          "Other",
+          "Not sure"
+        ]
+      },
+      {
+        "id": "symptom",
+        "label": "Where is the water, and is its level changing?"
+      },
+      {
+        "id": "active",
+        "label": "When did it start, and is it associated with recent rain?"
+      }
+    ]
+  },
+  {
+    "id": "hvac",
+    "title": "General",
+    "pattern": "\\b(?:air\\ conditioner|ac\\ not\\ working|furnace|hvac)\\b",
+    "exclude": "",
+    "priority": 70,
+    "availability": "Referral only",
+    "qualification": "Scope and qualifications must be checked by operator; source flag is unverified",
+    "source_rows": "74",
+    "legacy_flags": "yes",
+    "example": "furnace",
+    "category": "HVAC",
+    "questions": [
+      {
+        "id": "location",
+        "label": "Is this a heating or cooling problem?",
+        "options": [
+          "Heating",
+          "Cooling",
+          "Both",
+          "Not sure"
+        ]
+      },
+      {
+        "id": "symptom",
+        "label": "Which system is affected, and what symptoms have you noticed?"
+      },
+      {
+        "id": "active",
+        "label": "Does it affect the whole home or particular rooms?",
+        "options": [
+          "Whole home",
+          "Some rooms",
+          "Not sure"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "board",
+    "title": "Whiteboard/Corkboard",
+    "pattern": "\\b(?:mount\\ board|whiteboard|corkboard)\\b",
+    "exclude": "",
+    "priority": 70,
+    "availability": "Offered",
+    "qualification": "Scope and qualifications must be checked by operator; source flag is unverified",
+    "source_rows": "75",
+    "legacy_flags": "no",
+    "example": "whiteboard",
+    "category": "Installation",
+    "questions": [
+      {
+        "id": "q1",
+        "label": "How many boards?"
+      },
+      {
+        "id": "q2",
+        "label": "Approximate size?"
+      },
+      {
+        "id": "extent",
+        "label": "How many items or areas are affected, and what is their approximate size?"
+      }
+    ]
+  },
+  {
+    "id": "flagpole",
+    "title": "Flag Pole",
+    "pattern": "\\b(?:flagpole\\ install|flag\\ pole)\\b",
+    "exclude": "",
+    "priority": 70,
+    "availability": "Offered",
+    "qualification": "Scope and qualifications must be checked by operator; source flag is unverified",
+    "source_rows": "76",
+    "legacy_flags": "no",
+    "example": "flag pole",
+    "category": "Exterior",
+    "questions": [
+      {
+        "id": "q1",
+        "label": "Ground-mounted or wall-mounted?"
+      },
+      {
+        "id": "extent",
+        "label": "How many items or areas are affected, and what is their approximate size?"
+      },
+      {
+        "id": "details",
+        "label": "What materials, model, or product details can you share? A photo is also helpful."
+      }
+    ]
+  },
+  {
+    "id": "junk",
+    "title": "Junk Removal",
+    "pattern": "\\b(?:old\\ furniture\\ removal|junk\\ removal|haul\\ away)\\b",
+    "exclude": "",
+    "priority": 70,
+    "availability": "Referral only",
+    "qualification": "Scope and qualifications must be checked by operator; source flag is unverified",
+    "source_rows": "77",
+    "legacy_flags": "no",
+    "example": "junk removal",
+    "category": "Handyman",
+    "questions": [
+      {
+        "id": "q1",
+        "label": "What items need to be removed?"
+      },
+      {
+        "id": "q2",
+        "label": "Approximate volume (few items vs. truckload)?"
+      },
+      {
+        "id": "extent",
+        "label": "How many items or areas are affected, and what is their approximate size?"
+      }
+    ]
+  },
+  {
+    "id": "vent-cover",
+    "title": "Vent Cover Repair/Replacement",
+    "pattern": "\\b(?:bathroom\\ vent\\ cover|vent\\ cover\\ missing|vent\\ cover\\ broken|dryer\\ vent\\ cover|exterior\\ vent|vent\\ flapper|vent\\ cover|vent\\ cap)\\b",
+    "exclude": "",
+    "priority": 70,
+    "availability": "Offered",
+    "qualification": "Scope and qualifications must be checked by operator; source flag is unverified",
+    "source_rows": "78",
+    "legacy_flags": "no",
+    "example": "vent cover",
+    "category": "Exterior",
+    "questions": [
+      {
+        "id": "q1",
+        "label": "Which vent is affected?",
+        "options": [
+          "Dryer",
+          "Bathroom exhaust",
+          "Kitchen exhaust",
+          "Other",
+          "Not sure"
+        ]
+      },
+      {
+        "id": "q2",
+        "label": "What is wrong with the cover?",
+        "options": [
+          "Damaged",
+          "Missing",
+          "Flapper stuck",
+          "Not sure"
+        ]
+      },
+      {
+        "id": "extent",
+        "label": "How many covers, and how high are they above the ground?"
+      }
+    ]
+  }
+]
