@@ -1,3 +1,12 @@
+import {
+  getIssue,
+  matchIssues,
+  answerKey,
+  inferredAnswers,
+  questionAnswers,
+  needsClarificationReview,
+  reportedConcern,
+} from "./clarification";
 import React, { useState } from "react";
 import { createRoot } from "react-dom/client";
 import {
@@ -69,6 +78,141 @@ import {
   respondToOffer,
 } from "./dispatch";
 const KEY = "fieldwork-demo-v1";
+function TaskAnswers({ task }: { task: Task }) {
+  const rows = questionAnswers(task);
+  return (
+    <>
+      {reportedConcern(task) && (
+        <p className="warning">
+          Reported condition needs operator attention. Review the customer’s
+          answers before scheduling.
+        </p>
+      )}
+      {rows.length > 0 && (
+        <dl className="task-answers">
+          {rows.map((row) => (
+            <div key={row.key}>
+              <dt>
+                {row.label}
+                {row.inferred ? " · From your description" : ""}
+              </dt>
+              <dd>{row.value}</dd>
+            </div>
+          ))}
+        </dl>
+      )}
+    </>
+  );
+}
+function ClarificationFields({
+  task,
+  onChange,
+}: {
+  task: Task;
+  onChange: (patch: Partial<Task>) => void;
+}) {
+  const issue = getIssue(task.description);
+  const inferred = inferredAnswers(task.description);
+  const setAnswer = (key: string, value: string) => {
+    const answers = { ...task.answers, [key]: value };
+    onChange({
+      issueId: issue.id,
+      answers,
+      ...(issue.id === "tv" && answers["tv:cables"] === "New electrical outlet"
+        ? { restricted: true }
+        : {}),
+      ...(needsClarificationReview({ ...task, answers })
+        ? { reviewed: false }
+        : {}),
+    });
+  };
+  const multiple = matchIssues(task.description).filter(
+    (i) =>
+      i.id !== issue.id &&
+      !(
+        ["outlet", "wiring"].includes(i.id) &&
+        ["outlet", "wiring", "tv"].includes(issue.id)
+      ),
+  );
+  return (
+    <>
+      {(task.restricted || issue.review) && (
+        <p className="warning">
+          Yousef will review the scope and arrange the right provider before an
+          appointment is confirmed.
+        </p>
+      )}
+      {multiple.length > 0 && (
+        <p className="note">
+          This may describe more than one problem: {issue.title} and{" "}
+          {multiple.map((i) => i.title).join(", ")}. If these are separate jobs,
+          use Back and add each as its own task.
+        </p>
+      )}
+      {issue.questions.map((q) => {
+        const key = answerKey(issue, q);
+        const field = (
+          <label className="field" key={key}>
+            {q.label}
+            {key in inferred && !(key in task.answers) && (
+              <small>From your description — please check this answer.</small>
+            )}
+            {q.options ? (
+              <select
+                value={task.answers[key] ?? inferred[key] ?? ""}
+                onChange={(e) => setAnswer(key, e.target.value)}
+              >
+                <option value="">Choose an answer…</option>
+                {q.options.map((o) => (
+                  <option key={o}>{o}</option>
+                ))}
+              </select>
+            ) : (
+              <input
+                value={task.answers[key] || ""}
+                placeholder="Add details, or enter Not sure"
+                onChange={(e) => setAnswer(key, e.target.value)}
+              />
+            )}
+          </label>
+        );
+        return key in inferred && !(key in task.answers) ? (
+          <details className="inferred-answer" key={key}>
+            <summary>{inferred[key]} · From your description · Edit</summary>
+            {field}
+          </details>
+        ) : (
+          field
+        );
+      })}
+      {["sink-drain", "bath-drain", "toilet-block"].includes(issue.id) &&
+        /cleaner|chemical|drano|liquid.plumr/i.test(
+          task.answers[issue.id + ":tried"] || "",
+        ) && (
+          <label className="field">
+            Which product was used, and when?
+            <input
+              value={task.answers[issue.id + ":product"] || ""}
+              onChange={(e) => setAnswer(issue.id + ":product", e.target.value)}
+            />
+          </label>
+        )}
+      <label className="field">
+        Anything else we should know? (optional)
+        <textarea
+          value={task.answers["intake:details"] || ""}
+          onChange={(e) => setAnswer("intake:details", e.target.value)}
+        />
+      </label>
+      {reportedConcern(task) && (
+        <p className="warning">
+          We’ll flag this condition for operator attention. This prototype does
+          not dispatch emergency assistance.
+        </p>
+      )}
+    </>
+  );
+}
 function App() {
   const [theme, setTheme] = useState<"light" | "dark">(() => {
     try {
@@ -1286,6 +1430,7 @@ function App() {
                           <span className="badge">{t.duration} min</span>
                         </div>
                         <p>“{t.description}”</p>
+                        <TaskAnswers task={t} />
                         <div className="reason">
                           <ShieldCheck size={15} />
                           <span>
@@ -2015,59 +2160,11 @@ function App() {
                       tasks.map((t) => (
                         <div className="intake-task" key={t.id}>
                           <h3>{t.description}</h3>
-                          {t.restricted ? (
-                            <div className="warning">
-                              This may need a qualified specialist. Yousef will
-                              review it before any appointment is confirmed.
-                            </div>
-                          ) : (
-                            (t.category.includes("Doors")
-                              ? [
-                                  "Is it sticking, damaged, or not latching?",
-                                  "Does it happen all the time or sometimes?",
-                                ]
-                              : t.category.includes("Walls")
-                                ? [
-                                    "How large is the damaged area?",
-                                    "Is the wall currently painted?",
-                                  ]
-                                : t.category.includes("Shelving")
-                                  ? [
-                                      "How many shelves and what will they hold?",
-                                      "What is the wall made of?",
-                                    ]
-                                  : t.category.includes("Furniture")
-                                    ? [
-                                        "What items need assembling?",
-                                        "Are all parts and instructions available?",
-                                      ]
-                                    : t.category === "Needs Review"
-                                      ? [
-                                          "What would you like to repair or change?",
-                                          "Where is it and what is happening?",
-                                        ]
-                                      : [
-                                          "What is the size or extent of the issue?",
-                                          "Is there anything we should bring or know?",
-                                        ]
-                            ).map((q) => (
-                              <label className="field" key={q}>
-                                {q}
-                                <input
-                                  value={t.answers[q] || ""}
-                                  placeholder="Tell us a little more…"
-                                  onChange={(e) =>
-                                    patchTask(t.id, {
-                                      answers: {
-                                        ...t.answers,
-                                        [q]: e.target.value,
-                                      },
-                                    })
-                                  }
-                                />
-                              </label>
-                            ))
-                          )}
+                          <ClarificationFields
+                            task={t}
+                            onChange={(patch) => patchTask(t.id, patch)}
+                          />
+                          {taskPhotos(t)}
                         </div>
                       ))}
                     {step === 2 &&
@@ -2086,6 +2183,7 @@ function App() {
                               }
                             />
                             <p>{t.description}</p>
+                            <TaskAnswers task={t} />
                             {!t.reviewed && (
                               <small>
                                 Yousef will review this task before booking.
@@ -2487,6 +2585,7 @@ function App() {
                           {t.summary}
                         </h4>
                         <p>{t.description}</p>
+                        <TaskAnswers task={t} />
                         {taskPhotos(t)}
                       </div>
                     ))}
@@ -2588,6 +2687,7 @@ function App() {
                           <div className="portal-task" key={t.id}>
                             <h4>{t.summary}</h4>
                             <p>{t.description}</p>
+                            <TaskAnswers task={t} />
                             {t.photos.map((p, i) => (
                               <img
                                 className="offer-photo"

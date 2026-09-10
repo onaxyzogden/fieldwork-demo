@@ -512,3 +512,34 @@ footer,
     grid-template-columns: minmax(0, 1fr);
   }
 }
+.task-answers {
+  margin: 1rem 0;
+  display: grid;
+  gap: 0.75rem;
+  overflow-wrap: anywhere;
+}
+.task-answers div {
+  min-width: 0;
+}
+.task-answers dt {
+  font-size: var(--text-label);
+  color: var(--muted);
+  line-height: 1.5;
+}
+.task-answers dd {
+  margin: 0.25rem 0 0;
+  font-size: var(--text-body);
+  line-height: 1.6;
+  white-space: pre-wrap;
+}
+.inferred-answer {
+  margin: 1rem 0;
+  border: 1px solid var(--line);
+  border-radius: 0.5rem;
+  padding: 0.75rem;
+}
+.inferred-answer summary {
+  min-height: 2.75rem;
+  cursor: pointer;
+  overflow-wrap: anywhere;
+}

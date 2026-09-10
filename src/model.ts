@@ -1,4 +1,6 @@
+import { getIssue, needsClarificationReview } from "./clarification";
 export type Task = {
+  issueId?: string;
   id: string;
   requestId: string;
   description: string;
@@ -145,7 +147,7 @@ export const dateLabel = (s: string) =>
 export function classify(description: string) {
   const t = description.toLowerCase().replace(/[’]/g, "'");
   const restricted =
-    /\b(electrical|wiring|breaker|circuit|outlet|rough.in|load.bearing|structural)\b/.test(
+    /\b(electrical|wiring|breaker|circuit|outlet|light fixture|ceiling fan|rough.in|load.bearing|structural)\b/.test(
       t,
     ) ||
     (/\bswitch\b/.test(t) && !t.includes("switch out furniture"));
@@ -215,6 +217,20 @@ export function classify(description: string) {
       confidence: 1,
       reason: "SAFE-01 · restricted phrase overrides ordinary matches",
       restricted: true,
+      reviewed: false,
+    };
+  const intakeIssue = getIssue(description);
+  if (intakeIssue.id !== "unknown" && intakeIssue.review)
+    return {
+      issueId: intakeIssue.id,
+      summary: intakeIssue.title,
+      category: /sink|toilet|faucet|bath|fixture/.test(intakeIssue.id)
+        ? "Plumbing / Investigation"
+        : "Specialist / Review",
+      duration: 90,
+      confidence: 0.9,
+      reason: `INTAKE · ${intakeIssue.title} · operator scope review required`,
+      restricted: false,
       reviewed: false,
     };
   const candidates = rules
@@ -562,6 +578,12 @@ export function instantEligible(tasks: Task[]) {
     tasks.length === 1 &&
     tasks[0].category.includes("Doors") &&
     tasks[0].reviewed &&
+    !needsClarificationReview(tasks[0]) &&
+    (!tasks[0].answers["door-adjust:count"] ||
+      /^(1|one)( door)?$/i.test(
+        tasks[0].answers["door-adjust:count"].trim(),
+      )) &&
+    tasks[0].answers["door-adjust:location"] !== "Exterior" &&
     !tasks[0].restricted &&
     !/damaged|broken|replace|rott|crack|fire.rated/i.test(
       tasks[0].description + " " + Object.values(tasks[0].answers).join(" "),
