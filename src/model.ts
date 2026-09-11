@@ -1,5 +1,6 @@
 import { getIssue, needsClarificationReview } from "./clarification";
 export type Task = {
+  entryStage?: "description" | "details" | "done";
   issueId?: string;
   id: string;
   requestId: string;
@@ -17,6 +18,14 @@ export type Task = {
   status?: string;
 };
 export type Request = {
+  intakeScreen?: "tasks" | "booking";
+  editingTaskId?: string | null;
+  preferredSlot?: {
+    start: string;
+    providerId: string;
+    duration: number;
+    signature: string;
+  };
   id: string;
   customerId: string;
   name: string;
@@ -535,6 +544,7 @@ export function slots(
   city: string,
   exclude?: string,
   timing = "",
+  limit = 3,
 ) {
   if (!providerId) return [];
   const out: { start: string; travel: number; score: number }[] = [];
@@ -563,7 +573,7 @@ export function slots(
         });
     }
   }
-  return out.sort((a, b) => b.score - a.score).slice(0, 3);
+  return out.sort((a, b) => b.score - a.score).slice(0, limit);
 }
 export function eligible(providerId: string, tasks: Task[]) {
   const p = providers.find((p) => p.id === providerId);

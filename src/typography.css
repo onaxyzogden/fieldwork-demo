@@ -543,3 +543,171 @@ footer,
   cursor: pointer;
   overflow-wrap: anywhere;
 }
+.intake-main > .scenario-strip {
+  display: none;
+}
+.customer-intake {
+  max-width: 760px;
+  margin: 0 auto;
+}
+.intake-steps {
+  display: flex;
+  gap: 0.75rem;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  margin: 1rem 0;
+  color: var(--muted);
+  font-size: var(--text-label);
+}
+.intake-steps [aria-current] {
+  color: inherit;
+  font-weight: 700;
+}
+.customer-intake .customer-heading {
+  margin: 1.5rem 0;
+}
+.customer-intake .customer-heading h1 {
+  max-width: 22ch;
+}
+.compact-tasks {
+  display: grid;
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+}
+.compact-task {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+  border: 1px solid var(--line);
+  border-radius: 0.65rem;
+  padding: 0.5rem;
+  min-width: 0;
+}
+.task-open {
+  display: flex;
+  gap: 0.7rem;
+  align-items: center;
+  text-align: left;
+  flex: 1;
+  min-width: 0;
+  background: none;
+  border: 0;
+  color: inherit;
+  padding: 0.5rem;
+}
+.task-open strong,
+.task-open small {
+  display: block;
+  overflow-wrap: anywhere;
+}
+.task-open strong {
+  font-size: var(--text-body);
+}
+.task-open > span:last-child {
+  min-width: 0;
+}
+.active-task textarea {
+  min-height: 7rem;
+}
+.active-task .photos {
+  margin-bottom: 1rem;
+}
+.task-details {
+  margin-top: 1rem;
+  border-top: 1px solid var(--line);
+  padding-top: 1rem;
+}
+.intake-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+}
+.intake-bottom {
+  padding: 1rem 0 calc(1rem + env(safe-area-inset-bottom));
+}
+.intake-bottom p {
+  margin: 0.25rem 0 1rem;
+}
+.intake-times {
+  display: grid;
+  gap: 0.75rem;
+  margin: 1rem 0;
+}
+.intake-times .slot {
+  text-align: left;
+  white-space: normal;
+}
+.intake-times strong,
+.intake-times small {
+  display: block;
+  overflow-wrap: anywhere;
+}
+.address-pair {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 1rem;
+}
+.customer-intake summary {
+  min-height: 44px;
+  cursor: pointer;
+}
+.more-times-dialog {
+  background: var(--panel);
+  color: inherit;
+  border: 1px solid var(--line);
+  border-radius: 1rem;
+  padding: 1.25rem;
+  width: min(600px, calc(100% - 2rem));
+  max-height: 85dvh;
+  overflow-y: auto;
+  box-sizing: border-box;
+}
+.more-times-dialog::backdrop {
+  background: #0009;
+}
+.more-times-dialog h2 {
+  margin: 0;
+}
+.receipt-check {
+  font-size: 3rem;
+  color: var(--green);
+}
+.intake-receipt {
+  margin-top: 2rem;
+}
+@media (max-width: 480px) {
+  .address-pair {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 0;
+  }
+  .compact-task {
+    flex-wrap: wrap;
+  }
+  .compact-task > .text-button {
+    margin-left: auto;
+  }
+  .customer-intake .panel {
+    padding: 1rem;
+  }
+  .intake-actions > button {
+    flex: 1 1 100%;
+  }
+}
+.intake-steps {
+  flex-direction: row;
+}
+.customer-intake .customer-heading {
+  text-align: left;
+}
+.intake-main .account-row {
+  margin: 0.5rem 0;
+}
+.intake-main .account-row > .eyebrow {
+  display: none;
+}
+.intake-steps [aria-current] {
+  color: var(--amber);
+}
+:root[data-theme="light"] .intake-steps [aria-current] {
+  color: #80561f;
+}

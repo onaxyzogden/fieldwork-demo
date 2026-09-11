@@ -1,3 +1,5 @@
+import CustomerIntake from "./CustomerIntake";
+import { validAddress } from "./intake";
 import {
   getIssue,
   matchIssues,
@@ -994,7 +996,13 @@ function App() {
             </div>
           </div>
         </header>
-        <main>
+        <main
+          className={
+            role === "Customer" && page === "New request"
+              ? "intake-main"
+              : undefined
+          }
+        >
           <div className="scenario-strip">
             <span>EXPLORE A SCENARIO</span>
             {[
@@ -2069,426 +2077,22 @@ function App() {
                 </select>
               </div>
               {page === "New request" ? (
-                <>
-                  <div className="customer-heading">
-                    <div className="eyebrow">HOME, TAKEN CARE OF.</div>
-                    <h1>
-                      {
-                        [
-                          "What needs a little attention?",
-                          "A few details. A better visit.",
-                          "Did we get that right?",
-                          "Where can we help?",
-                          "Let’s find your time.",
-                          "You’re in good hands.",
-                        ][step]
-                      }
-                    </h1>
-                    <p>
-                      {
-                        [
-                          "Big to-do list or one small fix. Start with your own words.",
-                          "Only the questions that matter for your tasks.",
-                          "Check each task before we plan the work.",
-                          "One address for everything on your list.",
-                          "A clear next step, with no calendar guesswork.",
-                          "Review your request and follow its progress.",
-                        ][step]
-                      }
-                    </p>
-                  </div>
-                  <div className="stepper">
-                    {[
-                      "Describe",
-                      "Clarify",
-                      "Confirm",
-                      "Location",
-                      "Timing",
-                    ].map((x, i) => (
-                      <span key={x} className={step >= i ? "done" : ""}>
-                        <b>{step > i ? <Check size={12} /> : i + 1}</b>
-                        <small>{x}</small>
-                      </span>
-                    ))}
-                  </div>
-                  <section className="panel intake">
-                    {step === 0 && (
-                      <>
-                        {tasks.map((t, i) => (
-                          <div className="intake-task" key={t.id}>
-                            <div className="row between">
-                              <label htmlFor={t.id}>
-                                TASK {String(i + 1).padStart(2, "0")}
-                              </label>
-                              {tasks.length > 1 && (
-                                <button
-                                  className="icon-button"
-                                  aria-label="Remove task"
-                                  onClick={() =>
-                                    update((d) => {
-                                      d.tasks = d.tasks.filter(
-                                        (x) => x.id !== t.id,
-                                      );
-                                    })
-                                  }
-                                >
-                                  <X size={16} />
-                                </button>
-                              )}
-                            </div>
-                            <textarea
-                              id={t.id}
-                              placeholder="My bedroom door rubs against the frame and won’t close properly…"
-                              value={t.description}
-                              onChange={(e) =>
-                                patchTask(t.id, {
-                                  description: e.target.value,
-                                  ...classify(e.target.value),
-                                })
-                              }
-                            />
-                            {taskPhotos(t)}
-                          </div>
-                        ))}
-                        <button
-                          className="add-task"
-                          onClick={() =>
-                            update((d) =>
-                              d.tasks.push({
-                                id: uid(),
-                                requestId: r.id,
-                                description: "",
-                                ...classify(""),
-                                photos: [],
-                                answers: {},
-                              }),
-                            )
-                          }
-                        >
-                          <Plus size={18} /> Add another job or task
-                        </button>
-                        <p className="help">
-                          <ShieldCheck size={14} /> Describe each task
-                          separately. We’ll coordinate them together.
-                        </p>
-                      </>
-                    )}
-                    {step === 1 &&
-                      tasks.map((t) => (
-                        <div className="intake-task" key={t.id}>
-                          <h3>{t.description}</h3>
-                          <ClarificationFields
-                            task={t}
-                            onChange={(patch) => patchTask(t.id, patch)}
-                          />
-                          {taskPhotos(t)}
-                        </div>
-                      ))}
-                    {step === 2 &&
-                      tasks.map((t) => (
-                        <div className="confirm-task" key={t.id}>
-                          <div className="check-circle">
-                            <Check size={18} />
-                          </div>
-                          <div className="grow">
-                            <input
-                              aria-label="Interpreted task summary"
-                              className="summary-input"
-                              value={t.summary}
-                              onChange={(e) =>
-                                patchTask(t.id, { summary: e.target.value })
-                              }
-                            />
-                            <p>{t.description}</p>
-                            <TaskAnswers task={t} />
-                            {!t.reviewed && (
-                              <small>
-                                Yousef will review this task before booking.
-                              </small>
-                            )}
-                          </div>
-                          <button
-                            className="text-button"
-                            onClick={() => setStep(0)}
-                          >
-                            Edit
-                          </button>
-                        </div>
-                      ))}
-                    {step === 3 && (
-                      <>
-                        <label className="field">
-                          Street address
-                          <input
-                            value={r.address}
-                            placeholder="124 Maple Grove Drive"
-                            onChange={(e) =>
-                              update((d) => {
-                                d.requests.find((x) => x.id === r.id)!.address =
-                                  e.target.value;
-                              })
-                            }
-                          />
-                        </label>
-                        <div className="row">
-                          <label className="field grow">
-                            Municipality
-                            <select
-                              value={r.city}
-                              onChange={(e) =>
-                                update((d) => {
-                                  d.requests.find((x) => x.id === r.id)!.city =
-                                    e.target.value;
-                                })
-                              }
-                            >
-                              <option>Oakville</option>
-                              <option>Burlington</option>
-                              <option>Milton</option>
-                              <option>Mississauga</option>
-                            </select>
-                          </label>
-                          <label className="field">
-                            Province
-                            <input value="Ontario" readOnly />
-                          </label>
-                        </div>
-                        <div className="row">
-                          <label className="field grow">
-                            Postal code
-                            <input
-                              placeholder="L6J 4S7"
-                              value={r.postalCode || ""}
-                              onChange={(e) =>
-                                update((d) => {
-                                  d.requests.find(
-                                    (x) => x.id === r.id,
-                                  )!.postalCode = e.target.value;
-                                })
-                              }
-                            />
-                          </label>
-                          <label className="field grow">
-                            Unit (optional)
-                            <input
-                              placeholder="Unit / suite"
-                              value={r.unit || ""}
-                              onChange={(e) =>
-                                update((d) => {
-                                  d.requests.find((x) => x.id === r.id)!.unit =
-                                    e.target.value;
-                                })
-                              }
-                            />
-                          </label>
-                        </div>
-                        <label className="field">
-                          Unit, access & parking notes
-                          <textarea
-                            value={r.notes}
-                            placeholder="Side entrance, visitor parking…"
-                            onChange={(e) =>
-                              update((d) => {
-                                d.requests.find((x) => x.id === r.id)!.notes =
-                                  e.target.value;
-                              })
-                            }
-                          />
-                        </label>
-                        <p className="help">
-                          <MapPin size={15} /> Demo address lookup · Halton /
-                          GTA service area
-                        </p>
-                      </>
-                    )}
-                    {step === 4 && (
-                      <>
-                        {instantEligible(tasks) ? (
-                          <>
-                            <div className="row between">
-                              <h3>Best availability for your area</h3>
-                              {badge("Instant Book")}
-                            </div>
-                            <p>
-                              A predictable fix, a fixed price, and a visit with
-                              Yousef.
-                            </p>
-                            <div className="slot-grid vertical">
-                              {slots(
-                                s,
-                                "yousef",
-                                tasks[0].duration,
-                                r.city,
-                              ).map((o, i) => (
-                                <button
-                                  key={o.start}
-                                  className={
-                                    "slot " +
-                                    (slot === o.start ? "selected" : "")
-                                  }
-                                  onClick={() => setSlot(o.start)}
-                                >
-                                  <div className="row between">
-                                    <strong>{dateLabel(o.start)}</strong>
-                                    {i === 0 && (
-                                      <span className="badge green">
-                                        Best fit
-                                      </span>
-                                    )}
-                                  </div>
-                                  <small>
-                                    Yousef · {tasks[0].duration} min · nearby
-                                    route
-                                  </small>
-                                </button>
-                              ))}
-                            </div>
-                            <div className="price-total">
-                              <span>
-                                Door adjustment{" "}
-                                <small>Labour & standard materials · CAD</small>
-                              </span>
-                              <b>$129</b>
-                            </div>
-                            <button
-                              className="primary full"
-                              disabled={!slot}
-                              onClick={() => setModal("Instant payment")}
-                            >
-                              Book & pay $129 <ArrowRight size={17} />
-                            </button>
-                          </>
-                        ) : (
-                          <>
-                            <span className="badge">Request to Book</span>
-                            <h3>
-                              {hasReferral
-                                ? "Send this for referral review."
-                                : "Tell us what works for you."}
-                            </h3>
-                            <p>
-                              {hasReferral
-                                ? "This request includes a service we do not book through the platform. Yousef can review it and advise on next steps; submitting does not reserve an appointment or promise a referral."
-                                : "We’ll review the work, choose the right provider, and send a quote. These are preferences, not confirmed appointments."}
-                            </p>
-                            {!hasReferral && (
-                              <label className="field">
-                                Preferred days and time window
-                                <select
-                                  value={r.timing}
-                                  onChange={(e) =>
-                                    update((d) => {
-                                      d.requests.find(
-                                        (x) => x.id === r.id,
-                                      )!.timing = e.target.value;
-                                    })
-                                  }
-                                >
-                                  {[
-                                    "Weekdays · flexible",
-                                    "Weekdays · 9 AM–12 PM",
-                                    "Weekdays · 1–5 PM",
-                                    "Any day · flexible",
-                                    "Before the end of next week",
-                                  ].map((x) => (
-                                    <option key={x}>{x}</option>
-                                  ))}
-                                </select>
-                              </label>
-                            )}
-                            <button
-                              className="primary full"
-                              onClick={() => {
-                                update((d) => {
-                                  const q = d.requests.find(
-                                    (x) => x.id === r.id,
-                                  )!;
-                                  q.status = tasks.some((t) => !t.reviewed)
-                                    ? "Needs Review"
-                                    : "Submitted";
-                                  q.mode = "Request to Book";
-                                  log(
-                                    d,
-                                    `${r.name} submitted a request · confirmation pending review`,
-                                  );
-                                }, "Request received");
-                                setStep(5);
-                              }}
-                            >
-                              {hasReferral
-                                ? "Submit for referral review"
-                                : "Submit request"}{" "}
-                              <ArrowRight size={17} />
-                            </button>
-                          </>
-                        )}
-                      </>
-                    )}
-                    {step === 5 && (
-                      <div className="empty">
-                        <div className="success-icon">
-                          <CheckCircle2 size={34} />
-                        </div>
-                        <h2>
-                          {r.status === "Confirmed"
-                            ? "Your visit is booked."
-                            : "Your request is with us."}
-                        </h2>
-                        <p>
-                          {r.status === "Confirmed"
-                            ? "We look forward to taking care of your home."
-                            : hasReferral
-                              ? "Your request has been recorded for referral review. No appointment has been booked."
-                              : "Yousef will review your tasks and coordinate the next steps. Your appointment is not confirmed yet."}
-                        </p>
-                        <button
-                          className="primary"
-                          onClick={() => setPage("My bookings")}
-                        >
-                          Go to my bookings <ArrowRight size={16} />
-                        </button>
-                      </div>
-                    )}
-                    {step < 4 && (
-                      <div className="wizard-footer">
-                        <button
-                          className="text-button"
-                          disabled={step === 0}
-                          onClick={() => setStep(step - 1)}
-                        >
-                          <ArrowLeft size={16} /> Back
-                        </button>
-                        <button
-                          className="primary"
-                          onClick={() => {
-                            if (
-                              step === 0 &&
-                              tasks.some((t) => !t.description.trim())
-                            )
-                              return notify(
-                                "Describe each task before continuing.",
-                              );
-                            if (step === 3 && !r.address.trim())
-                              return notify("Enter a service address.");
-                            setStep(step + 1);
-                            setSlot("");
-                          }}
-                        >
-                          {step === 2 ? "Looks right" : "Continue"}{" "}
-                          <ArrowRight size={16} />
-                        </button>
-                      </div>
-                    )}
-                    {step === 4 && (
-                      <button
-                        className="text-button actions"
-                        onClick={() => setStep(3)}
-                      >
-                        <ArrowLeft size={16} /> Back
-                      </button>
-                    )}
-                  </section>
-                </>
+                <CustomerIntake
+                  key={r.id}
+                  s={s}
+                  r={r}
+                  update={update}
+                  notify={notify}
+                  photos={taskPhotos}
+                  questions={(t, change) => (
+                    <ClarificationFields task={t} onChange={change} />
+                  )}
+                  pay={(start) => {
+                    setSlot(start);
+                    setModal("Instant payment");
+                  }}
+                  view={() => setPage("My bookings")}
+                />
               ) : (
                 <>
                   <div className="heading">
@@ -2987,6 +2591,9 @@ function App() {
                   </div>
                   <Check size={18} />
                 </div>
+                {modal === "Instant payment" && (
+                  <p>Selected appointment: {dateLabel(slot)}</p>
+                )}
                 <h1>
                   {money(
                     modal === "Instant payment" ? 129 : quote?.amount || 0,
@@ -3011,10 +2618,19 @@ function App() {
                         return;
                       }
                       const available =
+                        r.status === "Draft" &&
+                        validAddress(r) &&
+                        eligible("yousef", tasks) &&
                         instantEligible(tasks) &&
-                        slots(s, "yousef", tasks[0].duration, r.city).some(
-                          (o) => o.start === slot,
-                        );
+                        slots(
+                          s,
+                          "yousef",
+                          tasks[0].duration,
+                          r.city,
+                          undefined,
+                          "",
+                          12,
+                        ).some((o) => o.start === slot);
                       if (!available)
                         return notify(
                           "That slot is no longer available. Choose another time.",
@@ -3090,6 +2706,7 @@ function App() {
                       );
                       if (fail) return;
                     }
+                    setToast("");
                     setModal("");
                   }}
                 >
