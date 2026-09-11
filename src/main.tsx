@@ -1,3 +1,4 @@
+import Blueprint from "./Blueprint";
 import ContractorWork, { JobWork } from "./ContractorWork";
 import { OperatorHome, OperatorToday } from "./OperatorWork";
 import { bucket, workIssue, workStatus } from "./work";
@@ -2087,6 +2088,9 @@ function App() {
             </div>
             {modal === "Demo settings" && (
               <>
+                <a className="secondary" href="?view=blueprint">
+                  Developer blueprint →
+                </a>
                 {role === "Operator" && (
                   <div className="dispatch-setting">
                     <label className="row">
@@ -2736,6 +2740,10 @@ function App() {
 }
 createRoot(document.getElementById("root")!).render(
   <React.StrictMode>
-    <App />
+    {new URLSearchParams(window.location.search).get("view") === "blueprint" ? (
+      <Blueprint />
+    ) : (
+      <App />
+    )}
   </React.StrictMode>,
 );
