@@ -1,3 +1,6 @@
+import ContractorWork, { JobWork } from "./ContractorWork";
+import { OperatorHome, OperatorToday } from "./OperatorWork";
+import { bucket, workIssue, workStatus } from "./work";
 import CustomerIntake from "./CustomerIntake";
 import { validAddress } from "./intake";
 import {
@@ -71,6 +74,7 @@ import "@fontsource/manrope/700.css";
 import "./style.css";
 import "./light.css";
 import "./typography.css";
+import "./work.css";
 import {
   migrateDispatch,
   dispatchStatus,
@@ -260,15 +264,22 @@ function App() {
       localStorage.setItem(KEY, JSON.stringify(s));
     } catch {}
   }, []);
-  const [page, setPage] = useState("Overview");
+  const [page, setPage] = useState("Home");
   const [active, setActive] = useState("r2");
   const [contractor, setContractor] = useState("marcus");
   const [customer, setCustomer] = useState("c2");
   const [toast, setToast] = useState("");
   const [search, setSearch] = useState("");
-  const [filter, setFilter] = useState("All requests");
+  const [filter, setFilter] = useState("Needs Action");
   const [step, setStep] = useState(0);
   const [selected, setSelected] = useState<string[]>([]);
+  const [fulfillment, setFulfillment] = useState(false);
+  React.useEffect(() => {
+    if (fulfillment)
+      document
+        .getElementById("fulfillment")
+        ?.scrollIntoView({ block: "start", behavior: "smooth" });
+  }, [fulfillment]);
   const [provider, setProvider] = useState("yousef");
   const [slot, setSlot] = useState("");
   const [quoteAmount, setQuoteAmount] = useState(395);
@@ -358,9 +369,18 @@ function App() {
   const duration = tasks
     .filter((t) => !selected.length || selected.includes(t.id))
     .reduce((a, t) => a + t.duration, 0);
-  const recommended = slots(s, provider, duration, r.city, undefined, r.timing);
+  const recommended = eligible(
+    provider,
+    tasks.filter((t) => !selected.length || selected.includes(t.id)),
+  )
+    ? slots(s, provider, duration, r.city, undefined, r.timing)
+    : [];
   const opts =
     override &&
+    eligible(
+      provider,
+      tasks.filter((t) => !selected.length || selected.includes(t.id)),
+    ) &&
     available(s, provider, duration, r.city, override, undefined, r.timing)
       ? [
           {
@@ -383,6 +403,7 @@ function App() {
     setActive(id);
     setCustomer(req.customerId);
     setSelected([]);
+    setFulfillment(false);
     setSlot("");
     setOverride("");
     setStep(0);
@@ -606,7 +627,7 @@ function App() {
         <strong>
           <CalendarDays size={16} /> {dateLabel(v.start)}
         </strong>
-        {badge(v.status)}
+        {badge(workStatus(v))}
       </div>
       <p>
         {providers.find((p) => p.id === v.providerId)?.name} · {v.duration} min
@@ -615,6 +636,24 @@ function App() {
       <small>
         {r.address}, {r.city}
       </small>
+      {role === "Customer" && (
+        <>
+          <div>
+            {v.messages?.map((m) => (
+              <p className="note" key={m.id}>
+                Simulated message: {m.text}
+              </p>
+            ))}
+          </div>
+          {v.execution?.finishedAt && (
+            <p className="note">
+              {workIssue(v)
+                ? "Your visit has finished. The operator will review the remaining work."
+                : "Your visit is complete."}
+            </p>
+          )}
+        </>
+      )}
       {role === "Customer" && v.status === "Confirmed" && (
         <div className="row actions">
           <button
@@ -734,7 +773,7 @@ function App() {
         <button
           className="map-expand"
           aria-label="Open route view"
-          onClick={() => setPage("Today’s route")}
+          onClick={() => setPage("Today")}
         >
           <ArrowUpRight size={18} />
         </button>
@@ -836,21 +875,17 @@ function App() {
         <nav>
           {(role === "Operator"
             ? [
-                [LayoutDashboard, "Overview"],
+                [LayoutDashboard, "Home"],
                 [ListTodo, "Requests"],
-                [Navigation, "Today’s route"],
-                [Users, "Contractors"],
-                [Clock, "Activity"],
+                [Navigation, "Today"],
+                [MoreHorizontal, "More"],
               ]
             : role === "Customer"
               ? [
                   [Plus, "New request"],
                   [CalendarDays, "My bookings"],
                 ]
-              : [
-                  [Briefcase, "Job offers"],
-                  [CalendarDays, "Assignments"],
-                ]
+              : [[Briefcase, "Your Work"]]
           ).map(([Icon, label]: any) => (
             <button
               key={label}
@@ -921,10 +956,10 @@ function App() {
                   setRole(x);
                   setPage(
                     x === "Operator"
-                      ? "Overview"
+                      ? "Home"
                       : x === "Customer"
                         ? "My bookings"
-                        : "Job offers",
+                        : "Your Work",
                   );
                 }}
               >
@@ -1021,259 +1056,35 @@ function App() {
               </button>
             ))}
           </div>
-          {role === "Operator" &&
-            page === "Overview" &&
-            s.visits.some((v) => dispatchStatus(s, v)) && (
-              <section className="dispatch-inbox">
-                <div className="row between">
-                  <h3>Dispatch needs your attention</h3>
-                  <span className="badge">
-                    {s.visits.filter((v) => dispatchStatus(s, v)).length} visits
-                  </span>
-                </div>
-                {s.visits
-                  .filter((v) => dispatchStatus(s, v))
-                  .map((v) => (
-                    <div key={v.id}>
-                      {dispatchPanel(v)}
-                      <button
-                        className="text-button"
-                        onClick={() => choose(v.requestId)}
-                      >
-                        Open request <ArrowUpRight size={14} />
-                      </button>
-                    </div>
-                  ))}
-              </section>
-            )}
-          {role === "Operator" && page === "Overview" && (
-            <>
-              <div className="heading">
-                <div>
-                  <div className="eyebrow">YOUR DAY, WELL COORDINATED</div>
-                  <h1>
-                    Good morning, Yousef <span className="wave">↗</span>
-                  </h1>
-                  <p>Less time on the road. More work that matters.</p>
-                </div>
+          {role === "Operator" && page === "Home" && (
+            <OperatorHome
+              s={s}
+              open={(id) => {
+                choose(id);
+                setPage("Requests");
+              }}
+              today={() => setPage("Today")}
+            />
+          )}
+          {role === "Operator" && page === "More" && (
+            <section className="panel">
+              <h1>More</h1>
+              {["Contractors", "Activity"].map((x) => (
                 <button
-                  className="primary"
-                  onClick={() => {
-                    setPage("Requests");
-                    setActive("r2");
-                  }}
+                  className="queue-item"
+                  key={x}
+                  onClick={() => setPage(x)}
                 >
-                  Review requests <ArrowUpRight size={17} />
+                  {x} →
                 </button>
-              </div>
-              <div className="stats">
-                {[
-                  [
-                    ListTodo,
-                    "Open requests",
-                    s.requests.filter(
-                      (r) =>
-                        !["Draft", "Cancelled", "Confirmed"].includes(r.status),
-                    ).length,
-                    "Ready for your attention",
-                  ],
-                  [
-                    CalendarDays,
-                    "Scheduled visits",
-                    s.visits.filter((v) => v.status === "Confirmed").length,
-                    "Your confirmed workload",
-                  ],
-                  [
-                    Navigation,
-                    "Planned drive time",
-                    s.visits.reduce((a, v) => a + v.travel, 0) + " min",
-                    "Route-aware recommendations",
-                  ],
-                  [
-                    Wallet,
-                    "Scheduled revenue",
-                    money(
-                      s.quotes
-                        .filter((q) => q.status === "Approved")
-                        .reduce((a, q) => a + q.amount, 0),
-                    ),
-                    "Approved customer quotes",
-                  ],
-                ].map(([Icon, label, value, sub]: any) => (
-                  <div className="stat" key={label}>
-                    <div className="row between">
-                      <span>{label}</span>
-                      <Icon size={18} />
-                    </div>
-                    <h2>{value}</h2>
-                    <small>{sub}</small>
-                  </div>
-                ))}
-              </div>
-              <div className="dashboard-grid">
-                <section className="panel">
-                  <div className="panel-title">
-                    <div>
-                      <h3>
-                        Requests that need you{" "}
-                        <span className="count">
-                          {attentionRequests.length}
-                        </span>
-                      </h3>
-                      <p>A little coordination goes a long way.</p>
-                    </div>
-                    <button
-                      className="text-button amber-text"
-                      onClick={() => setPage("Requests")}
-                    >
-                      View all <ArrowRight size={15} />
-                    </button>
-                  </div>
-                  <div className="request-list">
-                    {attentionRequests.map((req) => (
-                      <button
-                        className="request-row"
-                        key={req.id}
-                        onClick={() => {
-                          choose(req.id);
-                          setPage("Requests");
-                        }}
-                      >
-                        <div
-                          className={
-                            "request-icon " +
-                            (req.status === "Needs Review" ? "danger" : "")
-                          }
-                        >
-                          <Wrench size={18} />
-                        </div>
-                        <div className="grow">
-                          <div className="row between">
-                            <strong>
-                              {
-                                s.tasks.find((t) => t.requestId === req.id)
-                                  ?.summary
-                              }
-                              {s.tasks.filter((t) => t.requestId === req.id)
-                                .length > 1
-                                ? " + 3 tasks"
-                                : ""}
-                            </strong>
-                            <ChevronRight size={16} />
-                          </div>
-                          <p>
-                            {req.name} <span>· {req.city}</span>
-                          </p>
-                          <div className="row">
-                            {badge(req.status)}
-                            {requestDispatch(s, req.id) &&
-                              badge(requestDispatch(s, req.id))}
-                            <small>
-                              {
-                                s.tasks.filter((t) => t.requestId === req.id)
-                                  .length
-                              }{" "}
-                              tasks
-                            </small>
-                          </div>
-                        </div>
-                      </button>
-                    ))}
-                  </div>
-                </section>
-                <section className="panel route-panel">
-                  <div className="panel-title">
-                    <div>
-                      <h3>Your route, at a glance</h3>
-                      <p>Built around nearby work.</p>
-                    </div>
-                    <span className="badge green">Live demo</span>
-                  </div>
-                  <RouteMap />
-                  <div className="route-caption">
-                    <div>
-                      <span className="online" />
-                      <strong>Oakville & surrounding area</strong>
-                      <p>Appointments ranked by travel efficiency.</p>
-                    </div>
-                    <button
-                      className="secondary"
-                      onClick={() => setPage("Today’s route")}
-                    >
-                      View route <ArrowUpRight size={15} />
-                    </button>
-                  </div>
-                </section>
-              </div>
-              <div className="bottom-grid">
-                <section className="panel insight">
-                  <div className="insight-icon">
-                    <Layers size={24} />
-                  </div>
-                  <div>
-                    <span className="eyebrow">A SMARTER SERVICE DAY</span>
-                    <h3>Four tasks. One front door.</h3>
-                    <p>
-                      Daniel’s request can fit into one 4-hour visit. Bundle the
-                      work and save another trip.
-                    </p>
-                    <button
-                      className="text-button amber-text"
-                      onClick={() => choose("r2")}
-                    >
-                      Review bundle <ArrowRight size={16} />
-                    </button>
-                  </div>
-                </section>
-                <section className="panel">
-                  <div className="panel-title">
-                    <h3>Dispatch pulse</h3>
-                    <span className="online" />
-                  </div>
-                  <div className="pulse">
-                    <div>
-                      <b>
-                        {
-                          s.assignments.filter((a) => a.status === "Offered")
-                            .length
-                        }
-                      </b>
-                      <span>Awaiting response</span>
-                    </div>
-                    <div>
-                      <b>
-                        {
-                          s.assignments.filter((a) => a.status === "Accepted")
-                            .length
-                        }
-                      </b>
-                      <span>Accepted</span>
-                    </div>
-                    <div>
-                      <b>
-                        {
-                          s.visits.filter(
-                            (v) =>
-                              v.status !== "Cancelled" &&
-                              s.assignments.some(
-                                (a) =>
-                                  a.visitId === v.id &&
-                                  ["Declined", "Expired"].includes(a.status),
-                              ) &&
-                              !s.assignments.some(
-                                (a) =>
-                                  a.visitId === v.id &&
-                                  ["Offered", "Accepted"].includes(a.status),
-                              ),
-                          ).length
-                        }
-                      </b>
-                      <span>Need reassignment</span>
-                    </div>
-                  </div>
-                </section>
-              </div>
-            </>
+              ))}
+              <button
+                className="queue-item"
+                onClick={() => setModal("Demo settings")}
+              >
+                Demo settings →
+              </button>
+            </section>
           )}
           {role === "Operator" && page === "Requests" && (
             <>
@@ -1302,6 +1113,10 @@ function App() {
                   >
                     {[
                       "All requests",
+                      "Needs Action",
+                      "Waiting",
+                      "Scheduled",
+                      "History",
                       "Needs reassignment",
                       "Submitted",
                       "Needs Review",
@@ -1318,6 +1133,7 @@ function App() {
                       (q) =>
                         (filter === "All requests" ||
                           q.status === filter ||
+                          bucket(s, q.id) === filter ||
                           (filter === "Needs reassignment" &&
                             requestDispatch(s, q.id).includes(
                               "Needs reassignment",
@@ -1356,6 +1172,9 @@ function App() {
                           tasks
                         </p>
                         {badge(q.status)}
+                        {s.visits.some(
+                          (v) => v.requestId === q.id && workIssue(v),
+                        ) && badge("Issue · Operator follow-up")}
                         {requestDispatch(s, q.id) && (
                           <div className="actions">
                             {badge(requestDispatch(s, q.id))}
@@ -1391,41 +1210,79 @@ function App() {
                     </div>
                     <div className="row actions wrap">
                       <button
+                        className="primary"
+                        onClick={() => {
+                          setProvider("yousef");
+                          setFulfillment(true);
+                        }}
+                      >
+                        Do It Myself
+                      </button>
+                      <button
+                        className="secondary"
+                        onClick={() => {
+                          setProvider("marcus");
+                          setFulfillment(true);
+                        }}
+                      >
+                        Assign Contractor
+                      </button>
+                      <button
                         className="secondary"
                         onClick={() => {
                           setModal("Request information");
                         }}
                       >
-                        Request information
+                        Need More Info
                       </button>
-                      <button
-                        className="text-button"
-                        onClick={() => setModal("Decline request")}
-                      >
-                        Decline request
-                      </button>
-                      <select
-                        aria-label="Booking mode"
-                        value={r.mode}
-                        onChange={(e) => {
-                          if (
-                            e.target.value === "Instant Book" &&
-                            !instantEligible(tasks)
-                          )
-                            return notify(
-                              "This scope requires Request to Book.",
-                            );
-                          update((d) => {
-                            d.requests.find((q) => q.id === r.id)!.mode =
-                              e.target.value;
-                            log(d, "Operator changed booking mode");
-                          });
-                        }}
-                      >
-                        <option>Request to Book</option>
-                        <option>Instant Book</option>
-                      </select>
+                      <details>
+                        <summary>More actions</summary>
+                        <button
+                          className="text-button"
+                          onClick={() => setModal("Decline request")}
+                        >
+                          Decline request
+                        </button>
+                        <select
+                          aria-label="Booking mode"
+                          value={r.mode}
+                          onChange={(e) => {
+                            if (
+                              e.target.value === "Instant Book" &&
+                              !instantEligible(tasks)
+                            )
+                              return notify(
+                                "This scope requires Request to Book.",
+                              );
+                            update((d) => {
+                              d.requests.find((q) => q.id === r.id)!.mode =
+                                e.target.value;
+                              log(d, "Operator changed booking mode");
+                            });
+                          }}
+                        >
+                          <option>Request to Book</option>
+                          <option>Instant Book</option>
+                        </select>
+                      </details>
                     </div>
+                    <p>
+                      {tasks.length} tasks ·{" "}
+                      {tasks.reduce((n, t) => n + t.duration, 0)} minutes
+                      estimated ·{" "}
+                      {tasks.reduce((n, t) => n + t.photos.length, 0)} photos
+                    </p>
+                    {visits
+                      .filter((v) => v.execution || v.status === "Confirmed")
+                      .map((v) => (
+                        <JobWork
+                          key={v.id}
+                          s={s}
+                          provider="yousef"
+                          update={update}
+                          visit={v}
+                        />
+                      ))}
                     {r.notes && <p className="note">{r.notes}</p>}
                   </section>
                   <section className="panel">
@@ -1436,7 +1293,11 @@ function App() {
                       <small>Select tasks to group into a visit</small>
                     </div>
                     {tasks.map((t) => (
-                      <div className="task-review" key={t.id}>
+                      <details className="task-review" key={t.id}>
+                        <summary>
+                          {t.summary} · {t.duration} min
+                          {!t.reviewed ? " · Needs review" : ""}
+                        </summary>
                         <div className="row between">
                           <label className="row">
                             <input
@@ -1564,7 +1425,7 @@ function App() {
                             </button>
                           )}
                         </div>
-                      </div>
+                      </details>
                     ))}
                     {selected.length > 1 && (
                       <button
@@ -1575,142 +1436,188 @@ function App() {
                       </button>
                     )}
                   </section>
-                  <section className="panel">
-                    <div className="panel-title">
-                      <h3>Plan the visit</h3>
-                      <span className="badge">
-                        {selected.length || tasks.length} tasks · {duration} min
-                      </span>
-                    </div>
-                    <div className="segmented">
-                      <button
-                        className={provider === "yousef" ? "chosen" : ""}
-                        onClick={() => {
-                          setProvider("yousef");
-                          setSlot("");
-                        }}
-                      >
-                        Do It Myself
-                      </button>
-                      <button
-                        className={provider !== "yousef" ? "chosen" : ""}
-                        onClick={() => {
-                          setProvider("marcus");
-                          setSlot("");
-                        }}
-                      >
-                        Assign Contractor
-                      </button>
-                    </div>
-                    <div className="provider-options">
-                      {providers
-                        .filter((p) =>
-                          provider === "yousef"
-                            ? p.id === "yousef"
-                            : p.id !== "yousef",
-                        )
-                        .map((p) => (
+                  {fulfillment && (
+                    <>
+                      {" "}
+                      <section className="panel" id="fulfillment">
+                        <div className="panel-title">
+                          <h3>Plan the visit</h3>
+                          <span className="badge">
+                            {selected.length || tasks.length} tasks · {duration}{" "}
+                            min
+                          </span>
+                        </div>
+                        <div className="segmented">
                           <button
-                            key={p.id}
-                            className={
-                              "provider-card " +
-                              (provider === p.id ? "selected" : "")
-                            }
+                            className={provider === "yousef" ? "chosen" : ""}
                             onClick={() => {
-                              setProvider(p.id);
+                              setProvider("yousef");
                               setSlot("");
                             }}
                           >
-                            <div className="avatar">{p.initials}</div>
-                            <div>
-                              <strong>{p.name}</strong>
-                              <small>
-                                {p.city} · {money(p.rate)}/hr · Weekdays 9–5
-                              </small>
-                              <small>{p.skills}</small>
-                            </div>
-                            {provider === p.id && <Check size={17} />}
+                            Do It Myself
                           </button>
-                        ))}
-                    </div>
-                    <h4>
-                      Recommended appointments{" "}
-                      <span className="muted">· simulated routing</span>
-                    </h4>
-                    <div className="slot-grid">
-                      {opts.map((o, i) => (
-                        <button
-                          key={o.start}
-                          className={
-                            "slot " +
-                            ((slot || opts[0]?.start) === o.start
-                              ? "selected"
-                              : "")
-                          }
-                          onClick={() => setSlot(o.start)}
-                        >
-                          {i === 0 && (
-                            <span className="eyebrow">BEST ROUTE FIT</span>
-                          )}
-                          <strong>{dateLabel(o.start)}</strong>
-                          <small>+{o.travel} min driving · 15 min buffer</small>
-                        </button>
-                      ))}
-                    </div>
-                    {!opts.length && (
-                      <p className="warning">
-                        No available window fits these tasks. Split the visit or
-                        change provider.
-                      </p>
-                    )}
-                    <label className="mini-field actions">
-                      Override proposed time
-                      <input
-                        type="datetime-local"
-                        onChange={(e) => {
-                          const x = new Date(e.target.value);
-                          if (!Number.isFinite(+x)) return;
-                          if (
-                            available(
-                              s,
-                              provider,
-                              duration,
-                              r.city,
-                              x.toISOString(),
-                              undefined,
-                              r.timing,
+                          <button
+                            className={provider !== "yousef" ? "chosen" : ""}
+                            onClick={() => {
+                              setProvider("marcus");
+                              setSlot("");
+                            }}
+                          >
+                            Assign Contractor
+                          </button>
+                        </div>
+                        <div className="provider-options">
+                          {providers
+                            .filter((p) =>
+                              provider === "yousef"
+                                ? p.id === "yousef"
+                                : p.id !== "yousef",
                             )
-                          ) {
-                            setOverride(x.toISOString());
-                            setSlot(x.toISOString());
-                            notify(
-                              "Valid override selected; travel and buffers checked.",
-                            );
-                          } else
-                            notify(
-                              "That time conflicts with working hours, preferences, or an existing visit.",
-                            );
-                        }}
-                      />
-                    </label>
-                    {provider !== "yousef" && (
-                      <label className="mini-field">
-                        Contractor pay (CAD)
-                        <input
-                          type="number"
-                          min="0"
-                          value={pay}
-                          onChange={(e) => setPay(Math.max(0, +e.target.value))}
-                        />
-                      </label>
-                    )}
-                    <button className="primary actions" onClick={createVisit}>
-                      {provider === "yousef"
-                        ? "Create visit"
-                        : "Create visit & send offer"}
-                      <ArrowRight size={16} />
-                    </button>
-                  </section>
+                            .map((p) => (
+                              <button
+                                key={p.id}
+                                className={
+                                  "provider-card " +
+                                  (provider === p.id ? "selected" : "")
+                                }
+                                onClick={() => {
+                                  setProvider(p.id);
+                                  setSlot("");
+                                }}
+                              >
+                                <div className="avatar">{p.initials}</div>
+                                <div>
+                                  <strong>{p.name}</strong>
+                                  <small>
+                                    {p.city} · {money(p.rate)}/hr · Weekdays 9–5
+                                  </small>
+                                  <small>{p.skills}</small>
+                                </div>
+                                {provider === p.id && <Check size={17} />}
+                              </button>
+                            ))}
+                        </div>
+                        <details className="note">
+                          <summary>Why this provider?</summary>
+                          <p>
+                            {providers.find((p) => p.id === provider)?.skills}.{" "}
+                            {eligible(
+                              provider,
+                              tasks.filter(
+                                (t) =>
+                                  !selected.length || selected.includes(t.id),
+                              ),
+                            )
+                              ? "Required skills and review eligibility match."
+                              : "Not eligible for the selected scope."}{" "}
+                            Pay and customer price remain separate. Available
+                            appointments below account for duration, existing
+                            visits, travel and buffers.
+                          </p>
+                        </details>
+                        <h4>
+                          Recommended appointments{" "}
+                          <span className="muted">· simulated routing</span>
+                        </h4>
+                        <div className="slot-grid">
+                          {opts.map((o, i) => (
+                            <button
+                              key={o.start}
+                              className={
+                                "slot " +
+                                ((slot || opts[0]?.start) === o.start
+                                  ? "selected"
+                                  : "")
+                              }
+                              onClick={() => setSlot(o.start)}
+                            >
+                              {i === 0 && (
+                                <span className="eyebrow">BEST ROUTE FIT</span>
+                              )}
+                              <strong>{dateLabel(o.start)}</strong>
+                              <small>
+                                +{o.travel} min driving · 15 min buffer
+                              </small>
+                            </button>
+                          ))}
+                        </div>
+                        {!!opts.length && (
+                          <details className="note">
+                            <summary>Why this time?</summary>
+                            <p>
+                              {duration} minutes of work fits this provider’s
+                              weekday working hours. Simulated travel allowance:{" "}
+                              {opts.find(
+                                (o) => o.start === (slot || opts[0]?.start),
+                              )?.travel ?? opts[0]?.travel}{" "}
+                              minutes, plus a 15-minute buffer. Checked against
+                              this provider’s existing visits and the customer’s
+                              timing preference.
+                            </p>
+                          </details>
+                        )}
+                        {!opts.length && (
+                          <p className="warning">
+                            No available window fits these tasks. Split the
+                            visit or change provider.
+                          </p>
+                        )}
+                        <label className="mini-field actions">
+                          Override proposed time
+                          <input
+                            type="datetime-local"
+                            onChange={(e) => {
+                              const x = new Date(e.target.value);
+                              if (!Number.isFinite(+x)) return;
+                              if (
+                                available(
+                                  s,
+                                  provider,
+                                  duration,
+                                  r.city,
+                                  x.toISOString(),
+                                  undefined,
+                                  r.timing,
+                                )
+                              ) {
+                                setOverride(x.toISOString());
+                                setSlot(x.toISOString());
+                                notify(
+                                  "Valid override selected; travel and buffers checked.",
+                                );
+                              } else
+                                notify(
+                                  "That time conflicts with working hours, preferences, or an existing visit.",
+                                );
+                            }}
+                          />
+                        </label>
+                        {provider !== "yousef" && (
+                          <label className="mini-field">
+                            Contractor pay (CAD)
+                            <input
+                              type="number"
+                              min="0"
+                              value={pay}
+                              onChange={(e) =>
+                                setPay(Math.max(0, +e.target.value))
+                              }
+                            />
+                          </label>
+                        )}
+                        <button
+                          className="primary actions"
+                          onClick={createVisit}
+                        >
+                          {provider === "yousef"
+                            ? "Create visit"
+                            : "Create visit & send offer"}
+                          <ArrowRight size={16} />
+                        </button>
+                      </section>
+                    </>
+                  )}
                   {visits.filter((v) => v.status !== "Cancelled").length >
                     0 && (
                     <section className="panel">
@@ -1760,7 +1667,7 @@ function App() {
                                       onClick={() => {
                                         setContractor(a.providerId);
                                         setRole("Contractor");
-                                        setPage("Job offers");
+                                        setPage("Your Work");
                                       }}
                                     >
                                       Open contractor view{" "}
@@ -1779,8 +1686,8 @@ function App() {
                         ))}
                     </section>
                   )}
-                  <section className="panel">
-                    <h3>Customer pricing</h3>
+                  <details className="panel">
+                    <summary>Customer pricing & quotes</summary>
                     <p>
                       Customer charges and contractor compensation are separate.
                     </p>
@@ -1846,146 +1753,21 @@ function App() {
                       Send quote <ArrowUpRight size={16} />
                     </button>
                     {quotePanel()}
-                  </section>
+                  </details>
                 </div>
               </div>
             </>
           )}
-          {role === "Operator" && page === "Today’s route" && (
-            <>
-              <div className="heading">
-                <div>
-                  <div className="eyebrow">DAILY OPERATIONS</div>
-                  <h1>A better way around.</h1>
-                  <p>Your visits, travel, and breathing room in one place.</p>
-                </div>
-                <button
-                  className="primary"
-                  onClick={() =>
-                    update((d) => {
-                      d.visits.sort(
-                        (a, b) => +new Date(a.start) - +new Date(b.start),
-                      );
-                      log(
-                        d,
-                        "Route optimized within existing appointment commitments",
-                      );
-                    }, "Route ordered by appointment time")
-                  }
-                >
-                  Optimize route <Navigation size={16} />
-                </button>
-              </div>
-              <div className="panel">
-                <div className="route-toolbar">
-                  <select
-                    aria-label="Route provider"
-                    value={provider}
-                    onChange={(e) => setProvider(e.target.value)}
-                  >
-                    {providers.map((p) => (
-                      <option value={p.id} key={p.id}>
-                        {p.name}
-                      </option>
-                    ))}
-                  </select>
-                  <input
-                    aria-label="Route date"
-                    type="date"
-                    value={routeDay}
-                    onChange={(e) => setRouteDay(e.target.value)}
-                  />
-                  <button
-                    className="secondary"
-                    onClick={() =>
-                      update(
-                        (d) => log(d, "Provider started their service day"),
-                        "Day started",
-                      )
-                    }
-                  >
-                    Start day <Sun size={16} />
-                  </button>
-                </div>
-                <div className="route-summary">
-                  {routeVisits.filter((v) => v.status === "Confirmed").length}{" "}
-                  confirmed visits ·{" "}
-                  {Math.round(
-                    routeVisits.reduce((n, v) => n + v.duration, 0) / 6,
-                  ) / 10}{" "}
-                  planned hours ·{" "}
-                  {routeVisits.reduce((n, v) => n + v.travel, 0)} min driving
-                </div>
-                <RouteMap />
-                {routeVisits.map((v, i) => (
-                  <div className="route-stop" key={v.id}>
-                    <span className="stop-number">{i + 1}</span>
-                    <div className="grow">
-                      <h3>
-                        {s.requests.find((r) => r.id === v.requestId)?.name}
-                      </h3>
-                      <p>
-                        {dateLabel(v.start)} · {v.duration} min · {v.status}
-                      </p>
-                      <small>
-                        ↳ {v.travel} min travel + 15 min setup / overrun buffer
-                      </small>
-                    </div>
-                    <button
-                      className="secondary"
-                      onClick={() => {
-                        choose(v.requestId);
-                        setPage("Requests");
-                      }}
-                    >
-                      Open visit
-                    </button>
-                    <a
-                      className="text-button"
-                      target="_blank"
-                      rel="noreferrer"
-                      href={
-                        "https://www.google.com/maps/search/?api=1&query=" +
-                        encodeURIComponent(
-                          s.requests.find((r) => r.id === v.requestId)
-                            ?.address +
-                            " " +
-                            s.requests.find((r) => r.id === v.requestId)?.city,
-                        )
-                      }
-                    >
-                      Google Maps <ArrowUpRight size={14} />
-                    </a>
-                    <a
-                      className="text-button"
-                      target="_blank"
-                      rel="noreferrer"
-                      href={
-                        "https://maps.apple.com/?q=" +
-                        encodeURIComponent(
-                          s.requests.find((r) => r.id === v.requestId)
-                            ?.address +
-                            " " +
-                            s.requests.find((r) => r.id === v.requestId)?.city,
-                        )
-                      }
-                    >
-                      Apple Maps
-                    </a>
-                  </div>
-                ))}
-                {!routeVisits.length && (
-                  <div className="empty">
-                    <CalendarDays />
-                    <h3>A little room in your day.</h3>
-                    <p>
-                      Create a visit from the request queue to start planning
-                      this route.
-                    </p>
-                  </div>
-                )}
-              </div>
-            </>
+          {role === "Operator" && page === "Today" && (
+            <OperatorToday
+              s={s}
+              mapView={<RouteMap />}
+              update={update}
+              open={(id) => {
+                choose(id);
+                setPage("Requests");
+              }}
+            />
           )}
           {role === "Operator" && page === "Contractors" && (
             <>
@@ -2229,173 +2011,45 @@ function App() {
             </div>
           )}
           {role === "Contractor" && (
-            <div className="contractor-wrap">
-              <div className="account-row">
-                <span className="eyebrow">CONTRACTOR WORKSPACE</span>
+            <>
+              <label className="field">
+                Demo contractor
                 <select
-                  aria-label="Demo contractor"
                   value={contractor}
                   onChange={(e) => setContractor(e.target.value)}
                 >
                   {providers
                     .filter((p) => p.id !== "yousef")
                     .map((p) => (
-                      <option value={p.id} key={p.id}>
+                      <option key={p.id} value={p.id}>
                         {p.name}
                       </option>
                     ))}
                 </select>
-              </div>
-              <div className="heading">
-                <div>
-                  <h1>
-                    {page === "Assignments"
-                      ? "Your next good day."
-                      : "Work that fits you."}
-                  </h1>
-                  <p>
-                    {page === "Assignments"
-                      ? "Accepted assignments, all in one place."
-                      : "A clear scope. A fair rate. Your call."}
-                  </p>
-                </div>
-              </div>
-              {s.assignments
-                .filter(
-                  (a) =>
-                    a.providerId === contractor &&
-                    (page === "Assignments"
-                      ? ["Accepted", "Completed", "Cancelled"].includes(
-                          a.status,
-                        )
-                      : a.status !== "Accepted"),
-                )
-                .map((a) => {
-                  const v = s.visits.find((v) => v.id === a.visitId)!;
-                  const req = s.requests.find((r) => r.id === v.requestId)!;
-                  return (
-                    <section className="panel offer" key={a.id}>
-                      <div className="row between">
-                        <span className="eyebrow">
-                          {a.status === "Offered"
-                            ? "NEW JOB OFFER"
-                            : "ASSIGNMENT"}{" "}
-                          / {a.id.toUpperCase()}
-                        </span>
-                        {badge(a.status)}
-                      </div>
-                      <h2>
-                        {s.tasks.find((t) => v.taskIds.includes(t.id))?.summary}
-                      </h2>
-                      <p>
-                        <MapPin size={16} />
-                        {req.address}, {req.city}
-                      </p>
-                      <div className="offer-pay">
-                        <div>
-                          <small>YOUR PAY</small>
-                          <h1>
-                            {money(a.pay)}
-                            <small> CAD</small>
-                          </h1>
-                        </div>
-                        <span className="badge">Fixed compensation</span>
-                      </div>
-                      <div className="offer-facts">
-                        <span>
-                          <CalendarDays size={19} />
-                          <b>{dateLabel(v.start)}</b>
-                          <small>Proposed appointment</small>
-                        </span>
-                        <span>
-                          <Clock size={19} />
-                          <b>{v.duration} minutes</b>
-                          <small>Estimated on site</small>
-                        </span>
-                      </div>
-                      {s.tasks
-                        .filter((t) => v.taskIds.includes(t.id))
-                        .map((t) => (
-                          <div className="portal-task" key={t.id}>
-                            <h4>{t.summary}</h4>
-                            <p>{t.description}</p>
-                            <TaskAnswers task={t} />
-                            {t.photos.map((p, i) => (
-                              <img
-                                className="offer-photo"
-                                key={i}
-                                src={p}
-                                alt="Task reference"
-                              />
-                            ))}
-                          </div>
-                        ))}
-                      {a.status === "Offered" && (
-                        <>
-                          <p className="help">
-                            <Clock size={14} /> Offer expires in{" "}
-                            {Math.max(
-                              0,
-                              Math.ceil((a.expiresAt - s.clock) / 60000),
-                            )}{" "}
-                            minutes · demo clock
-                          </p>
-                          <div className="row">
-                            <button
-                              className="primary grow"
-                              onClick={() => respond(a.id, "Accepted")}
-                            >
-                              Accept offer <Check size={17} />
-                            </button>
-                            <button
-                              className="secondary grow"
-                              onClick={() => respond(a.id, "Declined")}
-                            >
-                              Decline
-                            </button>
-                          </div>
-                        </>
-                      )}
-                      {a.status === "Accepted" && (
-                        <p className="note">
-                          {v.status === "Confirmed"
-                            ? "Confirmed appointment. Customer details are available for this assignment."
-                            : "You accepted. Final customer confirmation is pending quote/payment requirements."}
-                        </p>
-                      )}
-                      {["Declined", "Expired", "Reassigned"].includes(
-                        a.status,
-                      ) && (
-                        <p className="note">
-                          This offer is no longer active. The operator will
-                          coordinate the next step.
-                        </p>
-                      )}
-                    </section>
-                  );
-                })}
-              {!s.assignments.some(
-                (a) =>
-                  a.providerId === contractor &&
-                  (page === "Assignments"
-                    ? ["Accepted", "Completed", "Cancelled"].includes(a.status)
-                    : a.status !== "Accepted"),
-              ) && (
-                <section className="panel empty">
-                  <Briefcase size={32} />
-                  <h3>
-                    {page === "Assignments"
-                      ? "Your schedule has room."
-                      : "You’re all caught up."}
-                  </h3>
-                  <p>
-                    {page === "Assignments"
-                      ? "Accepted offers will appear here."
-                      : "New offers from Yousef will appear here."}
-                  </p>
-                </section>
-              )}
-            </div>
+              </label>
+              <ContractorWork
+                key={contractor}
+                s={s}
+                provider={contractor}
+                update={update}
+              />
+            </>
+          )}
+          {role === "Operator" && (
+            <nav className="work-mobile-nav" aria-label="Operator navigation">
+              {["Home", "Requests", "Today", "More"].map((x) => (
+                <button
+                  key={x}
+                  className={page === x ? "chosen" : ""}
+                  onClick={() => {
+                    setPage(x);
+                    setSidebar(false);
+                  }}
+                >
+                  {x}
+                </button>
+              ))}
+            </nav>
           )}
           <footer>
             <span>
@@ -2494,10 +2148,10 @@ function App() {
                     setStep(0);
                     setPage(
                       role === "Operator"
-                        ? "Overview"
+                        ? "Home"
                         : role === "Customer"
                           ? "My bookings"
-                          : "Job offers",
+                          : "Your Work",
                     );
                     setModal("");
                     notify("All five scenarios reset");

@@ -186,6 +186,7 @@ export function respondToOffer(
   s: State,
   id: string,
   status: "Accepted" | "Declined",
+  reason = "",
 ) {
   const a = s.assignments.find((a) => a.id === id);
   const v = s.visits.find((v) => v.id === a?.visitId);
@@ -202,6 +203,7 @@ export function respondToOffer(
   )
     return false;
   a.status = status;
+  if (status === "Declined") a.declineReason = reason;
   if (status === "Accepted") {
     notification(
       s,
@@ -215,7 +217,7 @@ export function respondToOffer(
     s,
     a,
     "declined",
-    `${providers.find((p) => p.id === a.providerId)?.name} declined`,
+    `${providers.find((p) => p.id === a.providerId)?.name} declined${reason ? `: ${reason}` : ""}`,
   );
   if (s.settings?.autoReofferDeclined) {
     const option = replacementOptions(s, v, true)[0];

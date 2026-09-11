@@ -40,6 +40,17 @@ export type Request = {
   deadline?: string;
 };
 export type Visit = {
+  execution?: {
+    onWayAt?: string;
+    eta?: string;
+    startedAt?: string;
+    finishedAt?: string;
+    outcomes: Record<
+      string,
+      { outcome: string; note: string; before: string[]; after: string[] }
+    >;
+  };
+  messages?: { id: string; sender: string; text: string; at: string }[];
   id: string;
   requestId: string;
   taskIds: string[];
@@ -50,6 +61,7 @@ export type Visit = {
   travel: number;
 };
 export type Assignment = {
+  declineReason?: string;
   id: string;
   visitId: string;
   providerId: string;
@@ -475,10 +487,24 @@ export function reconcile(s: State) {
     for (const v of vs)
       if (!["In Progress", "Completed"].includes(v.status))
         v.status = ready ? "Confirmed" : "Proposed";
-    for (const t of tasks)
-      t.status = vs.some((v) => v.taskIds.includes(t.id))
-        ? "assigned to visit"
-        : "unassigned";
+    for (const t of tasks) {
+      const completed = vs.some(
+        (v) =>
+          v.execution?.finishedAt &&
+          v.execution.outcomes[t.id]?.outcome === "Completed",
+      );
+      t.status = completed
+        ? "Completed"
+        : vs.some((v) => v.taskIds.includes(t.id))
+          ? "assigned to visit"
+          : "unassigned";
+    }
+    if (
+      vs.length &&
+      vs.every((v) => v.status === "Completed") &&
+      tasks.every((t) => t.status === "Completed")
+    )
+      r.status = "Completed";
   }
 }
 export function torontoParts(date: Date) {

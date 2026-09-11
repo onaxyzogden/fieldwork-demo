@@ -1,0 +1,123 @@
+.work-task {
+  border-top: 1px solid var(--line);
+  padding: 16px 0;
+}
+.work-task summary,
+.task-review summary,
+.panel > summary {
+  cursor: pointer;
+  padding: 12px 0;
+  min-height: 44px;
+  font-weight: 600;
+}
+.work-task summary small {
+  display: block;
+  color: var(--muted);
+  font-weight: 400;
+}
+.work-photos {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 12px 0;
+}
+.work-photos img {
+  width: 96px;
+  height: 96px;
+  object-fit: cover;
+  border-radius: 10px;
+}
+.work-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+  align-items: end;
+}
+.work-toolbar > * {
+  flex: 1 1 180px;
+  min-width: 0;
+}
+.work-detail p,
+.work-task p {
+  margin: 12px 0;
+}
+.work-detail .field {
+  margin: 16px 0;
+}
+.work-detail input[type="file"] {
+  width: 100%;
+  min-width: 0;
+}
+.work-detail,
+.work-task,
+.contractor-wrap {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.work-detail .actions,
+.contractor-wrap .actions {
+  flex-wrap: wrap;
+}
+@media (max-width: 600px) {
+  .work-toolbar {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .work-detail .actions > * {
+    flex: 1 1 100%;
+  }
+}
+.queue-item p {
+  display: block;
+}
+.work-mobile-nav {
+  display: none;
+}
+.work-sheet {
+  color: inherit;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 20px;
+  padding: 24px;
+  width: min(560px, calc(100% - 24px));
+  max-height: 85dvh;
+  overflow-y: auto;
+  overflow-wrap: anywhere;
+}
+.work-sheet::backdrop {
+  background: #0009;
+}
+.work-sheet .row {
+  flex-wrap: wrap;
+}
+.work-sheet .field {
+  margin: 16px 0;
+}
+@media (max-width: 900px) {
+  .work-mobile-nav {
+    display: flex;
+    position: sticky;
+    bottom: 0;
+    background: var(--panel);
+    border: 1px solid var(--line);
+    padding: 8px;
+    gap: 4px;
+    flex-wrap: wrap;
+    border-radius: 12px;
+    z-index: 5;
+    margin: 20px 0;
+  }
+  .work-mobile-nav button {
+    flex: 1;
+    min-height: 44px;
+    background: transparent;
+    border: 0;
+    border-radius: 8px;
+    padding: 8px;
+    font-size: 0.875rem;
+  }
+  .work-mobile-nav .chosen {
+    background: var(--amber);
+    color: #272116;
+  }
+}
