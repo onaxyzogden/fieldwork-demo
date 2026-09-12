@@ -1,4 +1,5 @@
 import React, { useEffect, useRef, useState } from "react";
+import { MapPin, ListChecks, CalendarDays, Mail, Home } from "lucide-react";
 import {
   type State,
   type Request,
@@ -229,7 +230,27 @@ export default function CustomerIntake({
       aria-pressed={selectionValid && selected?.start === o.start}
       onClick={() => choose(o)}
     >
-      <strong>{timeLabel(o)}</strong>
+      {i === 0 && <span className="time-recommendation">Recommended</span>}
+      <strong>
+        {new Date(o.start).toLocaleDateString("en-CA", {
+          timeZone: "America/Toronto",
+          weekday: "short",
+          month: "short",
+          day: "numeric",
+        })}
+      </strong>
+      <span>
+        {new Date(o.start).toLocaleTimeString("en-CA", {
+          timeZone: "America/Toronto",
+          hour: "numeric",
+          minute: "2-digit",
+        })}{" "}
+        –{" "}
+        {new Date(+new Date(o.start) + o.duration * 60000).toLocaleTimeString(
+          "en-CA",
+          { timeZone: "America/Toronto", hour: "numeric", minute: "2-digit" },
+        )}
+      </span>
       <small>
         {i === 0 ? "Recommended · " : ""}
         {o.duration} min visit ·{" "}
@@ -260,9 +281,12 @@ export default function CustomerIntake({
         <>
           <header className="customer-heading">
             <h1>What do you need taken care of?</h1>
-            <p>Add each task separately.</p>
+            <p>
+              Add each task separately. Be as detailed as you like — photos help
+              a lot.
+            </p>
           </header>
-          <section className="panel task-composer" aria-label="Your tasks">
+          <section className="task-composer" aria-label="Your tasks">
             {tasks.length > 0 && (
               <p className="task-count">
                 {tasks.length} {tasks.length === 1 ? "thing" : "things"} to take
@@ -275,8 +299,8 @@ export default function CustomerIntake({
                 .map((t) => (
                   <div className="compact-task" key={t.id}>
                     <button className="task-open" onClick={() => open(t)}>
-                      <span aria-hidden="true">
-                        {t.entryStage === "done" ? "✓" : "✎"}
+                      <span className="task-number" aria-hidden="true">
+                        {all.indexOf(t) + 1}
                       </span>
                       <span>
                         <strong>{taskLabel(t)}</strong>
@@ -288,18 +312,28 @@ export default function CustomerIntake({
                         </small>
                       </span>
                     </button>
-                    <button
-                      className="text-button"
-                      aria-label={"Remove " + taskLabel(t)}
-                      onClick={() => remove(t)}
-                    >
-                      Remove
-                    </button>
+                    <details className="task-menu">
+                      <summary aria-label={"Actions for " + taskLabel(t)}>
+                        •••
+                      </summary>
+                      <button className="secondary" onClick={() => open(t)}>
+                        Edit task
+                      </button>
+                      <button
+                        className="text-button"
+                        aria-label={"Remove " + taskLabel(t)}
+                        onClick={() => remove(t)}
+                      >
+                        Remove
+                      </button>
+                    </details>
+                    <p className="task-description-preview">{t.description}</p>
+                    {photos(t)}
                   </div>
                 ))}
             </div>
             {editing && (
-              <div className="active-task" key={editing.id}>
+              <div className="active-task customer-task-card" key={editing.id}>
                 <div className="row between">
                   <label htmlFor={"task-description-" + editing.id}>
                     {tasks.length === 0 ? "First task" : "Describe this task"}
@@ -405,7 +439,7 @@ export default function CustomerIntake({
             <h1>Where and when?</h1>
             <p>One address for everything on your list.</p>
           </header>
-          <section className="panel">
+          <section className="customer-summary-card">
             <div className="row between">
               <strong>
                 {tasks.length} {tasks.length === 1 ? "task" : "tasks"} requested
@@ -419,6 +453,16 @@ export default function CustomerIntake({
                 Edit tasks
               </button>
             </div>
+            <ul className="customer-task-list">
+              {tasks.map((t) => (
+                <li key={t.id}>
+                  <ListChecks size={20} />
+                  <span>{taskLabel(t)}</span>
+                </li>
+              ))}
+            </ul>
+          </section>
+          <section className="customer-address-section">
             <h3>Where should we come?</h3>
             <label className="field">
               Service address
@@ -470,7 +514,20 @@ export default function CustomerIntake({
                 />
               </label>
             </details>
-            <h3>{referral ? "Referral review" : "What works for you?"}</h3>
+            {validAddress(r) && (
+              <div className="customer-location-preview">
+                <MapPin size={38} />
+                <strong>
+                  {r.address}
+                  <br />
+                  {r.city}
+                </strong>
+                <small>Illustrative location · simulated, not geocoded</small>
+              </div>
+            )}
+          </section>
+          <section className="customer-timing-section">
+            <h3>{referral ? "Referral review" : "When works for you?"}</h3>
             {referral ? (
               <p className="warning">
                 This includes a service we do not book through the platform.
@@ -508,7 +565,7 @@ export default function CustomerIntake({
                         className="secondary full"
                         onClick={() => setMore(true)}
                       >
-                        More times
+                        See more times
                       </button>
                     )}
                     {!instant && (
@@ -592,14 +649,14 @@ export default function CustomerIntake({
         </>
       )}
       {screen === "done" && (
-        <section className="panel intake-receipt">
+        <section className="intake-receipt">
           <div className="receipt-check" aria-hidden="true">
             ✓
           </div>
           <h1>
             {r.status === "Confirmed"
               ? "Your visit is booked."
-              : "We’ve got it."}
+              : "We’ve got your request."}
           </h1>
           <p>
             {r.status === "Confirmed"
@@ -608,35 +665,57 @@ export default function CustomerIntake({
                 ? "Your request has been received for referral review. No appointment is booked."
                 : "Your request has been received. We’ll review the details and confirm the appointment."}
           </p>
-          <dl className="task-answers">
-            <div>
-              <dt>Tasks</dt>
-              <dd>
-                {tasks.length} {tasks.length === 1 ? "task" : "tasks"}
-              </dd>
-            </div>
-            <div>
-              <dt>{visit ? "Confirmed appointment" : "Preferred time"}</dt>
-              <dd>
-                {visit
-                  ? timeLabel(visit)
-                  : referral
-                    ? "Referral review only"
-                    : r.preferredSlot
-                      ? timeLabel(r.preferredSlot)
-                      : r.timing}
-              </dd>
-            </div>
-            <div>
-              <dt>Service address</dt>
-              <dd>
-                {r.address}
-                {r.unit ? ", " + r.unit : ""}, {r.city} {r.postalCode}
-              </dd>
-            </div>
-          </dl>
+          <section className="customer-receipt-summary">
+            <h3>Your Request Summary</h3>
+            <dl className="task-answers">
+              <div>
+                <dt>
+                  <ListChecks size={22} /> Tasks
+                </dt>
+                <dd>
+                  {tasks.length} {tasks.length === 1 ? "task" : "tasks"}
+                </dd>
+              </div>
+              <div>
+                <dt>
+                  <CalendarDays size={22} />
+                  {visit ? "Confirmed appointment" : "Preferred time"}
+                </dt>
+                <dd>
+                  {visit
+                    ? timeLabel(visit)
+                    : referral
+                      ? "Referral review only"
+                      : r.preferredSlot
+                        ? timeLabel(r.preferredSlot)
+                        : r.timing}
+                </dd>
+              </div>
+              <div>
+                <dt>
+                  <MapPin size={22} />
+                  Service address
+                </dt>
+                <dd>
+                  {r.address}
+                  {r.unit ? ", " + r.unit : ""}, {r.city} {r.postalCode}
+                </dd>
+              </div>
+            </dl>
+          </section>
+          <div className="customer-notice">
+            <Mail size={28} />
+            <p>
+              Updates appear in this demo. Notifications are simulated in-app;
+              no email or text is sent.
+            </p>
+          </div>
           <button className="primary full" onClick={view}>
-            View request
+            View My Request
+          </button>
+          <button className="customer-home-link" onClick={view}>
+            <Home size={20} />
+            Back to Home
           </button>
         </section>
       )}
