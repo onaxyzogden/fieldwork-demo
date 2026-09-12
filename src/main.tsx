@@ -1,3 +1,4 @@
+import { suitableProviders } from "./suitability";
 import Blueprint from "./Blueprint";
 import ContractorWork, { JobWork } from "./ContractorWork";
 import { OperatorHome, OperatorToday } from "./OperatorWork";
@@ -63,6 +64,7 @@ import {
   slots,
   available,
   eligible,
+  scopeMatch,
   torontoParts,
   instantEligible,
 } from "./model";
@@ -76,6 +78,7 @@ import "./style.css";
 import "./light.css";
 import "./typography.css";
 import "./work.css";
+import "./blue-theme.css";
 import {
   migrateDispatch,
   dispatchStatus,
@@ -274,6 +277,9 @@ function App() {
   const [filter, setFilter] = useState("Needs Action");
   const [step, setStep] = useState(0);
   const [selected, setSelected] = useState<string[]>([]);
+  const [fulfillmentKind, setFulfillmentKind] = useState<"self" | "contractor">(
+    "self",
+  );
   const [fulfillment, setFulfillment] = useState(false);
   React.useEffect(() => {
     if (fulfillment)
@@ -291,6 +297,43 @@ function App() {
   const [reschedule, setReschedule] = useState("");
   const [fail, setFail] = useState(false);
   const [sidebar, setSidebar] = useState(false);
+  const menuTrigger = React.useRef<HTMLButtonElement>(null);
+  React.useEffect(() => {
+    if (!sidebar) return;
+    const drawer = document.querySelector<HTMLElement>(".sidebar");
+    const items = () =>
+      Array.from(
+        drawer?.querySelectorAll<HTMLElement>("button,a[href]") || [],
+      ).filter((el) => el.getClientRects().length > 0);
+    items()[0]?.focus();
+    const oldOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    const shell = document.querySelector<HTMLElement>(".shell");
+    if (shell) shell.inert = true;
+    const key = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        e.preventDefault();
+        setSidebar(false);
+      }
+      if (e.key === "Tab") {
+        const list = items();
+        if (e.shiftKey && document.activeElement === list[0]) {
+          e.preventDefault();
+          list.at(-1)?.focus();
+        } else if (!e.shiftKey && document.activeElement === list.at(-1)) {
+          e.preventDefault();
+          list[0]?.focus();
+        }
+      }
+    };
+    document.addEventListener("keydown", key);
+    return () => {
+      document.removeEventListener("keydown", key);
+      document.body.style.overflow = oldOverflow;
+      if (shell) shell.inert = false;
+      menuTrigger.current?.focus();
+    };
+  }, [sidebar]);
   const [override, setOverride] = useState("");
   const [routeDay, setRouteDay] = useState("");
   const routeVisits = s.visits
@@ -335,9 +378,11 @@ function App() {
     const focusables = () =>
       Array.from(
         dialog?.querySelectorAll<HTMLElement>(
-          "button,input,select,textarea,a[href]",
+          "button,input,select,textarea,a[href],summary",
         ) || [],
-      ).filter((el) => !el.hasAttribute("disabled"));
+      ).filter(
+        (el) => !el.hasAttribute("disabled") && el.getClientRects().length > 0,
+      );
     focusables()[0]?.focus();
     const handler = (e: KeyboardEvent) => {
       if (e.key === "Escape") setModal("");
@@ -370,6 +415,66 @@ function App() {
   const duration = tasks
     .filter((t) => !selected.length || selected.includes(t.id))
     .reduce((a, t) => a + t.duration, 0);
+  const scopeTasks = tasks.filter(
+    (t) => !selected.length || selected.includes(t.id),
+  );
+  const candidates = suitableProviders(
+    s,
+    scopeTasks,
+    r.city,
+    r.timing,
+    fulfillmentKind === "self",
+  );
+  const match = scopeMatch(provider, scopeTasks);
+  const scopeSignature = JSON.stringify([
+    r.id,
+    r.address,
+    r.city,
+    r.timing,
+    scopeTasks.map((t) => [
+      t.id,
+      t.description,
+      t.category,
+      t.reviewed,
+      t.restricted,
+      t.duration,
+    ]),
+  ]);
+  React.useEffect(() => {
+    if (!fulfillment || modal || page !== "Requests") return;
+    const stillFits = candidates.find((c) => c.provider.id === provider);
+    if (!stillFits) {
+      setProvider(
+        candidates.find((c) => c.appointments.length)?.provider.id ||
+          candidates[0]?.provider.id ||
+          "",
+      );
+      setSlot("");
+      setOverride("");
+    } else if (
+      slot &&
+      !available(s, provider, duration, r.city, slot, undefined, r.timing)
+    ) {
+      setSlot("");
+      setOverride("");
+    }
+  }, [
+    scopeSignature,
+    fulfillmentKind,
+    provider,
+    slot,
+    s.clock,
+    s.visits,
+    fulfillment,
+    modal,
+    page,
+  ]);
+  React.useEffect(() => {
+    if (!modal) {
+      setSlot("");
+      setOverride("");
+    }
+  }, [scopeSignature]);
   const recommended = eligible(
     provider,
     tasks.filter((t) => !selected.length || selected.includes(t.id)),
@@ -856,8 +961,29 @@ function App() {
       </div>
     ) : null;
   return (
-    <div className="app">
-      <aside className={"sidebar " + (sidebar ? "open" : "")}>
+    <div className="app" data-role={role}>
+      {sidebar && (
+        <button
+          className="drawer-backdrop"
+          aria-label="Close navigation"
+          onClick={() => setSidebar(false)}
+        />
+      )}
+      <aside
+        id="workspace-navigation"
+        role={sidebar ? "dialog" : undefined}
+        aria-modal={sidebar || undefined}
+        aria-label="Workspace navigation"
+        className={"sidebar " + (sidebar ? "open" : "")}
+      >
+        {sidebar && (
+          <button
+            className="text-button drawer-close"
+            onClick={() => setSidebar(false)}
+          >
+            Close navigation ×
+          </button>
+        )}
         <a className="brand" href="#" onClick={(e) => e.preventDefault()}>
           <span className="brand-icon">
             <Wrench size={21} />
@@ -915,7 +1041,10 @@ function App() {
           </div>
           <button
             className="text-button"
-            onClick={() => setModal("Demo settings")}
+            onClick={() => {
+              setSidebar(false);
+              setModal("Demo settings");
+            }}
           >
             <Settings size={16} /> Demo settings
           </button>
@@ -973,7 +1102,10 @@ function App() {
           <div className="row">
             <button
               className="mobile-menu icon-button"
-              aria-label="Toggle menu"
+              ref={menuTrigger}
+              aria-label="Open navigation"
+              aria-expanded={sidebar}
+              aria-controls="workspace-navigation"
               onClick={() => setSidebar(!sidebar)}
             >
               <Menu />
@@ -1039,24 +1171,6 @@ function App() {
               : undefined
           }
         >
-          <div className="scenario-strip">
-            <span>EXPLORE A SCENARIO</span>
-            {[
-              "01 Door adjustment",
-              "02 Four-task visit",
-              "03 Delegate a job",
-              "04 Needs review",
-              "05 Decline & reassign",
-            ].map((x, i) => (
-              <button
-                className={active === "r" + (i + 1) ? "selected" : ""}
-                key={x}
-                onClick={() => choose("r" + (i + 1))}
-              >
-                {x}
-              </button>
-            ))}
-          </div>
           {role === "Operator" && page === "Home" && (
             <OperatorHome
               s={s}
@@ -1081,7 +1195,10 @@ function App() {
               ))}
               <button
                 className="queue-item"
-                onClick={() => setModal("Demo settings")}
+                onClick={() => {
+                  setSidebar(false);
+                  setModal("Demo settings");
+                }}
               >
                 Demo settings →
               </button>
@@ -1213,6 +1330,7 @@ function App() {
                       <button
                         className="primary"
                         onClick={() => {
+                          setFulfillmentKind("self");
                           setProvider("yousef");
                           setFulfillment(true);
                         }}
@@ -1222,7 +1340,8 @@ function App() {
                       <button
                         className="secondary"
                         onClick={() => {
-                          setProvider("marcus");
+                          setFulfillmentKind("contractor");
+                          setProvider("");
                           setFulfillment(true);
                         }}
                       >
@@ -1286,7 +1405,7 @@ function App() {
                       ))}
                     {r.notes && <p className="note">{r.notes}</p>}
                   </section>
-                  <section className="panel">
+                  <section className="panel" id="review-tasks">
                     <div className="panel-title">
                       <h3>
                         Tasks <span className="count">{tasks.length}</span>
@@ -1450,8 +1569,11 @@ function App() {
                         </div>
                         <div className="segmented">
                           <button
-                            className={provider === "yousef" ? "chosen" : ""}
+                            className={
+                              fulfillmentKind === "self" ? "chosen" : ""
+                            }
                             onClick={() => {
+                              setFulfillmentKind("self");
                               setProvider("yousef");
                               setSlot("");
                             }}
@@ -1459,9 +1581,12 @@ function App() {
                             Do It Myself
                           </button>
                           <button
-                            className={provider !== "yousef" ? "chosen" : ""}
+                            className={
+                              fulfillmentKind === "contractor" ? "chosen" : ""
+                            }
                             onClick={() => {
-                              setProvider("marcus");
+                              setFulfillmentKind("contractor");
+                              setProvider("");
                               setSlot("");
                             }}
                           >
@@ -1469,54 +1594,98 @@ function App() {
                           </button>
                         </div>
                         <div className="provider-options">
-                          {providers
-                            .filter((p) =>
-                              provider === "yousef"
-                                ? p.id === "yousef"
-                                : p.id !== "yousef",
-                            )
-                            .map((p) => (
-                              <button
-                                key={p.id}
-                                className={
-                                  "provider-card " +
-                                  (provider === p.id ? "selected" : "")
-                                }
-                                onClick={() => {
-                                  setProvider(p.id);
-                                  setSlot("");
-                                }}
-                              >
-                                <div className="avatar">{p.initials}</div>
-                                <div>
-                                  <strong>{p.name}</strong>
-                                  <small>
-                                    {p.city} · {money(p.rate)}/hr · Weekdays 9–5
-                                  </small>
-                                  <small>{p.skills}</small>
-                                </div>
-                                {provider === p.id && <Check size={17} />}
-                              </button>
-                            ))}
+                          {candidates.map((c) => (
+                            <button
+                              key={c.provider.id}
+                              className={
+                                "provider-card " +
+                                (provider === c.provider.id ? "selected" : "")
+                              }
+                              onClick={() => {
+                                setProvider(c.provider.id);
+                                setSlot("");
+                                setOverride("");
+                              }}
+                            >
+                              <div className="avatar">
+                                {c.provider.initials}
+                              </div>
+                              <div>
+                                <strong>{c.provider.name}</strong>
+                                <small>
+                                  {c.provider.city} · {money(c.provider.rate)}
+                                  /hr
+                                </small>
+                                <small>
+                                  {c.match.checks
+                                    .map((x) => x.title)
+                                    .join(" · ")}
+                                </small>
+                                <small>
+                                  {c.appointments.length
+                                    ? `First fitting time: ${dateLabel(c.appointments[0].start)} · ${c.appointments[0].travel} min simulated travel`
+                                    : "No fitting time found"}
+                                </small>
+                              </div>
+                              {provider === c.provider.id && (
+                                <Check size={17} />
+                              )}
+                            </button>
+                          ))}
                         </div>
-                        <details className="note">
-                          <summary>Why this provider?</summary>
-                          <p>
-                            {providers.find((p) => p.id === provider)?.skills}.{" "}
-                            {eligible(
-                              provider,
-                              tasks.filter(
+                        {!candidates.length && (
+                          <div className="warning">
+                            <strong>
+                              {scopeTasks.some(
                                 (t) =>
-                                  !selected.length || selected.includes(t.id),
-                              ),
-                            )
-                              ? "Required skills and review eligibility match."
-                              : "Not eligible for the selected scope."}{" "}
-                            Pay and customer price remain separate. Available
-                            appointments below account for duration, existing
-                            visits, travel and buffers.
-                          </p>
-                        </details>
+                                  getIssue(t.description).availability ===
+                                  "Referral only",
+                              )
+                                ? "Referral-only scope: no bookable provider"
+                                : scopeTasks.some((t) => !t.reviewed)
+                                  ? "Review these tasks before choosing a provider"
+                                  : "No provider covers all selected tasks"}
+                            </strong>
+                            <p>
+                              Expand the task rows to review scope or select
+                              tasks for separate visits.
+                            </p>
+                            <button
+                              className="secondary"
+                              onClick={() => {
+                                setFulfillment(false);
+                                document
+                                  .getElementById("review-tasks")
+                                  ?.scrollIntoView({ block: "start" });
+                              }}
+                            >
+                              Review tasks / split visit
+                            </button>
+                          </div>
+                        )}
+                        {match.eligible && (
+                          <details className="note">
+                            <summary>Why this provider?</summary>
+                            <ul>
+                              {match.checks.map((c) => (
+                                <li key={c.taskId}>
+                                  <strong>{c.title}</strong> — {c.reason}.{" "}
+                                  <small>{c.category}</small>
+                                </li>
+                              ))}
+                            </ul>
+                            <p>
+                              {candidates.find(
+                                (c) => c.provider.id === provider,
+                              )?.appointments.length
+                                ? "Fitting times below account for combined duration, working hours, existing visits, travel and buffers."
+                                : "Scope fits, but no appointment fits the current duration and timing preference. Review timing or split the visit."}
+                            </p>
+                            <p>
+                              Customer price and contractor pay remain separate.
+                            </p>
+                          </details>
+                        )}
                         <h4>
                           Recommended appointments{" "}
                           <span className="muted">· simulated routing</span>
@@ -1609,6 +1778,7 @@ function App() {
                         )}
                         <button
                           className="primary actions"
+                          disabled={!match.eligible || !opts.length}
                           onClick={createVisit}
                         >
                           {provider === "yousef"
@@ -2036,22 +2206,6 @@ function App() {
               />
             </>
           )}
-          {role === "Operator" && (
-            <nav className="work-mobile-nav" aria-label="Operator navigation">
-              {["Home", "Requests", "Today", "More"].map((x) => (
-                <button
-                  key={x}
-                  className={page === x ? "chosen" : ""}
-                  onClick={() => {
-                    setPage(x);
-                    setSidebar(false);
-                  }}
-                >
-                  {x}
-                </button>
-              ))}
-            </nav>
-          )}
           <footer>
             <span>
               <span className="brand-mini">fieldwork.</span> Home services,
@@ -2088,6 +2242,34 @@ function App() {
             </div>
             {modal === "Demo settings" && (
               <>
+                <details className="sample-scenarios">
+                  <summary>Sample scenarios</summary>
+                  <div className="scenario-strip">
+                    <p>
+                      Open a fictional sample request. Existing demo changes are
+                      preserved.
+                    </p>
+                    {[
+                      "01 Door adjustment",
+                      "02 Four-task visit",
+                      "03 Delegate a job",
+                      "04 Needs review",
+                      "05 Decline & reassign",
+                    ].map((x, i) => (
+                      <button
+                        className={active === "r" + (i + 1) ? "selected" : ""}
+                        key={x}
+                        onClick={() => {
+                          choose("r" + (i + 1));
+                          setModal("");
+                        }}
+                      >
+                        {x}
+                      </button>
+                    ))}
+                  </div>
+                </details>
+
                 <a className="secondary" href="?view=blueprint">
                   Developer blueprint →
                 </a>

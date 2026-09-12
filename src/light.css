@@ -34,13 +34,13 @@
 :root[data-theme="light"] .scenario-strip > span {
   color: #627353;
 }
-:root[data-theme="light"] nav button {
+:root[data-theme="light"] .sidebar nav button {
   color: #586a5b;
 }
-:root[data-theme="light"] nav button:hover {
+:root[data-theme="light"] .sidebar nav button:hover {
   background: #e2e9db;
 }
-:root[data-theme="light"] nav button.active {
+:root[data-theme="light"] .sidebar nav button.active {
   background: #f7e8c9;
   color: #654918;
   border-color: #e5d0a2;

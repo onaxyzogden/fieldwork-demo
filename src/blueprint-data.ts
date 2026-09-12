@@ -92,7 +92,7 @@ export const stages: Stage[] = [
       },
       Operator: {
         title: "Choose the provider",
-        body: "Reviews provider skills, hourly rate and service area; chooses the tasks for this visit. Customer price and contractor pay remain separate.",
+        body: "Sees only providers matching every selected task under existing review and eligibility rules. Task-specific reasons explain the match; fitting appointments are separate from scope suitability. Customer price and contractor pay remain separate.",
       },
       Contractor: {
         title: "No offer sent yet",

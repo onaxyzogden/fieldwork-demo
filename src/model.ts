@@ -601,23 +601,56 @@ export function slots(
   }
   return out.sort((a, b) => b.score - a.score).slice(0, limit);
 }
-export function eligible(providerId: string, tasks: Task[]) {
+export function scopeMatch(providerId: string, tasks: Task[]) {
   const p = providers.find((p) => p.id === providerId);
-  if (!p) return false;
-  return tasks.every(
-    (t) =>
-      getIssue(t.description).availability !== "Referral only" &&
-      t.reviewed &&
-      (!t.restricted || p.eligible) &&
-      (t.restricted ||
-        providerId === "yousef" ||
-        p.skills
-          .toLowerCase()
-          .includes(t.category.split(" / ")[0].toLowerCase()) ||
-        (t.category.includes("Doors") && p.skills.includes("doors")) ||
-        (t.category.includes("Walls") && p.skills.includes("walls")) ||
-        (t.category.includes("Fixtures") && p.skills.includes("installation"))),
-  );
+  const active = tasks.filter((t) => !t.mergedInto);
+  const checks = active.map((t) => {
+    const referral = getIssue(t.description).availability === "Referral only";
+    const family = t.category.split(" / ")[0].toLowerCase();
+    const matchedSkill = !p
+      ? ""
+      : p.skills.toLowerCase().includes(family)
+        ? family
+        : t.category.includes("Doors") && p.skills.includes("doors")
+          ? "doors"
+          : t.category.includes("Walls") && p.skills.includes("walls")
+            ? "walls"
+            : t.category.includes("Fixtures") &&
+                p.skills.includes("installation")
+              ? "installation"
+              : "";
+    const skill =
+      !!p && (t.restricted || providerId === "yousef" || !!matchedSkill);
+    const qualified = !!p && (!t.restricted || p.eligible);
+    const fits = !referral && t.reviewed && qualified && skill;
+    const reason = referral
+      ? "Referral-only work is not bookable"
+      : !t.reviewed
+        ? "Operator scope review required"
+        : !qualified
+          ? "Restricted-work eligibility required"
+          : !skill
+            ? "Required skill not listed for this provider"
+            : t.restricted
+              ? "Operator-reviewed scope and manually marked specialist eligibility"
+              : providerId === "yousef"
+                ? "Covered by the existing owner/lead-handyman eligibility policy"
+                : `Listed ${matchedSkill} skill matches this task; operator scope review is complete`;
+    return {
+      taskId: t.id,
+      title: t.summary,
+      category: t.category,
+      fits,
+      reason,
+    };
+  });
+  return {
+    eligible: !!p && checks.length > 0 && checks.every((c) => c.fits),
+    checks,
+  };
+}
+export function eligible(providerId: string, tasks: Task[]) {
+  return scopeMatch(providerId, tasks).eligible;
 }
 export function instantEligible(tasks: Task[]) {
   return (

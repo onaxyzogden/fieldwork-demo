@@ -224,12 +224,12 @@ textarea::placeholder {
   padding: 0 13px;
   margin-bottom: 12px;
 }
-nav {
+.sidebar nav {
   display: flex;
   flex-direction: column;
   gap: 6px;
 }
-nav button {
+.sidebar nav button {
   display: flex;
   align-items: center;
   gap: 12px;
@@ -240,10 +240,10 @@ nav button {
   text-align: left;
   color: #a1aba1;
 }
-nav button:hover {
+.sidebar nav button:hover {
   background: #252c25;
 }
-nav button.active {
+.sidebar nav button.active {
   background: #332f24;
   border-color: #51442d;
   color: #edc07e;
