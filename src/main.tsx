@@ -80,6 +80,7 @@ import "./typography.css";
 import "./work.css";
 import "./blue-theme.css";
 import "./customer-concept.css";
+import "./operator-concept.css";
 import {
   migrateDispatch,
   dispatchStatus,
@@ -249,6 +250,8 @@ function App() {
     }
   });
   React.useEffect(() => {
+    if (fulfillment)
+      document.querySelector<HTMLElement>("#fulfillment > button")?.focus();
     document.documentElement.dataset.theme = theme;
     try {
       localStorage.setItem("fieldwork-theme", theme);
@@ -282,6 +285,7 @@ function App() {
     "self",
   );
   const [fulfillment, setFulfillment] = useState(false);
+  const [showRequestQueue, setShowRequestQueue] = useState(false);
   React.useEffect(() => {
     if (fulfillment)
       document
@@ -506,6 +510,7 @@ function App() {
     setTimeout(() => setToast(""), 3500);
   };
   const choose = (id: string) => {
+    setShowRequestQueue(false);
     const req = s.requests.find((x) => x.id === id)!;
     setActive(id);
     setCustomer(req.customerId);
@@ -1207,7 +1212,12 @@ function App() {
           )}
           {role === "Operator" && page === "Requests" && (
             <>
-              <div className="heading">
+              <div
+                className={
+                  "heading operator-request-heading " +
+                  (fulfillment ? "is-hidden" : "")
+                }
+              >
                 <div>
                   <div className="eyebrow">INTAKE & FULFILLMENT</div>
                   <h1>Service requests</h1>
@@ -1215,8 +1225,28 @@ function App() {
                 </div>
                 <span className="badge">{s.requests.length} requests</span>
               </div>
-              <div className="requests-layout">
-                <section className="panel queue">
+              <div
+                className={
+                  "requests-layout operator-concept " +
+                  (fulfillment ? "focused-fulfillment" : "")
+                }
+              >
+                {!fulfillment && (
+                  <button
+                    className="secondary mobile-request-browser"
+                    aria-expanded={showRequestQueue}
+                    onClick={() => setShowRequestQueue(!showRequestQueue)}
+                  >
+                    {showRequestQueue
+                      ? "Close request list"
+                      : "Browse requests"}
+                  </button>
+                )}
+                <section
+                  className={
+                    "panel queue " + (showRequestQueue ? "queue-open" : "")
+                  }
+                >
                   <label className="search">
                     <Search size={16} />
                     <input
@@ -1303,15 +1333,24 @@ function App() {
                     ))}
                 </section>
                 <div className="detail">
-                  <section className="panel">
+                  <div className="operator-detail-header">
+                    <button
+                      className="secondary"
+                      onClick={() => setPage("Home")}
+                    >
+                      ← Back to Home
+                    </button>
+                    <strong>Request Details</strong>
+                  </div>
+                  <section className="panel operator-summary">
                     <div className="panel-title">
                       <div>
                         <span className="eyebrow">
                           SERVICE REQUEST / {r.id.toUpperCase()}
                         </span>
-                        <h2>{r.name}</h2>
+                        <h2>{r.address || r.name}</h2>
                         <p>
-                          <MapPin size={14} /> {r.address}, {r.city}
+                          <MapPin size={14} /> {r.city} · {r.name}
                         </p>
                       </div>
                       <div className="status-stack">
@@ -1327,12 +1366,130 @@ function App() {
                       </span>
                       <span>{badge(r.mode)}</span>
                     </div>
-                    <div className="row actions wrap">
+                    <p>
+                      {tasks.length} tasks ·{" "}
+                      {tasks.reduce((n, t) => n + t.duration, 0)} minutes
+                      estimated ·{" "}
+                      {tasks.reduce((n, t) => n + t.photos.length, 0)} photos
+                    </p>
+                    {visits
+                      .filter((v) => v.execution || v.status === "Confirmed")
+                      .map((v) => (
+                        <JobWork
+                          key={v.id}
+                          s={s}
+                          provider="yousef"
+                          update={update}
+                          visit={v}
+                        />
+                      ))}
+                    {r.notes && <p className="note">{r.notes}</p>}
+                  </section>
+                  <section className="operator-location-card">
+                    <MapPin size={36} />
+                    <strong>
+                      {r.address}, {r.city}
+                    </strong>
+                    <a
+                      className="secondary"
+                      target="_blank"
+                      rel="noreferrer"
+                      href={
+                        "https://www.google.com/maps/search/?api=1&query=" +
+                        encodeURIComponent(r.address + ", " + r.city)
+                      }
+                    >
+                      Open in Maps ↗
+                    </a>
+                    <small>
+                      Illustrative location · simulated, not geocoded
+                    </small>
+                  </section>
+                  <section className="panel operator-photo-gallery">
+                    <h3>
+                      Photos ({tasks.reduce((n, t) => n + t.photos.length, 0)})
+                    </h3>
+                    <div className="operator-thumbnails">
+                      {tasks
+                        .flatMap((t) =>
+                          t.photos.map((photo, i) => ({
+                            photo,
+                            title: t.summary,
+                            index: i,
+                          })),
+                        )
+                        .slice(0, 3)
+                        .map((p, i) => (
+                          <figure key={i}>
+                            <img
+                              src={p.photo}
+                              alt={p.title + " photo " + (p.index + 1)}
+                            />
+                            <figcaption>{p.title}</figcaption>
+                          </figure>
+                        ))}
+                    </div>
+                    <details>
+                      <summary>View all task photos</summary>
+                      <div className="operator-thumbnails">
+                        {tasks
+                          .flatMap((t) =>
+                            t.photos.map((photo, i) => ({
+                              photo,
+                              title: t.summary,
+                              index: i,
+                            })),
+                          )
+                          .map((p, i) => (
+                            <figure key={i}>
+                              <a
+                                href={p.photo}
+                                target="_blank"
+                                rel="noreferrer"
+                                aria-label={
+                                  "Open " + p.title + " photo " + (p.index + 1)
+                                }
+                              >
+                                <img
+                                  src={p.photo}
+                                  alt={p.title + " photo " + (p.index + 1)}
+                                />
+                              </a>
+                              <figcaption>{p.title}</figcaption>
+                            </figure>
+                          ))}
+                      </div>
+                    </details>
+                    {!tasks.some((t) => t.photos.length > 0) && (
+                      <p>No customer photos yet. Add photos within a task.</p>
+                    )}
+                  </section>
+                  <section className="panel operator-estimate">
+                    <h3>Estimated visit</h3>
+                    <p>
+                      <Clock size={20} />{" "}
+                      {tasks.reduce((n, t) => n + t.duration, 0)} minutes ·{" "}
+                      {tasks.length} separate tasks
+                    </p>
+                  </section>
+                  <section className="panel operator-notes">
+                    <h3>Notes from customer</h3>
+                    <p>
+                      {r.notes ||
+                        "No additional access or parking notes supplied."}
+                    </p>
+                  </section>
+                  <section className="panel operator-action-panel">
+                    {" "}
+                    <div className="row actions wrap operator-primary-actions">
                       <button
                         className="primary"
                         onClick={() => {
                           setFulfillmentKind("self");
-                          setProvider("yousef");
+                          if (fulfillmentKind !== "self") {
+                            setProvider("yousef");
+                            setSlot("");
+                          }
                           setFulfillment(true);
                         }}
                       >
@@ -1342,7 +1499,10 @@ function App() {
                         className="secondary"
                         onClick={() => {
                           setFulfillmentKind("contractor");
-                          setProvider("");
+                          if (fulfillmentKind !== "contractor") {
+                            setProvider("");
+                            setSlot("");
+                          }
                           setFulfillment(true);
                         }}
                       >
@@ -1387,24 +1547,6 @@ function App() {
                         </select>
                       </details>
                     </div>
-                    <p>
-                      {tasks.length} tasks ·{" "}
-                      {tasks.reduce((n, t) => n + t.duration, 0)} minutes
-                      estimated ·{" "}
-                      {tasks.reduce((n, t) => n + t.photos.length, 0)} photos
-                    </p>
-                    {visits
-                      .filter((v) => v.execution || v.status === "Confirmed")
-                      .map((v) => (
-                        <JobWork
-                          key={v.id}
-                          s={s}
-                          provider="yousef"
-                          update={update}
-                          visit={v}
-                        />
-                      ))}
-                    {r.notes && <p className="note">{r.notes}</p>}
                   </section>
                   <section className="panel" id="review-tasks">
                     <div className="panel-title">
@@ -1416,6 +1558,9 @@ function App() {
                     {tasks.map((t) => (
                       <details className="task-review" key={t.id}>
                         <summary>
+                          <span className="task-number">
+                            {tasks.indexOf(t) + 1}
+                          </span>{" "}
                           {t.summary} · {t.duration} min
                           {!t.reviewed ? " · Needs review" : ""}
                         </summary>
@@ -1561,12 +1706,41 @@ function App() {
                     <>
                       {" "}
                       <section className="panel" id="fulfillment">
+                        <button
+                          className="secondary"
+                          onClick={() => {
+                            setFulfillment(false);
+                            requestAnimationFrame(() =>
+                              document
+                                .querySelector<HTMLElement>(
+                                  ".operator-primary-actions > button",
+                                )
+                                ?.focus(),
+                            );
+                          }}
+                        >
+                          ← Back to request
+                        </button>
                         <div className="panel-title">
-                          <h3>Plan the visit</h3>
+                          <h2>
+                            {fulfillmentKind === "self"
+                              ? "Do It Myself"
+                              : "Assign Contractor"}
+                          </h2>
                           <span className="badge">
                             {selected.length || tasks.length} tasks · {duration}{" "}
                             min
                           </span>
+                        </div>
+                        <div className="fulfillment-request-summary">
+                          <MapPin size={24} />
+                          <strong>
+                            {r.address}, {r.city}
+                          </strong>
+                          <p>{scopeTasks.map((t) => t.summary).join(" · ")}</p>
+                          <p>{r.timing}</p>
+                          {requestDispatch(s, r.id) &&
+                            badge(requestDispatch(s, r.id))}
                         </div>
                         <div className="segmented">
                           <button
@@ -1598,6 +1772,7 @@ function App() {
                           {candidates.map((c) => (
                             <button
                               key={c.provider.id}
+                              aria-pressed={provider === c.provider.id}
                               className={
                                 "provider-card " +
                                 (provider === c.provider.id ? "selected" : "")
@@ -1710,6 +1885,10 @@ function App() {
                               <small>
                                 +{o.travel} min driving · 15 min buffer
                               </small>
+                              <small>
+                                {duration} min work · fits provider schedule and
+                                customer preference
+                              </small>
                             </button>
                           ))}
                         </div>
@@ -1777,6 +1956,28 @@ function App() {
                             />
                           </label>
                         )}
+                        <div className="note">
+                          <strong>Customer price & confirmation</strong>
+                          <p>
+                            {s.quotes
+                              .filter(
+                                (q) =>
+                                  q.requestId === r.id &&
+                                  q.status !== "Superseded",
+                              )
+                              .map(
+                                (q) =>
+                                  `${q.type}: ${money(q.amount)} · ${q.status}`,
+                              )
+                              .join("; ") ||
+                              "No quote sent yet. Set pricing in Customer pricing & quotes below."}
+                          </p>
+                          <p>
+                            An offer does not confirm the customer appointment.
+                            Acceptance, approved scope, quote approval and
+                            applicable payment conditions still apply.
+                          </p>
+                        </div>
                         <button
                           className="primary actions"
                           disabled={!match.eligible || !opts.length}
@@ -1858,7 +2059,7 @@ function App() {
                         ))}
                     </section>
                   )}
-                  <details className="panel">
+                  <details className="panel operator-pricing">
                     <summary>Customer pricing & quotes</summary>
                     <p>
                       Customer charges and contractor compensation are separate.

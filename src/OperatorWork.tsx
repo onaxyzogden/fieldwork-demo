@@ -271,7 +271,7 @@ export function OperatorToday({
     <>
       <h1>Today</h1>
       <p>What’s happening, in appointment order.</p>
-      <section className="panel">
+      <section className="panel operator-day">
         <div className="work-toolbar">
           <label className="field">
             Provider
@@ -295,59 +295,135 @@ export function OperatorToday({
               onChange={(e) => setDay(e.target.value)}
             />
           </label>
-          <button className="secondary" onClick={() => setMap(!map)}>
-            {map ? "Timeline" : "Map"}
+        </div>
+        <div className="op-view-switch" role="group" aria-label="Today view">
+          <button aria-pressed={!map} onClick={() => setMap(false)}>
+            Timeline
+          </button>
+          <button aria-pressed={map} onClick={() => setMap(true)}>
+            Map
           </button>
         </div>
-        {map && mapView}
         <p>
-          {visits.length} visits ·{" "}
-          {visits.reduce((n, v) => n + v.duration, 0) / 60} work hours ·{" "}
-          {visits.reduce((n, v) => n + v.travel, 0)} min driving
+          {day} ·{" "}
+          {provider === "all"
+            ? "All providers · combined totals, separate routes"
+            : providers.find((p) => p.id === provider)?.name}
         </p>
-        {visits.map((v) => {
-          const r = s.requests.find((r) => r.id === v.requestId)!;
-          return (
-            <div className="work-task" key={v.id}>
-              <span className="badge">{workStatus(v)}</span>
-              <h3>{dateLabel(v.start)}</h3>
-              <p>
-                {s.tasks.find((t) => v.taskIds.includes(t.id))?.summary} ·{" "}
-                {providers.find((p) => p.id === v.providerId)?.name}
-              </p>
-              <p>
-                {r.address}, {r.city}
-              </p>
-              {v.execution?.startedAt && (
-                <p>Started {dateLabel(v.execution.startedAt)}</p>
-              )}
-              {v.execution?.eta && !v.execution.startedAt && (
-                <p>Simulated ETA {dateLabel(v.execution.eta)}</p>
-              )}
-              <small>{v.travel} min travel · 15 min buffer</small>
-              <div className="actions row">
-                <button className="secondary" onClick={() => setSelected(v.id)}>
-                  View progress
-                </button>
-                <button className="text-button" onClick={() => open(r.id)}>
-                  Open request
-                </button>
-                {map && (
-                  <a
-                    target="_blank"
-                    rel="noreferrer"
-                    href={
-                      "https://www.google.com/maps/search/?api=1&query=" +
-                      encodeURIComponent(r.address + ", " + r.city)
-                    }
-                  >
-                    Open map ↗
-                  </a>
-                )}
-              </div>
-            </div>
-          );
-        })}
+        {map && (
+          <section className="operator-route-card">
+            <h3>
+              {provider === "all" ? "Provider locations" : "Today’s route"}
+            </h3>
+            {mapView}
+            <p>
+              Illustrative map · simulated travel.{" "}
+              {provider === "all"
+                ? "Visits belong to separate provider routes."
+                : "Visit order is listed below."}
+            </p>
+            {visits.map((v) => {
+              const r = s.requests.find((r) => r.id === v.requestId)!;
+              return (
+                <a
+                  key={v.id}
+                  className="secondary"
+                  target="_blank"
+                  rel="noreferrer"
+                  href={
+                    "https://www.google.com/maps/search/?api=1&query=" +
+                    encodeURIComponent(r.address + ", " + r.city)
+                  }
+                >
+                  {r.address} · Open in Maps ↗
+                </a>
+              );
+            })}
+          </section>
+        )}
+        <div className="operator-timeline">
+          {!map &&
+            visits.map((v) => {
+              const r = s.requests.find((r) => r.id === v.requestId)!;
+              return (
+                <div className="work-task operator-timeline-entry" key={v.id}>
+                  <time className="operator-time" dateTime={v.start}>
+                    {new Date(v.start).toLocaleTimeString("en-CA", {
+                      timeZone: "America/Toronto",
+                      hour: "numeric",
+                      minute: "2-digit",
+                    })}
+                  </time>
+                  <span className="operator-timeline-dot" aria-hidden="true">
+                    {v.status === "Completed"
+                      ? "✓"
+                      : v.execution?.startedAt
+                        ? "▶"
+                        : "●"}
+                  </span>
+                  <span className="badge">{workStatus(v)}</span>
+                  <p>
+                    {s.tasks.find((t) => v.taskIds.includes(t.id))?.summary} ·{" "}
+                    {providers.find((p) => p.id === v.providerId)?.name}
+                  </p>
+                  <p>
+                    {r.address}, {r.city}
+                  </p>
+                  {v.execution?.startedAt && (
+                    <p>Started {dateLabel(v.execution.startedAt)}</p>
+                  )}
+                  {v.execution?.eta && !v.execution.startedAt && (
+                    <p>Simulated ETA {dateLabel(v.execution.eta)}</p>
+                  )}
+                  <small>{v.travel} min travel · 15 min buffer</small>
+                  <div className="actions row">
+                    <button
+                      className="secondary"
+                      onClick={() => setSelected(v.id)}
+                    >
+                      View progress
+                    </button>
+                    <button className="text-button" onClick={() => open(r.id)}>
+                      Open request
+                    </button>
+                    {map && (
+                      <a
+                        target="_blank"
+                        rel="noreferrer"
+                        href={
+                          "https://www.google.com/maps/search/?api=1&query=" +
+                          encodeURIComponent(r.address + ", " + r.city)
+                        }
+                      >
+                        Open map ↗
+                      </a>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
+        </div>
+        <div className="operator-day-totals">
+          <div>
+            <Clock3 size={22} />
+            <strong>
+              {Math.round(
+                (visits
+                  .filter((v) => v.status !== "Proposed")
+                  .reduce((n, v) => n + v.duration, 0) /
+                  60) *
+                  10,
+              ) / 10}{" "}
+              hrs
+            </strong>
+            <span>Booked work time</span>
+          </div>
+          <div>
+            <CalendarDays size={22} />
+            <strong>{visits.reduce((n, v) => n + v.travel, 0)} min</strong>
+            <span>Simulated travel · includes proposed</span>
+          </div>
+        </div>
         {!visits.length && (
           <div>
             <p>

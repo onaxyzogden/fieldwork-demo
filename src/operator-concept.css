@@ -1,0 +1,239 @@
+.operator-request-heading.is-hidden {
+  display: none;
+}
+.operator-concept .detail {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  min-width: 0;
+}
+.operator-detail-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+}
+.operator-summary h2 {
+  font-size: 1.75rem;
+}
+.operator-concept .panel {
+  margin: 0;
+}
+.operator-location-card {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem;
+  align-items: center;
+  padding: 1.25rem;
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  background:
+    repeating-linear-gradient(
+      25deg,
+      transparent 0 34px,
+      #ffffff60 35px 39px,
+      transparent 40px 80px
+    ),
+    linear-gradient(125deg, #d6e4dc 65%, #8ac5f4 66%);
+  color: #173650;
+}
+.operator-location-card strong {
+  background: #ffffffe8;
+  border-radius: 8px;
+  padding: 0.5rem;
+}
+.operator-location-card small {
+  flex-basis: 100%;
+  background: #ffffffe8;
+  padding: 0.3rem;
+}
+.operator-concept #review-tasks {
+  order: 3;
+}
+.operator-location-card {
+  order: 2;
+}
+.operator-photo-gallery {
+  order: 4;
+}
+.operator-estimate {
+  order: 5;
+  border-left: 3px solid #27b772;
+}
+.operator-notes {
+  order: 6;
+}
+.operator-action-panel {
+  order: 7;
+}
+.mobile-request-browser {
+  display: none;
+}
+@media (max-width: 900px) {
+  .mobile-request-browser {
+    display: block;
+    margin-bottom: 1rem;
+  }
+  .operator-concept > .queue:not(.queue-open) {
+    display: none;
+  }
+}
+.operator-concept
+  .detail
+  > section:not([class*="operator-"]):not(#review-tasks):not(#fulfillment),
+.operator-pricing {
+  order: 8;
+}
+.operator-thumbnails {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.75rem;
+}
+.operator-thumbnails figure {
+  margin: 0;
+  min-width: 0;
+}
+.operator-thumbnails img {
+  width: 100%;
+  aspect-ratio: 1;
+  object-fit: cover;
+  border-radius: 10px;
+}
+.operator-thumbnails figcaption {
+  font-size: 0.875rem;
+  overflow-wrap: anywhere;
+}
+.operator-primary-actions {
+  display: grid !important;
+  grid-template-columns: 1fr 1fr;
+}
+.operator-primary-actions > .primary,
+.operator-primary-actions > details {
+  grid-column: 1/-1;
+}
+.operator-concept summary {
+  min-height: 44px;
+}
+.operator-concept .task-review summary .task-number {
+  margin-right: 0.5rem;
+}
+.focused-fulfillment {
+  display: block !important;
+  max-width: 850px;
+  margin: auto;
+}
+.focused-fulfillment > .queue,
+.focused-fulfillment .detail > :not(#fulfillment):not(.operator-pricing) {
+  display: none !important;
+}
+.focused-fulfillment .detail > #fulfillment {
+  display: block;
+  order: 0;
+}
+.focused-fulfillment .operator-pricing {
+  order: 1;
+}
+.fulfillment-request-summary {
+  padding: 1rem;
+  border: 1px solid var(--line);
+  background: var(--accent-soft);
+  border-radius: 14px;
+  margin: 1rem 0;
+}
+.operator-concept .provider-options,
+.operator-concept .slot-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 1rem;
+}
+.operator-concept .provider-card,
+.operator-concept .slot {
+  padding: 1.25rem;
+  border-radius: 16px;
+  min-width: 0;
+}
+.operator-concept .provider-card.selected,
+.operator-concept .slot.selected {
+  border: 2px solid var(--accent-text);
+}
+.operator-concept #fulfillment > .primary {
+  width: 100%;
+  min-height: 56px;
+}
+.operator-day .work-toolbar {
+  flex-wrap: wrap;
+}
+.operator-timeline-entry {
+  position: relative;
+  margin-left: 100px !important;
+  border-left: 2px solid var(--accent-text) !important;
+  padding-left: 1.5rem !important;
+}
+.operator-time {
+  position: absolute;
+  left: -100px;
+  top: 1rem;
+  width: 80px;
+  font-size: 0.875rem;
+}
+.operator-timeline-dot {
+  position: absolute;
+  left: -12px;
+  top: 1rem;
+  background: var(--accent-soft);
+  color: var(--accent-text);
+  border: 1px solid var(--accent-text);
+  border-radius: 50%;
+  width: 24px;
+  height: 24px;
+  display: grid;
+  place-items: center;
+}
+.operator-route-card {
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  padding: 1rem;
+}
+.operator-route-card a {
+  display: block;
+  margin: 0.75rem 0;
+}
+.operator-day-totals {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1rem;
+  margin-top: 1rem;
+}
+.operator-day-totals > div {
+  display: grid;
+  gap: 0.5rem;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  padding: 1rem;
+  background: var(--accent-soft);
+}
+.operator-day-totals span {
+  font-size: 0.875rem;
+}
+@media (max-width: 600px) {
+  .operator-detail-header {
+    flex-wrap: wrap;
+  }
+  .operator-primary-actions {
+    grid-template-columns: 1fr;
+  }
+  .operator-timeline-entry {
+    margin-left: 65px !important;
+    padding: 1rem !important;
+  }
+  .operator-time {
+    left: -65px;
+    width: 52px;
+  }
+  .operator-day {
+    padding: 1rem !important;
+  }
+  .operator-day-totals {
+    gap: 0.5rem;
+  }
+}

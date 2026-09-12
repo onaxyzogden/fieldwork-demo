@@ -82,7 +82,8 @@ export const stages: Stage[] = [
     id: "fulfillment",
     title: "Choose fulfillment",
     subtitle: "Who can do this work?",
-    trigger: "Operator chooses Do It Myself or Assign Contractor.",
+    trigger:
+      "Operator opens the focused Do It Myself or Assign Contractor screen from Request Details. Back returns to the request without sending an offer.",
     gate: "Provider eligibility, skills and review requirements must fit the selected tasks.",
     records: ["task"],
     lanes: {
