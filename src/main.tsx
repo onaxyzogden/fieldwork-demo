@@ -89,6 +89,7 @@ import {
   dispatchStatus,
   requestDispatch,
   replacementOptions,
+  reassignmentForScope,
   reoffer,
   respondToOffer,
 } from "./dispatch";
@@ -548,6 +549,11 @@ function App() {
     });
   const createVisit = () => {
     const ids = selected.length ? selected : tasks.map((t) => t.id);
+    const existing = reassignmentForScope(s, r.id, ids);
+    if (existing) {
+      beginReassign(existing, provider === "yousef");
+      return;
+    }
     const chosen = tasks.filter((t) => ids.includes(t.id));
     if (chosen.some((t) => !t.reviewed))
       return notify("Review all selected tasks before scheduling.");
@@ -608,6 +614,10 @@ function App() {
     const choice = options.find((o) =>
       self ? o.provider.id === "yousef" : o.provider.id !== "yousef",
     );
+    if (self && !choice)
+      return notify(
+        "Yousef cannot currently cover this visit's scope and availability. Review the tasks or choose another eligible provider.",
+      );
     setReschedule(v.id);
     setProvider(choice?.provider.id || "");
     const oldPay =
@@ -1502,6 +1512,15 @@ function App() {
                       <button
                         className="primary"
                         onClick={() => {
+                          const existing = reassignmentForScope(
+                            s,
+                            r.id,
+                            selected.length ? selected : tasks.map((t) => t.id),
+                          );
+                          if (existing) {
+                            beginReassign(existing, true);
+                            return;
+                          }
                           setFulfillmentKind("self");
                           if (fulfillmentKind !== "self") {
                             setProvider("yousef");
@@ -1515,6 +1534,15 @@ function App() {
                       <button
                         className="secondary"
                         onClick={() => {
+                          const existing = reassignmentForScope(
+                            s,
+                            r.id,
+                            selected.length ? selected : tasks.map((t) => t.id),
+                          );
+                          if (existing) {
+                            beginReassign(existing);
+                            return;
+                          }
                           setFulfillmentKind("contractor");
                           if (fulfillmentKind !== "contractor") {
                             setProvider("");
@@ -2760,8 +2788,10 @@ function App() {
                 return (
                   <>
                     <p>
-                      Previous declines stay in history. Review the provider,
-                      pay, and appointment before sending a replacement offer.
+                      This reuses the existing visit; no duplicate visit is
+                      created. Previous declines stay in history. Review the
+                      provider, pay, and appointment before sending a
+                      replacement offer.
                     </p>
                     <div className="provider-options">
                       {options.map((o) => (

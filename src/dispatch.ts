@@ -85,6 +85,25 @@ export function requestDispatch(s: State, requestId: string) {
     statuses.find((x) => x.includes("Needs reassignment")) || statuses[0] || ""
   );
 }
+export function reassignmentForScope(
+  s: State,
+  requestId: string,
+  taskIds: string[],
+) {
+  const ids = new Set(taskIds);
+  if (!ids.size) return undefined;
+  const overlapping = s.visits.filter(
+    (v) => v.status !== "Cancelled" && v.taskIds.some((id) => ids.has(id)),
+  );
+  if (overlapping.length !== 1) return undefined;
+  const v = overlapping[0];
+  return v.requestId === requestId &&
+    v.taskIds.length === ids.size &&
+    v.taskIds.every((id) => ids.has(id)) &&
+    dispatchStatus(s, v).includes("Needs reassignment")
+    ? v
+    : undefined;
+}
 export function replacementOptions(s: State, v: Visit, automatic = false) {
   const req = s.requests.find((r) => r.id === v.requestId)!;
   const tasks = s.tasks.filter((t) => v.taskIds.includes(t.id));

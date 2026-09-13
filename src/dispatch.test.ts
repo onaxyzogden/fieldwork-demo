@@ -4,6 +4,7 @@ import {
   migrateDispatch,
   respondToOffer,
   replacementOptions,
+  reassignmentForScope,
   reoffer,
   requestDispatch,
   dispatchStatus,
@@ -190,5 +191,68 @@ describe("optional automatic reoffers", () => {
     expect(copy.settings!.autoReofferDeclined).toBe(true);
     expect(copy.notifications![0].read).toBe(true);
     expect(copy.notifications).toHaveLength(2);
+  });
+});
+
+describe("declined visit takeover routing", () => {
+  it("reuses the exact visit and retains declined history without confirming an unpaid quote", () => {
+    const s = setup();
+    const v = s.visits.find((v) => v.id === "v5")!;
+    respondToOffer(
+      s,
+      s.assignments.find((a) => a.visitId === v.id)!.id,
+      "Declined",
+    );
+    s.quotes.push({
+      id: "takeover-quote",
+      requestId: v.requestId,
+      type: "Manual quote",
+      amount: 250,
+      high: 250,
+      status: "Sent",
+      notes: "",
+      payOnCompletion: false,
+    });
+    const count = s.visits.length;
+    const target = reassignmentForScope(s, v.requestId, v.taskIds);
+    expect(target?.id).toBe(v.id);
+    const option = replacementOptions(s, v).find(
+      (o) => o.provider.id === "yousef",
+    )!;
+    expect(option).toBeTruthy();
+    expect(reoffer(s, v.id, "yousef", option.start!, 0)).toBe(true);
+    reconcile(s);
+    expect(s.visits).toHaveLength(count);
+    expect(v.providerId).toBe("yousef");
+    expect(v.status).toBe("Proposed");
+    expect(
+      s.assignments.some((a) => a.visitId === v.id && a.status === "Declined"),
+    ).toBe(true);
+    expect(
+      s.assignments.some(
+        (a) =>
+          a.visitId === v.id &&
+          a.providerId === "yousef" &&
+          a.status === "Accepted",
+      ),
+    ).toBe(true);
+    expect(reassignmentForScope(s, v.requestId, v.taskIds)).toBeUndefined();
+  });
+  it("does not bypass duplicate protection for mixed scope, partial scope or active offers", () => {
+    const s = setup(),
+      v = s.visits.find((v) => v.id === "v5")!;
+    expect(reassignmentForScope(s, v.requestId, v.taskIds)).toBeUndefined();
+    respondToOffer(
+      s,
+      s.assignments.find((a) => a.visitId === v.id)!.id,
+      "Declined",
+    );
+    expect(
+      reassignmentForScope(s, v.requestId, [...v.taskIds, "unbooked"]),
+    ).toBeUndefined();
+    expect(reassignmentForScope(s, "other-request", v.taskIds)).toBeUndefined();
+    expect(reassignmentForScope(s, v.requestId, [])).toBeUndefined();
+    s.visits.push({ ...v, id: "duplicate" });
+    expect(reassignmentForScope(s, v.requestId, v.taskIds)).toBeUndefined();
   });
 });
