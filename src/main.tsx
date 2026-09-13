@@ -2267,7 +2267,7 @@ function App() {
                 />
               ) : (
                 <>
-                  <div className="heading">
+                  <div className="heading customer-portal-heading">
                     <div>
                       <h1>Home, handled.</h1>
                       <p>Your requests and upcoming visits.</p>
@@ -2278,14 +2278,37 @@ function App() {
                   </div>
                   <div className="portal-tabs">
                     {s.requests
-                      .filter((x) => x.customerId === customer)
+                      .filter(
+                        (x) =>
+                          x.customerId === customer &&
+                          (x.status !== "Draft" ||
+                            !!x.address.trim() ||
+                            s.tasks.some(
+                              (t) =>
+                                t.requestId === x.id &&
+                                !t.mergedInto &&
+                                (!!t.description.trim() || t.photos.length > 0),
+                            )),
+                      )
                       .map((x) => (
                         <button
                           key={x.id}
                           className={r.id === x.id ? "selected" : ""}
                           onClick={() => setActive(x.id)}
                         >
-                          {x.address || "New request"}
+                          {x.status === "Draft"
+                            ? "Draft · " +
+                              (s.tasks
+                                .find(
+                                  (t) =>
+                                    t.requestId === x.id &&
+                                    !t.mergedInto &&
+                                    t.description.trim(),
+                                )
+                                ?.description.slice(0, 60) ||
+                                x.address ||
+                                "Photos added")
+                            : x.address || "Request · " + x.id.toUpperCase()}
                         </button>
                       ))}
                   </div>

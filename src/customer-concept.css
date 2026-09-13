@@ -232,6 +232,55 @@
   }
 }
 
-.customer-receipt-summary .task-answers > div { border-top:1px solid var(--line); padding:1rem 0; }
-.customer-intake .customer-address-section input { min-height:48px; }
-.customer-intake .task-composer > small { display:block; margin-top:.75rem; }
+.customer-receipt-summary .task-answers > div {
+  border-top: 1px solid var(--line);
+  padding: 1rem 0;
+}
+.customer-intake .customer-address-section input {
+  min-height: 48px;
+}
+.customer-intake .task-composer > small {
+  display: block;
+  margin-top: 0.75rem;
+}
+.customer-wrap .customer-portal-heading > div {
+  flex: 0 1 auto;
+  min-width: 0;
+}
+.customer-wrap .customer-portal-heading p {
+  margin-bottom: 0;
+}
+.customer-wrap .portal-task {
+  padding: 1.25rem;
+  margin: 1rem 0;
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  background: var(--bg);
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.customer-wrap .portal-task .photos {
+  flex-wrap: wrap;
+}
+.customer-wrap .portal-tabs button {
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+@media (max-width: 900px) {
+  .customer-wrap .customer-portal-heading {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 14px;
+  }
+  .customer-wrap .customer-portal-heading > div {
+    flex: none;
+  }
+  .customer-wrap .customer-portal-heading > .primary {
+    align-self: stretch;
+    min-height: 44px;
+    margin: 0;
+  }
+  .customer-wrap .portal-task {
+    padding: 1rem;
+  }
+}
