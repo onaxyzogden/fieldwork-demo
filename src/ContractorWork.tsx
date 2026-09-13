@@ -8,9 +8,9 @@ import {
   outcomes,
   dayKey,
   workStatus,
-  message,
 } from "./work";
 import { respondToOffer } from "./dispatch";
+import { MessageThread } from "./NotificationUI";
 function Sheet({
   title,
   close,
@@ -58,7 +58,7 @@ export function JobWork({
   visit,
 }: Props & { visit: Visit }) {
   const [finish, setFinish] = useState(false);
-  const [text, setText] = useState("");
+
   const v = visit,
     x = v.execution,
     r = s.requests.find((r) => r.id === v.requestId)!;
@@ -117,6 +117,25 @@ export function JobWork({
         </p>
       )}
       <h3>{v.taskIds.length} tasks in this visit</h3>
+      {x?.startedAt && (
+        <div className="contractor-progress">
+          <p>
+            {
+              v.taskIds.filter((id) => x.outcomes[id]?.outcome === "Completed")
+                .length
+            }{" "}
+            of {v.taskIds.length} completed
+          </p>
+          <progress
+            aria-label="Completed tasks"
+            max={v.taskIds.length}
+            value={
+              v.taskIds.filter((id) => x.outcomes[id]?.outcome === "Completed")
+                .length
+            }
+          />
+        </div>
+      )}
       {v.taskIds.map((id) => {
         const t = s.tasks.find((t) => t.id === id);
         if (!t) return null;
@@ -221,32 +240,12 @@ export function JobWork({
           </details>
         );
       })}
-      {allowed && (
-        <details className="work-task">
-          <summary>
-            Message customer <small>In-app simulation</small>
-          </summary>
-          {v.messages?.map((m) => (
-            <p key={m.id}>{m.text}</p>
-          ))}
-          <label className="field">
-            Message
-            <textarea value={text} onChange={(e) => setText(e.target.value)} />
-          </label>
-          <button
-            className="secondary"
-            disabled={!text.trim()}
-            onClick={() => {
-              update((d) => {
-                message(d, v.id, provider, text);
-              });
-              setText("");
-            }}
-          >
-            Send simulated message
-          </button>
-        </details>
-      )}
+      <MessageThread
+        s={s}
+        visit={v}
+        sender={provider === "yousef" ? "Operator" : provider}
+        update={update}
+      />
       {allowed && x?.startedAt && (
         <>
           <button
@@ -284,7 +283,8 @@ export function JobWork({
         </>
       )}
       {x?.finishedAt && (
-        <div className="note">
+        <div className="note contractor-success">
+          <div className="contractor-check">✓</div>
           <h3>Visit finished</h3>
           <p>
             {Object.values(x.outcomes).some((o) => o.outcome !== "Completed")
@@ -297,7 +297,12 @@ export function JobWork({
     </section>
   );
 }
-export default function ContractorWork({ s, provider, update }: Props) {
+export default function ContractorWork({
+  s,
+  provider,
+  update,
+  openVisit,
+}: Props & { openVisit?: string }) {
   const mine = s.assignments.filter((a) => a.providerId === provider);
   const today = dayKey(s.clock);
   const active = mine.some(
@@ -326,12 +331,41 @@ export default function ContractorWork({ s, provider, update }: Props) {
           : "Upcoming",
   );
   const [selected, setSelected] = useState("");
+  useEffect(() => {
+    if (openVisit) {
+      const assignment =
+        mine.find(
+          (a) =>
+            a.visitId === openVisit &&
+            ["Accepted", "Offered"].includes(a.status),
+        ) || mine.find((a) => a.visitId === openVisit);
+      if (assignment) setSelected(assignment.id);
+    }
+  }, [openVisit, provider]);
   const [decline, setDecline] = useState(false);
   const [reason, setReason] = useState("");
   const [accepted, setAccepted] = useState(false);
   const a = mine.find((a) => a.id === selected),
     v = s.visits.find((v) => v.id === a?.visitId),
     r = s.requests.find((r) => r.id === v?.requestId);
+  const nextAssignment = mine
+    .filter(
+      (a) =>
+        a.status === "Accepted" &&
+        a.id !== selected &&
+        s.visits.some(
+          (v) =>
+            v.id === a.visitId &&
+            v.status === "Confirmed" &&
+            !v.execution?.finishedAt &&
+            dayKey(v.start) === today,
+        ),
+    )
+    .sort((a, b) =>
+      s.visits
+        .find((v) => v.id === a.visitId)!
+        .start.localeCompare(s.visits.find((v) => v.id === b.visitId)!.start),
+    )[0];
   const respond = (status: "Accepted" | "Declined") => {
     update((d) => {
       const offer = d.assignments.find((a) => a.id === selected);
@@ -395,8 +429,9 @@ export default function ContractorWork({ s, provider, update }: Props) {
             ← Back to your work
           </button>
           {accepted && a.status === "Accepted" && (
-            <section className="note">
-              <h2>✓ Job accepted</h2>
+            <section className="note contractor-success">
+              <div className="contractor-check">✓</div>
+              <h2>Job accepted!</h2>
               <p>
                 {v.status === "Confirmed"
                   ? "Your appointment is confirmed."
@@ -407,119 +442,128 @@ export default function ContractorWork({ s, provider, update }: Props) {
               </button>
             </section>
           )}
-          {a.status === "Offered" ? (
-            <section className="panel">
-              <h2>{s.tasks.find((t) => v.taskIds.includes(t.id))?.summary}</h2>
-              <p>
-                {r.city} · {dateLabel(v.start)}
-              </p>
-              <p>
-                {v.duration} minutes · {v.taskIds.length} tasks
-              </p>
-              <h3>Your pay: {money(a.pay)} CAD</h3>
-              <p>
-                Offer expires {dateLabel(new Date(a.expiresAt).toISOString())}
-              </p>
-              {v.taskIds.map((id) => {
-                const t = s.tasks.find((t) => t.id === id)!;
-                return (
-                  <details className="work-task" key={id}>
-                    <summary>{t.summary}</summary>
-                    <p>{t.description}</p>
-                    <dl className="task-answers">
-                      {questionAnswers(t).map((row) => (
-                        <div key={row.key}>
-                          <dt>{row.label}</dt>
-                          <dd>{row.value}</dd>
-                        </div>
-                      ))}
-                    </dl>
-                    <p>
-                      {t.restricted ? "Specialist eligibility required" : ""}
-                    </p>
-                    <div className="work-photos">
-                      {t.photos.map((p, i) => (
-                        <a href={p} target="_blank" rel="noreferrer" key={i}>
-                          <img src={p} alt={`Task reference ${i + 1}`} />
-                        </a>
-                      ))}
-                    </div>
-                  </details>
-                );
-              })}
-              <div className="row actions">
-                <button
-                  className="primary grow"
-                  onClick={() => respond("Accepted")}
-                >
-                  Accept job
-                </button>
-                <button
-                  className="secondary grow"
-                  onClick={() => setDecline(true)}
-                >
-                  Decline
-                </button>
-              </div>
-              {decline && (
-                <Sheet
-                  title="Why are you declining?"
-                  close={() => setDecline(false)}
-                >
-                  <label className="field">
-                    Reason (optional)
-                    <select
-                      value={reason}
-                      onChange={(e) => setReason(e.target.value)}
+          {!(accepted && a.status === "Accepted") &&
+            (a.status === "Offered" ? (
+              <section className="panel">
+                <h2>
+                  {s.tasks.find((t) => v.taskIds.includes(t.id))?.summary}
+                </h2>
+                <p>
+                  {r.city} · {dateLabel(v.start)}
+                </p>
+                <p>
+                  {v.duration} minutes · {v.taskIds.length} tasks
+                </p>
+                <h3 className="contractor-pay">Your pay: {money(a.pay)} CAD</h3>
+                <p>
+                  Offer expires {dateLabel(new Date(a.expiresAt).toISOString())}
+                </p>
+                {v.taskIds.map((id) => {
+                  const t = s.tasks.find((t) => t.id === id)!;
+                  return (
+                    <details className="work-task" key={id}>
+                      <summary>{t.summary}</summary>
+                      <p>{t.description}</p>
+                      <dl className="task-answers">
+                        {questionAnswers(t).map((row) => (
+                          <div key={row.key}>
+                            <dt>{row.label}</dt>
+                            <dd>{row.value}</dd>
+                          </div>
+                        ))}
+                      </dl>
+                      <p>
+                        {t.restricted ? "Specialist eligibility required" : ""}
+                      </p>
+                      <div className="work-photos">
+                        {t.photos.map((p, i) => (
+                          <a href={p} target="_blank" rel="noreferrer" key={i}>
+                            <img src={p} alt={`Task reference ${i + 1}`} />
+                          </a>
+                        ))}
+                      </div>
+                    </details>
+                  );
+                })}
+                <MessageThread
+                  s={s}
+                  visit={v}
+                  sender={provider}
+                  update={update}
+                />
+                <div className="row actions">
+                  <button
+                    className="primary grow contractor-accept"
+                    onClick={() => respond("Accepted")}
+                  >
+                    Accept job
+                  </button>
+                  <button
+                    className="secondary grow"
+                    onClick={() => setDecline(true)}
+                  >
+                    Decline
+                  </button>
+                </div>
+                {decline && (
+                  <Sheet
+                    title="Why are you declining?"
+                    close={() => setDecline(false)}
+                  >
+                    <label className="field">
+                      Reason (optional)
+                      <select
+                        value={reason}
+                        onChange={(e) => setReason(e.target.value)}
+                      >
+                        <option value="">Prefer not to say</option>
+                        {[
+                          "Not available",
+                          "Too far",
+                          "Pay doesn’t work",
+                          "Outside my skill set",
+                          "Other",
+                        ].map((x) => (
+                          <option key={x}>{x}</option>
+                        ))}
+                      </select>
+                    </label>
+                    <button
+                      className="primary"
+                      onClick={() => respond("Declined")}
                     >
-                      <option value="">Prefer not to say</option>
-                      {[
-                        "Not available",
-                        "Too far",
-                        "Pay doesn’t work",
-                        "Outside my skill set",
-                        "Other",
-                      ].map((x) => (
-                        <option key={x}>{x}</option>
-                      ))}
-                    </select>
-                  </label>
+                      Decline job
+                    </button>
+                    <button
+                      className="text-button"
+                      onClick={() => setDecline(false)}
+                    >
+                      Cancel
+                    </button>
+                  </Sheet>
+                )}
+              </section>
+            ) : a.status === "Accepted" ? (
+              <>
+                <JobWork s={s} provider={provider} update={update} visit={v} />
+                {v.execution?.finishedAt && (
                   <button
                     className="primary"
-                    onClick={() => respond("Declined")}
+                    onClick={() => {
+                      setSelected(nextAssignment?.id || "");
+                      setTab("Today");
+                    }}
                   >
-                    Decline job
+                    {nextAssignment ? "Next job" : "Done for today"}
                   </button>
-                  <button
-                    className="text-button"
-                    onClick={() => setDecline(false)}
-                  >
-                    Cancel
-                  </button>
-                </Sheet>
-              )}
-            </section>
-          ) : a.status === "Accepted" ? (
-            <>
-              <JobWork s={s} provider={provider} update={update} visit={v} />
-              {v.execution?.finishedAt && (
-                <button
-                  className="primary"
-                  onClick={() => {
-                    setSelected("");
-                    setTab("Today");
-                  }}
-                >
-                  Back to Today
-                </button>
-              )}
-            </>
-          ) : (
-            <p className="note">
-              This offer is {a.status.toLowerCase()}. The operator will
-              coordinate the next step.
-            </p>
-          )}
+                )}
+              </>
+            ) : (
+              <p className="note">
+                This offer is {a.status.toLowerCase()}. The operator will
+                coordinate the next step.
+              </p>
+            ))}
         </>
       ) : (
         <>
@@ -533,7 +577,20 @@ export default function ContractorWork({ s, provider, update }: Props) {
               const v = s.visits.find((v) => v.id === a.visitId)!,
                 r = s.requests.find((r) => r.id === v.requestId)!;
               return (
-                <section className="panel" key={a.id}>
+                <section className="panel contractor-offer-card" key={a.id}>
+                  {s.tasks.find(
+                    (t) => v.taskIds.includes(t.id) && t.photos.length,
+                  )?.photos[0] && (
+                    <img
+                      className="contractor-job-thumb"
+                      src={
+                        s.tasks.find(
+                          (t) => v.taskIds.includes(t.id) && t.photos.length,
+                        )!.photos[0]
+                      }
+                      alt="Job reference"
+                    />
+                  )}
                   <span className="badge">
                     {a.status === "Offered" ? "New offer" : workStatus(v)}
                   </span>
@@ -550,7 +607,7 @@ export default function ContractorWork({ s, provider, update }: Props) {
                       .reduce((n, t) => n + t.photos.length, 0)}{" "}
                     photos
                   </p>
-                  <h3>Your pay: {money(a.pay)}</h3>
+                  <h3 className="contractor-pay">Your pay: {money(a.pay)}</h3>
                   <button className="primary" onClick={() => setSelected(a.id)}>
                     View job
                   </button>

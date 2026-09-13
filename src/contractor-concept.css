@@ -1,0 +1,143 @@
+.contractor-wrap {
+  max-width: 760px;
+  margin: auto;
+}
+.contractor-wrap .panel,
+.contractor-wrap .note {
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  background: var(--panel);
+  padding: 1.25rem;
+}
+.contractor-wrap .segmented {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.5rem;
+  background: none;
+  margin: 1rem 0;
+}
+.contractor-wrap .segmented button {
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  min-height: 44px;
+}
+.contractor-wrap .segmented .chosen {
+  border-color: var(--accent-text);
+  background: var(--accent-soft);
+}
+.contractor-wrap button,
+.contractor-wrap a.secondary {
+  min-height: 44px;
+  border-radius: 12px;
+}
+.contractor-wrap .primary {
+  min-height: 52px;
+}
+.contractor-offer-card {
+  display: flow-root;
+  margin: 1rem 0;
+}
+.contractor-job-thumb {
+  float: left;
+  width: 76px;
+  height: 88px;
+  object-fit: cover;
+  border-radius: 10px;
+  margin: 0 1rem 0.75rem 0;
+}
+.contractor-offer-card h2 {
+  font-size: 1.5rem;
+}
+.contractor-offer-card > .primary {
+  width: 100%;
+}
+.contractor-pay {
+  background: var(--accent-soft);
+  border: 1px solid var(--line);
+  padding: 1rem;
+  border-radius: 12px;
+  font-size: 1.25rem;
+  clear: both;
+}
+.contractor-success {
+  text-align: center;
+  padding: 2rem 1rem !important;
+}
+.contractor-check {
+  width: 96px;
+  height: 96px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  background: #20ad68;
+  color: white;
+  font-size: 3.5rem;
+  margin: 1rem auto;
+}
+.contractor-wrap .contractor-accept {
+  background: #12834b;
+  border-color: #12834b;
+  color: white;
+}
+.contractor-wrap .work-task {
+  border: 1px solid var(--line);
+  padding: 1rem;
+  border-radius: 14px;
+  margin: 0.75rem 0;
+}
+.contractor-wrap .work-task summary {
+  min-height: 44px;
+}
+.message-bubble {
+  padding: 1rem;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  margin: 0.75rem 0;
+  background: var(--panel);
+  overflow-wrap: anywhere;
+}
+.message-bubble.sent {
+  background: var(--accent-soft);
+  margin-left: 1rem;
+}
+.message-bubble p {
+  margin: 0.4rem 0;
+}
+.notification-link.unread {
+  border-left: 3px solid var(--accent-text);
+  background: var(--accent-soft);
+}
+.incoming-notice {
+  margin: 1rem;
+  display: flex;
+  gap: 0.75rem;
+  align-items: center;
+  padding: 0.75rem;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--accent-soft);
+}
+.incoming-notice > svg {
+  flex-shrink: 0;
+}
+.incoming-notice button {
+  background: none;
+  border: 0;
+  text-align: left;
+  color: var(--text);
+  overflow-wrap: anywhere;
+  min-height: 44px;
+}
+.incoming-notice small {
+  display: block;
+  color: var(--muted);
+}
+@media (max-width: 480px) {
+  .contractor-wrap .panel {
+    padding: 1rem;
+  }
+  .contractor-wrap .row.actions {
+    display: grid;
+    grid-template-columns: 1fr;
+  }
+}

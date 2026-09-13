@@ -168,7 +168,7 @@ export const stages: Stage[] = [
       },
     },
     notifications:
-      "Acceptance creates a persisted operator notification. No real calendar sync, charge or external confirmation message is sent.",
+      "Acceptance creates account-specific persisted notifications. Confirmation changes notify the customer and provider only after the existing gates pass. No real calendar sync, charge or external message is sent.",
     next: "Confirmed work can move to On the Way or Start job; rescheduling/cancellation follow existing policies.",
     capability: "Implemented",
     evidence: ["src/model.ts", "src/dispatch.ts", "src/main.tsx"],
@@ -199,7 +199,7 @@ export const stages: Stage[] = [
       },
     },
     notifications:
-      "Linked operator notification and activity entry are persisted. GPS tracking, background ETA refresh and push delivery are production gaps.",
+      "Linked account notifications and activity are persisted. The customer sees the simulated on-the-way update. GPS tracking, background ETA refresh and push delivery are production gaps.",
     next: "Start job. Duplicate On my way actions are rejected.",
     capability: "Simulated",
     evidence: ["src/work.ts", "src/ContractorWork.tsx", "src/OperatorWork.tsx"],
@@ -215,7 +215,7 @@ export const stages: Stage[] = [
     lanes: {
       Customer: {
         title: "Work is underway",
-        body: "Visit card shows In Progress. Simulated messages appear in the portal; a customer-facing live per-task checklist is not implemented.",
+        body: "Visit card shows In Progress. Customers and the assigned contractor can exchange simulated visit messages, with account-specific unread notifications and sent/received history. A customer-facing live per-task checklist is not implemented.",
       },
       Operator: {
         title: "Monitor task outcomes",

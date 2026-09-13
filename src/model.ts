@@ -89,6 +89,7 @@ export type Payment = {
 export type State = {
   settings?: { autoReofferDeclined: boolean };
   notifications?: {
+    recipient?: string;
     id: string;
     assignmentId: string;
     visitId: string;

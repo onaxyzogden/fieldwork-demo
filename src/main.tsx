@@ -81,6 +81,9 @@ import "./work.css";
 import "./blue-theme.css";
 import "./customer-concept.css";
 import "./operator-concept.css";
+import "./contractor-concept.css";
+import { deliverUpdates, inbox } from "./notifications";
+import { NotificationInbox, MessageThread } from "./NotificationUI";
 import {
   migrateDispatch,
   dispatchStatus,
@@ -275,6 +278,7 @@ function App() {
   const [page, setPage] = useState("Home");
   const [active, setActive] = useState("r2");
   const [contractor, setContractor] = useState("marcus");
+  const [contractorVisit, setContractorVisit] = useState("");
   const [customer, setCustomer] = useState("c2");
   const [toast, setToast] = useState("");
   const [search, setSearch] = useState("");
@@ -366,6 +370,7 @@ function App() {
       const d = migrateDispatch(structuredClone(prev));
       fn(d);
       reconcile(d);
+      deliverUpdates(prev, d);
       try {
         localStorage.setItem(KEY, JSON.stringify(d));
       } catch {}
@@ -376,6 +381,13 @@ function App() {
       setTimeout(() => setToast(""), 3500);
     }
   };
+  const recipient =
+    role === "Operator"
+      ? "Operator"
+      : role === "Customer"
+        ? "Customer:" + customer
+        : "Contractor:" + contractor;
+  const notices = inbox(s, recipient);
   React.useEffect(() => {
     if (!modal) return;
     const previous = document.activeElement as HTMLElement | null;
@@ -751,11 +763,12 @@ function App() {
       {role === "Customer" && (
         <>
           <div>
-            {v.messages?.map((m) => (
-              <p className="note" key={m.id}>
-                Simulated message: {m.text}
-              </p>
-            ))}
+            <MessageThread
+              s={s}
+              visit={v}
+              sender={"Customer:" + customer}
+              update={update}
+            />
           </div>
           {v.execution?.finishedAt && (
             <p className="note">
@@ -1146,20 +1159,15 @@ function App() {
             </button>
             <button
               className="icon-button"
-              aria-label={
-                role === "Operator"
-                  ? `View notifications (${s.notifications?.filter((n) => !n.read).length || 0} unread)`
-                  : "View notifications"
-              }
+              aria-label={`View notifications (${notices.filter((n) => !n.read).length} unread)`}
               onClick={() => setModal("Notifications")}
             >
               <Bell size={18} />
-              {role === "Operator" &&
-                !!s.notifications?.filter((n) => !n.read).length && (
-                  <span className="notification-count">
-                    {s.notifications.filter((n) => !n.read).length}
-                  </span>
-                )}
+              {!!notices.filter((n) => !n.read).length && (
+                <span className="notification-count">
+                  {notices.filter((n) => !n.read).length}
+                </span>
+              )}
             </button>
             <div className="avatar small">
               {role === "Operator"
@@ -1170,6 +1178,15 @@ function App() {
             </div>
           </div>
         </header>
+        {notices.find((n) => !n.read) && (
+          <div className="incoming-notice" role="status">
+            <Bell size={18} />
+            <button onClick={() => setModal("Notifications")}>
+              {notices.find((n) => !n.read)!.text}
+              <small>View update · in-app simulation</small>
+            </button>
+          </div>
+        )}
         <main
           className={
             role === "Customer" && page === "New request"
@@ -2404,6 +2421,7 @@ function App() {
                 key={contractor}
                 s={s}
                 provider={contractor}
+                openVisit={contractorVisit}
                 update={update}
               />
             </>
@@ -2550,77 +2568,31 @@ function App() {
               </>
             )}
             {modal === "Notifications" && (
-              <div className="notification-list">
-                {role === "Operator" && (
-                  <>
-                    <div className="row between">
-                      <span className="eyebrow">DISPATCH NOTIFICATIONS</span>
-                      <button
-                        className="text-button"
-                        onClick={() =>
-                          update((d) =>
-                            d.notifications?.forEach((n) => (n.read = true)),
-                          )
-                        }
-                      >
-                        Mark all read
-                      </button>
-                    </div>
-                    {!s.notifications?.length && (
-                      <p>No dispatch notifications yet.</p>
-                    )}
-                    {s.notifications?.map((n) => (
-                      <button
-                        className={
-                          "event notification-link " + (!n.read ? "unread" : "")
-                        }
-                        key={n.id}
-                        onClick={() => {
-                          update((d) => {
-                            const item = d.notifications?.find(
-                              (x) => x.id === n.id,
-                            );
-                            if (item) item.read = true;
-                          });
-                          choose(n.requestId);
-                          setPage("Requests");
-                          setModal("");
-                          setTimeout(
-                            () =>
-                              document
-                                .getElementById("visit-" + n.visitId)
-                                ?.scrollIntoView({
-                                  block: "center",
-                                  behavior: "smooth",
-                                }),
-                            0,
-                          );
-                        }}
-                      >
-                        <Bell size={15} />
-                        <span>
-                          <strong>{n.text}</strong>
-                          <small>
-                            {dateLabel(n.at)} · {n.read ? "Read" : "Unread"} ·
-                            Open visit
-                          </small>
-                        </span>
-                        <ArrowUpRight size={14} />
-                      </button>
-                    ))}
-                  </>
-                )}
-                <h4>Activity & simulated messages</h4>
-                {s.events.slice(0, 12).map((e) => (
-                  <div className="event" key={e.id}>
-                    <Bell size={15} />
-                    <div>
-                      <strong>{e.text}</strong>
-                      <small>{dateLabel(e.at)} · simulated notification</small>
-                    </div>
-                  </div>
-                ))}
-              </div>
+              <NotificationInbox
+                s={s}
+                recipient={recipient}
+                update={update}
+                open={(requestId, visitId) => {
+                  if (role === "Contractor") {
+                    setContractorVisit("");
+                    setTimeout(() => setContractorVisit(visitId), 0);
+                    setPage("Your Work");
+                  } else {
+                    choose(requestId);
+                    setPage(role === "Operator" ? "Requests" : "My bookings");
+                  }
+                  setModal("");
+                  setTimeout(() => {
+                    const thread = document.getElementById(
+                      "messages-" + visitId,
+                    );
+                    if (thread instanceof HTMLDetailsElement) {
+                      thread.open = true;
+                      thread.scrollIntoView({ block: "center" });
+                    }
+                  }, 100);
+                }}
+              />
             )}
             {["Instant payment", "Demo payment"].includes(modal) && (
               <>
