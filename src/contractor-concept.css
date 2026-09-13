@@ -5,20 +5,20 @@
 .contractor-wrap .panel,
 .contractor-wrap .note {
   border: 1px solid var(--line);
-  border-radius: 16px;
+  border-radius: var(--radius-lg);
   background: var(--panel);
-  padding: 1.25rem;
+  padding: var(--space-5);
 }
 .contractor-wrap .segmented {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 0.5rem;
+  gap: var(--space-2);
   background: none;
-  margin: 1rem 0;
+  margin: var(--space-4) 0;
 }
 .contractor-wrap .segmented button {
   border: 1px solid var(--line);
-  border-radius: 12px;
+  border-radius: var(--radius-md);
   min-height: 44px;
 }
 .contractor-wrap .segmented .chosen {
@@ -28,25 +28,25 @@
 .contractor-wrap button,
 .contractor-wrap a.secondary {
   min-height: 44px;
-  border-radius: 12px;
+  border-radius: var(--radius-md);
 }
 .contractor-wrap .primary {
   min-height: 52px;
 }
 .contractor-offer-card {
   display: flow-root;
-  margin: 1rem 0;
+  margin: var(--space-4) 0;
 }
 .contractor-job-thumb {
   float: left;
   width: 76px;
   height: 88px;
   object-fit: cover;
-  border-radius: 10px;
-  margin: 0 1rem 0.75rem 0;
+  border-radius: var(--radius-md);
+  margin: 0 var(--space-4) var(--space-3) 0;
 }
 .contractor-offer-card h2 {
-  font-size: 1.5rem;
+  font-size: var(--text-h2);
 }
 .contractor-offer-card > .primary {
   width: 100%;
@@ -54,67 +54,67 @@
 .contractor-pay {
   background: var(--accent-soft);
   border: 1px solid var(--line);
-  padding: 1rem;
-  border-radius: 12px;
-  font-size: 1.25rem;
+  padding: var(--space-4);
+  border-radius: var(--radius-md);
+  font-size: var(--text-intro);
   clear: both;
 }
 .contractor-success {
   text-align: center;
-  padding: 2rem 1rem !important;
+  padding: var(--space-8) var(--space-4) !important;
 }
 .contractor-check {
   width: 96px;
   height: 96px;
   display: grid;
   place-items: center;
-  border-radius: 50%;
-  background: #20ad68;
-  color: white;
-  font-size: 3.5rem;
-  margin: 1rem auto;
+  border-radius: var(--radius-pill);
+  background: var(--success);
+  color: var(--on-accent);
+  font-size: var(--text-h1);
+  margin: var(--space-4) auto;
 }
 .contractor-wrap .contractor-accept {
-  background: #12834b;
-  border-color: #12834b;
-  color: white;
+  background: var(--success-fill);
+  border-color: var(--success-fill);
+  color: var(--on-accent);
 }
 .contractor-wrap .work-task {
   border: 1px solid var(--line);
-  padding: 1rem;
-  border-radius: 14px;
-  margin: 0.75rem 0;
+  padding: var(--space-4);
+  border-radius: var(--radius-lg);
+  margin: var(--space-3) 0;
 }
 .contractor-wrap .work-task summary {
   min-height: 44px;
 }
 .message-bubble {
-  padding: 1rem;
+  padding: var(--space-4);
   border: 1px solid var(--line);
-  border-radius: 14px;
-  margin: 0.75rem 0;
+  border-radius: var(--radius-lg);
+  margin: var(--space-3) 0;
   background: var(--panel);
   overflow-wrap: anywhere;
 }
 .message-bubble.sent {
   background: var(--accent-soft);
-  margin-left: 1rem;
+  margin-left: var(--space-4);
 }
 .message-bubble p {
-  margin: 0.4rem 0;
+  margin: var(--space-2) 0;
 }
 .notification-link.unread {
   border-left: 3px solid var(--accent-text);
   background: var(--accent-soft);
 }
 .incoming-notice {
-  margin: 1rem;
+  margin: var(--space-4);
   display: flex;
-  gap: 0.75rem;
+  gap: var(--space-3);
   align-items: center;
-  padding: 0.75rem;
+  padding: var(--space-3);
   border: 1px solid var(--line);
-  border-radius: 12px;
+  border-radius: var(--radius-md);
   background: var(--accent-soft);
 }
 .incoming-notice > svg {
@@ -133,9 +133,6 @@
   color: var(--muted);
 }
 @media (max-width: 480px) {
-  .contractor-wrap .panel {
-    padding: 1rem;
-  }
   .contractor-wrap .row.actions {
     display: grid;
     grid-template-columns: 1fr;

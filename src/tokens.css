@@ -1,0 +1,110 @@
+/* Canonical Fieldwork tokens. Semantic aliases resolve directly here.
+Spacing: 4px grid. Radius: 4/8/16px; pill is structural.
+Layers rank siblings, not native dialog top-layer elements.
+Type: 1.25 ratio from 16px; 12/14px are utility exceptions. */
+:root {
+ font-family: "DM Sans", sans-serif; font-synthesis:none; font-weight:400; color-scheme:dark;
+ color:var(--text); background:var(--bg);
+ --text-body:1rem; --text-intro:1.25rem; --text-h3:1.5625rem; --text-h2:1.953125rem; --text-h1:2.44140625rem;
+ --text-label:.875rem; --text-caption:.75rem; --text-brand:1.5625rem;
+ --motion-fast:160ms; --motion-panel:320ms; --ease-enter:ease-out; --ease-exit:ease-in; --ease-move:ease-in-out;
+ --bg:#081522;
+ --panel:#102338;
+ --surface-raised:#17304a;
+ --line:#294157;
+ --muted:#a8b9ca;
+ --text:#edf5fc;
+ --accent:#146ce5;
+ --accent-text:#8ec4ff;
+ --accent-soft:#17385b;
+ --on-accent:#ffffff;
+ --success:#9fd5b5;
+ --success-fill:#12834b;
+ --success-soft:#153b30;
+ --warning:#f0bc65;
+ --warning-soft:#40331c;
+ --danger:#ff91a5;
+ --danger-soft:#421f2b;
+ --info:#8ec4ff;
+ --overlay:#00000099;
+ --shadow-ink:#00000040;
+ --focus:#8ec4ff;
+ --map-land:#1f3b42;
+ --map-water:#174763;
+ --map-road:#597681;
+ --map-label:#102338;
+ --print-paper:#ffffff;
+ --print-ink:#172c43;
+ --radius-sm:0.25rem;
+ --radius-md:0.5rem;
+ --radius-lg:1rem;
+ --radius-pill:9999px;
+ --space-1:0.25rem;
+ --space-2:0.5rem;
+ --space-3:0.75rem;
+ --space-4:1rem;
+ --space-5:1.25rem;
+ --space-6:1.5rem;
+ --space-7:1.75rem;
+ --space-8:2rem;
+ --space-9:2.25rem;
+ --space-10:2.5rem;
+ --space-11:2.75rem;
+ --space-12:3rem;
+ --space-14:3.5rem;
+ --space-16:4rem;
+ --space-25:6.25rem;
+ --space-30:7.5rem;
+ --space-35:8.75rem;
+ --space-46:11.5rem;
+ --space-51:12.75rem;
+ --space-59:14.75rem;
+ --space-68:17rem;
+ --z-base:0;
+ --z-dropdown:5;
+ --z-sticky:8;
+ --z-overlay:19;
+ --z-drawer:20;
+ --z-modal:40;
+ --z-toast:100;
+ --z-tooltip:150;
+}
+:root[data-theme="dark"] {color-scheme:dark;}
+:root[data-theme="light"] {color-scheme:light;
+ --bg:#f2f6fb;
+ --panel:#ffffff;
+ --surface-raised:#e9f0f8;
+ --line:#cbd7e4;
+ --muted:#53657a;
+ --text:#172c43;
+ --accent:#095fcf;
+ --accent-text:#095bbd;
+ --accent-soft:#e2efff;
+ --on-accent:#ffffff;
+ --success:#286343;
+ --success-fill:#12834b;
+ --success-soft:#e2f3e9;
+ --warning:#80500b;
+ --warning-soft:#fff1d6;
+ --danger:#ac2442;
+ --danger-soft:#ffe7ec;
+ --info:#095bbd;
+ --overlay:#00000066;
+ --shadow-ink:#172c4326;
+ --focus:#095fcf;
+ --map-land:#d6e4dc;
+ --map-water:#8ac5f4;
+ --map-road:#ffffff;
+ --map-label:#fffffff0;
+ --print-paper:#ffffff;
+ --print-ink:#172c43;
+}
+
+:root {
+ --shadow-sm:0 2px 8px var(--shadow-ink); --shadow-md:0 8px 24px var(--shadow-ink); --shadow-modal:0 24px 64px var(--shadow-ink); --shadow-drawer:16px 0 48px var(--shadow-ink);
+ --shadow-focus:0 0 0 3px color-mix(in srgb,var(--focus) 35%,transparent); --shadow-selected:inset 0 -2px var(--accent); --shadow-inset:inset 0 0 0 1px var(--line);
+ --gradient-location:repeating-linear-gradient(25deg,transparent 0 34px,var(--map-road) 35px 39px,transparent 40px 80px),linear-gradient(125deg,var(--map-land) 65%,var(--map-water) 66%);
+}
+@media print { :root, :root[data-theme] { --bg:#ffffff; --panel:#f2f6fb; --surface-raised:#e9f0f8; --text:#172c43; --line:#cbd7e4; --muted:#53657a; --accent-text:#095bbd; --accent-soft:#e2efff; color-scheme:light; } }
+
+:root { --gradient-surface:linear-gradient(115deg,var(--surface-raised),var(--panel)); }

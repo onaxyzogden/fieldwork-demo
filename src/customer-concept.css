@@ -7,7 +7,7 @@
   padding: 0;
 }
 .customer-intake .compact-tasks {
-  gap: 1rem;
+  gap: var(--space-4);
 }
 .customer-intake .compact-task,
 .customer-intake .customer-task-card,
@@ -16,14 +16,14 @@
 .customer-notice {
   background: var(--panel);
   border: 1px solid var(--line);
-  border-radius: 16px;
-  padding: 1.25rem;
+  border-radius: var(--radius-lg);
+  padding: var(--space-5);
 }
 .customer-intake .compact-task {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;
   align-items: start;
-  gap: 0.75rem;
+  gap: var(--space-3);
 }
 .customer-intake .task-open {
   padding: 0;
@@ -36,9 +36,9 @@
   flex-shrink: 0;
   width: 32px;
   height: 32px;
-  border-radius: 50%;
-  background: #477fb5;
-  color: white;
+  border-radius: var(--radius-pill);
+  background: var(--accent-text);
+  color: var(--on-accent);
 }
 .task-description-preview,
 .customer-intake .compact-task .photos {
@@ -51,21 +51,21 @@
 }
 .customer-intake .photos {
   flex-wrap: wrap;
-  gap: 0.65rem;
+  gap: var(--space-3);
 }
 .customer-intake .photos img {
   width: 72px;
   height: 72px;
   object-fit: cover;
-  border-radius: 9px;
+  border-radius: var(--radius-md);
   border: 1px solid var(--line);
 }
 .customer-intake .photo-add {
   min-height: 44px;
   border: 1px solid var(--line);
-  border-radius: 10px;
+  border-radius: var(--radius-md);
   background: var(--accent-soft);
-  padding: 0.7rem;
+  padding: var(--space-3);
 }
 .task-menu {
   max-width: 100%;
@@ -75,36 +75,36 @@
   place-items: center;
   min-width: 44px;
   border: 1px solid var(--line);
-  border-radius: 10px;
+  border-radius: var(--radius-md);
 }
 .task-menu button {
   display: block;
-  margin-top: 0.5rem;
+  margin-top: var(--space-2);
   min-height: 44px;
 }
 .customer-intake .add-task {
   width: 100%;
   border: 2px dashed var(--accent-text);
-  border-radius: 12px;
-  margin-top: 1rem;
+  border-radius: var(--radius-md);
+  margin-top: var(--space-4);
   min-height: 48px;
   background: transparent;
   color: var(--text);
 }
 .customer-intake .primary.full {
   min-height: 56px;
-  border-radius: 14px;
+  border-radius: var(--radius-lg);
 }
 .customer-task-list {
   list-style: none;
   padding: 0;
   display: grid;
-  gap: 0.75rem;
+  gap: var(--space-3);
   margin-bottom: 0;
 }
 .customer-task-list li {
   display: flex;
-  gap: 0.75rem;
+  gap: var(--space-3);
   align-items: flex-start;
 }
 .customer-task-list svg,
@@ -114,37 +114,31 @@
 }
 .customer-address-section,
 .customer-timing-section {
-  margin-top: 1.5rem;
+  margin-top: var(--space-6);
 }
 .customer-location-preview {
   min-height: 150px;
-  border-radius: 14px;
+  border-radius: var(--radius-lg);
   border: 1px solid var(--line);
-  padding: 1.25rem;
+  padding: var(--space-5);
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: 1rem;
-  color: #173650;
+  gap: var(--space-4);
+  color: var(--text);
   background:
-    repeating-linear-gradient(
-      25deg,
-      transparent 0 34px,
-      #ffffff80 35px 39px,
-      transparent 40px 80px
-    ),
-    linear-gradient(125deg, #d6e4dc 65%, #8ac5f4 66%);
+    var(--gradient-location);
 }
 .customer-location-preview strong {
-  background: #ffffffe8;
-  padding: 0.7rem;
-  border-radius: 9px;
+  background: var(--map-label);
+  padding: var(--space-3);
+  border-radius: var(--radius-md);
   overflow-wrap: anywhere;
 }
 .customer-location-preview small {
   flex-basis: 100%;
-  background: #ffffffde;
-  padding: 0.25rem;
+  background: var(--map-label);
+  padding: var(--space-1);
 }
 .customer-intake .intake-times {
   grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -152,10 +146,10 @@
 .customer-intake .intake-times .slot {
   display: flex;
   flex-direction: column;
-  gap: 0.75rem;
+  gap: var(--space-3);
   min-width: 0;
-  padding: 1rem;
-  border-radius: 14px;
+  padding: var(--space-4);
+  border-radius: var(--radius-lg);
   background: var(--panel);
   border: 1px solid var(--line);
 }
@@ -166,9 +160,9 @@
 .time-recommendation {
   background: var(--accent-soft);
   color: var(--accent-text);
-  border-radius: 6px;
-  padding: 0.25rem 0.4rem;
-  font-size: 0.875rem;
+  border-radius: var(--radius-sm);
+  padding: var(--space-1) var(--space-2);
+  font-size: var(--text-label);
 }
 .customer-intake .intake-receipt {
   text-align: center;
@@ -180,15 +174,15 @@
   place-items: center;
   width: 104px;
   height: 104px;
-  border-radius: 50%;
-  background: #27b772;
-  color: white;
-  margin: 2rem auto 1.5rem;
-  font-size: 4rem;
+  border-radius: var(--radius-pill);
+  background: var(--success);
+  color: var(--on-accent);
+  margin: var(--space-8) auto var(--space-6);
+  font-size: var(--text-h1);
 }
 .customer-receipt-summary {
   text-align: left;
-  margin: 1.5rem 0 1rem;
+  margin: var(--space-6) 0 var(--space-4);
 }
 .customer-receipt-summary h3 {
   margin-top: 0;
@@ -196,14 +190,14 @@
 .customer-receipt-summary dt {
   display: flex;
   align-items: center;
-  gap: 0.75rem;
+  gap: var(--space-3);
 }
 .customer-notice {
   display: flex;
-  gap: 1rem;
+  gap: var(--space-4);
   align-items: center;
   text-align: left;
-  margin-bottom: 1.5rem;
+  margin-bottom: var(--space-6);
 }
 .customer-notice p {
   margin: 0;
@@ -212,8 +206,8 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 0.75rem;
-  margin: 1rem auto;
+  gap: var(--space-3);
+  margin: var(--space-4) auto;
   min-height: 44px;
   color: var(--accent-text);
   background: none;
@@ -228,20 +222,20 @@
   .customer-summary-card,
   .customer-receipt-summary,
   .customer-notice {
-    padding: 1rem;
+    padding: var(--space-4);
   }
 }
 
 .customer-receipt-summary .task-answers > div {
   border-top: 1px solid var(--line);
-  padding: 1rem 0;
+  padding: var(--space-4) 0;
 }
 .customer-intake .customer-address-section input {
   min-height: 48px;
 }
 .customer-intake .task-composer > small {
   display: block;
-  margin-top: 0.75rem;
+  margin-top: var(--space-3);
 }
 .customer-wrap .customer-portal-heading > div {
   flex: 0 1 auto;
@@ -251,11 +245,7 @@
   margin-bottom: 0;
 }
 .customer-wrap .portal-task {
-  padding: 1.25rem;
-  margin: 1rem 0;
-  border: 1px solid var(--line);
-  border-radius: 16px;
-  background: var(--bg);
+  margin: var(--space-4) 0;
   min-width: 0;
   overflow-wrap: anywhere;
 }
@@ -270,7 +260,7 @@
   .customer-wrap .customer-portal-heading {
     flex-direction: column;
     align-items: stretch;
-    gap: 14px;
+    gap: var(--space-4);
   }
   .customer-wrap .customer-portal-heading > div {
     flex: none;
@@ -279,8 +269,5 @@
     align-self: stretch;
     min-height: 44px;
     margin: 0;
-  }
-  .customer-wrap .portal-task {
-    padding: 1rem;
   }
 }

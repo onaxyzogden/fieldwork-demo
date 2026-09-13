@@ -122,7 +122,7 @@ export default function Blueprint() {
             aria-label={`Switch to ${theme === "light" ? "dark" : "light"} mode`}
             onClick={() => setTheme(theme === "light" ? "dark" : "light")}
           >
-            {theme === "light" ? <Moon size={18} /> : <Sun size={18} />}
+            {theme === "light" ? <Moon size={16} /> : <Sun size={16} />}
           </button>
           <button className="primary" onClick={() => window.print()}>
             <Printer size={16} />
@@ -208,7 +208,7 @@ export default function Blueprint() {
                 onClick={() => selectStage(id)}
               >
                 {stages.find((s) => s.id === id)?.title}
-                {i < path.steps.length - 1 && <ArrowRight size={14} />}
+                {i < path.steps.length - 1 && <ArrowRight size={16} />}
               </button>
             ))}
           </div>
@@ -289,7 +289,7 @@ export default function Blueprint() {
               >
                 <span>0{i + 1}</span>
                 <h2>{s.title}</h2>
-                <ChevronDown size={18} />
+                <ChevronDown size={16} />
               </button>
               {(role === "All roles" ? roles : [role]).map((r) => (
                 <details key={r}>

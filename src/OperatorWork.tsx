@@ -135,7 +135,7 @@ export function OperatorHome({
           onClick={() => open(r.id)}
         >
           <span className="op-status-icon">
-            <Icon size={23} />
+            <Icon size={24} />
           </span>
           <span className="op-card-copy">
             <span className="op-card-top">
@@ -271,7 +271,7 @@ export function OperatorToday({
     <>
       <h1>Today</h1>
       <p>What’s happening, in appointment order.</p>
-      <section className="panel operator-day">
+      <section className="card panel operator-day">
         <div className="work-toolbar">
           <label className="field">
             Provider
@@ -405,7 +405,7 @@ export function OperatorToday({
         </div>
         <div className="operator-day-totals">
           <div>
-            <Clock3 size={22} />
+            <Clock3 size={20} />
             <strong>
               {Math.round(
                 (visits
@@ -419,7 +419,7 @@ export function OperatorToday({
             <span>Booked work time</span>
           </div>
           <div>
-            <CalendarDays size={22} />
+            <CalendarDays size={20} />
             <strong>{visits.reduce((n, v) => n + v.travel, 0)} min</strong>
             <span>Simulated travel · includes proposed</span>
           </div>

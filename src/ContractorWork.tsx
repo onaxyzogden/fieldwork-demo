@@ -68,7 +68,7 @@ export function JobWork({
       execute(d, v.id, provider, action);
     });
   return (
-    <section className="panel work-detail">
+    <section className="card panel work-detail">
       <span className="badge">{workStatus(v)}</span>
       <h2>
         {s.tasks.find((t) => v.taskIds.includes(t.id))?.summary}
@@ -444,7 +444,7 @@ export default function ContractorWork({
           )}
           {!(accepted && a.status === "Accepted") &&
             (a.status === "Offered" ? (
-              <section className="panel">
+              <section className="card panel">
                 <h2>
                   {s.tasks.find((t) => v.taskIds.includes(t.id))?.summary}
                 </h2>
@@ -577,7 +577,7 @@ export default function ContractorWork({
               const v = s.visits.find((v) => v.id === a.visitId)!,
                 r = s.requests.find((r) => r.id === v.requestId)!;
               return (
-                <section className="panel contractor-offer-card" key={a.id}>
+                <section className="card panel contractor-offer-card" key={a.id}>
                   {s.tasks.find(
                     (t) => v.taskIds.includes(t.id) && t.photos.length,
                   )?.photos[0] && (
@@ -618,7 +618,7 @@ export default function ContractorWork({
             (a) =>
               !s.visits.find((v) => v.id === a.visitId)?.execution?.finishedAt,
           ) && (
-            <section className="panel">
+            <section className="card panel">
               <h2>
                 {tab === "Today"
                   ? "You’re done for today."
@@ -631,7 +631,7 @@ export default function ContractorWork({
               </p>
             </section>
           )}
-          <details className="panel">
+          <details className="card panel">
             <summary>Past offers & completed work</summary>
             {mine
               .filter((a) => a.status !== "Offered")

@@ -74,14 +74,16 @@ import "@fontsource/dm-sans/600.css";
 import "@fontsource/manrope/500.css";
 import "@fontsource/manrope/600.css";
 import "@fontsource/manrope/700.css";
+import "./tokens.css";
 import "./style.css";
-import "./light.css";
+
 import "./typography.css";
 import "./work.css";
-import "./blue-theme.css";
+import "./primitives.css";
 import "./customer-concept.css";
 import "./operator-concept.css";
 import "./contractor-concept.css";
+import "./cards.css";
 import { deliverUpdates, inbox } from "./notifications";
 import { NotificationInbox, MessageThread } from "./NotificationUI";
 import {
@@ -640,7 +642,7 @@ function App() {
       >
         <div className="row between wrap">
           <strong>
-            <AlertCircle size={17} /> {status}
+            <AlertCircle size={16} /> {status}
           </strong>
           <small>
             Visit {v.id.toUpperCase()} · {dateLabel(v.start)}
@@ -659,7 +661,7 @@ function App() {
         {status.includes("Needs reassignment") && (
           <div className="row actions wrap">
             <button className="primary" onClick={() => beginReassign(v)}>
-              Offer to another contractor <ArrowRight size={15} />
+              Offer to another contractor <ArrowRight size={16} />
             </button>
             <button
               className="secondary"
@@ -746,7 +748,7 @@ function App() {
         <img key={i} src={p} alt={"Task photo " + (i + 1)} />
       ))}
       <label className="photo-add">
-        <Camera size={15} /> Add photo
+        <Camera size={16} /> Add photo
         <input
           type="file"
           accept="image/*"
@@ -844,27 +846,27 @@ function App() {
               <path
                 d="M 52 0 L 0 0 0 42"
                 fill="none"
-                stroke="#38413b"
+                stroke="var(--line)"
                 strokeWidth="2"
               />
             </pattern>
           </defs>
-          <rect width="700" height="300" fill="#222d28" />
+          <rect width="700" height="300" fill="var(--panel)" />
           <rect width="700" height="300" fill="url(#grid)" />
           <path
             d="M0 258 Q190 196 310 268 T700 210 L700 300H0Z"
-            fill="#243b3d"
+            fill="var(--surface-raised)"
           />
           <path
             d="M-30 180 Q190 90 340 125T730 25"
             fill="none"
-            stroke="#505245"
+            stroke="var(--line)"
             strokeWidth="11"
           />
           <path
             d="M130 179 L232 130 349 166 445 103 553 129"
             fill="none"
-            stroke="#e4b367"
+            stroke="var(--accent-text)"
             strokeWidth="4"
             strokeDasharray="7 5"
           />
@@ -878,15 +880,15 @@ function App() {
                 cx={x}
                 cy={y}
                 r="16"
-                fill="#e9b669"
-                stroke="#202723"
+                fill="var(--accent-text)"
+                stroke="var(--panel)"
                 strokeWidth="4"
               />
               <text
                 x={x}
                 y={y + 4}
                 textAnchor="middle"
-                fill="#20231f"
+                fill="var(--bg)"
                 fontSize="12"
                 fontWeight="bold"
               >
@@ -894,13 +896,13 @@ function App() {
               </text>
             </g>
           ))}
-          <text x="282" y="75" fill="#9aa99e" fontSize="14" letterSpacing="4">
+          <text x="282" y="75" fill="var(--muted)" fontSize="14" letterSpacing="4">
             OAKVILLE
           </text>
-          <text x="440" y="273" fill="#789397" fontSize="11" letterSpacing="3">
+          <text x="440" y="273" fill="var(--surface-raised)" fontSize="11" letterSpacing="3">
             LAKE ONTARIO
           </text>
-          <text x="30" y="35" fill="#a5b0a8" fontSize="10">
+          <text x="30" y="35" fill="var(--muted)" fontSize="10">
             QEW
           </text>
         </svg>
@@ -910,14 +912,14 @@ function App() {
           aria-label="Open route view"
           onClick={() => setPage("Today")}
         >
-          <ArrowUpRight size={18} />
+          <ArrowUpRight size={16} />
         </button>
       </div>
     );
   }
   const quotePanel = () =>
     quote ? (
-      <div className="panel quote">
+      <div className="card panel quote">
         <div className="row between">
           <span className="eyebrow">YOUR {quote.type.toUpperCase()}</span>
           {badge(quote.status)}
@@ -1015,7 +1017,7 @@ function App() {
         )}
         <a className="brand" href="#" onClick={(e) => e.preventDefault()}>
           <span className="brand-icon">
-            <Wrench size={21} />
+            <Wrench size={20} />
           </span>
           fieldwork<span className="brand-dot">.</span>
         </a>
@@ -1053,7 +1055,7 @@ function App() {
                 setSidebar(false);
               }}
             >
-              <Icon size={18} />
+              <Icon size={24} />
               {label}
               {label === "Requests" && (
                 <span className="nav-count">
@@ -1140,7 +1142,7 @@ function App() {
               <Menu />
             </button>
             <span>{role}</span>
-            <ChevronRight size={14} />
+            <ChevronRight size={16} />
             <strong>{page}</strong>
           </div>
           <div className="row">
@@ -1165,14 +1167,14 @@ function App() {
               }
               onClick={() => setTheme(theme === "light" ? "dark" : "light")}
             >
-              {theme === "light" ? <Moon size={18} /> : <Sun size={18} />}
+              {theme === "light" ? <Moon size={20} /> : <Sun size={20} />}
             </button>
             <button
               className="icon-button"
               aria-label={`View notifications (${notices.filter((n) => !n.read).length} unread)`}
               onClick={() => setModal("Notifications")}
             >
-              <Bell size={18} />
+              <Bell size={20} />
               {!!notices.filter((n) => !n.read).length && (
                 <span className="notification-count">
                   {notices.filter((n) => !n.read).length}
@@ -1190,7 +1192,7 @@ function App() {
         </header>
         {notices.find((n) => !n.read) && (
           <div className="incoming-notice" role="status">
-            <Bell size={18} />
+            <Bell size={16} />
             <button onClick={() => setModal("Notifications")}>
               {notices.find((n) => !n.read)!.text}
               <small>View update · in-app simulation</small>
@@ -1215,7 +1217,7 @@ function App() {
             />
           )}
           {role === "Operator" && page === "More" && (
-            <section className="panel">
+            <section className="card panel">
               <h1>More</h1>
               {["Contractors", "Activity"].map((x) => (
                 <button
@@ -1338,7 +1340,7 @@ function App() {
                           <small>{q.id.toUpperCase()}</small>
                         </div>
                         <p>
-                          <MapPin size={12} />
+                          <MapPin size={16} />
                           {q.city} ·{" "}
                           {
                             s.tasks.filter(
@@ -1369,7 +1371,7 @@ function App() {
                     </button>
                     <strong>Request Details</strong>
                   </div>
-                  <section className="panel operator-summary">
+                  <section className="card panel operator-summary">
                     <div className="panel-title">
                       <div>
                         <span className="eyebrow">
@@ -1377,7 +1379,7 @@ function App() {
                         </span>
                         <h2>{r.address || r.name}</h2>
                         <p>
-                          <MapPin size={14} /> {r.city} · {r.name}
+                          <MapPin size={16} /> {r.city} · {r.name}
                         </p>
                       </div>
                       <div className="status-stack">
@@ -1388,7 +1390,7 @@ function App() {
                     </div>
                     <div className="detail-meta">
                       <span>
-                        <Clock size={15} />
+                        <Clock size={16} />
                         {r.timing}
                       </span>
                       <span>{badge(r.mode)}</span>
@@ -1412,8 +1414,8 @@ function App() {
                       ))}
                     {r.notes && <p className="note">{r.notes}</p>}
                   </section>
-                  <section className="operator-location-card">
-                    <MapPin size={36} />
+                  <section className="card operator-location-card">
+                    <MapPin size={32} />
                     <strong>
                       {r.address}, {r.city}
                     </strong>
@@ -1432,7 +1434,7 @@ function App() {
                       Illustrative location · simulated, not geocoded
                     </small>
                   </section>
-                  <section className="panel operator-photo-gallery">
+                  <section className="card panel operator-photo-gallery">
                     <h3>
                       Photos ({tasks.reduce((n, t) => n + t.photos.length, 0)})
                     </h3>
@@ -1491,7 +1493,7 @@ function App() {
                       <p>No customer photos yet. Add photos within a task.</p>
                     )}
                   </section>
-                  <section className="panel operator-estimate">
+                  <section className="card panel operator-estimate">
                     <h3>Estimated visit</h3>
                     <p>
                       <Clock size={20} />{" "}
@@ -1499,14 +1501,14 @@ function App() {
                       {tasks.length} separate tasks
                     </p>
                   </section>
-                  <section className="panel operator-notes">
+                  <section className="card panel operator-notes">
                     <h3>Notes from customer</h3>
                     <p>
                       {r.notes ||
                         "No additional access or parking notes supplied."}
                     </p>
                   </section>
-                  <section className="panel operator-action-panel">
+                  <section className="card panel operator-action-panel">
                     {" "}
                     <div className="row actions wrap operator-primary-actions">
                       <button
@@ -1593,7 +1595,7 @@ function App() {
                       </details>
                     </div>
                   </section>
-                  <section className="panel" id="review-tasks">
+                  <section className="card panel" id="review-tasks">
                     <div className="panel-title">
                       <h3>
                         Tasks <span className="count">{tasks.length}</span>
@@ -1629,7 +1631,7 @@ function App() {
                         <p>“{t.description}”</p>
                         <TaskAnswers task={t} />
                         <div className="reason">
-                          <ShieldCheck size={15} />
+                          <ShieldCheck size={16} />
                           <span>
                             {t.reason}
                             <small>
@@ -1640,7 +1642,7 @@ function App() {
                         </div>
                         {t.restricted && (
                           <p className="warning">
-                            <AlertCircle size={15} /> Potential regulated work ·
+                            <AlertCircle size={16} /> Potential regulated work ·
                             operator review and eligible specialist required
                           </p>
                         )}
@@ -1750,7 +1752,7 @@ function App() {
                   {fulfillment && (
                     <>
                       {" "}
-                      <section className="panel" id="fulfillment">
+                      <section className="card panel" id="fulfillment">
                         <button
                           className="secondary"
                           onClick={() => {
@@ -1849,7 +1851,7 @@ function App() {
                                 </small>
                               </div>
                               {provider === c.provider.id && (
-                                <Check size={17} />
+                                <Check size={16} />
                               )}
                             </button>
                           ))}
@@ -2038,7 +2040,7 @@ function App() {
                   )}
                   {visits.filter((v) => v.status !== "Cancelled").length >
                     0 && (
-                    <section className="panel">
+                    <section className="card panel">
                       <h3>Visits & assignment history</h3>
                       {visits
                         .filter((v) => v.status !== "Cancelled")
@@ -2089,7 +2091,7 @@ function App() {
                                       }}
                                     >
                                       Open contractor view{" "}
-                                      <ArrowUpRight size={14} />
+                                      <ArrowUpRight size={16} />
                                     </button>
                                   )}
                                 </div>
@@ -2104,7 +2106,7 @@ function App() {
                         ))}
                     </section>
                   )}
-                  <details className="panel operator-pricing">
+                  <details className="card panel operator-pricing">
                     <summary>Customer pricing & quotes</summary>
                     <p>
                       Customer charges and contractor compensation are separate.
@@ -2201,12 +2203,12 @@ function App() {
               </div>
               <div className="roster">
                 {providers.map((p) => (
-                  <section className="panel" key={p.id}>
+                  <section className="card panel" key={p.id}>
                     <div className="avatar large">{p.initials}</div>
                     <h2>{p.name}</h2>
                     <p>{p.role}</p>
                     <p>
-                      <MapPin size={15} />
+                      <MapPin size={16} />
                       {p.city} · Halton / GTA
                     </p>
                     <p>{p.skills}</p>
@@ -2235,7 +2237,7 @@ function App() {
                   </p>
                 </div>
               </div>
-              <section className="panel">
+              <section className="card panel">
                 {s.events.map((e) => (
                   <div className="event" key={e.id}>
                     <span className="event-dot" />
@@ -2301,7 +2303,7 @@ function App() {
                       <p>Your requests and upcoming visits.</p>
                     </div>
                     <button className="primary" onClick={newRequest}>
-                      <Plus size={17} /> New request
+                      <Plus size={16} /> New request
                     </button>
                   </div>
                   <div className="portal-tabs">
@@ -2340,7 +2342,7 @@ function App() {
                         </button>
                       ))}
                   </div>
-                  <section className="panel">
+                  <section className="card panel">
                     <div className="row between">
                       <span className="eyebrow">
                         REQUEST {r.id.toUpperCase()}
@@ -2349,7 +2351,7 @@ function App() {
                     </div>
                     <h2>{r.address || "Your next home project"}</h2>
                     <p>
-                      <MapPin size={15} />
+                      <MapPin size={16} />
                       {r.city} · {tasks.length} tasks
                     </p>
                     {r.status === "Draft" ? (
@@ -2388,7 +2390,7 @@ function App() {
                             }
                             key={x}
                           >
-                            <CheckCircle2 size={18} />
+                            <CheckCircle2 size={16} />
                             <span>{x}</span>
                           </div>
                         ))}
@@ -2434,9 +2436,9 @@ function App() {
                       </form>
                     )}
                     {tasks.map((t) => (
-                      <div className="portal-task" key={t.id}>
+                      <div className="card portal-task" key={t.id}>
                         <h4>
-                          <Wrench size={15} />
+                          <Wrench size={16} />
                           {t.summary}
                         </h4>
                         <p>{t.description}</p>
@@ -2488,7 +2490,7 @@ function App() {
       </div>
       {toast && (
         <div className="toast" role="status">
-          <CheckCircle2 size={18} />
+          <CheckCircle2 size={16} />
           {toast}
         </div>
       )}
@@ -2654,7 +2656,7 @@ function App() {
                     <strong>Demo payment method</strong>
                     <small>Test card •••• 4242</small>
                   </div>
-                  <Check size={18} />
+                  <Check size={16} />
                 </div>
                 {modal === "Instant payment" && (
                   <p>Selected appointment: {dateLabel(slot)}</p>
@@ -2829,7 +2831,7 @@ function App() {
                                   " minutes"}
                             </small>
                           </div>
-                          {provider === o.provider.id && <Check size={17} />}
+                          {provider === o.provider.id && <Check size={16} />}
                         </button>
                       ))}
                     </div>

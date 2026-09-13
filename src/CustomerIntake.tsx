@@ -439,7 +439,7 @@ export default function CustomerIntake({
             <h1>Where and when?</h1>
             <p>One address for everything on your list.</p>
           </header>
-          <section className="customer-summary-card">
+          <section className="card customer-summary-card">
             <div className="row between">
               <strong>
                 {tasks.length} {tasks.length === 1 ? "task" : "tasks"} requested
@@ -516,7 +516,7 @@ export default function CustomerIntake({
             </details>
             {validAddress(r) && (
               <div className="customer-location-preview">
-                <MapPin size={38} />
+                <MapPin size={32} />
                 <strong>
                   {r.address}
                   <br />
@@ -665,12 +665,12 @@ export default function CustomerIntake({
                 ? "Your request has been received for referral review. No appointment is booked."
                 : "Your request has been received. We’ll review the details and confirm the appointment."}
           </p>
-          <section className="customer-receipt-summary">
+          <section className="card customer-receipt-summary">
             <h3>Your Request Summary</h3>
             <dl className="task-answers">
               <div>
                 <dt>
-                  <ListChecks size={22} /> Tasks
+                  <ListChecks size={20} /> Tasks
                 </dt>
                 <dd>
                   {tasks.length} {tasks.length === 1 ? "task" : "tasks"}
@@ -678,7 +678,7 @@ export default function CustomerIntake({
               </div>
               <div>
                 <dt>
-                  <CalendarDays size={22} />
+                  <CalendarDays size={20} />
                   {visit ? "Confirmed appointment" : "Preferred time"}
                 </dt>
                 <dd>
@@ -693,7 +693,7 @@ export default function CustomerIntake({
               </div>
               <div>
                 <dt>
-                  <MapPin size={22} />
+                  <MapPin size={20} />
                   Service address
                 </dt>
                 <dd>
@@ -703,8 +703,8 @@ export default function CustomerIntake({
               </div>
             </dl>
           </section>
-          <div className="customer-notice">
-            <Mail size={28} />
+          <div className="card customer-notice">
+            <Mail size={24} />
             <p>
               Updates appear in this demo. Notifications are simulated in-app;
               no email or text is sent.
