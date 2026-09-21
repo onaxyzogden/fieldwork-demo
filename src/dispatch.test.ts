@@ -339,3 +339,33 @@ describe("operator note", () => {
     expect(r.preferredSlot).toBeUndefined();
   });
 });
+describe("saved-state migration", () => {
+  it("backfills redesign fields and refreshes the denormalized name", () => {
+    const old = seed();
+    // Simulate a state saved before this round: no new fields, stale name copy.
+    for (const r of old.requests) {
+      delete (r as Partial<typeof r>).preferredSlots;
+      delete (r as Partial<typeof r>).timingConstraints;
+      delete (r as Partial<typeof r>).operatorNote;
+      delete (r as Partial<typeof r>).customerReply;
+      r.name = "Sophie Laurent";
+    }
+    const s = migrateDispatch(JSON.parse(JSON.stringify(old)));
+    for (const r of s.requests) {
+      expect(r.preferredSlots).toEqual([]);
+      expect(r.timingConstraints).toBe("");
+      expect(r.operatorNote).toBeNull();
+      expect(r.customerReply).toBeNull();
+    }
+    // The pill and the request must agree on who this is.
+    expect(s.requests.find((r) => r.id === "r2")!.name).toBe("Daniel Brooks");
+    expect(s.requests.find((r) => r.id === "r5")!.name).toBe("Amir Hassan");
+  });
+  it("leaves an unknown customerId's stored name alone", () => {
+    const s = seed();
+    s.requests[0].customerId = "c999";
+    s.requests[0].name = "Someone Else";
+    migrateDispatch(s);
+    expect(s.requests[0].name).toBe("Someone Else");
+  });
+});
