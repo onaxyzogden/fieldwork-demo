@@ -90,7 +90,7 @@ Validation: 173 application tests plus eight catalogue/compiler tests; productio
 
 Operator navigation is Home, Requests, Today, and More. Home prioritizes declines and unresolved work, with waiting items separate. Requests filters by the five derived buckets. Expand a task row to read its answers and mark it reviewed; classification internals and scope authoring sit behind per-task disclosures. Dispatch and pricing are one decision card — see the operator simplification round below. Today defaults to a timeline with optional illustrative map and external map links.
 
-Contractor walkthrough: choose a demo contractor, open Your Work > Offers, view the exact pay and task list, then accept or decline with an optional reason. Acceptance does not bypass customer quote/payment requirements. Once confirmed, open the assignment, mark On my way, Start job, open each task, and choose an outcome. Before/after photos and notes are optional. Complete job opens a review dialog; Finish job ends the visit. Unresolved tasks create operator attention without another appointment or payment. Yousef has the same execution controls in confirmed request details and Today.
+Contractor walkthrough: choose a demo contractor; Your Work opens straight to whatever needs attention — a running job, a single pending offer, or a list when more than one thing is open — rather than a remembered tab. View the exact pay and task list, then accept or decline with an optional reason; accepting drops straight into the job (a toast confirms it, not an extra screen) and shows a plain note when customer confirmation is still pending. Once confirmed, On my way and Start job are one primary action at a time, not two peers — the status line above them already says "On the Way" once pressed, so the button doesn't repeat it. Open each task and choose an outcome; before/after photos and notes are optional. Complete job opens a review dialog; Finish job ends the visit. Unresolved tasks create operator attention without another appointment or payment. Yousef has the same execution controls in confirmed request details and Today. See the contractor simplification round below.
 
 Execution data is optional and persisted per visit/task. Customer reference photos remain separate. Messages and notifications are in-app simulations; navigation opens external maps only. ETA uses the simulated clock and travel allowance, not GPS. Demo users can exercise a future confirmed assignment without waiting for its calendar date. Browser storage remains local and is not shared across devices.
 
@@ -194,3 +194,62 @@ and the production build pass. Browser checks walked every decision state
 confirmed one card and one instance of each action in each. The declined scenario
 was audited at 390/768/1280px in both themes: zero horizontal overflow and zero text
 nodes below WCAG AA.
+
+## Contractor simplification round
+
+Audited against the same procedure as the operator round: the role's remit was
+already written down (`src/blueprint-data.ts`'s Contractor lane on every stage —
+decide whether to take the job, signal travel, work the list, close out, communicate),
+so this round mapped every control against it directly. The contractor screen was in
+much better shape going in — accept/decline lives in exactly one place and
+`canWork()` guards every execution action at the model layer — so the changes here
+are five defects and two structural fixes, not a five-cluster collapse.
+
+**One state opens the screen, not a remembered tab.** The tab default used to be
+computed once and then thrown away — a running job, a pending offer, something
+scheduled today, or Upcoming, in that priority. It's now also the initial selection:
+a running job or a single unambiguous offer opens directly, instead of requiring a
+"View job" click on a list that already had exactly one thing to show. Tabs still
+work exactly as before for deliberate navigation.
+
+**Accepting drops into the job, not a receipt.** The "Job accepted!" interstitial
+behind its own "View job" click is gone; accepting now shows a toast and goes
+straight to the job, which already renders its own "confirmation pending" note via
+the existing allowed-gate when the customer hasn't confirmed yet — no information
+was lost, one screen was.
+
+**One primary action per execution stage.** `On my way` and `Start job` rendered as
+equal-weight peers, and the job status badge separately repeated "On my way" as its
+own badge once pressed. Now the badge is the single status line, and only one button
+is primary at a time: `On my way` before it's pressed, `Start job` once it has been.
+The same principle removed the redundant "Visit finished" heading once the top badge
+already reads Completed.
+
+**Two defects fixed:** `declineReason` was written twice (`respondToOffer()` already
+records it; the UI wrote it again immediately after — dead duplication, removed).
+"Past offers & completed work" is a completed/declined/expired list — but the filter
+that fed it (`a.status !== "Offered"`) accidentally admitted every in-progress
+Accepted job too, so today's live work showed up doubled: once as the current job,
+once labelled "past". Fixed to genuinely finished/declined/expired only.
+
+**The Upcoming tab no longer tells you to check Upcoming.** Its empty state shared
+text with Today's ("Check your upcoming work for the next appointment"), which read
+fine on Today but pointed at itself when it was the tab showing. Each of the three
+tabs now has its own empty-state copy.
+
+**Address surfaces earlier.** An accepted-but-not-yet-startable visit (planning
+tomorrow, before the day-of execution controls unlock) now shows its address and a
+Navigate link on the list card — previously that required opening the job. An
+unaccepted offer stays city-only, unchanged, since the exact address isn't needed to
+decide whether to take the job.
+
+Files: `src/ContractorWork.tsx` only. `src/work.ts` and `src/dispatch.ts` were not
+touched — the model layer already enforced everything correctly; this was a UI
+consolidation.
+
+Validation: 218 application tests plus 8 catalogue tests (unchanged — confirming the
+model layer wasn't touched), `npm run design:check` and the production build pass.
+Browser checks walked offer → accept → on my way → start → outcomes → complete →
+finish for all four demo identities, confirming one primary action and one status
+line at each stage, and re-ran the contrast/overflow audit at 390/768/1280px in both
+themes: zero horizontal overflow, zero text nodes below WCAG AA.

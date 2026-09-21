@@ -65,3 +65,17 @@ The general rule: a derived router that recognizes a value nothing produces is w
 ## Boundaries
 
 Scheduling, payments, dispatch, authorization and the clarification catalogue are unchanged. The handoff's stub slot generator and five-category matcher were **not** adopted: the existing `slots()`/`available()` scheduler and the 81-issue catalogue already do more, and replacing them would be a regression. Home, Today, Contractors and Activity navigation is untouched: the density complaint lives on the request detail.
+
+# Design decisions — contractor round
+
+## ADR 012: The screen opens to the derived state, not a remembered tab
+
+Accepted. The contractor's opening tab was already computed from a "what needs attention right now" priority — a running job, a pending offer, something scheduled today, else Upcoming — but that computation only ever chose a _tab_, then discarded itself. A single unambiguous offer or running job still required an extra "View job" click on a one-item list.
+
+The same computation now also drives the initial selection: a running job or exactly one pending offer opens directly, everything else still shows as a list. Multiple simultaneous offers stay a list, since there is no single unambiguous "the" decision left to jump to. Tabs remain a full manual override once the contractor has looked — this is a one-time initial derivation, not a live re-render that would fight the contractor's own navigation.
+
+The same round removed the post-accept interstitial (a receipt screen behind its own "View job" click) in favor of dropping straight into the job with a toast, and made "On my way" / "Start job" one primary action per stage instead of two permanent peers, once its own duplicate status badge was found — the same duplicate-announcement pattern as ADR 011's derived-value check, this time in a badge rather than a status field.
+
+## Boundaries
+
+`src/work.ts` and `src/dispatch.ts` are unchanged — every fix in this round was a UI consolidation over model-layer behavior that was already correct. All 218 application tests pass unmodified, which was the check that this stayed true.

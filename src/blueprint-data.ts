@@ -160,7 +160,7 @@ export const stages: Stage[] = [
       },
       Contractor: {
         title: "Job accepted",
-        body: "Immediately sees acceptance. If customer conditions remain unmet, the screen explicitly says final confirmation is pending.",
+        body: "Drops straight into the job on acceptance — a toast confirms it rather than a separate receipt screen. If customer conditions remain unmet, the job view itself explicitly says final confirmation is pending.",
       },
       System: {
         title: "Reconcile the records",
@@ -191,7 +191,7 @@ export const stages: Stage[] = [
       },
       Contractor: {
         title: "Share travel progress",
-        body: "On my way records the status. Navigate separately opens external maps; opening maps does not change job status.",
+        body: "On my way records the status and is the sole primary action until pressed; Start job then takes over rather than sitting alongside it as an equal-weight peer. Navigate separately opens external maps; opening maps does not change job status.",
       },
       System: {
         title: "Timestamp + mock ETA",
