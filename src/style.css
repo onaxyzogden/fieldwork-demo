@@ -146,8 +146,8 @@ textarea::placeholder {
   padding: 0 var(--space-2);
 }
 .brand-icon {
-  background: var(--accent-text);
-  color: var(--text);
+  background: var(--accent);
+  color: var(--on-accent);
   width: 33px;
   height: 35px;
   display: grid;
@@ -201,7 +201,7 @@ textarea::placeholder {
   display: inline-block;
   width: 6px;
   height: 6px;
-  background: var(--success);
+  background: var(--success-fill);
   border-radius: var(--radius-pill);
   flex-shrink: 0;
 }
@@ -287,7 +287,7 @@ textarea::placeholder {
   display: inline-block;
   width: 5px;
   height: 5px;
-  background: var(--accent-text);
+  background: var(--accent);
   border-radius: var(--radius-pill);
   margin-right: var(--space-2);
 }
@@ -339,7 +339,7 @@ textarea::placeholder {
   position: absolute;
   width: 4px;
   height: 4px;
-  background: var(--accent-text);
+  background: var(--accent);
   right: 8px;
   top: 7px;
   border-radius: var(--radius-pill);
@@ -413,12 +413,12 @@ main {
   min-height: 39px;
 }
 .primary {
-  background: var(--accent-text);
-  color: var(--text);
-  border-color: var(--accent-text);
+  background: var(--accent);
+  color: var(--on-accent);
+  border-color: var(--accent);
 }
 .primary:hover {
-  background: var(--accent-text);
+  background: var(--accent-hover);
   transform: translateY(-1px);
 }
 .secondary {
@@ -960,7 +960,7 @@ footer {
   width: 7px;
   height: 7px;
   border-radius: var(--radius-pill);
-  background: var(--accent-text);
+  background: var(--accent);
   margin-top: var(--space-2);
 }
 .route-stop {
@@ -975,8 +975,8 @@ footer {
   width: 31px;
   height: 31px;
   border-radius: var(--radius-pill);
-  background: var(--accent-text);
-  color: var(--text);
+  background: var(--accent);
+  color: var(--on-accent);
   display: grid;
   place-items: center;
 }
@@ -1038,9 +1038,9 @@ footer {
   color: var(--muted);
 }
 .stepper .done b {
-  background: var(--accent-text);
-  border-color: var(--accent-text);
-  color: var(--text);
+  background: var(--accent);
+  border-color: var(--accent);
+  color: var(--on-accent);
 }
 .stepper .done small {
   color: var(--accent-text);
@@ -1735,8 +1735,8 @@ footer {
   min-width: 17px;
   padding: var(--space-1) var(--space-1);
   border-radius: var(--radius-md);
-  background: var(--accent-text);
-  color: var(--text);
+  background: var(--accent);
+  color: var(--on-accent);
   font-weight: 700;
 }
 .notification-link {

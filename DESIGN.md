@@ -6,7 +6,11 @@ Fieldwork helps customers explain work, operators dispatch suitable providers, a
 
 ## Tokens
 
-`src/tokens.css` is the only palette/theme owner. Navy and blue are the approved brand; light mode uses cool white/slate. Component CSS must not introduce color literals.
+`src/tokens.css` is the only palette/theme owner. A refined amber is the approved brand; dark mode sits on a neutral near-black elevation ladder, light mode on warm off-white. Component CSS must not introduce color literals.
+
+Two consequences of an amber brand are deliberate. A separate amber `warning` would be indistinguishable from the accent, so attention states resolve to the urgent ramp and are told apart by the word and icon beside them, never by hue alone. `--info` follows the accent rather than keeping a competing blue.
+
+Tokens carry a **role**, and the role decides the pairing. `--accent`, `--success-fill` and `--danger-fill` are *fill* tokens: light in both themes, so they pair with `--on-accent` (dark ink). `--accent-text`, `--success` and `--danger` are *text* tokens: they flip lightness per theme and must never be used as a solid fill behind `--on-accent` or `--text`.
 
 | Family | Meaning |
 |---|---|
@@ -16,10 +20,10 @@ Fieldwork helps customers explain work, operators dispatch suitable providers, a
 | `success*`, `warning*`, `danger*`, `info` | Semantic feedback; always pair with words/icons |
 | `map-*`, `gradient-*`, `print-*` | Illustrative maps and print, never actual geocoding |
 | `space-N` | N × 4px; larger steps cover structural offsets |
-| `radius-sm/md/lg/pill` | 4/8/16px and circles/pills; nested controls use smaller steps |
+| `radius-sm/md/lg/pill` | 6/10/16px and circles/pills; nested controls use smaller steps |
 | `z-*` | Base, dropdown, sticky, overlay, drawer, modal, toast, tooltip; native dialogs use the browser top layer |
 | `shadow-*` | Small/medium elevation, drawer/modal, focus, selected and inset states |
-| `motion-fast/panel`, `ease-*` | 160/320ms; enter ease-out, exit ease-in, moves ease-in-out |
+| `motion-fast/base/panel`, `ease-*` | 160/220/320ms; enter ease-out, exit ease-in, moves ease-in-out; `ease-out` is the shared decelerating curve |
 
 Typography is DM Sans/Manrope with a 1.25 ratio: body 16, intro 20, H3 25, H2 31.25, H1 39.0625px, stored in rem. Labels 14px and captions 12px are intentional utility exceptions. Body line-height is 1.6, headings 1.5. Never shrink text to fit a screen.
 
