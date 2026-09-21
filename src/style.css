@@ -1223,6 +1223,63 @@ footer {
   color: var(--accent-text);
   border-top-color: var(--accent);
 }
+/* Customer home accordion. A request expands in place; there is no separate
+   detail screen for one to drift out of sync with. */
+.request-accordion {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+.request-accordion-item {
+  padding: 0;
+  overflow: hidden;
+}
+.accordion-head {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  width: 100%;
+  text-align: left;
+  background: none;
+  border: 0;
+  color: inherit;
+  padding: var(--space-4) var(--space-5);
+  min-height: 44px;
+}
+.accordion-head-text {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  flex: 1;
+  min-width: 0;
+}
+.accordion-head-text strong {
+  overflow-wrap: anywhere;
+}
+.accordion-head-text small {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  color: var(--muted);
+}
+.accordion-head .chevron {
+  flex-shrink: 0;
+  transition: transform var(--motion-fast) var(--ease-out);
+}
+.accordion-head .chevron.open {
+  transform: rotate(180deg);
+}
+.request-accordion-item > div {
+  padding: 0 var(--space-5) var(--space-5);
+}
+@media (max-width: 600px) {
+  .accordion-head {
+    padding: var(--space-4);
+  }
+  .request-accordion-item > div {
+    padding: 0 var(--space-4) var(--space-4);
+  }
+}
 /* Operator note. Visually distinct from ordinary cards because it is the one
    place the customer is being asked for something. One question, one reply. */
 .operator-note {

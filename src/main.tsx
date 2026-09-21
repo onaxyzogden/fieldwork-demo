@@ -30,6 +30,7 @@ import {
   Users,
   Settings,
   ChevronRight,
+  ChevronDown,
   Search,
   Bell,
   MoreHorizontal,
@@ -336,6 +337,7 @@ function App() {
   }, []);
   const [page, setPage] = useState("Home");
   const [active, setActive] = useState("r2");
+  const [expanded, setExpanded] = useState(true);
   const [contractor, setContractor] = useState("marcus");
   const [contractorVisit, setContractorVisit] = useState("");
   const [customer, setCustomer] = useState("c2");
@@ -481,6 +483,20 @@ function App() {
   }, [modal]);
   const r = s.requests.find((r) => r.id === active) || s.requests[0];
   const tasks = s.tasks.filter((t) => t.requestId === r.id && !t.mergedInto);
+  /* The signed-in customer's own requests. A draft only counts once it carries
+     something — an address, a description or a photo. */
+  const ownRequests = s.requests.filter(
+    (x) =>
+      x.customerId === customer &&
+      (x.status !== "Draft" ||
+        !!x.address.trim() ||
+        s.tasks.some(
+          (t) =>
+            t.requestId === x.id &&
+            !t.mergedInto &&
+            (!!t.description.trim() || t.photos.length > 0),
+        )),
+  );
   const hasReferral = tasks.some(
     (t) => getIssue(t.description).availability === "Referral only",
   );
@@ -2421,54 +2437,64 @@ function App() {
                       <Plus size={16} /> New request
                     </button>
                   </div>
-                  <div className="portal-tabs">
-                    {s.requests
-                      .filter(
-                        (x) =>
-                          x.customerId === customer &&
-                          (x.status !== "Draft" ||
-                            !!x.address.trim() ||
-                            s.tasks.some(
-                              (t) =>
-                                t.requestId === x.id &&
-                                !t.mergedInto &&
-                                (!!t.description.trim() || t.photos.length > 0),
-                            )),
-                      )
-                      .map((x) => (
-                        <button
-                          key={x.id}
-                          className={r.id === x.id ? "selected" : ""}
-                          onClick={() => setActive(x.id)}
-                        >
-                          {x.status === "Draft"
-                            ? "Draft · " +
-                              (s.tasks
-                                .find(
-                                  (t) =>
-                                    t.requestId === x.id &&
-                                    !t.mergedInto &&
-                                    t.description.trim(),
-                                )
-                                ?.description.slice(0, 60) ||
-                                x.address ||
-                                "Photos added")
-                            : x.address || "Request · " + x.id.toUpperCase()}
-                        </button>
-                      ))}
-                  </div>
-                  <section className="card panel">
-                    <div className="row between">
-                      <span className="eyebrow">
-                        REQUEST {r.id.toUpperCase()}
-                      </span>
-                      {badge(r.status)}
-                    </div>
-                    <h2>{r.address || "Your next home project"}</h2>
-                    <p>
-                      <MapPin size={16} />
-                      {r.city} · {tasks.length} tasks
-                    </p>
+                  {/* Accordion, not a tab strip into a separate detail screen.
+                      Everything about a request opens inline underneath its own
+                      row, so nothing about it lives on another page. */}
+                  <div className="request-accordion">
+                    {ownRequests.length === 0 && (
+                      <p className="note">
+                        No requests yet. Start one and it will appear here.
+                      </p>
+                    )}
+                    {ownRequests.map((x) => {
+                      const open = r.id === x.id && expanded;
+                      const count = s.tasks.filter(
+                        (t) => t.requestId === x.id && !t.mergedInto,
+                      ).length;
+                      const title =
+                        x.status === "Draft"
+                          ? "Draft · " +
+                            (s.tasks
+                              .find(
+                                (t) =>
+                                  t.requestId === x.id &&
+                                  !t.mergedInto &&
+                                  t.description.trim(),
+                              )
+                              ?.description.slice(0, 60) ||
+                              x.address ||
+                              "Photos added")
+                          : x.address || "Request · " + x.id.toUpperCase();
+                      return (
+                        <section className="card request-accordion-item" key={x.id}>
+                          <button
+                            className="accordion-head"
+                            aria-expanded={open}
+                            aria-controls={"request-" + x.id}
+                            onClick={() => {
+                              if (r.id === x.id) setExpanded(!expanded);
+                              else {
+                                setActive(x.id);
+                                setExpanded(true);
+                              }
+                            }}
+                          >
+                            <span className="accordion-head-text">
+                              <strong>{title}</strong>
+                              <small>
+                                <MapPin size={16} />
+                                {x.city} · {count}{" "}
+                                {count === 1 ? "task" : "tasks"}
+                              </small>
+                            </span>
+                            {badge(x.status)}
+                            <ChevronDown
+                              size={20}
+                              className={open ? "chevron open" : "chevron"}
+                            />
+                          </button>
+                          {!open ? null : (
+                            <div id={"request-" + x.id}>
                     {r.status === "Draft" ? (
                       <button
                         className="primary"
@@ -2587,9 +2613,14 @@ function App() {
                         {taskPhotos(t)}
                       </div>
                     ))}
-                  </section>
-                  {quotePanel()}
-                  {visits.map(visitCard)}
+                              {quotePanel()}
+                              {visits.map(visitCard)}
+                            </div>
+                          )}
+                        </section>
+                      );
+                    })}
+                  </div>
                 </>
               )}
             </div>
