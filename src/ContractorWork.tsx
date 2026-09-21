@@ -1,6 +1,13 @@
 import { questionAnswers } from "./clarification";
 import { useState, useRef, useEffect, type ReactNode } from "react";
-import { type State, type Visit, providers, money, dateLabel } from "./model";
+import {
+  type State,
+  type Visit,
+  providers,
+  money,
+  dateLabel,
+  customerName,
+} from "./model";
 import {
   canWork,
   execute,
@@ -58,6 +65,9 @@ export function JobWork({
   visit,
 }: Props & { visit: Visit }) {
   const [finish, setFinish] = useState(false);
+  /* Which task is blocking Complete job, if any. Per-task, so the message and
+     the focus target are the specific thing at fault. */
+  const [outcomeError, setOutcomeError] = useState("");
 
   const v = visit,
     x = v.execution,
@@ -96,13 +106,13 @@ export function JobWork({
           </a>
           {!x?.startedAt && (
             <>
-              <button
-                className="secondary"
-                disabled={!!x?.onWayAt}
-                onClick={() => act("way")}
-              >
-                On my way
-              </button>
+              {x?.onWayAt ? (
+                <span className="badge badge-success">On my way</span>
+              ) : (
+                <button className="secondary" onClick={() => act("way")}>
+                  On my way
+                </button>
+              )}
               <button className="primary" onClick={() => act("start")}>
                 Start job
               </button>
@@ -145,7 +155,11 @@ export function JobWork({
             saveOutcome(d, v.id, provider, id, p);
           });
         return (
-          <details key={id} className="work-task">
+          <details
+            key={id}
+            className="work-task"
+            open={outcomeError === id ? true : undefined}
+          >
             <summary>
               {o?.outcome === "Completed" ? "✓ " : ""}
               {t.summary}
@@ -169,23 +183,45 @@ export function JobWork({
             </div>
             {x?.startedAt && (
               <>
-                <label className="field">
-                  Task outcome
-                  <select
-                    disabled={!allowed}
-                    value={o?.outcome || ""}
-                    onChange={(e) => patch({ outcome: e.target.value })}
+                {!allowed ? (
+                  <div className="field">
+                    <span>Task outcome</span>
+                    <strong>{o?.outcome || "Not recorded"}</strong>
+                  </div>
+                ) : (
+                  <label
+                    className={
+                      "field" + (outcomeError === t.id ? " field-error" : "")
+                    }
+                    htmlFor={"outcome-" + t.id}
                   >
-                    <option value="">Choose an outcome</option>
-                    {outcomes.map((o) => (
-                      <option key={o}>{o}</option>
-                    ))}
-                  </select>
-                </label>
+                    Task outcome
+                    <select
+                      id={"outcome-" + t.id}
+                      value={o?.outcome || ""}
+                      aria-invalid={outcomeError === t.id || undefined}
+                      onChange={(e) => {
+                        if (outcomeError === t.id) setOutcomeError("");
+                        patch({ outcome: e.target.value });
+                      }}
+                    >
+                      <option value="">Choose an outcome</option>
+                      {outcomes.map((o) => (
+                        <option key={o}>{o}</option>
+                      ))}
+                    </select>
+                    {outcomeError === t.id && (
+                      <span className="field-message" role="alert">
+                        Choose an outcome for this task before completing the
+                        job.
+                      </span>
+                    )}
+                  </label>
+                )}
                 <label className="field">
                   Task note (optional)
                   <textarea
-                    disabled={!allowed}
+                    readOnly={!allowed}
                     value={o?.note || ""}
                     onChange={(e) => patch({ note: e.target.value })}
                   />
@@ -250,8 +286,16 @@ export function JobWork({
         <>
           <button
             className="primary"
-            disabled={!v.taskIds.every((id) => !!x.outcomes[id]?.outcome)}
-            onClick={() => setFinish(true)}
+            onClick={() => {
+              const pending = v.taskIds.find((id) => !x.outcomes[id]?.outcome);
+              if (pending) {
+                setOutcomeError(pending);
+                document.getElementById("outcome-" + pending)?.focus();
+                return;
+              }
+              setOutcomeError("");
+              setFinish(true);
+            }}
           >
             Complete job
           </button>
@@ -449,7 +493,7 @@ export default function ContractorWork({
                   {s.tasks.find((t) => v.taskIds.includes(t.id))?.summary}
                 </h2>
                 <p>
-                  {r.city} · {dateLabel(v.start)}
+                  {customerName(r.customerId)} · {r.city} · {dateLabel(v.start)}
                 </p>
                 <p>
                   {v.duration} minutes · {v.taskIds.length} tasks
@@ -577,7 +621,10 @@ export default function ContractorWork({
               const v = s.visits.find((v) => v.id === a.visitId)!,
                 r = s.requests.find((r) => r.id === v.requestId)!;
               return (
-                <section className="card panel contractor-offer-card" key={a.id}>
+                <section
+                  className="card panel contractor-offer-card"
+                  key={a.id}
+                >
                   {s.tasks.find(
                     (t) => v.taskIds.includes(t.id) && t.photos.length,
                   )?.photos[0] && (
@@ -598,10 +645,18 @@ export default function ContractorWork({
                     {s.tasks.find((t) => v.taskIds.includes(t.id))?.summary}
                   </h2>
                   <p>
-                    {r.city} · {dateLabel(v.start)}
+                    {customerName(r.customerId)} · {r.city} ·{" "}
+                    {dateLabel(v.start)}
                   </p>
+                  <ul className="contractor-task-list">
+                    {s.tasks
+                      .filter((t) => v.taskIds.includes(t.id))
+                      .map((t) => (
+                        <li key={t.id}>{t.summary}</li>
+                      ))}
+                  </ul>
                   <p>
-                    {v.taskIds.length} tasks · {v.duration} minutes ·{" "}
+                    {v.duration} minutes ·{" "}
                     {s.tasks
                       .filter((t) => v.taskIds.includes(t.id))
                       .reduce((n, t) => n + t.photos.length, 0)}{" "}

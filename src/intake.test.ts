@@ -8,6 +8,11 @@ import {
   intakeOptions,
   preferenceSignature,
   validAddress,
+  validStreet,
+  validPostal,
+  validCity,
+  upcomingDays,
+  dayParts,
   taskLabel,
 } from "./intake";
 function fill(t: Task) {
@@ -148,5 +153,39 @@ describe("three-screen intake", () => {
     expect(restored.tasks[0].entryStage).toBe("details");
     expect(restored.tasks[0].photos).toEqual(s.tasks[0].photos);
     expect(restored.requests[0].intakeScreen).toBe("booking");
+  });
+});
+
+describe("address validation is per-field", () => {
+  const base = { ...seed().requests[0], address: "", postalCode: "" };
+  it("reports street and postal independently", () => {
+    expect(validStreet({ ...base, address: "  " })).toBe(false);
+    expect(validStreet({ ...base, address: "12 Elm St" })).toBe(true);
+    expect(validPostal({ ...base, postalCode: "L6J4S7" })).toBe(true);
+    expect(validPostal({ ...base, postalCode: "L6J 4S7" })).toBe(true);
+    expect(validPostal({ ...base, postalCode: "l6j4s7" })).toBe(true);
+    expect(validPostal({ ...base, postalCode: "90210" })).toBe(false);
+    expect(validPostal({ ...base, postalCode: "" })).toBe(false);
+  });
+  it("only passes as a whole when every field passes", () => {
+    const ok = { ...base, address: "12 Elm St", postalCode: "L6J 4S7" };
+    expect(validCity(ok)).toBe(true);
+    expect(validAddress(ok)).toBe(true);
+    expect(validAddress({ ...ok, address: "" })).toBe(false);
+    expect(validAddress({ ...ok, postalCode: "nope" })).toBe(false);
+    expect(validAddress({ ...ok, city: "Toronto" })).toBe(false);
+  });
+});
+describe("stated timing preference", () => {
+  it("offers the next ten days from the simulated clock", () => {
+    const from = Date.UTC(2026, 8, 21, 12);
+    const days = upcomingDays(from);
+    expect(days).toHaveLength(10);
+    expect(days[0].date).toBe("2026-09-21");
+    expect(days[9].date).toBe("2026-09-30");
+    expect(new Set(days.map((d) => d.date)).size).toBe(10);
+  });
+  it("captures parts of a day, not exact times", () => {
+    expect(dayParts).toEqual(["Morning", "Afternoon", "Evening"]);
   });
 });

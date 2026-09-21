@@ -69,7 +69,7 @@
   display: grid;
   place-items: center;
   border-radius: var(--radius-pill);
-  background: var(--success);
+  background: var(--success-fill);
   color: var(--on-accent);
   font-size: var(--text-h1);
   margin: var(--space-4) auto;

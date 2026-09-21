@@ -76,7 +76,9 @@ Validation includes 163 application tests and eight CSV/compiler tests. Represen
 
 ## Three-screen customer intake
 
-Customer intake now uses Tasks → Where and when → Done. One editor is open at a time; saved tasks collapse to short rows. Save task opens its catalogue questions; Done with this task saves customer entry without approving operator scope. Unanswered details can explicitly be marked Not sure. Remove offers Undo. The address and optional draft progress persist without resetting old records.
+*(Superseded by the redesign section at the end of this file; intake is now Address → Tasks → Timing.)*
+
+Customer intake previously used Tasks → Where and when → Done. One editor is open at a time; saved tasks collapse to short rows. Save task opens its catalogue questions; Done with this task saves customer entry without approving operator scope. Unanswered details can explicitly be marked Not sure. Remove offers Undo. The address and optional draft progress persist without resetting old records.
 
 The combined booking screen offers up to three slots plus More times, using one eligible provider and the total task duration. Request to Book options remain preferences. Uncertain or oversized scope uses general timing; referral-only work has no bookable slots. Instant Book uses the existing simulated checkout with availability revalidation. The receipt distinguishes requests from confirmed appointments.
 
@@ -102,5 +104,25 @@ Use Print / Save PDF for the complete landscape overview, all eight stage detail
 
 Verification: direct link and refresh; role/path selection and stage focus; light/dark layouts at 320, 390, 461, 768 and 1280px. An isolated browser check loaded the actual entrypoint, exercised filters/stage selection, and confirmed zero storage writes with the demo record string unchanged. The printed overview, stage pages and reference/exception pages were visually inspected. Existing booking data and synced references were not changed.
 
-### Blue theme and operator layout
-All roles and the blueprint use navy/blue themes. Operator Home uses separate attention cards and daily metric tiles. Mobile navigation is in the header drawer; sample scenarios are under Demo settings. Contractor recommendations match all selected tasks using the same scope rules as offer eligibility, with availability shown separately.
+### Operator layout
+*(Palette superseded: see the redesign section below.)* Operator Home uses separate attention cards and daily metric tiles. Mobile navigation is in the header drawer; sample scenarios are under Demo settings. Contractor recommendations match all selected tasks using the same scope rules as offer eligibility, with availability shown separately.
+
+## Redesign round
+
+The brand is a refined amber in both themes. `src/tokens.css` remains the only palette owner, and tokens now carry a role: `--accent`, `--success-fill` and `--danger-fill` are fills that pair with the dark `--on-accent`; `--accent-text`, `--success` and `--danger` are text and flip per theme. With an amber brand a separate amber `warning` would be unreadable as a distinct signal, so attention states use the urgent ramp and are told apart by the word and icon beside them. Radius is 6/10/16px. The rem-based 1.25 type scale is unchanged — see `docs/design-decisions.md` ADR 007 for why the handoff's px scale was declined.
+
+Customer intake is **Address → Tasks → Timing**. Finished steps collapse to a summary row with an Edit that reopens them without discarding later work. Timing is optional: a flat list of the next ten days as tap-to-select chips, each revealing Morning/Afternoon/Evening, plus free-text constraints. Sending with nothing chosen is valid. A stated preference is stored separately from a chosen appointment and is never rendered as one. Tasks have two edits — Edit answers keeps the description, Edit description keeps the answers.
+
+Customer Home is an accordion. A request expands in place; there is no separate detail screen. The status track is three steps — Received / Quote / Confirmed. "Provider coordinated" was internal handoff the customer could not act on and survives only as the contextual line beneath.
+
+**A contractor decline is never visible to the customer.** On a decline the request falls back to "we're matching your request with a provider", exactly as if nothing had happened; reassignment is the operator's to solve. The assignment is deliberately left in place so the operator can see who declined.
+
+The operator can ask the customer **one** question at a time. One question, one reply; asking again replaces the pair rather than appending. This is not a chat, and is deliberately not growing into one — the per-visit message thread already exists for real back-and-forth.
+
+Customer and contractor screens carry a "Viewing as" pill switcher, since the prototype has to simulate several people to be testable. Every request traces to a real customer in the roster, so no record belongs to nobody.
+
+**No submit-type button in this app is disabled.** Each stays enabled, validates on click, marks the specific blocking field, writes the reason beside it and moves focus there. A disabled button drops out of tab order, is silent to screen readers and fires no pointer events, so the tooltip explaining the block never reaches the person who needed it.
+
+Validation: `design:check`, 214 application tests and 8 catalogue tests pass; production build passes. All three roles checked at 320, 390, 461, 768 and 1280px in both themes with no horizontal overflow, and an automated contrast audit over every rendered text node found nothing below WCAG AA. See `docs/design-verification.md`.
+
+Not adopted from the handoff: its stub slot generator and its five-category matcher. The existing scheduler and the 81-issue catalogue already do more, and swapping them in would be a regression.

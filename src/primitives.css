@@ -12,8 +12,8 @@
   color: var(--accent-text);
 }
 :root[data-theme="light"] .brand-icon {
-  background: var(--accent-text);
-  color: var(--text);
+  background: var(--accent);
+  color: var(--on-accent);
 }
 :root[data-theme="light"] .workspace {
   background: var(--panel);
@@ -31,13 +31,13 @@
   background: var(--panel);
 }
 :root[data-theme="light"] .sidebar nav button.active {
-  background: var(--accent-text);
-  color: var(--text);
-  border-color: var(--accent-text);
+  background: var(--accent);
+  color: var(--on-accent);
+  border-color: var(--accent);
 }
 :root[data-theme="light"] .nav-count {
-  background: var(--accent-text);
-  color: var(--text);
+  background: var(--accent);
+  color: var(--on-accent);
 }
 :root[data-theme="light"] .avatar {
   background: var(--panel);
@@ -45,9 +45,9 @@
   border-color: var(--muted);
 }
 :root[data-theme="light"] .avatar.amber {
-  background: var(--accent-text);
-  color: var(--text);
-  border-color: var(--accent-text);
+  background: var(--accent);
+  color: var(--on-accent);
+  border-color: var(--accent);
 }
 :root[data-theme="light"] .demo-bar {
   background: var(--panel);
@@ -58,7 +58,7 @@
   color: var(--text);
 }
 :root[data-theme="light"] .demo-dot {
-  background: var(--accent-text);
+  background: var(--accent);
 }
 :root[data-theme="light"] .role-switch {
   background: var(--panel);
@@ -89,18 +89,18 @@
 :root[data-theme="light"] .scenario-strip button.selected,
 :root[data-theme="light"] .scenario-strip button:hover,
 :root[data-theme="light"] .portal-tabs button.selected {
-  background: var(--accent-text);
-  color: var(--text);
-  border-color: var(--accent-text);
+  background: var(--accent);
+  color: var(--on-accent);
+  border-color: var(--accent);
 }
 :root[data-theme="light"] .primary {
-  background: var(--accent-text);
-  color: var(--text);
-  border-color: var(--accent-text);
+  background: var(--accent);
+  color: var(--on-accent);
+  border-color: var(--accent);
 }
 :root[data-theme="light"] .primary:hover {
-  background: var(--accent-text);
-  border-color: var(--accent-text);
+  background: var(--accent-hover);
+  border-color: var(--accent-hover);
 }
 :root[data-theme="light"] .secondary {
   background: var(--panel);
@@ -166,9 +166,9 @@
   background: var(--gradient-surface);
 }
 :root[data-theme="light"] .insight-icon {
-  background: var(--accent-text);
+  background: var(--accent-soft);
   color: var(--accent-text);
-  border-color: var(--accent-text);
+  border-color: var(--accent);
 }
 :root[data-theme="light"] .insight .eyebrow {
   color: var(--text);
@@ -180,9 +180,11 @@
   color: var(--text);
   border-color: var(--muted);
 }
+/* A placeholder at full text colour reads as an entered value. It is a hint,
+   so it sits a step below the ink the field's own content uses. */
 :root[data-theme="light"] input::placeholder,
 :root[data-theme="light"] textarea::placeholder {
-  color: var(--text);
+  color: var(--ink-muted);
 }
 :root[data-theme="light"] input:focus,
 :root[data-theme="light"] textarea:focus,
@@ -263,22 +265,6 @@
 }
 :root[data-theme="light"] .customer-heading .eyebrow {
   color: var(--accent-text);
-}
-:root[data-theme="light"] .stepper:before {
-  background: var(--panel);
-}
-:root[data-theme="light"] .stepper b {
-  background: var(--panel);
-  color: var(--text);
-  border-color: var(--muted);
-}
-:root[data-theme="light"] .stepper .done b {
-  background: var(--accent-text);
-  color: var(--text);
-  border-color: var(--accent-text);
-}
-:root[data-theme="light"] .stepper .done small {
-  color: var(--text);
 }
 :root[data-theme="light"] .intake-task textarea {
   background: var(--panel);
@@ -465,12 +451,12 @@
 :root[data-theme] .primary,
 :root[data-theme] .brand-icon {
   background: var(--accent);
-  color: var(--text);
+  color: var(--on-accent);
   border-color: var(--accent);
 }
 :root[data-theme] .primary:hover {
-  background: var(--accent-text);
-  border-color: var(--accent-text);
+  background: var(--accent-hover);
+  border-color: var(--accent-hover);
 }
 :root[data-theme] .secondary {
   background: var(--panel);
@@ -590,25 +576,8 @@
   border-color: var(--line);
   color: inherit;
 }
-:root[data-theme] .stepper:before {
-  background: var(--line);
-}
-:root[data-theme] .stepper b {
-  background: var(--panel);
-  color: var(--muted);
-  border-color: var(--line);
-}
-:root[data-theme] .stepper .done b,
-:root[data-theme] .stepper .active b {
-  background: var(--accent);
-  border-color: var(--accent);
-  color: var(--on-accent);
-}
-:root[data-theme] .stepper .done small {
-  color: var(--accent-text);
-}
 :root[data-theme] .demo-dot {
-  background: var(--accent-text);
+  background: var(--accent);
 }
 :root[data-theme] .route-map svg [stroke="var(--accent-text)"] {
   stroke: var(--accent-text);
@@ -811,7 +780,7 @@
   box-shadow: var(--shadow-selected);
 }
 .op-view-switch span {
-  background: var(--danger);
+  background: var(--danger-fill);
   color: var(--on-accent);
   border-radius: var(--radius-md);
   padding: var(--space-1) var(--space-2);

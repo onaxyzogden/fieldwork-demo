@@ -4,7 +4,7 @@ import ContractorWork, { JobWork } from "./ContractorWork";
 import { OperatorHome, OperatorToday } from "./OperatorWork";
 import { bucket, workIssue, workStatus } from "./work";
 import CustomerIntake from "./CustomerIntake";
-import { validAddress } from "./intake";
+import { validAddress, dayLabel } from "./intake";
 import {
   getIssue,
   matchIssues,
@@ -14,7 +14,7 @@ import {
   needsClarificationReview,
   reportedConcern,
 } from "./clarification";
-import React, { useState } from "react";
+import React, { useState, useRef } from "react";
 import { createRoot } from "react-dom/client";
 import {
   ArrowUpRight,
@@ -30,6 +30,7 @@ import {
   Users,
   Settings,
   ChevronRight,
+  ChevronDown,
   Search,
   Bell,
   MoreHorizontal,
@@ -67,6 +68,11 @@ import {
   scopeMatch,
   torontoParts,
   instantEligible,
+  customers,
+  customerName,
+  coordinated,
+  quoted,
+  confirmed,
 } from "./model";
 import "@fontsource/dm-sans/400.css";
 import "@fontsource/dm-sans/500.css";
@@ -96,6 +102,57 @@ import {
   respondToOffer,
 } from "./dispatch";
 const KEY = "fieldwork-demo-v1";
+/**
+ * Submit-type actions stay enabled and validate on click.
+ *
+ * A disabled button drops out of tab order, stays silent to screen readers, and
+ * fires no pointer events — so any tooltip explaining why it is blocked never
+ * reaches the person who needed it, and the greyed label usually fails contrast
+ * besides. Instead: always clickable, and on failure mark the blocking field,
+ * say why beside it, and move focus there.
+ */
+function NoteReply({ onSend }: { onSend: (reply: string) => void }) {
+  const [text, setText] = useState("");
+  const [error, setError] = useState("");
+  const ref = useRef<HTMLTextAreaElement>(null);
+  return (
+    <>
+      <label className={"field" + (error ? " field-error" : "")}>
+        Your reply
+        <textarea
+          ref={ref}
+          value={text}
+          aria-invalid={!!error || undefined}
+          aria-describedby={error ? "note-reply-error" : undefined}
+          placeholder="Add the requested details…"
+          onChange={(e) => {
+            setText(e.target.value);
+            if (error) setError("");
+          }}
+        />
+        {error && (
+          <span className="field-message" id="note-reply-error" role="alert">
+            <AlertCircle size={16} /> {error}
+          </span>
+        )}
+      </label>
+      <button
+        className="secondary"
+        onClick={() => {
+          if (!text.trim()) {
+            setError("Add your reply before sending.");
+            ref.current?.focus();
+            return;
+          }
+          onSend(text.trim());
+          setText("");
+        }}
+      >
+        Send reply
+      </button>
+    </>
+  );
+}
 function TaskAnswers({ task }: { task: Task }) {
   const rows = questionAnswers(task);
   const policy = getIssue(task.description);
@@ -280,6 +337,8 @@ function App() {
   }, []);
   const [page, setPage] = useState("Home");
   const [active, setActive] = useState("r2");
+  const [expanded, setExpanded] = useState(true);
+  const [payError, setPayError] = useState(false);
   const [contractor, setContractor] = useState("marcus");
   const [contractorVisit, setContractorVisit] = useState("");
   const [customer, setCustomer] = useState("c2");
@@ -425,6 +484,20 @@ function App() {
   }, [modal]);
   const r = s.requests.find((r) => r.id === active) || s.requests[0];
   const tasks = s.tasks.filter((t) => t.requestId === r.id && !t.mergedInto);
+  /* The signed-in customer's own requests. A draft only counts once it carries
+     something — an address, a description or a photo. */
+  const ownRequests = s.requests.filter(
+    (x) =>
+      x.customerId === customer &&
+      (x.status !== "Draft" ||
+        !!x.address.trim() ||
+        s.tasks.some(
+          (t) =>
+            t.requestId === x.id &&
+            !t.mergedInto &&
+            (!!t.description.trim() || t.photos.length > 0),
+        )),
+  );
   const hasReferral = tasks.some(
     (t) => getIssue(t.description).availability === "Referral only",
   );
@@ -665,12 +738,17 @@ function App() {
             </button>
             <button
               className="secondary"
-              disabled={
-                !replacementOptions(s, v).some(
-                  (o) => o.provider.id === "yousef",
+              onClick={() => {
+                if (
+                  !replacementOptions(s, v).some(
+                    (o) => o.provider.id === "yousef",
+                  )
                 )
-              }
-              onClick={() => beginReassign(v, true)}
+                  return notify(
+                    "No slot fits this visit on your own calendar. Offer it to another contractor.",
+                  );
+                beginReassign(v, true);
+              }}
             >
               Do It Myself
             </button>
@@ -705,9 +783,7 @@ function App() {
       d.requests.push({
         id,
         customerId: customer,
-        name:
-          s.requests.find((r) => r.customerId === customer)?.name ||
-          "Sarah Mitchell",
+        name: customerName(customer),
         address: "",
         city: "Oakville",
         status: "Draft",
@@ -896,10 +972,22 @@ function App() {
               </text>
             </g>
           ))}
-          <text x="282" y="75" fill="var(--muted)" fontSize="14" letterSpacing="4">
+          <text
+            x="282"
+            y="75"
+            fill="var(--muted)"
+            fontSize="14"
+            letterSpacing="4"
+          >
             OAKVILLE
           </text>
-          <text x="440" y="273" fill="var(--surface-raised)" fontSize="11" letterSpacing="3">
+          <text
+            x="440"
+            y="273"
+            fill="var(--surface-raised)"
+            fontSize="11"
+            letterSpacing="3"
+          >
             LAKE ONTARIO
           </text>
           <text x="30" y="35" fill="var(--muted)" fontSize="10">
@@ -1507,7 +1595,55 @@ function App() {
                       {r.notes ||
                         "No additional access or parking notes supplied."}
                     </p>
+                    {!!r.preferredSlots?.length || r.timingConstraints ? (
+                      <>
+                        <h3>Stated preference</h3>
+                        <p>
+                          {r.preferredSlots
+                            ?.map(
+                              (p) =>
+                                `${dayLabel(p.date)}${p.times.length ? ` (${p.times.join(", ")})` : ""}`,
+                            )
+                            .join(" · ") || "No specific day"}
+                          {r.timingConstraints
+                            ? ` — ${r.timingConstraints}`
+                            : ""}
+                        </p>
+                      </>
+                    ) : null}
                   </section>
+                  {r.operatorNote && (
+                    /* Single Q&A slot: waiting, then answered. Asking again
+                       replaces it rather than growing a history. */
+                    <section className="card operator-note">
+                      <span className="eyebrow">
+                        {r.customerReply
+                          ? "CUSTOMER ANSWERED"
+                          : "WAITING ON CUSTOMER"}
+                      </span>
+                      <p>{r.operatorNote}</p>
+                      {r.customerReply ? (
+                        <p className="operator-note-reply">
+                          <strong>Reply:</strong> {r.customerReply}
+                        </p>
+                      ) : (
+                        <button
+                          className="text-button"
+                          onClick={() =>
+                            update((d) => {
+                              const req = d.requests.find(
+                                (x) => x.id === r.id,
+                              )!;
+                              req.operatorNote = null;
+                              req.customerReply = null;
+                            }, "Question withdrawn")
+                          }
+                        >
+                          Cancel question
+                        </button>
+                      )}
+                    </section>
+                  )}
                   <section className="card panel operator-action-panel">
                     {" "}
                     <div className="row actions wrap operator-primary-actions">
@@ -1561,7 +1697,9 @@ function App() {
                           setModal("Request information");
                         }}
                       >
-                        Need More Info
+                        {r.operatorNote
+                          ? "Ask something else"
+                          : "Need More Info"}
                       </button>
                       <details>
                         <summary>More actions</summary>
@@ -2027,8 +2165,17 @@ function App() {
                         </div>
                         <button
                           className="primary actions"
-                          disabled={!match.eligible || !opts.length}
-                          onClick={createVisit}
+                          onClick={() => {
+                            if (!match.eligible)
+                              return notify(
+                                "This provider is not eligible for every selected task.",
+                              );
+                            if (!opts.length)
+                              return notify(
+                                "No appointment fits this scope. Adjust the tasks or choose another provider.",
+                              );
+                            createVisit();
+                          }}
                         >
                           {provider === "yousef"
                             ? "Create visit"
@@ -2254,29 +2401,37 @@ function App() {
             <div className="customer-wrap">
               <div className="account-row">
                 <span className="eyebrow">CUSTOMER PORTAL</span>
-                <select
-                  aria-label="Demo customer"
-                  value={customer}
-                  onChange={(e) => {
-                    setCustomer(e.target.value);
-                    setActive(
-                      s.requests.find((r) => r.customerId === e.target.value)!
-                        .id,
-                    );
-                    setStep(0);
-                  }}
-                >
-                  {s.requests
-                    .filter(
-                      (r, i, a) =>
-                        a.findIndex((x) => x.customerId === r.customerId) === i,
-                    )
-                    .map((r) => (
-                      <option value={r.customerId} key={r.customerId}>
-                        {r.name}
-                      </option>
-                    ))}
-                </select>
+              </div>
+              {/* The prototype has to simulate several people to be testable at
+                  all. Tappable pills, the same visual idiom as every other chip
+                  here, rather than a separate control type. The roster is the
+                  customer list itself, so someone with no requests yet is still
+                  selectable — identity does not depend on owning a row. */}
+              <div
+                className="identity-switch"
+                role="group"
+                aria-label="Viewing as"
+              >
+                <span className="eyebrow">VIEWING AS</span>
+                {customers.map((c) => (
+                  <button
+                    key={c.id}
+                    className={
+                      "badge " +
+                      (customer === c.id ? "badge-accent" : "badge-neutral")
+                    }
+                    aria-pressed={customer === c.id}
+                    onClick={() => {
+                      setCustomer(c.id);
+                      const own = s.requests.find((x) => x.customerId === c.id);
+                      if (own) setActive(own.id);
+                      setStep(0);
+                      setPage("Home");
+                    }}
+                  >
+                    {c.name}
+                  </button>
+                ))}
               </div>
               {page === "New request" ? (
                 <CustomerIntake
@@ -2306,170 +2461,224 @@ function App() {
                       <Plus size={16} /> New request
                     </button>
                   </div>
-                  <div className="portal-tabs">
-                    {s.requests
-                      .filter(
-                        (x) =>
-                          x.customerId === customer &&
-                          (x.status !== "Draft" ||
-                            !!x.address.trim() ||
-                            s.tasks.some(
-                              (t) =>
-                                t.requestId === x.id &&
-                                !t.mergedInto &&
-                                (!!t.description.trim() || t.photos.length > 0),
-                            )),
-                      )
-                      .map((x) => (
-                        <button
-                          key={x.id}
-                          className={r.id === x.id ? "selected" : ""}
-                          onClick={() => setActive(x.id)}
-                        >
-                          {x.status === "Draft"
-                            ? "Draft · " +
-                              (s.tasks
-                                .find(
-                                  (t) =>
-                                    t.requestId === x.id &&
-                                    !t.mergedInto &&
-                                    t.description.trim(),
-                                )
-                                ?.description.slice(0, 60) ||
-                                x.address ||
-                                "Photos added")
-                            : x.address || "Request · " + x.id.toUpperCase()}
-                        </button>
-                      ))}
-                  </div>
-                  <section className="card panel">
-                    <div className="row between">
-                      <span className="eyebrow">
-                        REQUEST {r.id.toUpperCase()}
-                      </span>
-                      {badge(r.status)}
-                    </div>
-                    <h2>{r.address || "Your next home project"}</h2>
-                    <p>
-                      <MapPin size={16} />
-                      {r.city} · {tasks.length} tasks
-                    </p>
-                    {r.status === "Draft" ? (
-                      <button
-                        className="primary"
-                        onClick={() => {
-                          setPage("New request");
-                          setStep(0);
-                        }}
-                      >
-                        Continue request <ArrowRight size={16} />
-                      </button>
-                    ) : (
-                      <div className="status-track">
-                        {[
-                          "Request received",
-                          "Provider coordinated",
-                          "Quote approved",
-                          "Visit confirmed",
-                        ].map((x, i) => (
-                          <div
-                            className={
-                              i === 0 ||
-                              (i === 1 &&
-                                visits.some((v) =>
-                                  s.assignments.some(
-                                    (a) =>
-                                      a.visitId === v.id &&
-                                      a.status === "Accepted",
-                                  ),
-                                )) ||
-                              (i === 2 && quote?.status === "Approved") ||
-                              (i === 3 && r.status === "Confirmed")
-                                ? "complete"
-                                : ""
-                            }
-                            key={x}
-                          >
-                            <CheckCircle2 size={16} />
-                            <span>{x}</span>
-                          </div>
-                        ))}
-                      </div>
-                    )}
-                    {!["Confirmed", "Cancelled", "Draft"].includes(
-                      r.status,
-                    ) && (
+                  {/* Accordion, not a tab strip into a separate detail screen.
+                      Everything about a request opens inline underneath its own
+                      row, so nothing about it lives on another page. */}
+                  <div className="request-accordion">
+                    {ownRequests.length === 0 && (
                       <p className="note">
-                        {r.status === "Needs Review"
-                          ? "Your request needs a closer look. We’ll coordinate a suitable provider."
-                          : "Your appointment is not confirmed until provider acceptance, quote approval, and any required payment are complete."}
+                        No requests yet. Start one and it will appear here.
                       </p>
                     )}
-                    {r.notes && <p className="note">{r.notes}</p>}
-                    {r.notes.startsWith("Information requested:") && (
-                      <form
-                        onSubmit={(e) => {
-                          e.preventDefault();
-                          const reply = String(
-                            new FormData(e.currentTarget).get("reply"),
-                          );
-                          update((d) => {
-                            d.requests.find((x) => x.id === r.id)!.notes +=
-                              " | Customer response: " + reply;
-                            log(
-                              d,
-                              "Customer replied to information request: " +
-                                reply,
-                            );
-                          }, "Response shared with Yousef");
-                        }}
-                      >
-                        <label className="field">
-                          Your response
-                          <textarea
-                            name="reply"
-                            required
-                            placeholder="Add the requested details…"
-                          />
-                        </label>
-                        <button className="secondary">Send response</button>
-                      </form>
-                    )}
-                    {tasks.map((t) => (
-                      <div className="card portal-task" key={t.id}>
-                        <h4>
-                          <Wrench size={16} />
-                          {t.summary}
-                        </h4>
-                        <p>{t.description}</p>
-                        <TaskAnswers task={t} />
-                        {taskPhotos(t)}
-                      </div>
-                    ))}
-                  </section>
-                  {quotePanel()}
-                  {visits.map(visitCard)}
+                    {ownRequests.map((x) => {
+                      const open = r.id === x.id && expanded;
+                      const count = s.tasks.filter(
+                        (t) => t.requestId === x.id && !t.mergedInto,
+                      ).length;
+                      const title =
+                        x.status === "Draft"
+                          ? "Draft · " +
+                            (s.tasks
+                              .find(
+                                (t) =>
+                                  t.requestId === x.id &&
+                                  !t.mergedInto &&
+                                  t.description.trim(),
+                              )
+                              ?.description.slice(0, 60) ||
+                              x.address ||
+                              "Photos added")
+                          : x.address || "Request · " + x.id.toUpperCase();
+                      return (
+                        <section
+                          className="card request-accordion-item"
+                          key={x.id}
+                        >
+                          <button
+                            className="accordion-head"
+                            aria-expanded={open}
+                            aria-controls={"request-" + x.id}
+                            onClick={() => {
+                              if (r.id === x.id) setExpanded(!expanded);
+                              else {
+                                setActive(x.id);
+                                setExpanded(true);
+                              }
+                            }}
+                          >
+                            <span className="accordion-head-text">
+                              <strong>{title}</strong>
+                              <small>
+                                <MapPin size={16} />
+                                {x.city} · {count}{" "}
+                                {count === 1 ? "task" : "tasks"}
+                              </small>
+                            </span>
+                            {badge(x.status)}
+                            <ChevronDown
+                              size={20}
+                              className={open ? "chevron open" : "chevron"}
+                            />
+                          </button>
+                          {!open ? null : (
+                            <div id={"request-" + x.id}>
+                              {r.status === "Draft" ? (
+                                <button
+                                  className="primary"
+                                  onClick={() => {
+                                    setPage("New request");
+                                    setStep(0);
+                                  }}
+                                >
+                                  Continue request <ArrowRight size={16} />
+                                </button>
+                              ) : (
+                                <div className="status-track">
+                                  {/* Three steps, not four. "Provider coordinated" was
+                            internal handoff the customer could not act on; it
+                            survives as the prose note below, not as a step. */}
+                                  {[
+                                    {
+                                      label: "Received",
+                                      done: true,
+                                    },
+                                    {
+                                      label: "Quote",
+                                      done: quote?.status === "Approved",
+                                      active: quoted(s, r.id),
+                                    },
+                                    {
+                                      label: "Confirmed",
+                                      done: confirmed(s, r.id),
+                                    },
+                                  ].map((x) => (
+                                    <div
+                                      className={
+                                        "status-step " +
+                                        (x.done
+                                          ? "done"
+                                          : x.active
+                                            ? "active"
+                                            : "")
+                                      }
+                                      key={x.label}
+                                    >
+                                      <CheckCircle2 size={16} />
+                                      <span>{x.label}</span>
+                                    </div>
+                                  ))}
+                                </div>
+                              )}
+                              {!["Confirmed", "Cancelled", "Draft"].includes(
+                                r.status,
+                              ) && (
+                                /* One contextual line, chosen from derived state — not a
+                         log. When a contractor declines, coordinated reverts to
+                         false and this falls back to "matching", which is what
+                         keeps the decline invisible to the customer. */
+                                <p className="note">
+                                  {r.status === "Needs Review"
+                                    ? "Your request needs a closer look. We’ll coordinate a suitable provider."
+                                    : !coordinated(s, r.id)
+                                      ? "We’re matching your request with a provider."
+                                      : !quoted(s, r.id)
+                                        ? "A provider has been matched. We’re preparing your quote."
+                                        : "Your appointment is not confirmed until provider acceptance, quote approval, and any required payment are complete."}
+                                </p>
+                              )}
+                              {!!r.preferredSlots?.length ||
+                              r.timingConstraints ? (
+                                /* The customer's own stated preference, always visible to
+                         them and never quietly dropped. */
+                                <p className="note">
+                                  Your preference:{" "}
+                                  {r.preferredSlots
+                                    ?.map(
+                                      (p) =>
+                                        `${dayLabel(p.date)}${p.times.length ? ` (${p.times.join(", ")})` : ""}`,
+                                    )
+                                    .join(" · ") || "no specific day"}
+                                  {r.timingConstraints
+                                    ? ` — ${r.timingConstraints}`
+                                    : ""}
+                                </p>
+                              ) : null}
+                              {r.notes && <p className="note">{r.notes}</p>}
+                              {r.operatorNote && (
+                                /* One question, one reply. Not a thread: see §7.3 — a new
+                         question replaces this pair rather than appending. */
+                                <div className="card operator-note">
+                                  <span className="eyebrow">
+                                    A QUESTION FOR YOU
+                                  </span>
+                                  <p>{r.operatorNote}</p>
+                                  {r.customerReply ? (
+                                    <p className="operator-note-reply">
+                                      <strong>Your reply:</strong>{" "}
+                                      {r.customerReply}
+                                    </p>
+                                  ) : (
+                                    <NoteReply
+                                      onSend={(reply) =>
+                                        update((d) => {
+                                          d.requests.find(
+                                            (x) => x.id === r.id,
+                                          )!.customerReply = reply;
+                                          log(d, "Customer replied: " + reply);
+                                        }, "Reply shared with Yousef")
+                                      }
+                                    />
+                                  )}
+                                </div>
+                              )}
+                              {tasks.map((t) => (
+                                <div className="card portal-task" key={t.id}>
+                                  <h4>
+                                    <Wrench size={16} />
+                                    {t.summary}
+                                  </h4>
+                                  <p>{t.description}</p>
+                                  <TaskAnswers task={t} />
+                                  {taskPhotos(t)}
+                                </div>
+                              ))}
+                              {quotePanel()}
+                              {visits.map(visitCard)}
+                            </div>
+                          )}
+                        </section>
+                      );
+                    })}
+                  </div>
                 </>
               )}
             </div>
           )}
           {role === "Contractor" && (
             <>
-              <label className="field">
-                Demo contractor
-                <select
-                  value={contractor}
-                  onChange={(e) => setContractor(e.target.value)}
-                >
-                  {providers
-                    .filter((p) => p.id !== "yousef")
-                    .map((p) => (
-                      <option key={p.id} value={p.id}>
-                        {p.name}
-                      </option>
-                    ))}
-                </select>
-              </label>
+              {/* Same pill idiom as the customer switcher. Yousef is included:
+                  he takes jobs as well as dispatching them, so he is a real
+                  contractor identity, not just the operator. */}
+              <div
+                className="identity-switch"
+                role="group"
+                aria-label="Viewing as"
+              >
+                <span className="eyebrow">VIEWING AS</span>
+                {providers.map((p) => (
+                  <button
+                    key={p.id}
+                    className={
+                      "badge " +
+                      (contractor === p.id ? "badge-accent" : "badge-neutral")
+                    }
+                    aria-pressed={contractor === p.id}
+                    onClick={() => setContractor(p.id)}
+                  >
+                    {p.name}
+                  </button>
+                ))}
+              </div>
               <ContractorWork
                 key={contractor}
                 s={s}
@@ -2853,22 +3062,44 @@ function App() {
                           Customer price is unchanged.
                         </p>
                         {provider !== "yousef" && (
-                          <label className="field">
+                          <label
+                            className={
+                              "field" + (payError ? " field-error" : "")
+                            }
+                            htmlFor="reoffer-pay"
+                          >
                             Replacement contractor pay (CAD)
                             <input
+                              id="reoffer-pay"
                               type="number"
                               min={choice.minimumPay}
                               value={pay}
-                              onChange={(e) => setPay(Number(e.target.value))}
+                              aria-invalid={payError || undefined}
+                              onChange={(e) => {
+                                if (payError) setPayError(false);
+                                setPay(Number(e.target.value));
+                              }}
                             />
+                            {payError && (
+                              <span className="field-message" role="alert">
+                                Pay at least {money(choice.minimumPay)} for this
+                                replacement.
+                              </span>
+                            )}
                           </label>
                         )}
                         <button
                           className="primary full actions"
-                          disabled={
-                            provider !== "yousef" && pay < choice.minimumPay
-                          }
                           onClick={() => {
+                            if (
+                              provider !== "yousef" &&
+                              pay < choice.minimumPay
+                            ) {
+                              setPayError(true);
+                              document.getElementById("reoffer-pay")?.focus();
+                              return;
+                            }
+                            setPayError(false);
                             update((d) => {
                               reoffer(d, v.id, provider, choice.start!, pay);
                             });
@@ -2986,13 +3217,15 @@ function App() {
                     "note",
                   ) as string;
                   update((d) => {
-                    d.requests.find((q) => q.id === r.id)!.notes =
-                      "Information requested: " + value;
+                    const req = d.requests.find((q) => q.id === r.id)!;
+                    // One slot, not a thread: asking again replaces the pair.
+                    req.operatorNote = value;
+                    req.customerReply = null;
                     log(
                       d,
                       "Operator requested additional information: " + value,
                     );
-                  }, "Request visible in customer portal");
+                  }, "Question visible in customer portal");
                   setModal("");
                 }}
               >

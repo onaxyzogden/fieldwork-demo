@@ -37,7 +37,7 @@
   width: 32px;
   height: 32px;
   border-radius: var(--radius-pill);
-  background: var(--accent-text);
+  background: var(--accent);
   color: var(--on-accent);
 }
 .task-description-preview,
@@ -175,7 +175,7 @@
   width: 104px;
   height: 104px;
   border-radius: var(--radius-pill);
-  background: var(--success);
+  background: var(--success-fill);
   color: var(--on-accent);
   margin: var(--space-8) auto var(--space-6);
   font-size: var(--text-h1);

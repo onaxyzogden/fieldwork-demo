@@ -105,8 +105,6 @@ footer,
 .scenario-strip > span,
 .demo-bar,
 .demo-extra,
-.stepper small,
-.stepper b,
 .avatar,
 .avatar.small,
 .slot .eyebrow,
@@ -285,23 +283,6 @@ footer,
 .notification-count {
   min-width: 1.25rem;
 }
-.stepper {
-  gap: var(--space-2);
-  margin-left: 0;
-  margin-right: 0;
-}
-.stepper > span {
-  flex: 1;
-  min-width: 0;
-  text-align: center;
-}
-.stepper b {
-  width: 2rem;
-  height: 2rem;
-}
-.stepper:before {
-  top: 1rem;
-}
 .field {
   width: 100%;
 }
@@ -311,10 +292,6 @@ footer,
 .text-button,
 .photo-add {
   min-height: 2.75rem;
-}
-@media (min-width: 48rem) {
-}
-@media (min-width: 90rem) {
 }
 @media (max-width: 75rem) {
   .dashboard-grid,
@@ -479,17 +456,6 @@ footer,
   .account-row > * {
     flex: 1 1 100%;
   }
-  .stepper {
-    flex-wrap: wrap;
-    justify-content: center;
-    gap: var(--space-3);
-  }
-  .stepper > span {
-    flex: 0 1 4rem;
-  }
-  .stepper:before {
-    display: none;
-  }
   .modal {
     padding: var(--space-4);
   }
@@ -535,17 +501,11 @@ footer,
   max-width: 760px;
   margin: 0 auto;
 }
+/* Type only. Layout and state colour belong to the canonical stepper in style.css. */
 .intake-steps {
-  display: flex;
-  gap: var(--space-3);
-  justify-content: space-between;
-  flex-wrap: wrap;
-  margin: var(--space-4) 0;
-  color: var(--muted);
-  font-size: var(--text-label);
+  font-size: var(--text-caption);
 }
 .intake-steps [aria-current] {
-  color: inherit;
   font-weight: 700;
 }
 .customer-intake .customer-heading {
@@ -686,10 +646,4 @@ footer,
 }
 .intake-main .account-row > .eyebrow {
   display: none;
-}
-.intake-steps [aria-current] {
-  color: var(--accent-text);
-}
-:root[data-theme="light"] .intake-steps [aria-current] {
-  color: var(--accent-text);
 }

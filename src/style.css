@@ -28,10 +28,10 @@ a {
 button {
   cursor: pointer;
 }
-button:disabled {
-  opacity: 0.4;
-  cursor: not-allowed;
-}
+/* No styling for button:disabled, because no submit-type button in this app is
+   disabled. Actions stay enabled and validate on click; see .field-error. The
+   0.4-opacity grey-out this rule used to apply is the contrast failure that
+   argument is about, so leaving it here would only invite the pattern back. */
 button:focus-visible,
 a:focus-visible {
   outline: 2px solid var(--accent-text);
@@ -146,8 +146,8 @@ textarea::placeholder {
   padding: 0 var(--space-2);
 }
 .brand-icon {
-  background: var(--accent-text);
-  color: var(--text);
+  background: var(--accent);
+  color: var(--on-accent);
   width: 33px;
   height: 35px;
   display: grid;
@@ -201,7 +201,7 @@ textarea::placeholder {
   display: inline-block;
   width: 6px;
   height: 6px;
-  background: var(--success);
+  background: var(--success-fill);
   border-radius: var(--radius-pill);
   flex-shrink: 0;
 }
@@ -287,7 +287,7 @@ textarea::placeholder {
   display: inline-block;
   width: 5px;
   height: 5px;
-  background: var(--accent-text);
+  background: var(--accent);
   border-radius: var(--radius-pill);
   margin-right: var(--space-2);
 }
@@ -339,7 +339,7 @@ textarea::placeholder {
   position: absolute;
   width: 4px;
   height: 4px;
-  background: var(--accent-text);
+  background: var(--accent);
   right: 8px;
   top: 7px;
   border-radius: var(--radius-pill);
@@ -413,12 +413,12 @@ main {
   min-height: 39px;
 }
 .primary {
-  background: var(--accent-text);
-  color: var(--text);
-  border-color: var(--accent-text);
+  background: var(--accent);
+  color: var(--on-accent);
+  border-color: var(--accent);
 }
 .primary:hover {
-  background: var(--accent-text);
+  background: var(--accent-hover);
   transform: translateY(-1px);
 }
 .secondary {
@@ -569,6 +569,50 @@ main {
   background: var(--danger-soft);
   color: var(--danger);
   border-color: var(--danger-soft);
+}
+/* Named badge variants. The same chip also serves as a tappable identity pill,
+   which is why a <button>.badge must not inherit button chrome. */
+.badge-success {
+  background: var(--success-soft);
+  color: var(--success);
+  border-color: var(--success-soft);
+}
+.badge-urgent {
+  background: var(--danger-soft);
+  color: var(--danger);
+  border-color: var(--danger-soft);
+}
+.badge-accent {
+  background: var(--accent-soft);
+  color: var(--accent-text);
+  border-color: var(--accent);
+}
+.badge-neutral {
+  background: var(--surface-raised);
+  color: var(--muted);
+  border-color: var(--surface-raised);
+}
+button.badge {
+  cursor: pointer;
+  min-height: 0;
+  font-size: var(--text-label);
+}
+.identity-switch {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+  margin: var(--space-3) 0 var(--space-5);
+}
+/* Driven by aria-pressed, so the state a screen reader announces and the state
+   you can see are the same thing. A tinted pill beside a grey one is too close
+   to call at a glance in light mode, so the active identity takes solid accent —
+   the same treatment as a selected day chip. */
+.identity-switch .badge[aria-pressed="true"] {
+  background: var(--accent);
+  color: var(--on-accent);
+  border-color: var(--accent);
+  font-weight: 600;
 }
 .route-panel {
   display: flex;
@@ -960,7 +1004,7 @@ footer {
   width: 7px;
   height: 7px;
   border-radius: var(--radius-pill);
-  background: var(--accent-text);
+  background: var(--accent);
   margin-top: var(--space-2);
 }
 .route-stop {
@@ -975,8 +1019,8 @@ footer {
   width: 31px;
   height: 31px;
   border-radius: var(--radius-pill);
-  background: var(--accent-text);
-  color: var(--text);
+  background: var(--accent);
+  color: var(--on-accent);
   display: grid;
   place-items: center;
 }
@@ -1003,46 +1047,6 @@ footer {
   line-height: 1.5;
 }
 .customer-heading .eyebrow {
-  color: var(--accent-text);
-}
-.stepper {
-  display: flex;
-  justify-content: space-between;
-  margin: var(--space-8) var(--space-6);
-  position: relative;
-}
-.stepper:before {
-  content: "";
-  position: absolute;
-  top: 13px;
-  left: 25px;
-  right: 25px;
-  height: 1px;
-  background: var(--panel);
-}
-.stepper > span {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-2);
-  align-items: center;
-  position: relative;
-}
-.stepper b {
-  display: grid;
-  place-items: center;
-  border: 1px solid var(--panel);
-  background: var(--panel);
-  border-radius: var(--radius-pill);
-  height: 27px;
-  width: 27px;
-  color: var(--muted);
-}
-.stepper .done b {
-  background: var(--accent-text);
-  border-color: var(--accent-text);
-  color: var(--text);
-}
-.stepper .done small {
   color: var(--accent-text);
 }
 .intake {
@@ -1198,20 +1202,191 @@ footer {
   border-color: var(--accent-text);
   background: var(--surface-raised);
 }
-.status-track {
-  display: grid;
-  grid-template-columns: repeat(4, 1fr);
+/* Canonical stepper. One motif, two call sites: the customer status track and
+   the intake wizard's mini-progress header (.intake-steps). Do not add a third. */
+.status-track,
+.intake-steps {
+  display: flex;
   gap: var(--space-2);
   margin: var(--space-6) 0;
 }
-.status-track > div {
+.status-track > *,
+.intake-steps > * {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  color: var(--ink-muted);
+  padding-top: var(--space-2);
+  border-top: 2px solid var(--line);
+}
+.status-track .done,
+.status-track .complete,
+.intake-steps .done {
+  color: var(--success);
+  border-top-color: var(--success-fill);
+}
+.status-track .active,
+.intake-steps .active,
+.intake-steps [aria-current] {
+  color: var(--accent-text);
+  border-top-color: var(--accent);
+}
+/* Intake: completed steps collapse to a summary row that can be reopened. */
+.step-summary {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-3) var(--space-4);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+  margin-bottom: var(--space-3);
+}
+.step-summary > span {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  flex: 1;
+  min-width: 0;
+  flex-wrap: wrap;
+}
+.step-summary small {
+  color: var(--muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  min-width: 0;
+}
+.step-summary-check {
+  color: var(--success);
+  flex-shrink: 0;
+}
+/* Stated timing preference. A flat scrollable list of days rather than a
+   calendar modal — the same data capture for a fraction of the build. */
+.day-chips {
+  display: flex;
+  gap: var(--space-2);
+  overflow-x: auto;
+  padding-bottom: var(--space-2);
+  flex-wrap: wrap;
+}
+.day-chip {
+  border: 1px solid var(--line);
+  background: var(--surface-raised);
+  color: var(--text);
+  border-radius: var(--radius-pill);
+  padding: var(--space-2) var(--space-4);
+  min-height: 44px;
+  white-space: nowrap;
+}
+.day-chip.selected {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: var(--on-accent);
+  font-weight: 600;
+}
+.day-parts {
+  margin: var(--space-3) 0;
+}
+.day-parts > small {
+  display: block;
+  color: var(--muted);
+  margin-bottom: var(--space-2);
+}
+/* Customer home accordion. A request expands in place; there is no separate
+   detail screen for one to drift out of sync with. */
+.request-accordion {
   display: flex;
   flex-direction: column;
+  gap: var(--space-4);
+}
+.request-accordion-item {
+  padding: 0;
+  overflow: hidden;
+}
+.accordion-head {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  width: 100%;
+  text-align: left;
+  background: none;
+  border: 0;
+  color: inherit;
+  padding: var(--space-4) var(--space-5);
+  min-height: 44px;
+}
+.accordion-head-text {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  flex: 1;
+  min-width: 0;
+}
+.accordion-head-text strong {
+  overflow-wrap: anywhere;
+}
+.accordion-head-text small {
+  display: flex;
+  align-items: center;
   gap: var(--space-2);
   color: var(--muted);
 }
-.status-track .complete {
-  color: var(--success);
+.accordion-head .chevron {
+  flex-shrink: 0;
+  transition: transform var(--motion-fast) var(--ease-out);
+}
+.accordion-head .chevron.open {
+  transform: rotate(180deg);
+}
+.request-accordion-item > div {
+  padding: 0 var(--space-5) var(--space-5);
+}
+@media (max-width: 600px) {
+  .accordion-head {
+    padding: var(--space-4);
+  }
+  .request-accordion-item > div {
+    padding: 0 var(--space-4) var(--space-4);
+  }
+}
+/* Operator note. Visually distinct from ordinary cards because it is the one
+   place the customer is being asked for something. One question, one reply. */
+.operator-note {
+  --card-border: var(--accent);
+  --card-surface: var(--accent-soft);
+  margin: var(--space-4) 0;
+}
+.operator-note .eyebrow {
+  color: var(--accent-text);
+}
+.operator-note-reply {
+  margin-top: var(--space-3);
+  padding-top: var(--space-3);
+  border-top: 1px solid var(--border-strong);
+}
+/* Validation. Colour comes from CSS, never computed in JS (DESIGN.md), and the
+   message sits beside the field rather than in a tooltip, which never reaches
+   keyboard or screen-reader users. */
+/* The class is repeated deliberately, to reach specificity 0-3-1. The theme
+   input rules in primitives.css are `:root[data-theme] input`, and `:root` is a
+   pseudo-class, so those are 0-2-1 — a single or doubled `.field-error` ties
+   them and loses on source order, leaving the field grey. */
+.field-error.field-error.field-error input,
+.field-error.field-error.field-error select,
+.field-error.field-error.field-error textarea,
+.field-error.field-error.field-error input:focus,
+.field-error.field-error.field-error select:focus,
+.field-error.field-error.field-error textarea:focus {
+  border-color: var(--danger-fill);
+}
+.field-message {
+  color: var(--danger);
+  font-size: var(--text-label);
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
 }
 .note {
   padding: var(--space-3) var(--space-4);
@@ -1628,9 +1803,6 @@ footer {
     max-width: 340px;
     margin: auto;
   }
-  .stepper {
-    margin: var(--space-6) var(--space-1);
-  }
   .intake {
     padding: var(--space-5);
   }
@@ -1735,8 +1907,8 @@ footer {
   min-width: 17px;
   padding: var(--space-1) var(--space-1);
   border-radius: var(--radius-md);
-  background: var(--accent-text);
-  color: var(--text);
+  background: var(--accent);
+  color: var(--on-accent);
   font-weight: 700;
 }
 .notification-link {
@@ -2062,12 +2234,14 @@ main button,
   .payment-method {
     flex-wrap: wrap;
   }
-  .stepper {
-    gap: var(--space-1);
-  }
-  .stepper > span {
-    min-width: 0;
-    flex: 1;
-    text-align: center;
-  }
+}
+/* Contractor job cards list every task. A count is not enough to decide on an
+   offer — the contractor needs to see what the work actually is. */
+.contractor-task-list {
+  margin: var(--space-2) 0;
+  padding-left: var(--space-5);
+  color: var(--muted);
+}
+.contractor-task-list li {
+  margin: var(--space-1) 0;
 }

@@ -117,7 +117,7 @@
     font-size: var(--text-label);
   }
   .work-mobile-nav .chosen {
-    background: var(--accent-text);
-    color: var(--text);
+    background: var(--accent);
+    color: var(--on-accent);
   }
 }

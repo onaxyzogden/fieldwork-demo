@@ -130,10 +130,10 @@
   background: var(--panel);
 }
 .bp-dot.simulated {
-  background: var(--accent-text);
+  background: var(--accent);
 }
 .bp-dot.gap {
-  background: var(--danger);
+  background: var(--danger-fill);
 }
 .bp-controls {
   display: flex;

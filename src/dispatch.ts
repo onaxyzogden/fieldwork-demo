@@ -9,11 +9,25 @@ import {
   uid,
   log,
   dateLabel,
+  customers,
+  customerName,
 } from "./model";
 
 export function migrateDispatch(s: State): State {
   s.settings ??= { autoReofferDeclined: false };
   s.notifications ??= [];
+  // Saved states predate the redesign fields and the current customer roster.
+  // The stored name is a denormalized copy, so refresh it from the roster the
+  // identity switcher reads; otherwise a returning visitor sees one name on the
+  // pill and a different one on their own request. Nothing else is rewritten.
+  for (const r of s.requests) {
+    r.preferredSlots ??= [];
+    r.timingConstraints ??= "";
+    r.operatorNote ??= null;
+    r.customerReply ??= null;
+    if (customers.some((c) => c.id === r.customerId))
+      r.name = customerName(r.customerId);
+  }
   // Existing declined offers get an actionable alert, without triggering a retroactive reoffer.
   for (const a of s.assignments)
     if (
