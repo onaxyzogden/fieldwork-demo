@@ -9,118 +9,166 @@ Brand is a refined amber in both themes. Two consequences are deliberate:
   and icon beside them, never by hue alone.
 - `--info` follows the accent rather than keeping a competing blue. */
 :root {
- font-family: "DM Sans", sans-serif; font-synthesis:none; font-weight:400; color-scheme:dark;
- color:var(--text); background:var(--bg);
- --text-body:1rem; --text-intro:1.25rem; --text-h3:1.5625rem; --text-h2:1.953125rem; --text-h1:2.44140625rem;
- --text-label:.875rem; --text-caption:.75rem; --text-brand:1.5625rem;
- --motion-fast:160ms; --motion-panel:320ms; --motion-base:220ms;
- --ease-enter:ease-out; --ease-exit:ease-in; --ease-move:ease-in-out;
- --ease-out:cubic-bezier(0.16,1,0.3,1);
- --bg:#12151a;
- --panel:#1b1f26;
- --surface-raised:#242a33;
- --line:#2e3540;
- --border-strong:#3c4553;
- --muted:#aab2c0;
- --ink-muted:#7d8696;
- --text:#eef1f6;
- --accent:#e3a95e;
- --accent-hover:#edbb7a;
- --accent-text:#f0cd96;
- --accent-soft:#3a2f1c;
- --on-accent:#241a0c;
- --success:#a9d6b4;
- --success-fill:#7fbf8f;
- --success-soft:#1c2b20;
- --warning:#f0a99d;
- --warning-soft:#33201d;
- --danger:#f0a99d;
- --danger-fill:#e2695b;
- --danger-soft:#33201d;
- --info:#f0cd96;
- --overlay:#00000099;
- --shadow-ink:#00000040;
- --focus:#edbb7a;
- --map-land:#1f3b42;
- --map-water:#174763;
- --map-road:#597681;
- --map-label:#1b1f26;
- --print-paper:#ffffff;
- --print-ink:#1c1f24;
- --radius-sm:0.375rem;
- --radius-md:0.625rem;
- --radius-lg:1rem;
- --radius-pill:9999px;
- --space-1:0.25rem;
- --space-2:0.5rem;
- --space-3:0.75rem;
- --space-4:1rem;
- --space-5:1.25rem;
- --space-6:1.5rem;
- --space-7:1.75rem;
- --space-8:2rem;
- --space-9:2.25rem;
- --space-10:2.5rem;
- --space-11:2.75rem;
- --space-12:3rem;
- --space-14:3.5rem;
- --space-16:4rem;
- --space-25:6.25rem;
- --space-30:7.5rem;
- --space-35:8.75rem;
- --space-46:11.5rem;
- --space-51:12.75rem;
- --space-59:14.75rem;
- --space-68:17rem;
- --z-base:0;
- --z-dropdown:5;
- --z-sticky:8;
- --z-overlay:19;
- --z-drawer:20;
- --z-modal:40;
- --z-toast:100;
- --z-tooltip:150;
+  font-family: "DM Sans", sans-serif;
+  font-synthesis: none;
+  font-weight: 400;
+  color-scheme: dark;
+  color: var(--text);
+  background: var(--bg);
+  --text-body: 1rem;
+  --text-intro: 1.25rem;
+  --text-h3: 1.5625rem;
+  --text-h2: 1.953125rem;
+  --text-h1: 2.44140625rem;
+  --text-label: 0.875rem;
+  --text-caption: 0.75rem;
+  --text-brand: 1.5625rem;
+  --motion-fast: 160ms;
+  --motion-panel: 320ms;
+  --motion-base: 220ms;
+  --ease-enter: ease-out;
+  --ease-exit: ease-in;
+  --ease-move: ease-in-out;
+  --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+  --bg: #12151a;
+  --panel: #1b1f26;
+  --surface-raised: #242a33;
+  --line: #2e3540;
+  --border-strong: #3c4553;
+  --muted: #aab2c0;
+  --ink-muted: #7d8696;
+  --text: #eef1f6;
+  --accent: #e3a95e;
+  --accent-hover: #edbb7a;
+  --accent-text: #f0cd96;
+  --accent-soft: #3a2f1c;
+  --on-accent: #241a0c;
+  --success: #a9d6b4;
+  --success-fill: #7fbf8f;
+  --success-soft: #1c2b20;
+  --warning: #f0a99d;
+  --warning-soft: #33201d;
+  --danger: #f0a99d;
+  --danger-fill: #e2695b;
+  --danger-soft: #33201d;
+  --info: #f0cd96;
+  --overlay: #00000099;
+  --shadow-ink: #00000040;
+  --focus: #edbb7a;
+  --map-land: #1f3b42;
+  --map-water: #174763;
+  --map-road: #597681;
+  --map-label: #1b1f26;
+  --print-paper: #ffffff;
+  --print-ink: #1c1f24;
+  --radius-sm: 0.375rem;
+  --radius-md: 0.625rem;
+  --radius-lg: 1rem;
+  --radius-pill: 9999px;
+  --space-1: 0.25rem;
+  --space-2: 0.5rem;
+  --space-3: 0.75rem;
+  --space-4: 1rem;
+  --space-5: 1.25rem;
+  --space-6: 1.5rem;
+  --space-7: 1.75rem;
+  --space-8: 2rem;
+  --space-9: 2.25rem;
+  --space-10: 2.5rem;
+  --space-11: 2.75rem;
+  --space-12: 3rem;
+  --space-14: 3.5rem;
+  --space-16: 4rem;
+  --space-25: 6.25rem;
+  --space-30: 7.5rem;
+  --space-35: 8.75rem;
+  --space-46: 11.5rem;
+  --space-51: 12.75rem;
+  --space-59: 14.75rem;
+  --space-68: 17rem;
+  --z-base: 0;
+  --z-dropdown: 5;
+  --z-sticky: 8;
+  --z-overlay: 19;
+  --z-drawer: 20;
+  --z-modal: 40;
+  --z-toast: 100;
+  --z-tooltip: 150;
 }
-:root[data-theme="dark"] {color-scheme:dark;}
-:root[data-theme="light"] {color-scheme:light;
- --bg:#f7f6f4;
- --panel:#ffffff;
- --surface-raised:#efedea;
- --line:#dcd8d2;
- --border-strong:#c3beb5;
- --muted:#5c6270;
- --ink-muted:#7d8494;
- --text:#1c1f24;
- --accent:#e0a154;
- --accent-hover:#d4913a;
- --accent-text:#8a5a12;
- --accent-soft:#fbf0dd;
- --on-accent:#241a0c;
- --success:#1f6b3a;
- --success-fill:#7fbf8f;
- --success-soft:#e4f2e8;
- --warning:#9a3d2e;
- --warning-soft:#fbe6e2;
- --danger:#9a3d2e;
- --danger-fill:#e2695b;
- --danger-soft:#fbe6e2;
- --info:#8a5a12;
- --overlay:#00000066;
- --shadow-ink:#1c1f2426;
- --focus:#8a5a12;
- --map-land:#d6e4dc;
- --map-water:#8ac5f4;
- --map-road:#ffffff;
- --map-label:#fffffff0;
- --print-paper:#ffffff;
- --print-ink:#1c1f24;
+:root[data-theme="dark"] {
+  color-scheme: dark;
+}
+:root[data-theme="light"] {
+  color-scheme: light;
+  --bg: #f7f6f4;
+  --panel: #ffffff;
+  --surface-raised: #efedea;
+  --line: #dcd8d2;
+  --border-strong: #c3beb5;
+  --muted: #5c6270;
+  --ink-muted: #7d8494;
+  --text: #1c1f24;
+  --accent: #e0a154;
+  --accent-hover: #d4913a;
+  --accent-text: #8a5a12;
+  --accent-soft: #fbf0dd;
+  --on-accent: #241a0c;
+  --success: #1f6b3a;
+  --success-fill: #7fbf8f;
+  --success-soft: #e4f2e8;
+  --warning: #9a3d2e;
+  --warning-soft: #fbe6e2;
+  --danger: #9a3d2e;
+  --danger-fill: #e2695b;
+  --danger-soft: #fbe6e2;
+  --info: #8a5a12;
+  --overlay: #00000066;
+  --shadow-ink: #1c1f2426;
+  --focus: #8a5a12;
+  --map-land: #d6e4dc;
+  --map-water: #8ac5f4;
+  --map-road: #ffffff;
+  --map-label: #fffffff0;
+  --print-paper: #ffffff;
+  --print-ink: #1c1f24;
 }
 
 :root {
- --shadow-sm:0 2px 8px var(--shadow-ink); --shadow-md:0 8px 24px var(--shadow-ink); --shadow-modal:0 24px 64px var(--shadow-ink); --shadow-drawer:16px 0 48px var(--shadow-ink);
- --shadow-focus:0 0 0 3px color-mix(in srgb,var(--focus) 35%,transparent); --shadow-selected:inset 0 -2px var(--accent); --shadow-inset:inset 0 0 0 1px var(--line);
- --gradient-location:repeating-linear-gradient(25deg,transparent 0 34px,var(--map-road) 35px 39px,transparent 40px 80px),linear-gradient(125deg,var(--map-land) 65%,var(--map-water) 66%);
+  --shadow-sm: 0 2px 8px var(--shadow-ink);
+  --shadow-md: 0 8px 24px var(--shadow-ink);
+  --shadow-modal: 0 24px 64px var(--shadow-ink);
+  --shadow-drawer: 16px 0 48px var(--shadow-ink);
+  --shadow-focus: 0 0 0 3px color-mix(in srgb, var(--focus) 35%, transparent);
+  --shadow-selected: inset 0 -2px var(--accent);
+  --shadow-inset: inset 0 0 0 1px var(--line);
+  --gradient-location:
+    repeating-linear-gradient(
+      25deg,
+      transparent 0 34px,
+      var(--map-road) 35px 39px,
+      transparent 40px 80px
+    ),
+    linear-gradient(125deg, var(--map-land) 65%, var(--map-water) 66%);
 }
-@media print { :root, :root[data-theme] { --bg:#ffffff; --panel:#f7f6f4; --surface-raised:#efedea; --text:#1c1f24; --line:#dcd8d2; --muted:#5c6270; --accent-text:#8a5a12; --accent-soft:#fbf0dd; color-scheme:light; } }
+@media print {
+  :root,
+  :root[data-theme] {
+    --bg: #ffffff;
+    --panel: #f7f6f4;
+    --surface-raised: #efedea;
+    --text: #1c1f24;
+    --line: #dcd8d2;
+    --muted: #5c6270;
+    --accent-text: #8a5a12;
+    --accent-soft: #fbf0dd;
+    color-scheme: light;
+  }
+}
 
-:root { --gradient-surface:linear-gradient(115deg,var(--surface-raised),var(--panel)); }
+:root {
+  --gradient-surface: linear-gradient(
+    115deg,
+    var(--surface-raised),
+    var(--panel)
+  );
+}

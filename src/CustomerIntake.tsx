@@ -1,12 +1,5 @@
 import React, { useEffect, useRef, useState } from "react";
-import {
-  MapPin,
-  ListChecks,
-  CalendarDays,
-  Mail,
-  Home,
-  Check,
-} from "lucide-react";
+import { MapPin, Check, Plus } from "lucide-react";
 import {
   type State,
   type Request,
@@ -17,7 +10,7 @@ import {
   dateLabel,
   log,
 } from "./model";
-import { getIssue } from "./clarification";
+import { getIssue, answerKey } from "./clarification";
 import {
   entryTasks,
   taskLabel,
@@ -27,7 +20,6 @@ import {
   cities,
   upcomingDays,
   dayParts,
-  dayLabel,
   missingQuestions,
   completeEntry,
   intakeOptions,
@@ -39,7 +31,11 @@ type Props = {
   update: (fn: (d: State) => void, msg?: string) => void;
   notify: (text: string) => void;
   photos: (t: Task) => React.ReactNode;
-  questions: (t: Task, change: (p: Partial<Task>) => void) => React.ReactNode;
+  questions: (
+    t: Task,
+    change: (p: Partial<Task>) => void,
+    attempted: boolean,
+  ) => React.ReactNode;
   pay: (start: string) => void;
   view: () => void;
 };
@@ -55,13 +51,10 @@ export default function CustomerIntake({
 }: Props) {
   const tasks = entryTasks(s, r.id),
     all = s.tasks.filter((t) => t.requestId === r.id && !t.mergedInto);
-  const done = r.status !== "Draft",
-    screen = done ? "done" : r.intakeScreen || "address";
-  const editing =
-    r.editingTaskId === null
-      ? undefined
-      : all.find((t) => t.id === r.editingTaskId) ||
-        all.find((t) => t.entryStage !== "done");
+  // Once submitted this component is never shown again — submit() and the
+  // instant-payment handler both navigate straight back to Home, matching
+  // the shared design reference, which has no confirmation screen of its own.
+  const screen = r.intakeScreen || "address";
   const referral = tasks.some(
     (t) => getIssue(t.description).availability === "Referral only",
   );
@@ -89,7 +82,16 @@ export default function CustomerIntake({
     street?: string;
     postal?: string;
   }>({});
-  const [descriptionError, setDescriptionError] = useState("");
+  /* Every task renders as its own card in whichever stage it's currently in —
+     describe, clarify, or done — rather than one "active" editor plus a
+     collapsed preview list. Both of these are keyed per task because more
+     than one can theoretically be mid-entry at once. */
+  const [descriptionErrors, setDescriptionErrors] = useState<
+    Record<string, string>
+  >({});
+  const [answersAttempted, setAnswersAttempted] = useState<
+    Record<string, boolean>
+  >({});
   const dialog = useRef<HTMLDialogElement>(null),
     editor = useRef<HTMLTextAreaElement>(null),
     streetRef = useRef<HTMLInputElement>(null),
@@ -109,17 +111,18 @@ export default function CustomerIntake({
       ),
     );
   useEffect(() => {
-    if (selected && !selectionValid && !done)
+    if (selected && !selectionValid && r.status === "Draft")
       patchRequest({ preferredSlot: undefined, timing: "Weekdays · flexible" });
-  }, [signature, selectionValid, done]);
+  }, [signature, selectionValid, r.status]);
   useEffect(() => {
     if (more) dialog.current?.showModal();
     else dialog.current?.close();
   }, [more]);
   useEffect(() => {
-    if (screen === "tasks" && editing?.entryStage !== "details")
+    const t = all.find((t) => t.id === r.editingTaskId);
+    if (screen === "tasks" && t && t.entryStage !== "details")
       editor.current?.focus();
-  }, [editing?.id, screen]);
+  }, [r.editingTaskId, screen]);
   const choose = (o: (typeof options)[number]) => {
     patchRequest({
       preferredSlot: {
@@ -175,6 +178,14 @@ export default function CustomerIntake({
   };
   const open = (t: Task) =>
     patchRequest({ editingTaskId: t.id, intakeScreen: "tasks" });
+  /* Two edits, not one. Fixing a typo in the description must not cost you
+     every clarifying answer, so reopening at "description" keeps the
+     answers, and reopening at "details" keeps the description. */
+  const reopen = (t: Task, stage: "description" | "details") =>
+    update((d) => {
+      d.tasks.find((x) => x.id === t.id)!.entryStage = stage;
+      d.requests.find((x) => x.id === r.id)!.editingTaskId = t.id;
+    });
   const add = () => {
     const empty = all.find((t) => !t.description.trim());
     if (empty) {
@@ -207,16 +218,25 @@ export default function CustomerIntake({
       req.preferredSlot = undefined;
     });
   };
-  const complete = (t: Task, uncertain = false) => {
-    if (!uncertain && missingQuestions(t).length) {
-      notify("Answer the remaining questions, or mark them Not sure.");
+  /**
+   * Every question also carries its own inline "Not sure" button (see
+   * ClarificationFields), so by the time this runs, a question is only ever
+   * missing because it was genuinely skipped — mark it and focus it, rather
+   * than one global notification that doesn't say which one.
+   */
+  const complete = (t: Task) => {
+    const missing = missingQuestions(t);
+    if (missing.length) {
+      setAnswersAttempted((x) => ({ ...x, [t.id]: true }));
+      const issue = getIssue(t.description);
+      document
+        .getElementById("q-" + t.id + "-" + answerKey(issue, missing[0]))
+        ?.focus();
       return;
     }
+    setAnswersAttempted((x) => ({ ...x, [t.id]: false }));
     update((d) => {
-      completeEntry(
-        d.tasks.find((x) => x.id === t.id)!,
-        uncertain,
-      );
+      completeEntry(d.tasks.find((x) => x.id === t.id)!);
       d.requests.find((x) => x.id === r.id)!.editingTaskId = null;
     });
   };
@@ -281,6 +301,9 @@ export default function CustomerIntake({
         `${req.name} submitted ${tasks.length} separate tasks · ${referral ? "referral review" : "appointment not confirmed"}`,
       );
     });
+    // Straight back to Home, expanded — there is no confirmation screen of
+    // its own here; the accordion already shows exactly what's true now.
+    view();
   };
   const timeLabel = (o: { start: string; duration: number }) =>
     `${dateLabel(o.start)} – ${new Date(+new Date(o.start) + o.duration * 60000).toLocaleTimeString("en-CA", { timeZone: "America/Toronto", hour: "numeric", minute: "2-digit" })}`;
@@ -322,23 +345,12 @@ export default function CustomerIntake({
       </small>
     </button>
   );
-  const visit = s.visits.find(
-    (v) => v.requestId === r.id && v.status === "Confirmed",
-  );
   return (
     <div className="customer-intake">
       {/* Same stepper motif as the customer status track, not a second one. */}
       <nav className="intake-steps" aria-label="Request progress">
         {["Address", "Tasks", "Timing"].map((label, i) => {
-          // On the receipt every step is behind you, so none is still "active".
-          const at =
-            screen === "address"
-              ? 0
-              : screen === "tasks"
-                ? 1
-                : screen === "done"
-                  ? 3
-                  : 2;
+          const at = screen === "address" ? 0 : screen === "tasks" ? 1 : 2;
           return (
             <span
               key={label}
@@ -351,29 +363,20 @@ export default function CustomerIntake({
         })}
       </nav>
       {/* Completed steps collapse to a summary row with an Edit that reopens
-          them without discarding anything entered since. */}
-      {screen !== "address" && screen !== "done" && (
+          them without discarding anything entered since. The checkmark is a
+          solid filled circle, the same treatment for every collapsed step. */}
+      {screen !== "address" && (
         <div className="step-summary">
           <span>
-            <Check size={16} className="step-summary-check" />
-            <strong>{r.address}</strong>
-            <small>{r.city}</small>
+            <span className="step-summary-check">
+              <Check size={16} strokeWidth={3} />
+            </span>
+            <span className="step-summary-text">
+              <strong>{r.address}</strong>
+              <small>{r.city}</small>
+            </span>
           </span>
           <button className="text-button" onClick={() => goto("address")}>
-            Edit
-          </button>
-        </div>
-      )}
-      {screen === "booking" && (
-        <div className="step-summary">
-          <span>
-            <Check size={16} className="step-summary-check" />
-            <strong>
-              {tasks.length} {tasks.length === 1 ? "task" : "tasks"}
-            </strong>
-            <small>{tasks.map(taskLabel).join(" · ")}</small>
-          </span>
-          <button className="text-button" onClick={() => goto("tasks")}>
             Edit
           </button>
         </div>
@@ -494,6 +497,31 @@ export default function CustomerIntake({
           </div>
         </>
       )}
+      {screen === "address" && (
+        /* A step not yet reached: named, muted, non-interactive. */
+        <div className="step-upcoming">
+          <span className="step-upcoming-ring" />
+          <strong>What needs doing?</strong>
+        </div>
+      )}
+      {screen === "booking" && (
+        <div className="step-summary">
+          <span>
+            <span className="step-summary-check">
+              <Check size={16} strokeWidth={3} />
+            </span>
+            <span className="step-summary-text">
+              <strong>
+                {tasks.length} {tasks.length === 1 ? "task" : "tasks"}
+              </strong>
+              <small>{tasks.map(taskLabel).join(" · ")}</small>
+            </span>
+          </span>
+          <button className="text-button" onClick={() => goto("tasks")}>
+            Edit
+          </button>
+        </div>
+      )}
       {screen === "tasks" && (
         <>
           <header className="customer-heading">
@@ -504,168 +532,139 @@ export default function CustomerIntake({
             </p>
           </header>
           <section className="task-composer" aria-label="Your tasks">
-            {tasks.length > 0 && (
-              <p className="task-count">
-                {tasks.length} {tasks.length === 1 ? "thing" : "things"} to take
-                care of
-              </p>
-            )}
-            <div className="compact-tasks">
-              {all
-                .filter((t) => t.id !== editing?.id && t.description.trim())
-                .map((t) => (
-                  <div className="compact-task" key={t.id}>
-                    <button className="task-open" onClick={() => open(t)}>
-                      <span className="task-number" aria-hidden="true">
-                        {all.indexOf(t) + 1}
-                      </span>
-                      <span>
-                        <strong>{taskLabel(t)}</strong>
-                        <small>
-                          {t.photos.length} photos ·{" "}
-                          {t.entryStage === "done"
-                            ? "Details saved"
-                            : "Details to finish"}
-                        </small>
-                      </span>
-                    </button>
-                    {t.entryStage === "done" && (
-                      <span
-                        className={
-                          "badge " +
-                          (t.reviewed ? "badge-success" : "badge-urgent")
-                        }
-                      >
-                        {t.reviewed ? "Reviewed" : "Needs review"}
-                      </span>
-                    )}
-                    <details className="task-menu">
-                      <summary aria-label={"Actions for " + taskLabel(t)}>
-                        •••
-                      </summary>
-                      {/* Two edits, not one. Fixing a typo in the description
-                          must not cost you every clarifying answer. */}
-                      <button
-                        className="secondary"
-                        onClick={() => {
-                          patchTask(t.id, { entryStage: "details" });
-                          open(t);
-                        }}
-                      >
-                        Edit answers
-                      </button>
-                      <button
-                        className="secondary"
-                        onClick={() => {
-                          patchTask(t.id, { entryStage: "description" });
-                          open(t);
-                        }}
-                      >
-                        Edit description
-                      </button>
-                      <button
-                        className="text-button"
-                        aria-label={"Remove " + taskLabel(t)}
-                        onClick={() => remove(t)}
-                      >
-                        Remove
-                      </button>
-                    </details>
-                    <p className="task-description-preview">{t.description}</p>
-                    {photos(t)}
-                  </div>
-                ))}
-            </div>
-            {editing && (
-              <div
-                className={
-                  "active-task customer-task-card" +
-                  (descriptionError ? " field-error" : "")
-                }
-                key={editing.id}
-              >
-                <div className="row between">
-                  <label htmlFor={"task-description-" + editing.id}>
-                    {tasks.length === 0 ? "First task" : "Describe this task"}
-                  </label>
-                  <button
-                    className="text-button"
-                    onClick={() => remove(editing)}
-                  >
-                    Remove task
-                  </button>
-                </div>
-                <textarea
-                  ref={editor}
-                  id={"task-description-" + editing.id}
-                  value={editing.description}
-                  placeholder="Describe what you need done…"
-                  aria-invalid={!!descriptionError || undefined}
-                  aria-describedby={
-                    descriptionError ? "task-description-error" : undefined
+            {/* Every task is its own card in whichever stage it's currently
+                in. No separate collapsed-preview list and expanded editor —
+                what you see is what's actually there. */}
+            {all.map((t) => {
+              const issue = getIssue(t.description);
+              const isFocusTarget = t.id === r.editingTaskId;
+              return (
+                <div
+                  className={
+                    "card task-card" +
+                    (descriptionErrors[t.id] ? " field-error" : "")
                   }
-                  onChange={(e) => {
-                    if (descriptionError) setDescriptionError("");
-                    patchTask(editing.id, {
-                      description: e.target.value,
-                      ...classify(e.target.value),
-                      entryStage: "description",
-                    });
-                  }}
-                />
-                {descriptionError && (
-                  <span
-                    className="field-message"
-                    id="task-description-error"
-                    role="alert"
-                  >
-                    {descriptionError}
-                  </span>
-                )}
-                {photos(editing)}
-                {editing.entryStage === "details" ? (
-                  <div className="task-details">
-                    <h3>A few useful details</h3>
-                    {questions(editing, (p) =>
-                      patchTask(editing.id, { ...p, entryStage: "details" }),
-                    )}
-                    <div className="intake-actions">
-                      <button
-                        className="primary"
-                        onClick={() => complete(editing)}
+                  key={t.id}
+                >
+                  {(!t.entryStage || t.entryStage === "description") && (
+                    <>
+                      <label
+                        className="field"
+                        htmlFor={"task-description-" + t.id}
                       >
-                        Done with this task
-                      </button>
-                      {missingQuestions(editing).length > 0 && (
+                        Describe the problem
+                        <textarea
+                          ref={isFocusTarget ? editor : undefined}
+                          id={"task-description-" + t.id}
+                          value={t.description}
+                          placeholder="e.g. Bedroom door is sticking against the frame"
+                          aria-invalid={!!descriptionErrors[t.id] || undefined}
+                          aria-describedby={
+                            descriptionErrors[t.id]
+                              ? "task-description-error-" + t.id
+                              : undefined
+                          }
+                          onChange={(e) => {
+                            if (descriptionErrors[t.id])
+                              setDescriptionErrors((x) => ({
+                                ...x,
+                                [t.id]: "",
+                              }));
+                            patchTask(t.id, {
+                              description: e.target.value,
+                              ...classify(e.target.value),
+                              entryStage: "description",
+                            });
+                          }}
+                        />
+                        {descriptionErrors[t.id] && (
+                          <span
+                            className="field-message"
+                            id={"task-description-error-" + t.id}
+                            role="alert"
+                          >
+                            {descriptionErrors[t.id]}
+                          </span>
+                        )}
+                      </label>
+                      {photos(t)}
+                      <div className="task-card-actions">
+                        {all.length > 1 && (
+                          <button
+                            className="text-button"
+                            onClick={() => remove(t)}
+                          >
+                            Remove
+                          </button>
+                        )}
                         <button
                           className="secondary"
-                          onClick={() => complete(editing, true)}
+                          onClick={() => {
+                            if (!t.description.trim()) {
+                              setDescriptionErrors((x) => ({
+                                ...x,
+                                [t.id]:
+                                  "Describe the problem before continuing.",
+                              }));
+                              if (isFocusTarget) editor.current?.focus();
+                              return;
+                            }
+                            setDescriptionErrors((x) => ({ ...x, [t.id]: "" }));
+                            patchTask(t.id, { entryStage: "details" });
+                          }}
                         >
-                          Mark remaining Not sure
+                          Continue
                         </button>
+                      </div>
+                    </>
+                  )}
+                  {t.entryStage === "details" && (
+                    <>
+                      <strong>{issue.title}</strong>
+                      {questions(
+                        t,
+                        (p) => patchTask(t.id, { ...p, entryStage: "details" }),
+                        !!answersAttempted[t.id],
                       )}
+                      <button className="secondary" onClick={() => complete(t)}>
+                        Save answers
+                      </button>
+                    </>
+                  )}
+                  {t.entryStage === "done" && (
+                    <div className="task-card-done">
+                      <div className="task-card-done-text">
+                        <strong>{issue.title}</strong>
+                        <small>{t.description}</small>
+                        {photos(t)}
+                      </div>
+                      <div className="task-card-done-actions">
+                        <span
+                          className={
+                            "badge " +
+                            (t.reviewed ? "badge-success" : "badge-urgent")
+                          }
+                        >
+                          {t.reviewed ? "Reviewed" : "Needs review"}
+                        </span>
+                        <button
+                          className="text-button"
+                          onClick={() => reopen(t, "details")}
+                        >
+                          Edit answers
+                        </button>
+                        <button
+                          className="text-button"
+                          onClick={() => reopen(t, "description")}
+                        >
+                          Edit description
+                        </button>
+                      </div>
                     </div>
-                  </div>
-                ) : (
-                  <button
-                    className="secondary"
-                    onClick={() => {
-                      if (!editing.description.trim()) {
-                        setDescriptionError(
-                          "Describe what you need done before saving.",
-                        );
-                        editor.current?.focus();
-                        return;
-                      }
-                      setDescriptionError("");
-                      patchTask(editing.id, { entryStage: "details" });
-                    }}
-                  >
-                    Save task
-                  </button>
-                )}
-              </div>
-            )}
+                  )}
+                </div>
+              );
+            })}
             {removed && (
               <div role="status" className="note">
                 Task removed.{" "}
@@ -688,8 +687,9 @@ export default function CustomerIntake({
                 </button>
               </div>
             )}
-            <button className="add-task" onClick={add}>
-              + Add another task
+            <button className="secondary" onClick={add}>
+              <Plus size={16} className="icon-inline" />
+              Add another task
             </button>
             <small>
               Saved details are ready for review; they do not mean the work is
@@ -698,64 +698,72 @@ export default function CustomerIntake({
           </section>
           <div className="intake-bottom">
             <button className="primary full" onClick={advance}>
-              Continue with {tasks.length}{" "}
-              {tasks.length === 1 ? "task" : "tasks"} →
+              Continue
             </button>
           </div>
         </>
+      )}
+      {screen !== "booking" && (
+        <div className="step-upcoming">
+          <span className="step-upcoming-ring" />
+          <strong>When works for you?</strong>
+        </div>
       )}
       {screen === "booking" && (
         <>
           <header className="customer-heading">
             <h1>When works for you?</h1>
             <p>
-              Optional — tell us your preference, or send the request and we’ll
-              find a time.
+              Optional — select any dates and times that work. We’ll do our best
+              to match.
             </p>
           </header>
-          {/* Stated preference. A flat list of the next 10 days rather than a
-              calendar modal: the same data, far less to build and to use. This
+          {/* Stated preference. A vertical list of the next 10 days rather than
+              a calendar modal: the same data, far less to build and to use. This
               is a wish, not a booking, and submitting with nothing chosen is a
               perfectly good answer. */}
           <section className="customer-timing-section">
             <h3>Days that suit you</h3>
-            <div className="day-chips">
+            {/* Each row expands in place to its own Morning/Afternoon/Evening
+                toggles the moment it's picked — not a separate summary block
+                collecting every selected day's toggles afterward. */}
+            <div className="date-list">
               {upcomingDays(s.clock).map((d) => {
-                const picked = r.preferredSlots?.some((p) => p.date === d.date);
+                const slot = r.preferredSlots?.find((p) => p.date === d.date);
                 return (
-                  <button
-                    key={d.date}
-                    className={"day-chip" + (picked ? " selected" : "")}
-                    aria-pressed={picked}
-                    onClick={() => togglePreferredDay(d.date)}
-                  >
-                    {d.label}
-                  </button>
+                  <div key={d.date}>
+                    <button
+                      className={"date-chip" + (slot ? " selected" : "")}
+                      aria-pressed={!!slot}
+                      onClick={() => togglePreferredDay(d.date)}
+                    >
+                      {d.label}
+                      {slot && <Check size={16} />}
+                    </button>
+                    {slot && (
+                      <div className="time-pills">
+                        {dayParts.map((part) => (
+                          <button
+                            key={part}
+                            className={
+                              "time-pill" +
+                              (slot.times.includes(part) ? " selected" : "")
+                            }
+                            aria-pressed={slot.times.includes(part)}
+                            aria-label={`${part} on ${d.date}`}
+                            onClick={() => togglePreferredTime(d.date, part)}
+                          >
+                            {part}
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                  </div>
                 );
               })}
             </div>
-            {r.preferredSlots?.map((p) => (
-              <div className="day-parts" key={p.date}>
-                <small>{dayLabel(p.date)}</small>
-                <div className="day-chips">
-                  {dayParts.map((part) => (
-                    <button
-                      key={part}
-                      className={
-                        "day-chip" + (p.times.includes(part) ? " selected" : "")
-                      }
-                      aria-pressed={p.times.includes(part)}
-                      aria-label={`${part} on ${p.date}`}
-                      onClick={() => togglePreferredTime(p.date, part)}
-                    >
-                      {part}
-                    </button>
-                  ))}
-                </div>
-              </div>
-            ))}
             <label className="field">
-              Timing constraints (optional)
+              Timing constraints
               <textarea
                 value={r.timingConstraints || ""}
                 placeholder="Baby is napping from 3–4pm. Please do not arrive during those times."
@@ -885,82 +893,11 @@ export default function CustomerIntake({
               </>
             ) : (
               <button className="primary full" onClick={submit}>
-                {referral ? "Send for referral review" : "Send request"}
+                {referral ? "Send for referral review" : "Submit request"}
               </button>
             )}
           </div>
         </>
-      )}
-      {screen === "done" && (
-        <section className="intake-receipt">
-          <div className="receipt-check" aria-hidden="true">
-            ✓
-          </div>
-          <h1>
-            {r.status === "Confirmed"
-              ? "Your visit is booked."
-              : "We’ve got your request."}
-          </h1>
-          <p>
-            {r.status === "Confirmed"
-              ? "Your appointment is confirmed."
-              : referral
-                ? "Your request has been received for referral review. No appointment is booked."
-                : "Your request has been received. We’ll review the details and confirm the appointment."}
-          </p>
-          <section className="card customer-receipt-summary">
-            <h3>Your Request Summary</h3>
-            <dl className="task-answers">
-              <div>
-                <dt>
-                  <ListChecks size={20} /> Tasks
-                </dt>
-                <dd>
-                  {tasks.length} {tasks.length === 1 ? "task" : "tasks"}
-                </dd>
-              </div>
-              <div>
-                <dt>
-                  <CalendarDays size={20} />
-                  {visit ? "Confirmed appointment" : "Preferred time"}
-                </dt>
-                <dd>
-                  {visit
-                    ? timeLabel(visit)
-                    : referral
-                      ? "Referral review only"
-                      : r.preferredSlot
-                        ? timeLabel(r.preferredSlot)
-                        : r.timing}
-                </dd>
-              </div>
-              <div>
-                <dt>
-                  <MapPin size={20} />
-                  Service address
-                </dt>
-                <dd>
-                  {r.address}
-                  {r.unit ? ", " + r.unit : ""}, {r.city} {r.postalCode}
-                </dd>
-              </div>
-            </dl>
-          </section>
-          <div className="card customer-notice">
-            <Mail size={24} />
-            <p>
-              Updates appear in this demo. Notifications are simulated in-app;
-              no email or text is sent.
-            </p>
-          </div>
-          <button className="primary full" onClick={view}>
-            View My Request
-          </button>
-          <button className="customer-home-link" onClick={view}>
-            <Home size={20} />
-            Back to Home
-          </button>
-        </section>
       )}
       <dialog
         aria-label="More times"
