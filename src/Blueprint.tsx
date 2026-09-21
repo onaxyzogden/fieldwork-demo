@@ -23,7 +23,9 @@ function Detail({ stage }: { stage: Stage }) {
   return (
     <>
       <div className="bp-detail-head">
-        <span className="bp-kicker">STAGE {stages.indexOf(stage) + 1} / 8</span>
+        <span className="bp-kicker">
+          STAGE {stages.indexOf(stage) + 1} / {stages.length}
+        </span>
         <h2>{stage.title}</h2>
         <p>{stage.subtitle}</p>
       </div>
