@@ -1,5 +1,13 @@
 import { describe, it, expect } from "vitest";
-import { seed, reconcile, slots, type State } from "./model";
+import {
+  seed,
+  reconcile,
+  slots,
+  coordinated,
+  quoted,
+  confirmed,
+  type State,
+} from "./model";
 import {
   migrateDispatch,
   respondToOffer,
@@ -254,5 +262,80 @@ describe("declined visit takeover routing", () => {
     expect(reassignmentForScope(s, v.requestId, [])).toBeUndefined();
     s.visits.push({ ...v, id: "duplicate" });
     expect(reassignmentForScope(s, v.requestId, v.taskIds)).toBeUndefined();
+  });
+});
+describe("customer-facing derived state", () => {
+  it("hides a decline from the customer by reverting coordinated", () => {
+    const s = setup();
+    const a = s.assignments.find((a) => a.visitId === "v5")!;
+    expect(coordinated(s, "r5")).toBe(true);
+    respondToOffer(s, a.id, "Declined", "Booked that morning");
+    // The assignment is deliberately left in place so the operator can name who
+    // declined — but the customer must fall back to the ordinary matching state.
+    expect(a.providerId).toBe("marcus");
+    expect(coordinated(s, "r5")).toBe(false);
+    expect(quoted(s, "r5")).toBe(false);
+    expect(confirmed(s, "r5")).toBe(false);
+  });
+  it("withholds a quote from the customer until coordination holds", () => {
+    const s = setup();
+    s.quotes.push({
+      id: "q5",
+      requestId: "r5",
+      type: "Manual quote",
+      amount: 250,
+      high: 250,
+      status: "Sent",
+      notes: "",
+      payOnCompletion: false,
+    });
+    expect(quoted(s, "r5")).toBe(true);
+    respondToOffer(
+      s,
+      s.assignments.find((a) => a.visitId === "v5")!.id,
+      "Declined",
+    );
+    expect(quoted(s, "r5")).toBe(false);
+  });
+  it("needs a time as well as approval and acceptance to confirm", () => {
+    const s = setup();
+    const a = s.assignments.find((a) => a.visitId === "v5")!;
+    respondToOffer(s, a.id, "Accepted");
+    s.quotes.push({
+      id: "q5",
+      requestId: "r5",
+      type: "Manual quote",
+      amount: 250,
+      high: 250,
+      status: "Approved",
+      notes: "",
+      payOnCompletion: true,
+    });
+    expect(confirmed(s, "r5")).toBe(true);
+    // Strip the time: approval and acceptance alone are not a confirmed visit.
+    s.visits.find((v) => v.id === "v5")!.start = "";
+    expect(confirmed(s, "r5")).toBe(false);
+  });
+});
+describe("operator note", () => {
+  it("is one slot, not a thread — asking again replaces the pair", () => {
+    const s: State = seed();
+    const r = s.requests.find((r) => r.id === "r2")!;
+    r.operatorNote = "Could you share a photo of the frame?";
+    r.customerReply = "Photo added.";
+    // Asking something else clears the previous answer rather than appending.
+    r.operatorNote = "Is the door interior or exterior?";
+    r.customerReply = null;
+    expect(r.operatorNote).toBe("Is the door interior or exterior?");
+    expect(r.customerReply).toBeNull();
+    expect(Object.keys(r)).not.toContain("operatorNotes");
+  });
+  it("seeds a stated preference that is separate from any booked slot", () => {
+    const s = seed();
+    const r = s.requests.find((r) => r.id === "r3")!;
+    expect(r.preferredSlots!.length).toBe(1);
+    expect(r.preferredSlots![0].times).toEqual(["Morning", "Afternoon"]);
+    expect(r.timingConstraints).toContain("napping");
+    expect(r.preferredSlot).toBeUndefined();
   });
 });

@@ -14,7 +14,7 @@ import {
   needsClarificationReview,
   reportedConcern,
 } from "./clarification";
-import React, { useState } from "react";
+import React, { useState, useRef } from "react";
 import { createRoot } from "react-dom/client";
 import {
   ArrowUpRight,
@@ -67,6 +67,11 @@ import {
   scopeMatch,
   torontoParts,
   instantEligible,
+  customers,
+  customerName,
+  coordinated,
+  quoted,
+  confirmed,
 } from "./model";
 import "@fontsource/dm-sans/400.css";
 import "@fontsource/dm-sans/500.css";
@@ -96,6 +101,57 @@ import {
   respondToOffer,
 } from "./dispatch";
 const KEY = "fieldwork-demo-v1";
+/**
+ * Submit-type actions stay enabled and validate on click.
+ *
+ * A disabled button drops out of tab order, stays silent to screen readers, and
+ * fires no pointer events — so any tooltip explaining why it is blocked never
+ * reaches the person who needed it, and the greyed label usually fails contrast
+ * besides. Instead: always clickable, and on failure mark the blocking field,
+ * say why beside it, and move focus there.
+ */
+function NoteReply({ onSend }: { onSend: (reply: string) => void }) {
+  const [text, setText] = useState("");
+  const [error, setError] = useState("");
+  const ref = useRef<HTMLTextAreaElement>(null);
+  return (
+    <>
+      <label className={"field" + (error ? " field-error" : "")}>
+        Your reply
+        <textarea
+          ref={ref}
+          value={text}
+          aria-invalid={!!error || undefined}
+          aria-describedby={error ? "note-reply-error" : undefined}
+          placeholder="Add the requested details…"
+          onChange={(e) => {
+            setText(e.target.value);
+            if (error) setError("");
+          }}
+        />
+        {error && (
+          <span className="field-message" id="note-reply-error" role="alert">
+            <AlertCircle size={16} /> {error}
+          </span>
+        )}
+      </label>
+      <button
+        className="secondary"
+        onClick={() => {
+          if (!text.trim()) {
+            setError("Add your reply before sending.");
+            ref.current?.focus();
+            return;
+          }
+          onSend(text.trim());
+          setText("");
+        }}
+      >
+        Send reply
+      </button>
+    </>
+  );
+}
 function TaskAnswers({ task }: { task: Task }) {
   const rows = questionAnswers(task);
   const policy = getIssue(task.description);
@@ -705,9 +761,7 @@ function App() {
       d.requests.push({
         id,
         customerId: customer,
-        name:
-          s.requests.find((r) => r.customerId === customer)?.name ||
-          "Sarah Lin",
+        name: customerName(customer),
         address: "",
         city: "Oakville",
         status: "Draft",
@@ -1507,7 +1561,62 @@ function App() {
                       {r.notes ||
                         "No additional access or parking notes supplied."}
                     </p>
+                    {!!r.preferredSlots?.length || r.timingConstraints ? (
+                      <>
+                        <h3>Stated preference</h3>
+                        <p>
+                          {r.preferredSlots
+                            ?.map(
+                              (p) =>
+                                `${new Date(
+                                  p.date + "T12:00:00Z",
+                                ).toLocaleDateString("en-CA", {
+                                  timeZone: "America/Toronto",
+                                  weekday: "short",
+                                  month: "short",
+                                  day: "numeric",
+                                })}${p.times.length ? ` (${p.times.join(", ")})` : ""}`,
+                            )
+                            .join(" · ") || "No specific day"}
+                          {r.timingConstraints
+                            ? ` — ${r.timingConstraints}`
+                            : ""}
+                        </p>
+                      </>
+                    ) : null}
                   </section>
+                  {r.operatorNote && (
+                    /* Single Q&A slot: waiting, then answered. Asking again
+                       replaces it rather than growing a history. */
+                    <section className="card operator-note">
+                      <span className="eyebrow">
+                        {r.customerReply
+                          ? "CUSTOMER ANSWERED"
+                          : "WAITING ON CUSTOMER"}
+                      </span>
+                      <p>{r.operatorNote}</p>
+                      {r.customerReply ? (
+                        <p className="operator-note-reply">
+                          <strong>Reply:</strong> {r.customerReply}
+                        </p>
+                      ) : (
+                        <button
+                          className="text-button"
+                          onClick={() =>
+                            update((d) => {
+                              const req = d.requests.find(
+                                (x) => x.id === r.id,
+                              )!;
+                              req.operatorNote = null;
+                              req.customerReply = null;
+                            }, "Question withdrawn")
+                          }
+                        >
+                          Cancel question
+                        </button>
+                      )}
+                    </section>
+                  )}
                   <section className="card panel operator-action-panel">
                     {" "}
                     <div className="row actions wrap operator-primary-actions">
@@ -1561,7 +1670,7 @@ function App() {
                           setModal("Request information");
                         }}
                       >
-                        Need More Info
+                        {r.operatorNote ? "Ask something else" : "Need More Info"}
                       </button>
                       <details>
                         <summary>More actions</summary>
@@ -2254,29 +2363,35 @@ function App() {
             <div className="customer-wrap">
               <div className="account-row">
                 <span className="eyebrow">CUSTOMER PORTAL</span>
-                <select
-                  aria-label="Demo customer"
-                  value={customer}
-                  onChange={(e) => {
-                    setCustomer(e.target.value);
-                    setActive(
-                      s.requests.find((r) => r.customerId === e.target.value)!
-                        .id,
-                    );
-                    setStep(0);
-                  }}
-                >
-                  {s.requests
-                    .filter(
-                      (r, i, a) =>
-                        a.findIndex((x) => x.customerId === r.customerId) === i,
-                    )
-                    .map((r) => (
-                      <option value={r.customerId} key={r.customerId}>
-                        {r.name}
-                      </option>
-                    ))}
-                </select>
+              </div>
+              {/* The prototype has to simulate several people to be testable at
+                  all. Tappable pills, the same visual idiom as every other chip
+                  here, rather than a separate control type. The roster is the
+                  customer list itself, so someone with no requests yet is still
+                  selectable — identity does not depend on owning a row. */}
+              <div className="identity-switch" role="group" aria-label="Viewing as">
+                <span className="eyebrow">VIEWING AS</span>
+                {customers.map((c) => (
+                  <button
+                    key={c.id}
+                    className={
+                      "badge " +
+                      (customer === c.id ? "badge-accent" : "badge-neutral")
+                    }
+                    aria-pressed={customer === c.id}
+                    onClick={() => {
+                      setCustomer(c.id);
+                      const own = s.requests.find(
+                        (x) => x.customerId === c.id,
+                      );
+                      if (own) setActive(own.id);
+                      setStep(0);
+                      setPage("Home");
+                    }}
+                  >
+                    {c.name}
+                  </button>
+                ))}
               </div>
               {page === "New request" ? (
                 <CustomerIntake
@@ -2366,32 +2481,33 @@ function App() {
                       </button>
                     ) : (
                       <div className="status-track">
+                        {/* Three steps, not four. "Provider coordinated" was
+                            internal handoff the customer could not act on; it
+                            survives as the prose note below, not as a step. */}
                         {[
-                          "Request received",
-                          "Provider coordinated",
-                          "Quote approved",
-                          "Visit confirmed",
-                        ].map((x, i) => (
+                          {
+                            label: "Received",
+                            done: true,
+                          },
+                          {
+                            label: "Quote",
+                            done: quote?.status === "Approved",
+                            active: quoted(s, r.id),
+                          },
+                          {
+                            label: "Confirmed",
+                            done: confirmed(s, r.id),
+                          },
+                        ].map((x) => (
                           <div
                             className={
-                              i === 0 ||
-                              (i === 1 &&
-                                visits.some((v) =>
-                                  s.assignments.some(
-                                    (a) =>
-                                      a.visitId === v.id &&
-                                      a.status === "Accepted",
-                                  ),
-                                )) ||
-                              (i === 2 && quote?.status === "Approved") ||
-                              (i === 3 && r.status === "Confirmed")
-                                ? "complete"
-                                : ""
+                              "status-step " +
+                              (x.done ? "done" : x.active ? "active" : "")
                             }
-                            key={x}
+                            key={x.label}
                           >
                             <CheckCircle2 size={16} />
-                            <span>{x}</span>
+                            <span>{x.label}</span>
                           </div>
                         ))}
                       </div>
@@ -2399,41 +2515,66 @@ function App() {
                     {!["Confirmed", "Cancelled", "Draft"].includes(
                       r.status,
                     ) && (
+                      /* One contextual line, chosen from derived state — not a
+                         log. When a contractor declines, coordinated reverts to
+                         false and this falls back to "matching", which is what
+                         keeps the decline invisible to the customer. */
                       <p className="note">
                         {r.status === "Needs Review"
                           ? "Your request needs a closer look. We’ll coordinate a suitable provider."
-                          : "Your appointment is not confirmed until provider acceptance, quote approval, and any required payment are complete."}
+                          : !coordinated(s, r.id)
+                            ? "We’re matching your request with a provider."
+                            : !quoted(s, r.id)
+                              ? "A provider has been matched. We’re preparing your quote."
+                              : "Your appointment is not confirmed until provider acceptance, quote approval, and any required payment are complete."}
                       </p>
                     )}
+                    {!!r.preferredSlots?.length || r.timingConstraints ? (
+                      /* The customer's own stated preference, always visible to
+                         them and never quietly dropped. */
+                      <p className="note">
+                        Your preference:{" "}
+                        {r.preferredSlots
+                          ?.map(
+                            (p) =>
+                              `${new Date(p.date + "T12:00:00Z").toLocaleDateString(
+                                "en-CA",
+                                {
+                                  timeZone: "America/Toronto",
+                                  weekday: "short",
+                                  month: "short",
+                                  day: "numeric",
+                                },
+                              )}${p.times.length ? ` (${p.times.join(", ")})` : ""}`,
+                          )
+                          .join(" · ") || "no specific day"}
+                        {r.timingConstraints ? ` — ${r.timingConstraints}` : ""}
+                      </p>
+                    ) : null}
                     {r.notes && <p className="note">{r.notes}</p>}
-                    {r.notes.startsWith("Information requested:") && (
-                      <form
-                        onSubmit={(e) => {
-                          e.preventDefault();
-                          const reply = String(
-                            new FormData(e.currentTarget).get("reply"),
-                          );
-                          update((d) => {
-                            d.requests.find((x) => x.id === r.id)!.notes +=
-                              " | Customer response: " + reply;
-                            log(
-                              d,
-                              "Customer replied to information request: " +
-                                reply,
-                            );
-                          }, "Response shared with Yousef");
-                        }}
-                      >
-                        <label className="field">
-                          Your response
-                          <textarea
-                            name="reply"
-                            required
-                            placeholder="Add the requested details…"
+                    {r.operatorNote && (
+                      /* One question, one reply. Not a thread: see §7.3 — a new
+                         question replaces this pair rather than appending. */
+                      <div className="card operator-note">
+                        <span className="eyebrow">A QUESTION FOR YOU</span>
+                        <p>{r.operatorNote}</p>
+                        {r.customerReply ? (
+                          <p className="operator-note-reply">
+                            <strong>Your reply:</strong> {r.customerReply}
+                          </p>
+                        ) : (
+                          <NoteReply
+                            onSend={(reply) =>
+                              update((d) => {
+                                d.requests.find(
+                                  (x) => x.id === r.id,
+                                )!.customerReply = reply;
+                                log(d, "Customer replied: " + reply);
+                              }, "Reply shared with Yousef")
+                            }
                           />
-                        </label>
-                        <button className="secondary">Send response</button>
-                      </form>
+                        )}
+                      </div>
                     )}
                     {tasks.map((t) => (
                       <div className="card portal-task" key={t.id}>
@@ -2455,21 +2596,29 @@ function App() {
           )}
           {role === "Contractor" && (
             <>
-              <label className="field">
-                Demo contractor
-                <select
-                  value={contractor}
-                  onChange={(e) => setContractor(e.target.value)}
-                >
-                  {providers
-                    .filter((p) => p.id !== "yousef")
-                    .map((p) => (
-                      <option key={p.id} value={p.id}>
-                        {p.name}
-                      </option>
-                    ))}
-                </select>
-              </label>
+              {/* Same pill idiom as the customer switcher. Yousef is included:
+                  he takes jobs as well as dispatching them, so he is a real
+                  contractor identity, not just the operator. */}
+              <div
+                className="identity-switch"
+                role="group"
+                aria-label="Viewing as"
+              >
+                <span className="eyebrow">VIEWING AS</span>
+                {providers.map((p) => (
+                  <button
+                    key={p.id}
+                    className={
+                      "badge " +
+                      (contractor === p.id ? "badge-accent" : "badge-neutral")
+                    }
+                    aria-pressed={contractor === p.id}
+                    onClick={() => setContractor(p.id)}
+                  >
+                    {p.name}
+                  </button>
+                ))}
+              </div>
               <ContractorWork
                 key={contractor}
                 s={s}
@@ -2986,13 +3135,15 @@ function App() {
                     "note",
                   ) as string;
                   update((d) => {
-                    d.requests.find((q) => q.id === r.id)!.notes =
-                      "Information requested: " + value;
+                    const req = d.requests.find((q) => q.id === r.id)!;
+                    // One slot, not a thread: asking again replaces the pair.
+                    req.operatorNote = value;
+                    req.customerReply = null;
                     log(
                       d,
                       "Operator requested additional information: " + value,
                     );
-                  }, "Request visible in customer portal");
+                  }, "Question visible in customer portal");
                   setModal("");
                 }}
               >
