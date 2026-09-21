@@ -16,6 +16,68 @@ export type Stage = {
 };
 export const stages: Stage[] = [
   {
+    id: "walkthrough",
+    title: "Walk",
+    subtitle: "One property. Findings, not a job.",
+    trigger:
+      "An operator walks a property and records what is visibly wrong, before anybody has asked for work.",
+    gate: "Every finding carries a scope and either a price or an explicit further-assessment classification. An unpriced finding cannot be sent as though it were quotable.",
+    records: ["property", "walkthrough", "finding"],
+    lanes: {
+      Customer: {
+        title: "Nothing yet",
+        body: "The customer has not asked for anything and is not involved at this stage. Proactive work begins with observation, not a request.",
+      },
+      Operator: {
+        title: "Record each finding",
+        body: "Area, observed condition, proposed work, photos, and a price where one can responsibly be given. Findings stay separate even when found on the same visit.",
+      },
+      Contractor: {
+        title: "Not involved",
+        body: "Contractors receive executable tasks after approval. They never hold customer approval decisions.",
+      },
+      System: {
+        title: "Issue stable identifiers",
+        body: "One assessment id per walkthrough and one number per finding, written once, so the digital record, the PDF and the converted task all name the same item.",
+      },
+    },
+    notifications: "None. Nothing has been sent to the customer yet.",
+    next: "Sending the assessment moves to Assess.",
+    capability: "Implemented",
+    evidence: ["src/pmw.ts", "src/Walkthroughs.tsx"],
+  },
+  {
+    id: "assess",
+    title: "Assess",
+    subtitle: "Approve, defer, or ask for assessment.",
+    trigger:
+      "The customer opens the assessment link and reviews each finding on its own.",
+    gate: "Approval requires a priced finding, a named authorizer and a payment method on file. A further-assessment finding offers no approval control at all.",
+    records: ["walkthrough", "finding", "quote"],
+    lanes: {
+      Customer: {
+        title: "Decide item by item",
+        body: "Approve what they want done and defer the rest, with a running approved total. No account is required to review or approve.",
+      },
+      Operator: {
+        title: "Watch and follow up",
+        body: "Sees decisions as they land, and rescopes anything flagged for further assessment into a priced finding on a later walkthrough.",
+      },
+      Contractor: {
+        title: "Not involved",
+        body: "No task exists yet. Nothing is dispatchable until approved work is converted.",
+      },
+      System: {
+        title: "Convert approvals into work",
+        body: "Approved findings become ordinary tasks on one request with an approved quote, so the existing pipeline carries them from here.",
+      },
+    },
+    notifications: "The customer's decisions reach the operator's workspace.",
+    next: "Converted work joins the reactive pipeline at Schedule.",
+    capability: "Simulated",
+    evidence: ["src/Assessment.tsx", "src/pmw.ts"],
+  },
+  {
     id: "submit",
     title: "Submit",
     subtitle: "One request. Independent tasks.",
@@ -278,6 +340,31 @@ export type Entity = {
 };
 export const entities: Entity[] = [
   {
+    id: "property",
+    name: "Property",
+    owns: "A location and its owner. Maintenance history belongs here, not to any one job.",
+    states: "No status. A property persists whether or not work is open on it.",
+    links: ["request", "walkthrough"],
+    note: "Requests link by propertyId, never by matching address text: addresses are editable, so text matching would silently re-home a request.",
+  },
+  {
+    id: "walkthrough",
+    name: "Walkthrough",
+    owns: "One dated assessment of one property, its assessment id, tax rate and the customer's authorization.",
+    states: "Stored: Draft, Sent, Converted.",
+    links: ["property", "finding"],
+    note: "The tax rate is stored rather than read live, so an assessment keeps matching the total it was approved at.",
+  },
+  {
+    id: "finding",
+    name: "Finding",
+    owns: "One observed issue: area, condition, proposed scope, photos, price and the customer's decision.",
+    states:
+      "Stored: pricing is Quoted or Further Assessment Required; decision is Pending, Approved or Not Now. Everything else — deferred, scheduled, in progress, completed — is derived from the task it became.",
+    links: ["walkthrough", "task"],
+    note: "Pricing and decision are separate fields on purpose: an unpriced finding cannot be approved, which is a data rule rather than a UI one.",
+  },
+  {
     id: "request",
     name: "Service Request",
     owns: "Customer, property, task grouping, booking mode and preferences.",
@@ -349,6 +436,12 @@ export const entities: Entity[] = [
   },
 ];
 export const examples = [
+  {
+    id: "pmw",
+    name: "Proactive walkthrough",
+    steps: ["walkthrough", "assess", "schedule", "confirm", "way", "progress", "finish"],
+    text: "Nobody reported a problem. An operator walks the property, records three findings, and the customer approves one, defers another and asks for an assessment on the third. The approved finding becomes an ordinary task on one request, so scheduling and execution are the existing flow. The deferred and unpriced findings stay on the property record for the next walkthrough.",
+  },
   {
     id: "instant",
     name: "Instant Book",

@@ -121,3 +121,37 @@ The same reasoning applies to responsive collapse generally: rather than retrofi
 ## Boundaries
 
 `src/ContractorWork.tsx`, `src/CustomerIntake.tsx`, `src/NotificationUI.tsx` and every model/dispatch/work module are unchanged — Compare mode is composition and CSS containment over an app that already worked, not new business logic. All 218 tests pass unmodified.
+
+# Design decisions — PMW (Property Maintenance Walkthrough)
+
+## ADR 018: The property is the record, and a foreign key is the only thing that says so
+
+Accepted. Work could only enter Fieldwork reactively, and every address was a flat string on a `Request`. Two jobs at the same house were unrelated rows, so there was nothing a maintenance history could belong to — the brief's "one property, one maintenance record" had no record to attach to.
+
+`Property` is now a real entity and `Request.propertyId` links to it. The migration that backfills it for saved states matches on normalized address, city and owner **once**, and only for a request that has no property yet. It never re-derives the link afterwards, because addresses are editable free text: a customer correcting a typo in their address must not silently move that job to a different property. This is the same principle model.ts already states for customers — identity is a foreign key, not a string comparison.
+
+## ADR 019: What the operator can price and what the customer decides are two different fields
+
+Accepted. The brief asks that "further assessment required" not appear as a third checkbox beside Approve and Not Now, because it is not a customer preference — it is the operator admitting the walkthrough did not reveal enough to price the repair responsibly.
+
+A `Finding` therefore carries `pricing` (the operator's classification: `Quoted` or `Further Assessment Required`) and `decision` (the customer's: `Pending`, `Approved`, `Not Now`) as separate fields, and `decide()` returns false when asked to approve anything that is not quotable. One enum would have made "you cannot approve this" a rule the UI enforces by hiding a button; two fields make it a rule the data enforces, so no surface — guest link, operator screen, or anything added later — can record an approval for work nobody has scoped.
+
+Everything else about a finding is derived: deferred, scheduled, in progress and completed all read the task it became, where `reconcile()` already maintains the truth. Completion is deliberately not a `decision` value, because completion is a fact about the task, and storing it on the finding would give one truth two writers — the failure ADR 011 names.
+
+## ADR 020: The proactive path converts into the existing pipeline rather than forking it
+
+Accepted. Approved findings become ordinary tasks on one ordinary request with one approved quote. Nothing in the operator queue, the dispatch layer, the contractor's Your Work or the payment gate knows PMW exists.
+
+Three consequences are deliberate. **One request per approval event**, not per walkthrough, so approving a finding that was deferred months ago opens new work instead of reopening a completed job. **Converted tasks are marked reviewed**, because an operator scoped them in person and `reconcile()` parks any request holding an unreviewed task in `Needs Review` — intake triage this work has already had; they still run through the same classifier and the same provider eligibility, so a walkthrough cannot route restricted work to an unqualified contractor. And **the payment gate needed no new code at all**: an approved, unpaid quote is already the state `reconcile()` reads as `Awaiting Payment`, which is exactly the brief's "no scheduling until the payment requirement is satisfied".
+
+The brief asks for an authorization rather than a charge. `"Paid"` is read in six places across `model.ts` and `main.tsx`, all of them on the reactive path, so widening that vocabulary would have put shipped behaviour at risk to change a word. The payment row stays `"Paid"` and the customer-facing wording is derived from whether the quote's request came from a walkthrough.
+
+## ADR 021: The printed assessment has no data path of its own
+
+Accepted. §11 requires the PDF and the digital record to be two representations of one thing. The reliable way to guarantee that is not discipline but structure: `AssessmentPrint` renders from the same records and the same derived helpers as the screen, is always in the DOM, and is revealed by `@media print`. There is no export step that could fall behind, and a test asserts the printed document carries the same assessment id, finding numbers, scopes, prices and statuses as the screen.
+
+Found in the same pass: `blueprint.css` declared a global, unscoped `@page { size: A4 landscape }`, and it ships in the same bundle as the rest of the app. Any printable document added anywhere would have come out landscape. It is now a named page scoped to the blueprint.
+
+## Boundaries
+
+`reconcile()`, `src/dispatch.ts`, `src/work.ts`, `src/ContractorWork.tsx` and `src/CustomerIntake.tsx` are unchanged: PMW is new records and new surfaces over an execution pipeline that already worked. The existing tests pass unmodified, which is the check that this stayed true. The guest assessment link is a URL parameter, not a secured link, and the page says so; account creation after completion is invited but does nothing, since the brief's Phase 4 is out of scope.

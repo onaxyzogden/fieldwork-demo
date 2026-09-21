@@ -6,8 +6,8 @@ import { stages, entities, examples, roles } from "./blueprint-data";
 afterEach(() => vi.unstubAllGlobals());
 describe("developer blueprint", () => {
   it("covers eight unique stages with all four perspectives", () => {
-    expect(stages).toHaveLength(8);
-    expect(new Set(stages.map((s) => s.id)).size).toBe(8);
+    expect(stages).toHaveLength(10);
+    expect(new Set(stages.map((s) => s.id)).size).toBe(10);
     for (const s of stages) {
       expect(Object.keys(s.lanes)).toEqual([...roles]);
       expect(s.trigger.length).toBeGreaterThan(10);
@@ -20,7 +20,7 @@ describe("developer blueprint", () => {
       for (const id of s.records) expect(ids).toContain(id);
     for (const e of entities)
       for (const id of e.links) expect(ids).toContain(id);
-    expect(examples).toHaveLength(6);
+    expect(examples).toHaveLength(7);
     for (const e of examples)
       for (const id of e.steps)
         expect(stages.some((s) => s.id === id)).toBe(true);

@@ -12,10 +12,12 @@ import {
   customers,
   customerName,
 } from "./model";
+import { migratePmw } from "./pmw";
 
 export function migrateDispatch(s: State): State {
   s.settings ??= { autoReofferDeclined: false };
   s.notifications ??= [];
+  migratePmw(s);
   // Saved states predate the redesign fields and the current customer roster.
   // The stored name is a denormalized copy, so refresh it from the roster the
   // identity switcher reads; otherwise a returning visitor sees one name on the

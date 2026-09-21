@@ -16,6 +16,8 @@ export type Task = {
   answers: Record<string, string>;
   mergedInto?: string;
   status?: string;
+  /** Set when this task was converted from an approved walkthrough finding. */
+  findingId?: string;
 };
 export type Request = {
   intakeScreen?: "address" | "tasks" | "booking";
@@ -55,6 +57,10 @@ export type Request = {
   postalCode?: string;
   unit?: string;
   deadline?: string;
+  /** The property this request is against. Maintenance history hangs off it. */
+  propertyId?: string;
+  /** Set when the request was created by approving walkthrough findings. */
+  walkthroughId?: string;
 };
 export type Visit = {
   execution?: {
@@ -103,6 +109,68 @@ export type Payment = {
   amount: number;
   reference: string;
 };
+/**
+ * A location, not a job. Requests come and go; the property persists, which is
+ * the only thing a maintenance history can hang off. Linked by foreign key and
+ * never by address string — addresses are editable free text.
+ */
+export type Property = {
+  id: string;
+  customerId: string;
+  address: string;
+  city: string;
+  unit?: string;
+  postalCode?: string;
+  notes?: string;
+  nextWalkthrough?: string;
+};
+/** One dated assessment of one property. */
+export type Walkthrough = {
+  id: string;
+  /** The customer-facing identifier, e.g. PMW-0001. Written once, never rewritten. */
+  assessmentId: string;
+  propertyId: string;
+  operatorId: string;
+  date: string;
+  status: "Draft" | "Sent" | "Converted";
+  sentAt?: string;
+  /** Snapshotted when sent: a live rate would make an old assessment stop matching its own total. */
+  taxRate: number;
+  authorization?: { name: string; agreedAt: string };
+};
+/**
+ * One observed maintenance issue.
+ *
+ * `pricing` is the operator's classification and `decision` is the customer's —
+ * two fields, deliberately, so "further assessment required" can never be
+ * approved as though it were a priced repair. One enum would make that a UI
+ * rule; two make it a data rule.
+ */
+export type Finding = {
+  id: string;
+  walkthroughId: string;
+  /** Stable per walkthrough. Never re-derived from array position. */
+  number: number;
+  area: string;
+  title: string;
+  observed: string;
+  proposed: string;
+  photos: string[];
+  priority?: string;
+  internalNotes: string;
+  customerNotes: string;
+  pricing: "Quoted" | "Further Assessment Required";
+  price?: number;
+  decision: "Pending" | "Approved" | "Not Now";
+  decidedAt?: string;
+  /** Set by conversion only. The finding's half of the link to executable work. */
+  taskId?: string;
+  /** This finding restates an earlier one carried into a later walkthrough. */
+  carriedFrom?: string;
+  /** An unpriced finding later superseded by a scoped one. */
+  resolvedBy?: string;
+  followUpRequestedAt?: string;
+};
 export type State = {
   settings?: { autoReofferDeclined: boolean };
   notifications?: {
@@ -122,6 +190,11 @@ export type State = {
   assignments: Assignment[];
   quotes: Quote[];
   payments: Payment[];
+  /* Typed as present rather than optional: a state saved before PMW existed
+     lacks them on disk, and migratePmw() backfills them on the way in. */
+  properties: Property[];
+  walkthroughs: Walkthrough[];
+  findings: Finding[];
   events: { id: string; text: string; at: string }[];
   clock: number;
 };
@@ -402,6 +475,15 @@ export function seed(): State {
     operatorNote: null,
     customerReply: null,
   }));
+  // Every seeded request is at its own address, so each becomes one property and
+  // the demo starts with a maintenance record already attached to each job.
+  const properties: Property[] = requests.map((r, i) => ({
+    id: "p" + (i + 1),
+    customerId: r.customerId,
+    address: r.address,
+    city: r.city,
+  }));
+  requests.forEach((r, i) => (r.propertyId = properties[i].id));
   // One seeded request carries a stated preference so the operator queue and the
   // customer's own view both exercise it without needing a fresh intake run.
   const withPreference = requests.find((r) => r.id === "r3");
@@ -442,6 +524,9 @@ export function seed(): State {
   return {
     requests,
     tasks,
+    properties,
+    walkthroughs: [],
+    findings: [],
     visits: [
       {
         id: "v5",

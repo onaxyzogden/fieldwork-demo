@@ -2,6 +2,9 @@ import { suitableProviders } from "./suitability";
 import Blueprint from "./Blueprint";
 import ContractorWork, { JobWork } from "./ContractorWork";
 import { OperatorHome, OperatorToday } from "./OperatorWork";
+import Walkthroughs from "./Walkthroughs";
+import Assessment from "./Assessment";
+import PropertyRecord from "./PropertyRecord";
 import { bucket, workIssue, workStatus } from "./work";
 import CustomerIntake from "./CustomerIntake";
 import { validAddress, dayLabel } from "./intake";
@@ -48,6 +51,7 @@ import {
   Sun,
   Moon,
   Menu,
+  ClipboardCheck,
 } from "lucide-react";
 import {
   type State,
@@ -61,7 +65,6 @@ import {
   money,
   dateLabel,
   log,
-  reconcile,
   slots,
   available,
   eligible,
@@ -90,7 +93,8 @@ import "./customer-concept.css";
 import "./operator-concept.css";
 import "./contractor-concept.css";
 import "./cards.css";
-import { deliverUpdates, inbox } from "./notifications";
+import "./assessment.css";
+import { inbox } from "./notifications";
 import { NotificationInbox, MessageThread } from "./NotificationUI";
 import {
   migrateDispatch,
@@ -100,7 +104,7 @@ import {
   reassignmentForScope,
   reoffer,
 } from "./dispatch";
-const KEY = "fieldwork-demo-v1";
+import { KEY, load, save, commit } from "./store";
 /**
  * Submit-type actions stay enabled and validate on click.
  *
@@ -361,9 +365,7 @@ function Workspace({
   const [role, setRole] = useState<Role>(initialRole);
   const idPrefix = compareMode ? role + "-" : "";
   React.useEffect(() => {
-    try {
-      localStorage.setItem(KEY, JSON.stringify(s));
-    } catch {}
+    save(s);
   }, []);
   const [page, setPage] = useState("Home");
   const [active, setActive] = useState("r2");
@@ -458,16 +460,7 @@ function Workspace({
   }, [sidebar]);
   const [override, setOverride] = useState("");
   const update = (fn: (d: State) => void, msg?: string) => {
-    setS((prev) => {
-      const d = migrateDispatch(structuredClone(prev));
-      fn(d);
-      reconcile(d);
-      deliverUpdates(prev, d);
-      try {
-        localStorage.setItem(KEY, JSON.stringify(d));
-      } catch {}
-      return d;
-    });
+    setS((prev) => commit(prev, fn));
     if (msg) {
       setToast(msg);
       setTimeout(() => setToast(""), 3500);
@@ -517,6 +510,13 @@ function Workspace({
   const tasks = s.tasks.filter((t) => t.requestId === r.id && !t.mergedInto);
   /* The signed-in customer's own requests. A draft only counts once it carries
      something — an address, a description or a photo. */
+  /* Only properties that have actually been walked: an empty history is not
+     worth a collapsed panel telling the customer there is nothing in it. */
+  const customerProperties = s.properties.filter(
+    (p) =>
+      p.customerId === customer &&
+      s.walkthroughs.some((w) => w.propertyId === p.id),
+  );
   const ownRequests = s.requests.filter(
     (x) =>
       x.customerId === customer &&
@@ -1444,6 +1444,7 @@ function Workspace({
             ? [
                 [LayoutDashboard, "Home"],
                 [ListTodo, "Requests"],
+                [ClipboardCheck, "Walkthroughs"],
                 [Navigation, "Today"],
                 [MoreHorizontal, "More"],
               ]
@@ -2373,6 +2374,17 @@ function Workspace({
               </div>
             </>
           )}
+          {role === "Operator" && page === "Walkthroughs" && (
+            <Walkthroughs
+              s={s}
+              update={update}
+              notify={notify}
+              openRequest={(id) => {
+                choose(id);
+                setPage("Requests");
+              }}
+            />
+          )}
           {role === "Operator" && page === "Today" && (
             <OperatorToday
               s={s}
@@ -2732,6 +2744,16 @@ function Workspace({
                   >
                     <Plus size={16} /> New request
                   </button>
+                  {/* Collapsed and below the bookings: the walkthrough history
+                      is a reference, not the thing the customer came for. */}
+                  {customerProperties.map((p) => (
+                    <details className="card panel" key={p.id}>
+                      <summary>
+                        <strong>Maintenance record · {p.address}</strong>
+                      </summary>
+                      <PropertyRecord s={s} propertyId={p.id} />
+                    </details>
+                  ))}
                 </>
               )}
             </div>
@@ -2892,7 +2914,7 @@ function Workspace({
                   onClick={() => {
                     const d = migrateDispatch(seed());
                     setS(d);
-                    localStorage.setItem(KEY, JSON.stringify(d));
+                    save(d);
                     setActive("r2");
                     setCustomer("c2");
                     setStep(0);
@@ -3484,15 +3506,17 @@ function App() {
       return "light";
     }
   });
-  const [s, setS] = useState<State>(() => {
-    try {
-      return migrateDispatch(
-        JSON.parse(localStorage.getItem(KEY) || "null") || seed(),
-      );
-    } catch {
-      return migrateDispatch(seed());
-    }
-  });
+  const [s, setS] = useState<State>(load);
+  /* The customer's assessment link is a separate page, so their approval lands
+     in another tab. Without this the operator would be looking at a stale
+     screen until they reloaded. */
+  React.useEffect(() => {
+    const sync = (e: StorageEvent) => {
+      if (e.key === KEY && e.newValue) setS(load());
+    };
+    window.addEventListener("storage", sync);
+    return () => window.removeEventListener("storage", sync);
+  }, []);
   const [compare, setCompare] = useState(false);
   if (!compare)
     return (
@@ -3521,12 +3545,23 @@ function App() {
     </div>
   );
 }
+/**
+ * The whole router. The customer's assessment is a link they open, so it has to
+ * be addressable — and in a prototype with no backend, a URL parameter is what a
+ * link can be. The page says as much rather than implying the link is secret.
+ */
+function pickView() {
+  const params = new URLSearchParams(window.location.search);
+  if (params.get("view") === "blueprint") return <Blueprint />;
+  if (params.get("view") === "assessment") {
+    /* Before the first paint, not in an effect: the assessment is a document
+       and always reads light, and setting it after mount flashes the dark
+       palette's text onto a light page. */
+    document.documentElement.dataset.theme = "light";
+    return <Assessment assessmentId={params.get("id") || ""} />;
+  }
+  return <App />;
+}
 createRoot(document.getElementById("root")!).render(
-  <React.StrictMode>
-    {new URLSearchParams(window.location.search).get("view") === "blueprint" ? (
-      <Blueprint />
-    ) : (
-      <App />
-    )}
-  </React.StrictMode>,
+  <React.StrictMode>{pickView()}</React.StrictMode>,
 );
