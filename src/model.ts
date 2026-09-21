@@ -538,9 +538,13 @@ export function reconcile(s: State) {
   for (const r of s.requests) {
     if (["Draft", "Cancelled", "Declined", "Completed"].includes(r.status))
       continue;
+    /* An unanswered operator question is a waiting state in its own right.
+       The Waiting bucket has always recognized it; until now nothing set it,
+       so "Need More Info" left the request sitting in Needs Action. */
+    const asked = !!r.operatorNote && !r.customerReply;
     const tasks = s.tasks.filter((t) => t.requestId === r.id && !t.mergedInto);
     if (tasks.some((t) => !t.reviewed)) {
-      r.status = "Needs Review";
+      r.status = asked ? "Information requested" : "Needs Review";
       continue;
     }
     const vs = s.visits.filter(
@@ -583,7 +587,9 @@ export function reconcile(s: State) {
               !q.payOnCompletion &&
               !s.payments.some((p) => p.quoteId === q.id && p.status === "Paid")
             ? "Awaiting Payment"
-            : "Submitted";
+            : asked
+              ? "Information requested"
+              : "Submitted";
     for (const v of vs)
       if (!["In Progress", "Completed"].includes(v.status))
         v.status = ready ? "Confirmed" : "Proposed";

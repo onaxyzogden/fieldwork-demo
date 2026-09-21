@@ -19,41 +19,38 @@
 .operator-concept .panel {
   margin: 0;
 }
-.operator-location-card {
+/* One decision per state: tone comes from the shared op-tone-* tokens the
+   Home cards already use, so a declined job reads the same in both places. */
+.op-decision {
   display: flex;
-  flex-wrap: wrap;
+  flex-direction: column;
   gap: var(--space-4);
-  align-items: center;
-  color: var(--text);
+  border-left: 3px solid var(--tone, var(--accent-text));
+  scroll-margin-top: var(--space-5);
 }
-.operator-location-card strong {
-  background: var(--map-label);
-  border-radius: var(--radius-md);
-  padding: var(--space-2);
+.op-decision-head {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-4);
 }
-.operator-location-card small {
+.op-decision-head h3 {
+  margin: 0;
+}
+.op-decision-head p {
+  margin: var(--space-1) 0 0;
+  color: var(--muted);
+}
+.op-decision-amount strong {
+  font-size: var(--text-h3);
+}
+.op-decision-actions {
+  gap: var(--space-3);
+}
+.op-decision-actions > details {
   flex-basis: 100%;
-  background: var(--map-label);
-  padding: var(--space-1);
 }
-.operator-concept #review-tasks {
-  order: 3;
-}
-.operator-location-card {
-  order: 2;
-}
-.operator-photo-gallery {
-  order: 4;
-}
-.operator-estimate {
-  order: 5;
-  border-left: 3px solid var(--success);
-}
-.operator-notes {
-  order: 6;
-}
-.operator-action-panel {
-  order: 7;
+.operator-history summary .count {
+  margin-left: var(--space-2);
 }
 .mobile-request-browser {
   display: none;
@@ -67,39 +64,6 @@
     display: none;
   }
 }
-.operator-concept
-  .detail
-  > section:not([class*="operator-"]):not(#review-tasks):not(#fulfillment),
-.operator-pricing {
-  order: 8;
-}
-.operator-thumbnails {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: var(--space-3);
-}
-.operator-thumbnails figure {
-  margin: 0;
-  min-width: 0;
-}
-.operator-thumbnails img {
-  width: 100%;
-  aspect-ratio: 1;
-  object-fit: cover;
-  border-radius: var(--radius-md);
-}
-.operator-thumbnails figcaption {
-  font-size: var(--text-label);
-  overflow-wrap: anywhere;
-}
-.operator-primary-actions {
-  display: grid !important;
-  grid-template-columns: 1fr 1fr;
-}
-.operator-primary-actions > .primary,
-.operator-primary-actions > details {
-  grid-column: 1/-1;
-}
 .operator-concept summary {
   min-height: 44px;
 }
@@ -112,15 +76,11 @@
   margin: auto;
 }
 .focused-fulfillment > .queue,
-.focused-fulfillment .detail > :not(#fulfillment):not(.operator-pricing) {
+.focused-fulfillment .detail > :not(#fulfillment) {
   display: none !important;
 }
 .focused-fulfillment .detail > #fulfillment {
   display: block;
-  order: 0;
-}
-.focused-fulfillment .operator-pricing {
-  order: 1;
 }
 .fulfillment-request-summary {
   padding: var(--space-4);
@@ -208,8 +168,9 @@
   .operator-detail-header {
     flex-wrap: wrap;
   }
-  .operator-primary-actions {
-    grid-template-columns: 1fr;
+  .op-decision-actions > .primary,
+  .op-decision-actions > .secondary {
+    width: 100%;
   }
   .operator-timeline-entry {
     margin-left: var(--space-16) !important;
