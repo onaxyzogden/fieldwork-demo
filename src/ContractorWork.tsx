@@ -104,16 +104,20 @@ export function JobWork({
           >
             Navigate ↗
           </a>
+          {/* One primary at a time: the badge above already says "On the
+              Way" once pressed, so the button doesn't repeat it — it just
+              disappears and Start job takes over as the primary. */}
           {!x?.startedAt && (
             <>
-              {x?.onWayAt ? (
-                <span className="badge badge-success">On my way</span>
-              ) : (
-                <button className="secondary" onClick={() => act("way")}>
+              {!x?.onWayAt && (
+                <button className="primary" onClick={() => act("way")}>
                   On my way
                 </button>
               )}
-              <button className="primary" onClick={() => act("start")}>
+              <button
+                className={x?.onWayAt ? "primary" : "secondary"}
+                onClick={() => act("start")}
+              >
                 Start job
               </button>
             </>
@@ -326,10 +330,13 @@ export function JobWork({
           )}
         </>
       )}
+      {/* No "Visit finished" heading here — the badge at the top of this
+          card already says Completed (or Issue); this block adds the
+          outcome detail the badge can't carry, not a second announcement
+          of the same fact. */}
       {x?.finishedAt && (
         <div className="note contractor-success">
           <div className="contractor-check">✓</div>
-          <h3>Visit finished</h3>
           <p>
             {Object.values(x.outcomes).some((o) => o.outcome !== "Completed")
               ? "Unresolved tasks have been flagged for operator follow-up."
@@ -349,7 +356,14 @@ export default function ContractorWork({
 }: Props & { openVisit?: string }) {
   const mine = s.assignments.filter((a) => a.providerId === provider);
   const today = dayKey(s.clock);
-  const active = mine.some(
+  /* What the screen opens to: the thing that actually needs the contractor's
+     attention right now, not a remembered tab. A running job wins outright;
+     next, a single unambiguous offer is opened directly rather than making
+     "View job" a mandatory extra click. Multiple offers or nothing urgent
+     fall back to a list. Computed once at mount — after that, tabs and
+     selection are the contractor's own navigation, not re-derived out from
+     under them. */
+  const runningAssignment = mine.find(
     (a) =>
       a.status === "Accepted" &&
       s.visits.some(
@@ -359,22 +373,25 @@ export default function ContractorWork({
           !v.execution.finishedAt,
       ),
   );
+  const offeredAssignments = mine.filter((a) => a.status === "Offered");
+  const scheduledToday = mine.some(
+    (a) =>
+      a.status === "Accepted" &&
+      s.visits.some((v) => v.id === a.visitId && dayKey(v.start) === today),
+  );
   const [tab, setTab] = useState(
-    active
+    runningAssignment
       ? "Today"
-      : mine.some((a) => a.status === "Offered")
+      : offeredAssignments.length
         ? "Offers"
-        : mine.some(
-              (a) =>
-                a.status === "Accepted" &&
-                s.visits.some(
-                  (v) => v.id === a.visitId && dayKey(v.start) === today,
-                ),
-            )
+        : scheduledToday
           ? "Today"
           : "Upcoming",
   );
-  const [selected, setSelected] = useState("");
+  const [selected, setSelected] = useState(
+    runningAssignment?.id ||
+      (offeredAssignments.length === 1 ? offeredAssignments[0].id : ""),
+  );
   useEffect(() => {
     if (openVisit) {
       const assignment =
@@ -388,7 +405,6 @@ export default function ContractorWork({
   }, [openVisit, provider]);
   const [decline, setDecline] = useState(false);
   const [reason, setReason] = useState("");
-  const [accepted, setAccepted] = useState(false);
   const a = mine.find((a) => a.id === selected),
     v = s.visits.find((v) => v.id === a?.visitId),
     r = s.requests.find((r) => r.id === v?.requestId);
@@ -411,17 +427,15 @@ export default function ContractorWork({
         .start.localeCompare(s.visits.find((v) => v.id === b.visitId)!.start),
     )[0];
   const respond = (status: "Accepted" | "Declined") => {
-    update((d) => {
-      const offer = d.assignments.find((a) => a.id === selected);
-      if (
-        respondToOffer(d, selected, status, reason) &&
-        offer &&
-        status === "Declined"
-      )
-        offer.declineReason = reason;
-    });
+    // respondToOffer() already records declineReason on the assignment
+    // draft it mutates — writing it again here was dead duplication.
+    update(
+      (d) => {
+        respondToOffer(d, selected, status, reason);
+      },
+      status === "Accepted" ? "Job accepted" : "Offer declined",
+    );
     setDecline(false);
-    setAccepted(status === "Accepted");
   };
   const assignments = mine
     .filter((a) => {
@@ -454,7 +468,6 @@ export default function ContractorWork({
             onClick={() => {
               setTab(t);
               setSelected("");
-              setAccepted(false);
             }}
           >
             {t}
@@ -463,151 +476,134 @@ export default function ContractorWork({
       </div>
       {a && v && r ? (
         <>
-          <button
-            className="text-button"
-            onClick={() => {
-              setSelected("");
-              setAccepted(false);
-            }}
-          >
+          <button className="text-button" onClick={() => setSelected("")}>
             ← Back to your work
           </button>
-          {accepted && a.status === "Accepted" && (
-            <section className="note contractor-success">
-              <div className="contractor-check">✓</div>
-              <h2>Job accepted!</h2>
+          {/* Accepting used to swap in a full-screen "Job accepted!" receipt
+              behind a View job click. It now drops straight into the job
+              below (which already says "confirmation pending" via its own
+              allowed-gate note when applicable) and the confirmation rides
+              the ordinary toast instead — one fewer screen between deciding
+              and doing the work. */}
+          {a.status === "Offered" ? (
+            <section className="card panel">
+              <h2>{s.tasks.find((t) => v.taskIds.includes(t.id))?.summary}</h2>
               <p>
-                {v.status === "Confirmed"
-                  ? "Your appointment is confirmed."
-                  : "Customer confirmation is pending quote/payment requirements."}
+                {customerName(r.customerId)} · {r.city} · {dateLabel(v.start)}
               </p>
-              <button className="secondary" onClick={() => setAccepted(false)}>
-                View job
-              </button>
-            </section>
-          )}
-          {!(accepted && a.status === "Accepted") &&
-            (a.status === "Offered" ? (
-              <section className="card panel">
-                <h2>
-                  {s.tasks.find((t) => v.taskIds.includes(t.id))?.summary}
-                </h2>
-                <p>
-                  {customerName(r.customerId)} · {r.city} · {dateLabel(v.start)}
-                </p>
-                <p>
-                  {v.duration} minutes · {v.taskIds.length} tasks
-                </p>
-                <h3 className="contractor-pay">Your pay: {money(a.pay)} CAD</h3>
-                <p>
-                  Offer expires {dateLabel(new Date(a.expiresAt).toISOString())}
-                </p>
-                {v.taskIds.map((id) => {
-                  const t = s.tasks.find((t) => t.id === id)!;
-                  return (
-                    <details className="work-task" key={id}>
-                      <summary>{t.summary}</summary>
-                      <p>{t.description}</p>
-                      <dl className="task-answers">
-                        {questionAnswers(t).map((row) => (
-                          <div key={row.key}>
-                            <dt>{row.label}</dt>
-                            <dd>{row.value}</dd>
-                          </div>
-                        ))}
-                      </dl>
-                      <p>
-                        {t.restricted ? "Specialist eligibility required" : ""}
-                      </p>
-                      <div className="work-photos">
-                        {t.photos.map((p, i) => (
-                          <a href={p} target="_blank" rel="noreferrer" key={i}>
-                            <img src={p} alt={`Task reference ${i + 1}`} />
-                          </a>
-                        ))}
-                      </div>
-                    </details>
-                  );
-                })}
-                <MessageThread
-                  s={s}
-                  visit={v}
-                  sender={provider}
-                  update={update}
-                />
-                <div className="row actions">
-                  <button
-                    className="primary grow contractor-accept"
-                    onClick={() => respond("Accepted")}
-                  >
-                    Accept job
-                  </button>
-                  <button
-                    className="secondary grow"
-                    onClick={() => setDecline(true)}
-                  >
-                    Decline
-                  </button>
-                </div>
-                {decline && (
-                  <Sheet
-                    title="Why are you declining?"
-                    close={() => setDecline(false)}
-                  >
-                    <label className="field">
-                      Reason (optional)
-                      <select
-                        value={reason}
-                        onChange={(e) => setReason(e.target.value)}
-                      >
-                        <option value="">Prefer not to say</option>
-                        {[
-                          "Not available",
-                          "Too far",
-                          "Pay doesn’t work",
-                          "Outside my skill set",
-                          "Other",
-                        ].map((x) => (
-                          <option key={x}>{x}</option>
-                        ))}
-                      </select>
-                    </label>
-                    <button
-                      className="primary"
-                      onClick={() => respond("Declined")}
+              <p>
+                {v.duration} minutes · {v.taskIds.length} tasks
+              </p>
+              <h3 className="contractor-pay">Your pay: {money(a.pay)} CAD</h3>
+              <p>
+                Offer expires {dateLabel(new Date(a.expiresAt).toISOString())}
+              </p>
+              {v.taskIds.map((id) => {
+                const t = s.tasks.find((t) => t.id === id)!;
+                return (
+                  <details className="work-task" key={id}>
+                    <summary>{t.summary}</summary>
+                    <p>{t.description}</p>
+                    <dl className="task-answers">
+                      {questionAnswers(t).map((row) => (
+                        <div key={row.key}>
+                          <dt>{row.label}</dt>
+                          <dd>{row.value}</dd>
+                        </div>
+                      ))}
+                    </dl>
+                    <p>
+                      {t.restricted ? "Specialist eligibility required" : ""}
+                    </p>
+                    <div className="work-photos">
+                      {t.photos.map((p, i) => (
+                        <a href={p} target="_blank" rel="noreferrer" key={i}>
+                          <img src={p} alt={`Task reference ${i + 1}`} />
+                        </a>
+                      ))}
+                    </div>
+                  </details>
+                );
+              })}
+              <MessageThread
+                s={s}
+                visit={v}
+                sender={provider}
+                update={update}
+              />
+              <div className="row actions">
+                <button
+                  className="primary grow contractor-accept"
+                  onClick={() => respond("Accepted")}
+                >
+                  Accept job
+                </button>
+                <button
+                  className="secondary grow"
+                  onClick={() => setDecline(true)}
+                >
+                  Decline
+                </button>
+              </div>
+              {decline && (
+                <Sheet
+                  title="Why are you declining?"
+                  close={() => setDecline(false)}
+                >
+                  <label className="field">
+                    Reason (optional)
+                    <select
+                      value={reason}
+                      onChange={(e) => setReason(e.target.value)}
                     >
-                      Decline job
-                    </button>
-                    <button
-                      className="text-button"
-                      onClick={() => setDecline(false)}
-                    >
-                      Cancel
-                    </button>
-                  </Sheet>
-                )}
-              </section>
-            ) : a.status === "Accepted" ? (
-              <>
-                <JobWork s={s} provider={provider} update={update} visit={v} />
-                {v.execution?.finishedAt && (
+                      <option value="">Prefer not to say</option>
+                      {[
+                        "Not available",
+                        "Too far",
+                        "Pay doesn’t work",
+                        "Outside my skill set",
+                        "Other",
+                      ].map((x) => (
+                        <option key={x}>{x}</option>
+                      ))}
+                    </select>
+                  </label>
                   <button
                     className="primary"
-                    onClick={() => {
-                      setSelected(nextAssignment?.id || "");
-                      setTab("Today");
-                    }}
+                    onClick={() => respond("Declined")}
                   >
-                    {nextAssignment ? "Next job" : "Done for today"}
+                    Decline job
                   </button>
-                )}
-              </>
-            ) : (
-              <p className="note">
-                This offer is {a.status.toLowerCase()}. The operator will
-                coordinate the next step.
-              </p>
-            ))}
+                  <button
+                    className="text-button"
+                    onClick={() => setDecline(false)}
+                  >
+                    Cancel
+                  </button>
+                </Sheet>
+              )}
+            </section>
+          ) : a.status === "Accepted" ? (
+            <>
+              <JobWork s={s} provider={provider} update={update} visit={v} />
+              {v.execution?.finishedAt && (
+                <button
+                  className="primary"
+                  onClick={() => {
+                    setSelected(nextAssignment?.id || "");
+                    setTab("Today");
+                  }}
+                >
+                  {nextAssignment ? "Next job" : "Done for today"}
+                </button>
+              )}
+            </>
+          ) : (
+            <p className="note">
+              This offer is {a.status.toLowerCase()}. The operator will
+              coordinate the next step.
+            </p>
+          )}
         </>
       ) : (
         <>
@@ -648,6 +644,25 @@ export default function ContractorWork({
                     {customerName(r.customerId)} · {r.city} ·{" "}
                     {dateLabel(v.start)}
                   </p>
+                  {/* Accepted-but-not-yet-startable visits (planning ahead,
+                      before the day-of execution controls unlock) still
+                      deserve the address — a contractor should be able to
+                      see where tomorrow's job is without opening it. An
+                      unaccepted offer stays city-only, matching the accept
+                      decision it's meant to inform. */}
+                  {a.status === "Accepted" && (
+                    <a
+                      className="text-button"
+                      target="_blank"
+                      rel="noreferrer"
+                      href={
+                        "https://www.google.com/maps/search/?api=1&query=" +
+                        encodeURIComponent(r.address + ", " + r.city)
+                      }
+                    >
+                      {r.address}, {r.city} · Navigate ↗
+                    </a>
+                  )}
                   <ul className="contractor-task-list">
                     {s.tasks
                       .filter((t) => v.taskIds.includes(t.id))
@@ -677,19 +692,29 @@ export default function ContractorWork({
               <h2>
                 {tab === "Today"
                   ? "You’re done for today."
-                  : "You’re all caught up."}
+                  : tab === "Offers"
+                    ? "You’re all caught up."
+                    : "Nothing scheduled yet."}
               </h2>
               <p>
                 {tab === "Offers"
                   ? "New offers will appear here."
-                  : "Check your upcoming work for the next appointment."}
+                  : tab === "Today"
+                    ? "Check Upcoming for your next appointment."
+                    : "New appointments will appear here once one is scheduled."}
               </p>
             </section>
           )}
           <details className="card panel">
             <summary>Past offers & completed work</summary>
             {mine
-              .filter((a) => a.status !== "Offered")
+              .filter(
+                (a) =>
+                  ["Declined", "Expired"].includes(a.status) ||
+                  (a.status === "Accepted" &&
+                    !!s.visits.find((v) => v.id === a.visitId)?.execution
+                      ?.finishedAt),
+              )
               .map((a) => (
                 <button
                   className="queue-item"
