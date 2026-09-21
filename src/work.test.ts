@@ -152,6 +152,45 @@ describe("job execution", () => {
       s.visits.find((v) => v.id === "second-visit")?.execution,
     ).toBeUndefined();
   });
+  it("moves a request to Information requested while the operator waits on an answer", () => {
+    const s = ready();
+    const r = s.requests.find((r) => r.id === "r3")!;
+    r.operatorNote = "Which door is it?";
+    r.customerReply = null;
+    s.quotes.find((q) => q.id === "work-quote")!.status = "Sent";
+    reconcile(s);
+    expect(r.status).toBe("Awaiting Quote Approval");
+    const fresh = seed();
+    const q = fresh.requests.find((x) => x.id === "r2")!;
+    fresh.tasks
+      .filter((t) => t.requestId === q.id)
+      .forEach((t) => (t.reviewed = true));
+    q.operatorNote = "Which door is it?";
+    q.customerReply = null;
+    reconcile(fresh);
+    expect(q.status).toBe("Information requested");
+    expect(bucket(fresh, q.id)).toBe("Waiting");
+    q.customerReply = "The back one.";
+    reconcile(fresh);
+    expect(q.status).toBe("Submitted");
+    expect(bucket(fresh, q.id)).toBe("Needs Action");
+  });
+  it("keeps an unreviewed request waiting while a question is outstanding", () => {
+    const s = seed();
+    const r = s.requests.find((x) => x.id === "r2")!;
+    s.tasks
+      .filter((t) => t.requestId === r.id)
+      .forEach((t) => (t.reviewed = false));
+    r.operatorNote = "Can you send a photo?";
+    r.customerReply = null;
+    reconcile(s);
+    expect(r.status).toBe("Information requested");
+    expect(bucket(s, r.id)).toBe("Waiting");
+    r.customerReply = "Attached.";
+    reconcile(s);
+    expect(r.status).toBe("Needs Review");
+    expect(bucket(s, r.id)).toBe("Needs Action");
+  });
   it("retains booking status when a waiting request needs dispatch attention", () => {
     const s = ready();
     const a = s.assignments.find((a) => a.id === "work-offer")!;

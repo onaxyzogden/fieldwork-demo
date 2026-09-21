@@ -197,7 +197,15 @@ export function OperatorHome({
             </strong>
             <span>Active contractors</span>
           </button>
-          <button className="op-pending" onClick={() => setView("attention")}>
+          <button
+            className="op-pending"
+            onClick={() => {
+              setView("attention");
+              document
+                .querySelector(".op-attention-list")
+                ?.scrollIntoView({ block: "start" });
+            }}
+          >
             <strong>{needs.length}</strong>
             <span>Pending decisions</span>
           </button>

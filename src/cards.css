@@ -3,7 +3,6 @@
    once a task is submitted, not a card — see .portal-task in style.css. */
 .card,
 .panel,
-.operator-location-card,
 .contractor-offer-card {
   background: var(--card-surface, var(--panel));
   color: var(--text);
@@ -15,13 +14,10 @@
 .customer-wrap .portal-task {
   --card-surface: var(--bg);
 }
-.operator-location-card,
 .customer-location-preview {
   background: var(--gradient-location);
   color: var(--text);
 }
-.operator-location-card strong,
-.operator-location-card small,
 .customer-location-preview strong,
 .customer-location-preview small {
   background: var(--map-label);
@@ -89,7 +85,6 @@
 @media (max-width: 600px) {
   .card,
   .panel,
-  .operator-location-card,
   .contractor-offer-card {
     padding: var(--space-4);
   }

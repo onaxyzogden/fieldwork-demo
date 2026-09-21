@@ -99,7 +99,6 @@ import {
   replacementOptions,
   reassignmentForScope,
   reoffer,
-  respondToOffer,
 } from "./dispatch";
 const KEY = "fieldwork-demo-v1";
 /**
@@ -390,6 +389,9 @@ function App() {
   const [slot, setSlot] = useState("");
   const [quoteAmount, setQuoteAmount] = useState(395);
   const [quoteType, setQuoteType] = useState("Manual quote");
+  /* The quote amount is suggested from duration until the operator edits it,
+     so switching requests never carries the previous request's price over. */
+  const [quoteTouched, setQuoteTouched] = useState(false);
   const [completion, setCompletion] = useState(false);
   const [pay, setPay] = useState(180);
   const [modal, setModal] = useState("");
@@ -434,27 +436,6 @@ function App() {
     };
   }, [sidebar]);
   const [override, setOverride] = useState("");
-  const [routeDay, setRouteDay] = useState("");
-  const routeVisits = s.visits
-    .filter(
-      (v) =>
-        v.providerId === provider &&
-        v.status !== "Cancelled" &&
-        (!routeDay ||
-          new Intl.DateTimeFormat("en-CA", {
-            timeZone: "America/Toronto",
-            year: "numeric",
-            month: "2-digit",
-            day: "2-digit",
-          }).format(new Date(v.start)) === routeDay),
-    )
-    .sort((a, b) => +new Date(a.start) - +new Date(b.start));
-  const attentionRequests = s.requests.filter(
-    (r) =>
-      !["Draft", "Confirmed", "Cancelled", "Declined", "Completed"].includes(
-        r.status,
-      ),
-  );
   const update = (fn: (d: State) => void, msg?: string) => {
     setS((prev) => {
       const d = migrateDispatch(structuredClone(prev));
@@ -627,6 +608,7 @@ function App() {
   };
   const choose = (id: string) => {
     setShowRequestQueue(false);
+    setQuoteTouched(false);
     const req = s.requests.find((x) => x.id === id)!;
     setActive(id);
     setCustomer(req.customerId);
@@ -708,10 +690,6 @@ function App() {
     );
     setSelected([]);
   };
-  const respond = (id: string, status: "Accepted" | "Declined") =>
-    update((d) => {
-      respondToOffer(d, id, status);
-    });
   const beginReassign = (v: Visit, self = false) => {
     const options = replacementOptions(s, v);
     const choice = options.find((o) =>
@@ -731,59 +709,6 @@ function App() {
         : Math.max(oldPay, choice?.minimumPay || 0),
     );
     setModal("Reassign visit");
-  };
-  const dispatchPanel = (v: Visit) => {
-    const status = dispatchStatus(s, v);
-    if (!status) return null;
-    return (
-      <div
-        className="dispatch-alert"
-        key={"dispatch-" + v.id}
-        id={"dispatch-" + v.id}
-      >
-        <div className="row between wrap">
-          <strong>
-            <AlertCircle size={16} /> {status}
-          </strong>
-          <small>
-            Visit {v.id.toUpperCase()} · {dateLabel(v.start)}
-          </small>
-        </div>
-        <p>
-          {s.requests.find((r) => r.id === v.requestId)?.name} ·{" "}
-          {s.assignments
-            .filter((a) => a.visitId === v.id && a.status === "Declined")
-            .map((a) => providers.find((p) => p.id === a.providerId)?.name)
-            .join(", ") || "Previous contractor"}
-          {status.includes("Needs reassignment")
-            ? " — choose the next provider."
-            : ` — replacement offered to ${providers.find((p) => p.id === v.providerId)?.name}; awaiting response.`}
-        </p>
-        {status.includes("Needs reassignment") && (
-          <div className="row actions wrap">
-            <button className="primary" onClick={() => beginReassign(v)}>
-              Offer to another contractor <ArrowRight size={16} />
-            </button>
-            <button
-              className="secondary"
-              onClick={() => {
-                if (
-                  !replacementOptions(s, v).some(
-                    (o) => o.provider.id === "yousef",
-                  )
-                )
-                  return notify(
-                    "No slot fits this visit on your own calendar. Offer it to another contractor.",
-                  );
-                beginReassign(v, true);
-              }}
-            >
-              Do It Myself
-            </button>
-          </div>
-        )}
-      </div>
-    );
   };
   const cancelVisit = (v: Visit) =>
     update((d) => {
@@ -1107,6 +1032,322 @@ function App() {
           ))}
       </div>
     ) : null;
+  /* One status line, not two. Whatever the operator must act on supersedes the
+     stored request status: a work issue first, then dispatch state. */
+  const requestStatus = (id: string) => {
+    const issue = s.visits.find(
+      (v) => v.requestId === id && v.status !== "Cancelled" && workIssue(v),
+    );
+    return (
+      (issue && workIssue(issue)) ||
+      requestDispatch(s, id) ||
+      s.requests.find((x) => x.id === id)!.status
+    );
+  };
+  /* Simulated customer price: a flat call-out plus a labour rate over the
+     estimated duration, rounded to $5. Contractor pay stays separate. */
+  const suggestedQuote =
+    Math.round(
+      (45 + (tasks.reduce((n, t) => n + t.duration, 0) / 60) * 120) / 5,
+    ) * 5;
+  const amount = quoteTouched ? quoteAmount : Math.max(95, suggestedQuote);
+  const sendQuote = () =>
+    update((d) => {
+      d.quotes
+        .filter((q) => q.requestId === r.id)
+        .forEach((q) => (q.status = "Superseded"));
+      d.quotes.push({
+        id: uid(),
+        requestId: r.id,
+        type: quoteType,
+        amount,
+        high: Math.round(amount * 1.25),
+        status: "Sent",
+        notes:
+          quoteType === "Estimated range"
+            ? "Final price depends on site conditions. Any additional work requires your approval."
+            : "Labour and standard materials included. Quote valid for 7 days.",
+        payOnCompletion: completion,
+      });
+      log(d, `Quote sent to ${r.name} · ${money(amount)}`);
+    }, "Quote ready in customer portal");
+  const quoteFields = () => (
+    <>
+      <div className="row wrap">
+        <label className="mini-field">
+          Pricing path
+          <select
+            value={quoteType}
+            onChange={(e) => setQuoteType(e.target.value)}
+          >
+            <option>Manual quote</option>
+            <option>Fixed price</option>
+            <option>Estimated range</option>
+          </select>
+        </label>
+        <label className="mini-field">
+          Amount (CAD)
+          <input
+            type="number"
+            min="1"
+            value={amount}
+            onChange={(e) => {
+              setQuoteTouched(true);
+              setQuoteAmount(Math.max(1, +e.target.value));
+            }}
+          />
+        </label>
+      </div>
+      <label className="row actions">
+        <input
+          type="checkbox"
+          checked={completion}
+          onChange={(e) => setCompletion(e.target.checked)}
+        />{" "}
+        Pay on completion
+      </label>
+      <p>Customer charges and contractor compensation stay separate.</p>
+    </>
+  );
+  /* The single dispatch decision. Exactly one state is live at a time, so
+     "who does this job now?" is asked in one place on the screen instead of
+     five, and the answer never depends on which task checkboxes are ticked. */
+  const decisionCard = () => {
+    const live = visits.filter((v) => v.status !== "Cancelled");
+    const acceptedBy = (v: Visit) =>
+      s.assignments.some(
+        (a) =>
+          a.visitId === v.id &&
+          a.providerId === v.providerId &&
+          a.status === "Accepted",
+      );
+    const named = (id?: string) =>
+      providers.find((p) => p.id === id)?.name || "The contractor";
+    const stalled = live.find((v) =>
+      dispatchStatus(s, v).includes("Needs reassignment"),
+    );
+    const unreviewed = tasks.filter((t) => !t.reviewed);
+    const loose = tasks.filter(
+      (t) => !live.some((v) => v.taskIds.includes(t.id)),
+    );
+    const awaiting = live.find((v) => !acceptedBy(v));
+    const plural = (n: number) => (n === 1 ? "" : "s");
+    let tone = "new";
+    let Icon = ListTodo;
+    let title = "";
+    let body = "";
+    let actions: React.ReactNode = null;
+    let extra: React.ReactNode = null;
+    let closed = false;
+    if (["Cancelled", "Declined", "Completed"].includes(r.status)) {
+      closed = true;
+      tone = "complete";
+      Icon = CheckCircle2;
+      title = "Request " + r.status.toLowerCase();
+      body = "No dispatch decision is left on this request.";
+    } else if (r.status === "Confirmed") {
+      closed = true;
+      tone = "complete";
+      Icon = CheckCircle2;
+      title = "Confirmed";
+      body = live
+        .map((v) => `${named(v.providerId)} · ${dateLabel(v.start)}`)
+        .join(" · ");
+    } else if (stalled) {
+      const expired = dispatchStatus(s, stalled).startsWith("Offer expired");
+      const previous = s.assignments
+        .filter(
+          (a) =>
+            a.visitId === stalled.id &&
+            ["Declined", "Expired"].includes(a.status),
+        )
+        .at(-1);
+      tone = "issue";
+      Icon = AlertCircle;
+      title = expired ? "Offer expired" : "Contractor declined";
+      body = `${named(previous?.providerId)} ${expired ? "did not answer in time" : "declined this job"}. Choose who covers it.`;
+      actions = (
+        <>
+          <button className="primary" onClick={() => beginReassign(stalled)}>
+            Offer to another contractor <ArrowRight size={16} />
+          </button>
+          <button
+            className="secondary"
+            onClick={() => beginReassign(stalled, true)}
+          >
+            Do it myself
+          </button>
+        </>
+      );
+    } else if (unreviewed.length) {
+      title = "Scope needs review";
+      body = `${unreviewed.length} task${plural(unreviewed.length)} still need${unreviewed.length === 1 ? "s" : ""} your review before this job can be assigned.`;
+      actions = (
+        <button
+          className="primary"
+          onClick={() =>
+            document
+              .getElementById("review-tasks")
+              ?.scrollIntoView({ block: "start" })
+          }
+        >
+          Review tasks <ArrowRight size={16} />
+        </button>
+      );
+    } else if (loose.length) {
+      title = live.length ? "Assign the remaining tasks" : "Assign this job";
+      body = `${loose.length} task${plural(loose.length)} · ${loose.reduce((n, t) => n + t.duration, 0)} min · not on a visit yet.`;
+      actions = (
+        <>
+          <button
+            className="primary"
+            onClick={() => {
+              setSelected([]);
+              setFulfillmentKind("contractor");
+              setProvider("");
+              setSlot("");
+              setFulfillment(true);
+            }}
+          >
+            Offer to a contractor <ArrowRight size={16} />
+          </button>
+          <button
+            className="secondary"
+            onClick={() => {
+              setSelected([]);
+              setFulfillmentKind("self");
+              setProvider("yousef");
+              setSlot("");
+              setFulfillment(true);
+            }}
+          >
+            Do it myself
+          </button>
+        </>
+      );
+    } else if (awaiting) {
+      tone = "";
+      Icon = Clock;
+      title = "Offer sent";
+      body = `Waiting on ${named(awaiting.providerId)} to accept · ${dateLabel(awaiting.start)}`;
+    } else if (!quote) {
+      tone = "quote";
+      Icon = Wallet;
+      title = "Send the quote";
+      body =
+        "Every task is assigned and accepted. The customer approves the price before the visit is confirmed.";
+      extra = (
+        <p className="op-decision-amount">
+          <strong>{money(amount)} CAD</strong>{" "}
+          <small>
+            {quoteTouched ? "your amount" : "suggested · simulated pricing"}
+          </small>
+        </p>
+      );
+      actions = (
+        <>
+          <button className="primary" onClick={sendQuote}>
+            Send quote <ArrowUpRight size={16} />
+          </button>
+          <details>
+            <summary>Adjust</summary>
+            {quoteFields()}
+          </details>
+        </>
+      );
+    } else {
+      const paid = s.payments.some(
+        (p) => p.quoteId === quote.id && p.status === "Paid",
+      );
+      tone = quote.status === "Declined" ? "issue" : "quote";
+      Icon = quote.status === "Declined" ? AlertCircle : Wallet;
+      title =
+        quote.status === "Declined"
+          ? "Quote declined"
+          : quote.status === "Approved"
+            ? paid || quote.payOnCompletion
+              ? "Quote approved"
+              : "Awaiting payment"
+            : "Quote sent";
+      body =
+        `${money(quote.amount)} · ` +
+        (quote.status === "Declined"
+          ? "the customer declined this price. Revise it and send again."
+          : quote.status === "Approved"
+            ? paid || quote.payOnCompletion
+              ? "approved; the visit confirms once the remaining conditions are met."
+              : "approved; waiting on the simulated payment."
+            : "waiting for the customer to approve.");
+      if (["Sent", "Declined"].includes(quote.status))
+        actions = (
+          <details>
+            <summary>Revise the quote</summary>
+            {quoteFields()}
+            <button className="secondary actions" onClick={sendQuote}>
+              Send revised quote <ArrowUpRight size={16} />
+            </button>
+          </details>
+        );
+    }
+    return (
+      <section
+        className={"card panel op-decision " + (tone ? "op-tone-" + tone : "")}
+        id="decision"
+      >
+        <div className="op-decision-head">
+          <span className="op-status-icon">
+            <Icon size={24} />
+          </span>
+          <div>
+            <h3>{title}</h3>
+            <p>{body}</p>
+          </div>
+        </div>
+        {extra}
+        {!closed && (
+          <div className="row actions wrap op-decision-actions">
+            {actions}
+            <button
+              className="secondary"
+              onClick={() => setModal("Request information")}
+            >
+              {r.operatorNote ? "Ask something else" : "Need More Info"}
+            </button>
+            <details>
+              <summary>More actions</summary>
+              <button
+                className="text-button"
+                onClick={() => setModal("Decline request")}
+              >
+                Decline request
+              </button>
+              <label className="mini-field">
+                Booking mode
+                <select
+                  value={r.mode}
+                  onChange={(e) => {
+                    if (
+                      e.target.value === "Instant Book" &&
+                      !instantEligible(tasks)
+                    )
+                      return notify("This scope requires Request to Book.");
+                    update((d) => {
+                      d.requests.find((q) => q.id === r.id)!.mode =
+                        e.target.value;
+                      log(d, "Operator changed booking mode");
+                    });
+                  }}
+                >
+                  <option>Request to Book</option>
+                  <option>Instant Book</option>
+                </select>
+              </label>
+            </details>
+          </div>
+        )}
+      </section>
+    );
+  };
   return (
     <div className="app" data-role={role}>
       {sidebar && (
@@ -1410,14 +1651,8 @@ function App() {
                       "Needs Action",
                       "Waiting",
                       "Scheduled",
-                      "History",
-                      "Needs reassignment",
-                      "Submitted",
-                      "Needs Review",
-                      "Awaiting Provider Acceptance",
-                      "Awaiting Quote Approval",
-                      "Confirmed",
                       "Draft",
+                      "History",
                     ].map((x) => (
                       <option key={x}>{x}</option>
                     ))}
@@ -1426,12 +1661,7 @@ function App() {
                     .filter(
                       (q) =>
                         (filter === "All requests" ||
-                          q.status === filter ||
-                          bucket(s, q.id) === filter ||
-                          (filter === "Needs reassignment" &&
-                            requestDispatch(s, q.id).includes(
-                              "Needs reassignment",
-                            ))) &&
+                          bucket(s, q.id) === filter) &&
                         (
                           q.name +
                           q.city +
@@ -1465,15 +1695,7 @@ function App() {
                           }{" "}
                           tasks
                         </p>
-                        {badge(q.status)}
-                        {s.visits.some(
-                          (v) => v.requestId === q.id && workIssue(v),
-                        ) && badge("Issue · Operator follow-up")}
-                        {requestDispatch(s, q.id) && (
-                          <div className="actions">
-                            {badge(requestDispatch(s, q.id))}
-                          </div>
-                        )}
+                        {badge(requestStatus(q.id))}
                       </button>
                     ))}
                 </section>
@@ -1498,11 +1720,7 @@ function App() {
                           <MapPin size={16} /> {r.city} · {r.name}
                         </p>
                       </div>
-                      <div className="status-stack">
-                        {badge(r.status)}
-                        {requestDispatch(s, r.id) &&
-                          badge(requestDispatch(s, r.id))}
-                      </div>
+                      {badge(requestStatus(r.id))}
                     </div>
                     <div className="detail-meta">
                       <span>
@@ -1512,31 +1730,13 @@ function App() {
                       <span>{badge(r.mode)}</span>
                     </div>
                     <p>
-                      {tasks.length} tasks ·{" "}
+                      {tasks.length} task{tasks.length === 1 ? "" : "s"} ·{" "}
                       {tasks.reduce((n, t) => n + t.duration, 0)} minutes
                       estimated ·{" "}
                       {tasks.reduce((n, t) => n + t.photos.length, 0)} photos
                     </p>
-                    {visits
-                      .filter((v) => v.execution || v.status === "Confirmed")
-                      .map((v) => (
-                        <JobWork
-                          key={v.id}
-                          s={s}
-                          provider="yousef"
-                          update={update}
-                          visit={v}
-                        />
-                      ))}
-                    {r.notes && <p className="note">{r.notes}</p>}
-                  </section>
-                  <section className="card operator-location-card">
-                    <MapPin size={32} />
-                    <strong>
-                      {r.address}, {r.city}
-                    </strong>
                     <a
-                      className="secondary"
+                      className="text-button"
                       target="_blank"
                       rel="noreferrer"
                       href={
@@ -1544,102 +1744,10 @@ function App() {
                         encodeURIComponent(r.address + ", " + r.city)
                       }
                     >
-                      Open in Maps ↗
+                      {r.address}, {r.city} · Open in Maps ↗
                     </a>
-                    <small>
-                      Illustrative location · simulated, not geocoded
-                    </small>
                   </section>
-                  <section className="card panel operator-photo-gallery">
-                    <h3>
-                      Photos ({tasks.reduce((n, t) => n + t.photos.length, 0)})
-                    </h3>
-                    <div className="operator-thumbnails">
-                      {tasks
-                        .flatMap((t) =>
-                          t.photos.map((photo, i) => ({
-                            photo,
-                            title: t.summary,
-                            index: i,
-                          })),
-                        )
-                        .slice(0, 3)
-                        .map((p, i) => (
-                          <figure key={i}>
-                            <img
-                              src={p.photo}
-                              alt={p.title + " photo " + (p.index + 1)}
-                            />
-                            <figcaption>{p.title}</figcaption>
-                          </figure>
-                        ))}
-                    </div>
-                    <details>
-                      <summary>View all task photos</summary>
-                      <div className="operator-thumbnails">
-                        {tasks
-                          .flatMap((t) =>
-                            t.photos.map((photo, i) => ({
-                              photo,
-                              title: t.summary,
-                              index: i,
-                            })),
-                          )
-                          .map((p, i) => (
-                            <figure key={i}>
-                              <a
-                                href={p.photo}
-                                target="_blank"
-                                rel="noreferrer"
-                                aria-label={
-                                  "Open " + p.title + " photo " + (p.index + 1)
-                                }
-                              >
-                                <img
-                                  src={p.photo}
-                                  alt={p.title + " photo " + (p.index + 1)}
-                                />
-                              </a>
-                              <figcaption>{p.title}</figcaption>
-                            </figure>
-                          ))}
-                      </div>
-                    </details>
-                    {!tasks.some((t) => t.photos.length > 0) && (
-                      <p>No customer photos yet. Add photos within a task.</p>
-                    )}
-                  </section>
-                  <section className="card panel operator-estimate">
-                    <h3>Estimated visit</h3>
-                    <p>
-                      <Clock size={20} />{" "}
-                      {tasks.reduce((n, t) => n + t.duration, 0)} minutes ·{" "}
-                      {tasks.length} separate tasks
-                    </p>
-                  </section>
-                  <section className="card panel operator-notes">
-                    <h3>Notes from customer</h3>
-                    <p>
-                      {r.notes ||
-                        "No additional access or parking notes supplied."}
-                    </p>
-                    {!!r.preferredSlots?.length || r.timingConstraints ? (
-                      <>
-                        <h3>Stated preference</h3>
-                        <p>
-                          {r.preferredSlots
-                            ?.map(
-                              (p) =>
-                                `${dayLabel(p.date)}${p.times.length ? ` (${p.times.join(", ")})` : ""}`,
-                            )
-                            .join(" · ") || "No specific day"}
-                          {r.timingConstraints
-                            ? ` — ${r.timingConstraints}`
-                            : ""}
-                        </p>
-                      </>
-                    ) : null}
-                  </section>
+                  {decisionCard()}
                   {r.operatorNote && (
                     /* Single Q&A slot: waiting, then answered. Asking again
                        replaces it rather than growing a history. */
@@ -1677,101 +1785,35 @@ function App() {
                       )}
                     </section>
                   )}
-                  <section className="card panel operator-action-panel">
-                    {" "}
-                    <div className="row actions wrap operator-primary-actions">
-                      <button
-                        className="primary"
-                        onClick={() => {
-                          const existing = reassignmentForScope(
-                            s,
-                            r.id,
-                            selected.length ? selected : tasks.map((t) => t.id),
-                          );
-                          if (existing) {
-                            beginReassign(existing, true);
-                            return;
-                          }
-                          setFulfillmentKind("self");
-                          if (fulfillmentKind !== "self") {
-                            setProvider("yousef");
-                            setSlot("");
-                          }
-                          setFulfillment(true);
-                        }}
-                      >
-                        Do It Myself
-                      </button>
-                      <button
-                        className="secondary"
-                        onClick={() => {
-                          const existing = reassignmentForScope(
-                            s,
-                            r.id,
-                            selected.length ? selected : tasks.map((t) => t.id),
-                          );
-                          if (existing) {
-                            beginReassign(existing);
-                            return;
-                          }
-                          setFulfillmentKind("contractor");
-                          if (fulfillmentKind !== "contractor") {
-                            setProvider("");
-                            setSlot("");
-                          }
-                          setFulfillment(true);
-                        }}
-                      >
-                        Assign Contractor
-                      </button>
-                      <button
-                        className="secondary"
-                        onClick={() => {
-                          setModal("Request information");
-                        }}
-                      >
-                        {r.operatorNote
-                          ? "Ask something else"
-                          : "Need More Info"}
-                      </button>
-                      <details>
-                        <summary>More actions</summary>
-                        <button
-                          className="text-button"
-                          onClick={() => setModal("Decline request")}
-                        >
-                          Decline request
-                        </button>
-                        <select
-                          aria-label="Booking mode"
-                          value={r.mode}
-                          onChange={(e) => {
-                            if (
-                              e.target.value === "Instant Book" &&
-                              !instantEligible(tasks)
+                  <section className="card panel operator-notes">
+                    <h3>Notes from customer</h3>
+                    <p>
+                      {r.notes ||
+                        "No additional access or parking notes supplied."}
+                    </p>
+                    {!!r.preferredSlots?.length || r.timingConstraints ? (
+                      <>
+                        <h3>Stated preference</h3>
+                        <p>
+                          {r.preferredSlots
+                            ?.map(
+                              (p) =>
+                                `${dayLabel(p.date)}${p.times.length ? ` (${p.times.join(", ")})` : ""}`,
                             )
-                              return notify(
-                                "This scope requires Request to Book.",
-                              );
-                            update((d) => {
-                              d.requests.find((q) => q.id === r.id)!.mode =
-                                e.target.value;
-                              log(d, "Operator changed booking mode");
-                            });
-                          }}
-                        >
-                          <option>Request to Book</option>
-                          <option>Instant Book</option>
-                        </select>
-                      </details>
-                    </div>
+                            .join(" · ") || "No specific day"}
+                          {r.timingConstraints
+                            ? ` — ${r.timingConstraints}`
+                            : ""}
+                        </p>
+                      </>
+                    ) : null}
                   </section>
                   <section className="card panel" id="review-tasks">
                     <div className="panel-title">
                       <h3>
                         Tasks <span className="count">{tasks.length}</span>
                       </h3>
-                      <small>Select tasks to group into a visit</small>
+                      <small>Select tasks to group into a separate visit</small>
                     </div>
                     {tasks.map((t) => (
                       <details className="task-review" key={t.id}>
@@ -1801,16 +1843,6 @@ function App() {
                         </div>
                         <p>“{t.description}”</p>
                         <TaskAnswers task={t} />
-                        <div className="reason">
-                          <ShieldCheck size={16} />
-                          <span>
-                            {t.reason}
-                            <small>
-                              Confidence {Math.round(t.confidence * 100)}% ·{" "}
-                              {t.category}
-                            </small>
-                          </span>
-                        </div>
                         {t.restricted && (
                           <p className="warning">
                             <AlertCircle size={16} /> Potential regulated work ·
@@ -1818,97 +1850,119 @@ function App() {
                           </p>
                         )}
                         {taskPhotos(t)}
-                        <div className="row wrap actions">
-                          <label className="mini-field">
-                            Classification
-                            <select
-                              aria-label={"Classification for " + t.summary}
-                              value={t.category}
-                              onChange={(e) =>
-                                update((d) => {
-                                  const task = d.tasks.find(
-                                    (x) => x.id === t.id,
-                                  )!;
-                                  log(
-                                    d,
-                                    `Classification corrected: ${task.category} → ${e.target.value} · original: ${task.description}`,
-                                  );
-                                  task.category = e.target.value;
-                                  task.restricted =
-                                    task.restricted ||
-                                    e.target.value.includes("Electrical");
-                                  task.reviewed = !task.restricted;
-                                }, "Correction recorded")
-                              }
-                            >
-                              <option>{t.category}</option>
-                              {[
-                                "Handyman / Doors / Adjustment",
-                                "Handyman / Walls / Drywall",
-                                "Installation / Shelving",
-                                "Assembly / Furniture",
-                                "Electrical / Restricted work",
-                              ]
-                                .filter((x) => x !== t.category)
-                                .map((x) => (
-                                  <option key={x}>{x}</option>
-                                ))}
-                            </select>
-                          </label>
-                          <label className="mini-field">
-                            Duration (min)
-                            <input
-                              type="number"
-                              min="15"
-                              max="480"
-                              value={t.duration}
-                              onChange={(e) => {
-                                if (
-                                  visits.some(
-                                    (v) =>
-                                      v.status !== "Cancelled" &&
-                                      v.taskIds.includes(t.id),
-                                  )
-                                )
-                                  return notify(
-                                    "Remove the visit before changing task duration so we can recalculate availability.",
-                                  );
-                                patchTask(t.id, {
-                                  duration: Math.max(
-                                    15,
-                                    Number(e.target.value),
-                                  ),
-                                });
-                              }}
-                            />
-                          </label>
+                        {!t.reviewed && (
                           <button
-                            className="text-button"
-                            onClick={() => {
-                              setSelected([t.id]);
-                              setModal("Split task");
-                            }}
+                            className="secondary actions"
+                            onClick={() =>
+                              update((d) => {
+                                d.tasks.find((x) => x.id === t.id)!.reviewed =
+                                  true;
+                                log(
+                                  d,
+                                  "Operator reviewed task; compliance flag retained",
+                                );
+                              }, "Review recorded")
+                            }
                           >
-                            Split task
+                            Mark reviewed
                           </button>
-                          {!t.reviewed && (
+                        )}
+                        {/* Explainability and scope authoring stay reachable
+                            but out of the triage path. */}
+                        <details className="note">
+                          <summary>Why this classification?</summary>
+                          <div className="reason">
+                            <ShieldCheck size={16} />
+                            <span>
+                              {t.reason}
+                              <small>
+                                Confidence {Math.round(t.confidence * 100)}% ·{" "}
+                                {t.category}
+                              </small>
+                            </span>
+                          </div>
+                        </details>
+                        <details className="note">
+                          <summary>Adjust scope</summary>
+                          <p>
+                            Reclassifying to restricted work clears the review
+                            flag and returns this request to Needs Review.
+                          </p>
+                          <div className="row wrap actions">
+                            <label className="mini-field">
+                              Classification
+                              <select
+                                aria-label={"Classification for " + t.summary}
+                                value={t.category}
+                                onChange={(e) =>
+                                  update((d) => {
+                                    const task = d.tasks.find(
+                                      (x) => x.id === t.id,
+                                    )!;
+                                    log(
+                                      d,
+                                      `Classification corrected: ${task.category} → ${e.target.value} · original: ${task.description}`,
+                                    );
+                                    task.category = e.target.value;
+                                    task.restricted =
+                                      task.restricted ||
+                                      e.target.value.includes("Electrical");
+                                    task.reviewed = !task.restricted;
+                                  }, "Correction recorded")
+                                }
+                              >
+                                <option>{t.category}</option>
+                                {[
+                                  "Handyman / Doors / Adjustment",
+                                  "Handyman / Walls / Drywall",
+                                  "Installation / Shelving",
+                                  "Assembly / Furniture",
+                                  "Electrical / Restricted work",
+                                ]
+                                  .filter((x) => x !== t.category)
+                                  .map((x) => (
+                                    <option key={x}>{x}</option>
+                                  ))}
+                              </select>
+                            </label>
+                            <label className="mini-field">
+                              Duration (min)
+                              <input
+                                type="number"
+                                min="15"
+                                max="480"
+                                value={t.duration}
+                                onChange={(e) => {
+                                  if (
+                                    visits.some(
+                                      (v) =>
+                                        v.status !== "Cancelled" &&
+                                        v.taskIds.includes(t.id),
+                                    )
+                                  )
+                                    return notify(
+                                      "Remove the visit before changing task duration so we can recalculate availability.",
+                                    );
+                                  patchTask(t.id, {
+                                    duration: Math.max(
+                                      15,
+                                      Number(e.target.value),
+                                    ),
+                                  });
+                                }}
+                              />
+                            </label>
                             <button
-                              className="secondary"
-                              onClick={() =>
-                                update((d) => {
-                                  d.tasks.find((x) => x.id === t.id)!.reviewed =
-                                    true;
-                                  log(
-                                    d,
-                                    "Operator reviewed task; compliance flag retained",
-                                  );
-                                }, "Review recorded")
-                              }
+                              className="text-button"
+                              onClick={() => {
+                                setSelected([t.id]);
+                                setModal("Split task");
+                              }}
                             >
-                              Mark reviewed
+                              Split task
                             </button>
-                          )}
-                        </div>
+                          </div>
+                        </details>
                       </details>
                     ))}
                     {selected.length > 1 && (
@@ -1930,9 +1984,7 @@ function App() {
                             setFulfillment(false);
                             requestAnimationFrame(() =>
                               document
-                                .querySelector<HTMLElement>(
-                                  ".operator-primary-actions > button",
-                                )
+                                .querySelector<HTMLElement>("#decision button")
                                 ?.focus(),
                             );
                           }}
@@ -1957,34 +2009,6 @@ function App() {
                           </strong>
                           <p>{scopeTasks.map((t) => t.summary).join(" · ")}</p>
                           <p>{r.timing}</p>
-                          {requestDispatch(s, r.id) &&
-                            badge(requestDispatch(s, r.id))}
-                        </div>
-                        <div className="segmented">
-                          <button
-                            className={
-                              fulfillmentKind === "self" ? "chosen" : ""
-                            }
-                            onClick={() => {
-                              setFulfillmentKind("self");
-                              setProvider("yousef");
-                              setSlot("");
-                            }}
-                          >
-                            Do It Myself
-                          </button>
-                          <button
-                            className={
-                              fulfillmentKind === "contractor" ? "chosen" : ""
-                            }
-                            onClick={() => {
-                              setFulfillmentKind("contractor");
-                              setProvider("");
-                              setSlot("");
-                            }}
-                          >
-                            Assign Contractor
-                          </button>
                         </div>
                         <div className="provider-options">
                           {candidates.map((c) => (
@@ -2188,7 +2212,7 @@ function App() {
                                   `${q.type}: ${money(q.amount)} · ${q.status}`,
                               )
                               .join("; ") ||
-                              "No quote sent yet. Set pricing in Customer pricing & quotes below."}
+                              "No quote sent yet. Send it from the request once this visit is assigned."}
                           </p>
                           <p>
                             An offer does not confirm the customer appointment.
@@ -2220,13 +2244,22 @@ function App() {
                   )}
                   {visits.filter((v) => v.status !== "Cancelled").length >
                     0 && (
-                    <section className="card panel">
-                      <h3>Visits & assignment history</h3>
+                    /* Audit trail, not a decision surface: reassignment lives
+                       in the decision card, so no Reassign button here. */
+                    <details className="card panel operator-history">
+                      <summary>
+                        Visits &amp; assignment history{" "}
+                        <span className="count">
+                          {
+                            visits.filter((v) => v.status !== "Cancelled")
+                              .length
+                          }
+                        </span>
+                      </summary>
                       {visits
                         .filter((v) => v.status !== "Cancelled")
                         .map((v) => (
                           <div key={v.id}>
-                            {dispatchPanel(v)}
                             {visitCard(v)}
                             {s.assignments
                               .filter((a) => a.visitId === v.id)
@@ -2244,23 +2277,6 @@ function App() {
                                       : money(a.pay)}
                                   </span>
                                   {badge(a.status)}
-                                  {["Declined", "Expired"].includes(a.status) &&
-                                    !s.assignments.some(
-                                      (current) =>
-                                        current.visitId === v.id &&
-                                        ["Offered", "Accepted"].includes(
-                                          current.status,
-                                        ),
-                                    ) && (
-                                      <button
-                                        className="secondary"
-                                        onClick={() => {
-                                          beginReassign(v);
-                                        }}
-                                      >
-                                        Reassign
-                                      </button>
-                                    )}
                                   {a.status === "Offered" && (
                                     <button
                                       className="text-button"
@@ -2284,76 +2300,8 @@ function App() {
                             </button>
                           </div>
                         ))}
-                    </section>
+                    </details>
                   )}
-                  <details className="card panel operator-pricing">
-                    <summary>Customer pricing & quotes</summary>
-                    <p>
-                      Customer charges and contractor compensation are separate.
-                    </p>
-                    <div className="row wrap">
-                      <label className="mini-field">
-                        Pricing path
-                        <select
-                          value={quoteType}
-                          onChange={(e) => setQuoteType(e.target.value)}
-                        >
-                          <option>Manual quote</option>
-                          <option>Fixed price</option>
-                          <option>Estimated range</option>
-                        </select>
-                      </label>
-                      <label className="mini-field">
-                        Amount (CAD)
-                        <input
-                          type="number"
-                          min="1"
-                          value={quoteAmount}
-                          onChange={(e) =>
-                            setQuoteAmount(Math.max(1, +e.target.value))
-                          }
-                        />
-                      </label>
-                    </div>
-                    <label className="row actions">
-                      <input
-                        type="checkbox"
-                        checked={completion}
-                        onChange={(e) => setCompletion(e.target.checked)}
-                      />{" "}
-                      Pay on completion
-                    </label>
-                    <button
-                      className="primary actions"
-                      onClick={() =>
-                        update((d) => {
-                          d.quotes
-                            .filter((q) => q.requestId === r.id)
-                            .forEach((q) => (q.status = "Superseded"));
-                          d.quotes.push({
-                            id: uid(),
-                            requestId: r.id,
-                            type: quoteType,
-                            amount: quoteAmount,
-                            high: Math.round(quoteAmount * 1.25),
-                            status: "Sent",
-                            notes:
-                              quoteType === "Estimated range"
-                                ? "Final price depends on site conditions. Any additional work requires your approval."
-                                : "Labour and standard materials included. Quote valid for 7 days.",
-                            payOnCompletion: completion,
-                          });
-                          log(
-                            d,
-                            `Quote sent to ${r.name} · ${money(quoteAmount)}`,
-                          );
-                        }, "Quote ready in customer portal")
-                      }
-                    >
-                      Send quote <ArrowUpRight size={16} />
-                    </button>
-                    {quotePanel()}
-                  </details>
                 </div>
               </div>
             </>

@@ -61,7 +61,7 @@ export const stages: Stage[] = [
       },
       Operator: {
         title: "Review and price",
-        body: "Inspects answers, photos, classification reasons and duration; can correct, merge or split tasks and send a separate quote.",
+        body: "Inspects answers and photos inline and marks each task reviewed. Classification reasons sit behind Why this classification?; correcting a category, duration or split sits behind Adjust scope. Pricing is one Send quote action on the decision card.",
       },
       Contractor: {
         title: "Not involved yet",
@@ -407,15 +407,15 @@ export const examples = [
 export const alternatives = [
   [
     "Information request",
-    "Operator stores a question in request notes; customer can respond in the portal.",
-    "Production gap",
-    "The Waiting bucket recognizes an Information requested status, but the current action does not set it. Do not model this as a complete message/state workflow.",
+    "Operator asks one question; the request moves to Information requested until the customer answers in the portal.",
+    "Implemented",
+    "A single question/answer slot, not a thread: asking again replaces the pair. Do not model this as a complete messaging workflow.",
   ],
   [
     "Decline / expiry",
-    "Declines create structured alerts; expired offers are found through dispatch state. Replacement offers retain history.",
+    "A decline or expiry replaces the request's decision card with one Contractor declined card offering exactly two actions. Replacement offers retain history.",
     "Implemented",
-    "Automatic decline reoffers default off, preserve appointment/customer price/pay, and never auto-confirm. Expiry does not auto-reoffer.",
+    "The decision card is the only place reassignment is offered, and it ignores task selection. Automatic decline reoffers default off, preserve appointment/customer price/pay, and never auto-confirm. Expiry does not auto-reoffer.",
   ],
   [
     "Quote decline",

@@ -76,7 +76,7 @@ Validation includes 163 application tests and eight CSV/compiler tests. Represen
 
 ## Three-screen customer intake
 
-*(Superseded by the redesign section at the end of this file; intake is now Address → Tasks → Timing.)*
+_(Superseded by the redesign section at the end of this file; intake is now Address → Tasks → Timing.)_
 
 Customer intake previously used Tasks → Where and when → Done. One editor is open at a time; saved tasks collapse to short rows. Save task opens its catalogue questions; Done with this task saves customer entry without approving operator scope. Unanswered details can explicitly be marked Not sure. Remove offers Undo. The address and optional draft progress persist without resetting old records.
 
@@ -88,7 +88,7 @@ Validation: 173 application tests plus eight catalogue/compiler tests; productio
 
 ## Operator and contractor workflow update
 
-Operator navigation is Home, Requests, Today, and More. Home prioritizes declines and unresolved work, with waiting items separate. Requests has Needs Action, Waiting, Scheduled, and history filters. Expand task rows for classification and split/merge controls; choose fulfillment to reveal provider/time recommendations. Quotes remain under Customer pricing & quotes. Today defaults to a timeline with optional illustrative map and external map links.
+Operator navigation is Home, Requests, Today, and More. Home prioritizes declines and unresolved work, with waiting items separate. Requests filters by the five derived buckets. Expand a task row to read its answers and mark it reviewed; classification internals and scope authoring sit behind per-task disclosures. Dispatch and pricing are one decision card — see the operator simplification round below. Today defaults to a timeline with optional illustrative map and external map links.
 
 Contractor walkthrough: choose a demo contractor, open Your Work > Offers, view the exact pay and task list, then accept or decline with an optional reason. Acceptance does not bypass customer quote/payment requirements. Once confirmed, open the assignment, mark On my way, Start job, open each task, and choose an outcome. Before/after photos and notes are optional. Complete job opens a review dialog; Finish job ends the visit. Unresolved tasks create operator attention without another appointment or payment. Yousef has the same execution controls in confirmed request details and Today.
 
@@ -105,7 +105,8 @@ Use Print / Save PDF for the complete landscape overview, all eight stage detail
 Verification: direct link and refresh; role/path selection and stage focus; light/dark layouts at 320, 390, 461, 768 and 1280px. An isolated browser check loaded the actual entrypoint, exercised filters/stage selection, and confirmed zero storage writes with the demo record string unchanged. The printed overview, stage pages and reference/exception pages were visually inspected. Existing booking data and synced references were not changed.
 
 ### Operator layout
-*(Palette superseded: see the redesign section below.)* Operator Home uses separate attention cards and daily metric tiles. Mobile navigation is in the header drawer; sample scenarios are under Demo settings. Contractor recommendations match all selected tasks using the same scope rules as offer eligibility, with availability shown separately.
+
+_(Palette superseded: see the redesign section below.)_ Operator Home uses separate attention cards and daily metric tiles. Mobile navigation is in the header drawer; sample scenarios are under Demo settings. Contractor recommendations match all selected tasks using the same scope rules as offer eligibility, with availability shown separately.
 
 ## Redesign round
 
@@ -126,3 +127,70 @@ Customer and contractor screens carry a "Viewing as" pill switcher, since the pr
 Validation: `design:check`, 214 application tests and 8 catalogue tests pass; production build passes. All three roles checked at 320, 390, 461, 768 and 1280px in both themes with no horizontal overflow, and an automated contrast audit over every rendered text node found nothing below WCAG AA. See `docs/design-verification.md`.
 
 Not adopted from the handoff: its stub slot generator and its five-category matcher. The existing scheduler and the 81-issue catalogue already do more, and swapping them in would be a regression.
+
+## Operator simplification round
+
+The operator's remit is written down first, because the screen's density came from
+never having decided it: **triage** the scope, **author** it when it is wrong,
+**decide who** does the job, **decide the price**, and **unblock** declines and
+ambiguity. Everything on the request detail now maps to one of those five, and
+anything that mapped to none of them is gone.
+
+**One decision per state.** A declined job used to offer the same
+"who does this now?" choice through five separate control clusters — a top action
+row, a dispatch alert, a Reassign button in the assignment history, a segmented
+control inside the fulfillment panel, and the reassign modal itself — announced by
+six different badges. The request detail now renders exactly one decision card, and
+which card appears is derived state: Scope needs review, Assign this job, Offer
+sent, **Contractor declined**, Send the quote, Quote sent, Confirmed. `Need More
+Info` is available in every state; `Decline request` and the booking mode stay under
+`More actions`.
+
+Two behaviour bugs went with the duplication. The two Do It Myself paths guarded
+differently and reported different reasons for the same refusal. And the top-row
+buttons silently did two different things depending on which task checkboxes were
+ticked — reassigning on an exact scope match, otherwise opening the fulfillment
+panel to dead-end on "these tasks already belong to a visit". The decision card is
+authoritative regardless of selection.
+
+**Triage inline, authoring behind a disclosure.** A task row shows its summary,
+description, clarification answers, photos, any restricted-work warning and
+`Mark reviewed`. Classification confidence and reason moved behind
+_Why this classification?_; category, duration and split moved behind
+_Adjust scope_, which now states that reclassifying to restricted work clears the
+review flag and returns the request to Needs Review. Merge still appears only when
+more than one task is selected.
+
+**Pricing is one control.** `Send quote` with an amount suggested from the
+estimated duration, and `Adjust` for pricing path, amount and pay-on-completion.
+The separate Customer pricing & quotes panel is gone.
+
+**Cut from the detail:** the simulated map card (the address carries the Maps link),
+the request-level photo gallery (photos belong to the task rows that already render
+them), the "Estimated visit" card (it duplicated the summary line verbatim), and the
+embedded execution panel (execution belongs on Today). Visits & assignment history
+collapses to one line — it is an audit trail, not a decision surface.
+
+**Queue filter** is the five derived buckets from `src/work.ts` plus All requests.
+It previously mixed buckets, raw `Request.status` values and one dispatch string
+across twelve overlapping options. Queue rows carry one badge instead of three.
+
+**Information requested is no longer a phantom status.** `bucket()` has always
+routed it to Waiting, but nothing ever set it, so "Need More Info" left the request
+sitting in Needs Action. `reconcile()` now sets it while an operator question is
+outstanding and clears it when the customer replies, and the notification keys off
+`operatorNote` rather than a `notes` prefix nothing has written since the Q&A slot
+was introduced.
+
+Dead code removed: `respond()`, `routeVisits`, `attentionRequests`, `routeDay`,
+the `dispatchPanel` renderer and the `.dispatch-alert` / `.status-stack` /
+`.operator-location-card` / `.operator-thumbnails` / `.operator-primary-actions`
+rules that served them. The `order:` juggling in `operator-concept.css` is gone —
+DOM order is the reading order.
+
+Validation: 218 application tests plus 8 catalogue tests; `npm run design:check`
+and the production build pass. Browser checks walked every decision state
+(needs review, unassigned, offer pending, declined, assigned-unquoted, quoted) and
+confirmed one card and one instance of each action in each. The declined scenario
+was audited at 390/768/1280px in both themes: zero horizontal overflow and zero text
+nodes below WCAG AA.

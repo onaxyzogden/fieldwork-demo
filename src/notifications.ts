@@ -27,13 +27,28 @@ export function deliverUpdates(before: State, after: State) {
   };
   for (const r of after.requests) {
     const old = before.requests.find((x) => x.id === r.id);
-    if (
-      old &&
-      old.notes !== r.notes &&
-      r.notes.startsWith("Information requested:")
-    ) {
+    /* Keyed off the field the operator actually writes. The old key was
+       r.notes, which nothing has written since the Q&A slot was introduced. */
+    if (old && old.operatorNote !== r.operatorNote && r.operatorNote) {
       for (const recipient of ["Operator", "Customer:" + r.customerId])
-        emit(recipient, r.id, "", "", "information", r.notes);
+        emit(
+          recipient,
+          r.id,
+          "",
+          "",
+          "information",
+          `Information requested: ${r.operatorNote}`,
+        );
+    }
+    if (old && old.customerReply !== r.customerReply && r.customerReply) {
+      emit(
+        "Operator",
+        r.id,
+        "",
+        "",
+        "information",
+        `${r.name} answered: ${r.customerReply}`,
+      );
     }
     if (r.status !== "Draft" && old?.status !== r.status) {
       emit(

@@ -326,16 +326,6 @@
   background: var(--panel);
   border-color: var(--accent-text);
 }
-:root[data-theme="light"] .dispatch-alert {
-  background: var(--panel);
-  border-color: var(--accent-text);
-}
-:root[data-theme="light"] .dispatch-alert strong {
-  color: var(--accent-text);
-}
-:root[data-theme="light"] .dispatch-alert p {
-  color: var(--text);
-}
 :root[data-theme="light"] .dispatch-setting {
   background: var(--panel);
   border-color: var(--accent-text);
@@ -529,14 +519,12 @@
   color: var(--danger);
   border-color: var(--danger);
 }
-:root[data-theme] .warning,
-:root[data-theme] .dispatch-alert {
+:root[data-theme] .warning {
   background: var(--surface-raised);
   color: var(--accent-text);
   border-color: var(--accent-text);
 }
-:root[data-theme="light"] .warning,
-:root[data-theme="light"] .dispatch-alert {
+:root[data-theme="light"] .warning {
   background: var(--panel);
   color: var(--text);
   border-color: var(--accent-text);
