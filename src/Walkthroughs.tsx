@@ -624,6 +624,12 @@ function FindingCard({
             )}
           </p>
           {f.customerNotes && <p className="note">{f.customerNotes}</p>}
+          {f.followUpRequestedAt && (
+            <p className="note">
+              The customer asked for an assessment on {dateLabel(f.followUpRequestedAt)}.
+              Scope and price it here, or carry it into a new walkthrough.
+            </p>
+          )}
         </>
       )}
     </details>

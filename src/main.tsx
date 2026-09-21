@@ -3553,8 +3553,13 @@ function App() {
 function pickView() {
   const params = new URLSearchParams(window.location.search);
   if (params.get("view") === "blueprint") return <Blueprint />;
-  if (params.get("view") === "assessment")
+  if (params.get("view") === "assessment") {
+    /* Before the first paint, not in an effect: the assessment is a document
+       and always reads light, and setting it after mount flashes the dark
+       palette's text onto a light page. */
+    document.documentElement.dataset.theme = "light";
     return <Assessment assessmentId={params.get("id") || ""} />;
+  }
   return <App />;
 }
 createRoot(document.getElementById("root")!).render(

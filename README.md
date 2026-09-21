@@ -391,3 +391,91 @@ question) appears in the customer column immediately, with no reload;
 each column's toast and drawer stay visually confined to that column;
 a too-narrow window scrolls the row horizontally instead of squashing the
 columns.
+
+## PMW — proactive property maintenance
+
+Until now work could only enter Fieldwork one way: a customer reports a
+problem. **PMW (Property Maintenance Walkthrough)** adds the other
+direction. An operator walks a property, records what they observe, and
+the customer decides item by item what to approve. Both paths converge on
+the same fulfillment system — one property, one maintenance record, two
+ways work enters Fieldwork.
+
+**Try it.** Operator → **Walkthroughs** → New walkthrough → add findings →
+Send to customer → **Copy link** or **Open as the customer**. The link is
+the customer's whole experience: no account, no sign-in.
+
+### What a finding is
+
+One observed issue, kept separate from every other issue found the same
+day. It carries an area, the observed condition, the proposed work,
+photos, and either a price or the classification **further assessment
+required** — for the case where something is visibly wrong but the cause,
+access, trade or extent cannot responsibly be priced from a walkthrough.
+
+That distinction is held in the data, not the interface. A finding has
+two fields: `pricing`, which is the operator's classification, and
+`decision`, which is the customer's. Approval is refused for anything
+that is not priced, so no surface — the guest link, the operator screen,
+or anything added later — can record an approval for work nobody scoped.
+The customer sees a status and a way to ask for an assessment, never an
+approve button beside a price that does not exist.
+
+### Approved work is ordinary work
+
+Approving converts findings into ordinary Fieldwork tasks on one ordinary
+request with one approved quote. Nothing downstream knows PMW exists: the
+operator queue, dispatch, the contractor's Your Work and the payment gate
+all behave exactly as they do for a reported problem. Converted tasks
+still run through the same classifier and the same provider eligibility,
+so a walkthrough cannot route restricted work to an unqualified
+contractor.
+
+Scheduling is blocked until payment is settled, and that needed no new
+code — an approved, unpaid quote is already the state the reconciler
+reads as Awaiting Payment.
+
+### The record outlasts the job
+
+Deferred findings stay attached to the property and resurface in its
+maintenance record rather than disappearing with the assessment.
+Completed work keeps its date, the contractor's note and the after
+photos. The record is assembled on read from walkthroughs, findings,
+tasks and visits, so it cannot disagree with the work it describes. It is
+shown to the operator, to the customer below their bookings, and on the
+guest link.
+
+### The printed assessment
+
+**Print / Save PDF** on the assessment produces the document the PMW
+template specifies — header, numbered findings, work summary, approval
+block, payment note. It renders from the same records and the same
+derived values as the screen, so the two cannot drift; a test asserts the
+printed document carries the same assessment id, finding numbers, scopes,
+prices and statuses.
+
+### Known limits
+
+The assessment link is a URL parameter, not a secured private link, and
+the page says so. The guest view lives outside the workspace, so it does
+not appear in Compare mode — demoing the handoff takes a second tab.
+Account creation after completion is invited but does nothing: that is
+the brief's Phase 4, deliberately out of scope, as is everything in its
+§15.
+
+Files: `src/pmw.ts` (records, decisions, conversion, derived state),
+`src/Walkthroughs.tsx` (operator capture), `src/Assessment.tsx` and
+`src/AssessmentPrint.tsx` (the customer's link and its printed form),
+`src/PropertyRecord.tsx`, `src/store.ts` (one load/save/commit pipeline
+shared by both entry points), plus `Property`/`Walkthrough`/`Finding` in
+`src/model.ts`. `reconcile()`, `src/dispatch.ts`, `src/work.ts`,
+`ContractorWork.tsx` and `CustomerIntake.tsx` are unchanged.
+
+Validation: the existing 218 tests pass unmodified — the check that the
+pipeline really was reused rather than forked — alongside 29 new tests
+covering identifier stability, totals and tax, the refusal to approve an
+unpriced finding, conversion shape, the payment gate, carry-forward, and
+screen/print parity. `npm run design:check` and the production build
+pass. Browser-verified end to end at 390/768/1280px in both themes:
+capture, the guest link, per-finding decisions, conversion into the
+existing queue, the property record, and the printed document.

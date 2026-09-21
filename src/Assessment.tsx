@@ -53,7 +53,6 @@ export default function Assessment({ assessmentId }: { assessmentId: string }) {
   const [authority, setAuthority] = useState(false);
   const [method, setMethod] = useState(false);
   useEffect(() => {
-    document.documentElement.dataset.theme = "light";
     const sync = (e: StorageEvent) => {
       if (e.key === KEY && e.newValue) setS(load());
     };
