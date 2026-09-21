@@ -103,3 +103,21 @@ Both now call a single `startOrResumeRequest()` that checks for _any_ existing i
 ## Boundaries
 
 `src/CustomerIntake.tsx`, `src/work.ts` and `src/dispatch.ts` are unchanged. `completeEntry()`'s unused `uncertain` parameter was removed (its capability was already fully covered by the per-question "Not sure" button the UI actually uses); `src/intake.test.ts` was updated to exercise the same real path rather than the removed flag, preserving every invariant it checked.
+
+# Design decisions — compare mode
+
+## ADR 016: Three independent columns come from three instances of one component, not three new ones
+
+Accepted. The brief called for Customer, Operator and Contractor to run side by side, each fully and independently navigable. The obvious-looking path — extract `OperatorPanel` and `CustomerPanel` as new components, wire each one's dozen-odd pieces of state through props — means hand-splitting roughly 1,900 lines that already work, with every split a chance to drop a variable or change behavior by accident.
+
+The app's whole body was already one component (`App`, now `Workspace`) reading one set of state. Renamed and parameterized to take its shared document store and theme as props, it composes as one instance for the existing single-role mode or three for Compare, one per role. Each instance gets its own `page`/`active`/`modal`/`toast` for free, from React's own per-instance hooks — no manual state-splitting, no risk of an Operator and Customer flow silently sharing a variable the way ADR 010's `reschedule` field once did by coincidence. `s`/`setS` stay lifted and shared across all three, which is the one deliberate exception: data is shared so an action in one column is visible in the others; navigation is not.
+
+## ADR 017: Reuse the mobile drawer's own CSS instead of inventing a compare-mode nav
+
+Accepted. `.sidebar` is `position: fixed` to the browser viewport, correct for one Workspace and wrong for three side by side — opening any column's drawer would pin it to the whole page's left edge, not that column. Rather than building new compact per-column navigation, each compare column gets `transform: translateZ(0)`, which by the CSS spec becomes the containing block for its own `position: fixed` descendants. `.sidebar`, `.modal-backdrop`, `.drawer-backdrop` and `.toast` all become column-relative with no change to any of those rules, and each column reuses the exact drawer treatment already built and tested for phones.
+
+The same reasoning applies to responsive collapse generally: rather than retrofitting every breakpoint in the app to respond to a column's own width (a project the size of this one), only the one collapse that would otherwise be functionally broken — the Operator's two-pane request queue, whose detail pane would drop under 200px — is forced narrow by class. Everything else is an accepted, stated density tradeoff of a comparison view, not a full re-certification of the app's responsive design at column width.
+
+## Boundaries
+
+`src/ContractorWork.tsx`, `src/CustomerIntake.tsx`, `src/NotificationUI.tsx` and every model/dispatch/work module are unchanged — Compare mode is composition and CSS containment over an app that already worked, not new business logic. All 218 tests pass unmodified.

@@ -329,16 +329,27 @@ function ClarificationFields({
     </>
   );
 }
-function App() {
-  const [theme, setTheme] = useState<"light" | "dark">(() => {
-    try {
-      return localStorage.getItem("fieldwork-theme") === "dark"
-        ? "dark"
-        : "light";
-    } catch {
-      return "light";
-    }
-  });
+type Role = "Customer" | "Operator" | "Contractor";
+function Workspace({
+  s,
+  setS,
+  theme,
+  setTheme,
+  initialRole = "Operator",
+  compareMode = false,
+  onEnterCompare,
+  onExitCompare,
+}: {
+  s: State;
+  setS: React.Dispatch<React.SetStateAction<State>>;
+  theme: "light" | "dark";
+  setTheme: React.Dispatch<React.SetStateAction<"light" | "dark">>;
+  initialRole?: Role;
+  compareMode?: boolean;
+  onEnterCompare?: () => void;
+  onExitCompare?: () => void;
+}) {
+  const workspaceRef = React.useRef<HTMLDivElement>(null);
   React.useEffect(() => {
     if (fulfillment)
       document.querySelector<HTMLElement>("#fulfillment > button")?.focus();
@@ -347,16 +358,8 @@ function App() {
       localStorage.setItem("fieldwork-theme", theme);
     } catch {}
   }, [theme]);
-  const [s, setS] = useState<State>(() => {
-    try {
-      return migrateDispatch(
-        JSON.parse(localStorage.getItem(KEY) || "null") || seed(),
-      );
-    } catch {
-      return migrateDispatch(seed());
-    }
-  });
-  const [role, setRole] = useState("Operator");
+  const [role, setRole] = useState<Role>(initialRole);
+  const idPrefix = compareMode ? role + "-" : "";
   React.useEffect(() => {
     try {
       localStorage.setItem(KEY, JSON.stringify(s));
@@ -401,15 +404,26 @@ function App() {
   const menuTrigger = React.useRef<HTMLButtonElement>(null);
   React.useEffect(() => {
     if (!sidebar) return;
-    const drawer = document.querySelector<HTMLElement>(".sidebar");
+    const drawer = workspaceRef.current?.querySelector<HTMLElement>(
+      ".sidebar",
+    );
     const items = () =>
       Array.from(
         drawer?.querySelectorAll<HTMLElement>("button,a[href]") || [],
       ).filter((el) => el.getClientRects().length > 0);
     items()[0]?.focus();
-    const oldOverflow = document.body.style.overflow;
+    /* Reference-counted: two Workspace instances (Compare mode) can each
+       open their own drawer at once, and the second must not let the
+       first's close hand scrolling back before both are shut. */
+    const locks = Number(document.body.dataset.drawerLocks || "0") + 1;
+    document.body.dataset.drawerLocks = String(locks);
     document.body.style.overflow = "hidden";
-    const shell = document.querySelector<HTMLElement>(".shell");
+    /* Compare mode gives each column its own scroll box (see .compare-column
+       in style.css), so body's own overflow lock above doesn't stop this
+       column's content from scrolling out from under its open drawer. */
+    if (compareMode && workspaceRef.current)
+      workspaceRef.current.style.overflow = "hidden";
+    const shell = workspaceRef.current?.querySelector<HTMLElement>(".shell");
     if (shell) shell.inert = true;
     const key = (e: KeyboardEvent) => {
       if (e.key === "Escape") {
@@ -430,7 +444,14 @@ function App() {
     document.addEventListener("keydown", key);
     return () => {
       document.removeEventListener("keydown", key);
-      document.body.style.overflow = oldOverflow;
+      const remaining = Math.max(
+        0,
+        Number(document.body.dataset.drawerLocks || "1") - 1,
+      );
+      document.body.dataset.drawerLocks = String(remaining);
+      if (remaining === 0) document.body.style.overflow = "";
+      if (compareMode && workspaceRef.current)
+        workspaceRef.current.style.overflow = "";
       if (shell) shell.inert = false;
       menuTrigger.current?.focus();
     };
@@ -462,7 +483,8 @@ function App() {
   React.useEffect(() => {
     if (!modal) return;
     const previous = document.activeElement as HTMLElement | null;
-    const dialog = document.querySelector<HTMLElement>("[role=dialog]");
+    const dialog =
+      workspaceRef.current?.querySelector<HTMLElement>("[role=dialog]");
     const focusables = () =>
       Array.from(
         dialog?.querySelectorAll<HTMLElement>(
@@ -813,7 +835,7 @@ function App() {
     </div>
   );
   const visitCard = (v: Visit) => (
-    <div className="visit-card" key={v.id} id={"visit-" + v.id}>
+    <div className="visit-card" key={v.id} id={idPrefix + "visit-" + v.id}>
       <div className="row between">
         <strong>
           <CalendarDays size={16} /> {dateLabel(v.start)}
@@ -1375,7 +1397,11 @@ function App() {
     );
   };
   return (
-    <div className="app" data-role={role}>
+    <div
+      className={"app" + (compareMode ? " compare-column" : "")}
+      data-role={role}
+      ref={workspaceRef}
+    >
       {sidebar && (
         <button
           className="drawer-backdrop"
@@ -1384,7 +1410,7 @@ function App() {
         />
       )}
       <aside
-        id="workspace-navigation"
+        id={idPrefix + "workspace-navigation"}
         role={sidebar ? "dialog" : undefined}
         aria-modal={sidebar || undefined}
         aria-label="Workspace navigation"
@@ -1491,24 +1517,40 @@ function App() {
             </span>
           </span>
           <div className="role-switch">
-            {["Customer", "Operator", "Contractor"].map((x) => (
-              <button
-                key={x}
-                className={role === x ? "chosen" : ""}
-                onClick={() => {
-                  setRole(x);
-                  setPage(
-                    x === "Operator"
-                      ? "Home"
-                      : x === "Customer"
-                        ? "My bookings"
-                        : "Your Work",
-                  );
-                }}
-              >
-                {x}
-              </button>
-            ))}
+            {compareMode ? (
+              <>
+                <span className="chosen">{role}</span>
+                <button className="text-button" onClick={onExitCompare}>
+                  <X size={16} /> Exit compare
+                </button>
+              </>
+            ) : (
+              <>
+                {(["Customer", "Operator", "Contractor"] as const).map(
+                  (x) => (
+                    <button
+                      key={x}
+                      className={role === x ? "chosen" : ""}
+                      onClick={() => {
+                        setRole(x);
+                        setPage(
+                          x === "Operator"
+                            ? "Home"
+                            : x === "Customer"
+                              ? "My bookings"
+                              : "Your Work",
+                        );
+                      }}
+                    >
+                      {x}
+                    </button>
+                  ),
+                )}
+                <button className="text-button" onClick={onEnterCompare}>
+                  <Layers size={16} /> Compare
+                </button>
+              </>
+            )}
           </div>
         </div>
         <header className="topbar">
@@ -1518,7 +1560,7 @@ function App() {
               ref={menuTrigger}
               aria-label="Open navigation"
               aria-expanded={sidebar}
-              aria-controls="workspace-navigation"
+              aria-controls={idPrefix + "workspace-navigation"}
               onClick={() => setSidebar(!sidebar)}
             >
               <Menu />
@@ -3423,6 +3465,59 @@ function App() {
           </section>
         </div>
       )}
+    </div>
+  );
+}
+const compareRoles = ["Customer", "Operator", "Contractor"] as const;
+/**
+ * Data (`s`) is shared so an action in one column shows up in the others;
+ * navigation is not, so each column gets its own Workspace instance and,
+ * with it, its own independent page/selection/modal state for free.
+ */
+function App() {
+  const [theme, setTheme] = useState<"light" | "dark">(() => {
+    try {
+      return localStorage.getItem("fieldwork-theme") === "dark"
+        ? "dark"
+        : "light";
+    } catch {
+      return "light";
+    }
+  });
+  const [s, setS] = useState<State>(() => {
+    try {
+      return migrateDispatch(
+        JSON.parse(localStorage.getItem(KEY) || "null") || seed(),
+      );
+    } catch {
+      return migrateDispatch(seed());
+    }
+  });
+  const [compare, setCompare] = useState(false);
+  if (!compare)
+    return (
+      <Workspace
+        s={s}
+        setS={setS}
+        theme={theme}
+        setTheme={setTheme}
+        onEnterCompare={() => setCompare(true)}
+      />
+    );
+  return (
+    <div className="compare-row">
+      {compareRoles.map((r) => (
+        <Workspace
+          key={r}
+          s={s}
+          setS={setS}
+          theme={theme}
+          setTheme={setTheme}
+          initialRole={r}
+          compareMode
+          onExitCompare={() => setCompare(false)}
+        />
+      ))}
     </div>
   );
 }

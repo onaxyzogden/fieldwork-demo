@@ -316,3 +316,78 @@ shows the progress tracker; confirmed both "New request" entry points resume
 the same draft rather than creating a second; re-ran the contrast/overflow
 audit at 390/768/1280px in both themes: zero horizontal overflow, zero text
 nodes below WCAG AA.
+
+## Compare mode
+
+A fourth entry in the role switcher — **Compare** — renders Customer,
+Operator and Contractor side by side as three full, independently
+navigable copies of the app, so a reviewer can watch one action ripple
+across all three roles without switching back and forth.
+
+**Architecture.** The whole existing app body (sidebar, topbar, every
+role's screens, every modal) was already one component; it's now called
+`Workspace` and takes its shared document store (`s`/`setS`) and theme as
+props instead of owning them. Normal mode renders one `Workspace`, exactly
+as before. Compare mode renders three — one per role, each with its own
+internal `page`/`active`/`modal`/`toast` state via React's ordinary
+per-instance hooks — sharing the same `s`/`setS`, so an action taken in one
+column (a quote sent, a question asked) is visible in the others the
+moment it happens, no reload or manual sync involved. This was chosen over
+hand-splitting the Operator and Customer views into new components: it
+reaches the same "fully independent columns" outcome with far less
+surface area rewritten, since each column is simply a second (or third)
+copy of code that already works, rather than a new decomposition of it.
+
+**Reused, not rebuilt: the mobile drawer.** `.sidebar` is `position: fixed`
+to the browser viewport — correct when one Workspace owns the page, wrong
+once three share it. Rather than inventing a new compact nav for compare
+columns, each column gets a `transform: translateZ(0)` box, which the CSS
+spec makes the containing block for its own `position: fixed` descendants
+(`.sidebar`, `.modal-backdrop`, `.drawer-backdrop`, `.toast`). Every one of
+those rules pins to its own column instead of the shared viewport with no
+change to any of them, and the column reuses the exact narrow-viewport
+drawer treatment already built for phones (`.mobile-menu`, the slide-in
+`.sidebar`, the focus trap) instead of a bespoke compare-mode nav.
+
+**The one real risk with three instances mounted at once: shared DOM ids.**
+`document.querySelector`/`getElementById` calls that assumed a single
+Workspace on the page (`.sidebar`/`.shell` in the drawer's focus trap,
+`[role=dialog]` in the modal's focus trap) are now scoped to each
+instance's own root via a ref, so opening a dialog in one column can't trap
+focus in another's. `id="workspace-navigation"` and each visit card's id
+are prefixed by role only in compare mode, so three simultaneously-mounted
+copies never collide; ids gated by role already (`#fulfillment`,
+`#decision`, ContractorWork's `#outcome-*`) needed no change, since compare
+mode never mounts two columns of the same role. The sidebar drawer's
+existing body-scroll lock is now reference-counted rather than a plain
+boolean, so two columns' drawers opening and closing independently can't
+hand scrolling back to the page while one is still open.
+
+**Accepted limitation, stated rather than hidden:** every other responsive
+rule in this app (typography scale steps, card padding, the dozen smaller
+breakpoints across the role stylesheets) still keys off the real browser
+viewport, which stays desktop-wide in compare mode even though a column is
+phone-narrow. Retrofitting all of them to respond to a column's own width
+would be a second project the size of this one; the one collapse that
+would otherwise be functionally broken rather than merely denser — the
+Operator's two-pane request queue, which would leave a real detail pane
+under 200px wide — reuses its own existing narrow-screen rules by class.
+Everything else is accepted as a deliberately denser view, the same way a
+compare column scrolls horizontally into view rather than trying to
+compress three independent apps into a phone screen.
+
+Files: `src/main.tsx` only (`App` renamed to `Workspace` and parameterized;
+a new, small `App` composes one or three instances) and `src/style.css`
+(the `.compare-row`/`.compare-column` rules). `ContractorWork.tsx`,
+`CustomerIntake.tsx`, `NotificationUI.tsx` and the model/dispatch/work
+layers are unchanged.
+
+Validation: 218 tests, `npm run design:check` and the production build
+pass unmodified. Browser-verified: single-role mode is unaffected at
+390/768/1280px in both themes (ids unprefixed, identical markup); compare
+mode renders three correctly-labelled columns that navigate, scroll and
+scroll-lock independently; an operator action (asking a clarifying
+question) appears in the customer column immediately, with no reload;
+each column's toast and drawer stay visually confined to that column;
+a too-narrow window scrolls the row horizontally instead of squashing the
+columns.
