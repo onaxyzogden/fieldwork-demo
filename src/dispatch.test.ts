@@ -55,7 +55,7 @@ describe("dispatch decline visibility", () => {
       read: false,
     });
     expect(s.notifications![0].text).toContain("Marcus Chen");
-    expect(s.notifications![0].text).toContain("Sophie Laurent");
+    expect(s.notifications![0].text).toContain("Amir Hassan");
   });
   it("manual replacement preserves history and remains pending until acceptance", () => {
     const s = setup();

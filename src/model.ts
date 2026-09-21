@@ -18,14 +18,31 @@ export type Task = {
   status?: string;
 };
 export type Request = {
-  intakeScreen?: "tasks" | "booking";
+  intakeScreen?: "address" | "tasks" | "booking";
   editingTaskId?: string | null;
+  /** A slot the customer actually selected. A commitment, unlike preferredSlots. */
   preferredSlot?: {
     start: string;
     providerId: string;
     duration: number;
     signature: string;
   };
+  /**
+   * Scheduling preference stated at intake — days the customer would like, and
+   * which parts of those days. Deliberately independent of preferredSlot: this
+   * is a wish, not a booking, and is never rendered as one.
+   */
+  preferredSlots?: { date: string; times: string[] }[];
+  /** Free text from the same intake step, e.g. "baby naps 3–4pm". */
+  timingConstraints?: string;
+  /**
+   * The operator's single outstanding question and the customer's single reply.
+   * One slot, not a thread: asking again overwrites the pair. If real
+   * back-and-forth is ever needed that is a decision to adopt chat, not to grow
+   * this into a message list.
+   */
+  operatorNote?: string | null;
+  customerReply?: string | null;
   id: string;
   customerId: string;
   name: string;
@@ -108,6 +125,20 @@ export type State = {
   events: { id: string; text: string; at: string }[];
   clock: number;
 };
+/**
+ * The customer roster. An explicit list, not a set derived from existing
+ * requests: identity is a real foreign key, so a customer exists whether or not
+ * they currently have a request, and no request can belong to nobody.
+ */
+export const customers = [
+  { id: "c1", name: "Sarah Lin" },
+  { id: "c2", name: "Daniel Brooks" },
+  { id: "c3", name: "Priya Nair" },
+  { id: "c4", name: "James Carter" },
+  { id: "c5", name: "Amir Hassan" },
+];
+export const customerName = (id: string) =>
+  customers.find((c) => c.id === id)?.name || "Unknown customer";
 export const providers = [
   {
     id: "yousef",
@@ -314,7 +345,7 @@ export function seed(): State {
     [
       "r1",
       "c1",
-      "Sarah Mitchell",
+      "Sarah Lin",
       "124 Maple Grove Drive",
       "Oakville",
       "Draft",
@@ -332,7 +363,7 @@ export function seed(): State {
     [
       "r3",
       "c3",
-      "Emma Wilson",
+      "Priya Nair",
       "215 New Street",
       "Burlington",
       "Submitted",
@@ -341,7 +372,7 @@ export function seed(): State {
     [
       "r4",
       "c4",
-      "Oliver Martin",
+      "James Carter",
       "62 Thompson Road",
       "Milton",
       "Needs Review",
@@ -350,7 +381,7 @@ export function seed(): State {
     [
       "r5",
       "c5",
-      "Sophie Laurent",
+      "Amir Hassan",
       "90 Rebecca Street",
       "Oakville",
       "Awaiting Provider Acceptance",
@@ -366,7 +397,22 @@ export function seed(): State {
     mode: a[6],
     timing: "Weekdays · 9 AM–5 PM · Flexible",
     notes: "",
+    preferredSlots: [],
+    timingConstraints: "",
+    operatorNote: null,
+    customerReply: null,
   }));
+  // One seeded request carries a stated preference so the operator queue and the
+  // customer's own view both exercise it without needing a fresh intake run.
+  const withPreference = requests.find((r) => r.id === "r3");
+  if (withPreference) {
+    const day = new Date(clock + 3 * 86400000);
+    withPreference.preferredSlots = [
+      { date: day.toISOString().slice(0, 10), times: ["Morning", "Afternoon"] },
+    ];
+    withPreference.timingConstraints =
+      "Baby is napping from 3–4pm. Please do not arrive during those times.";
+  }
   const ds = [
     [
       "r1",
@@ -426,6 +472,56 @@ export function seed(): State {
     ],
     clock,
   };
+}
+/**
+ * Derived customer-facing state. Computed, never stored.
+ *
+ * A decline reverts `coordinated` to false, and that is exactly what hides the
+ * decline from the customer: their view falls back to the ordinary "still
+ * matching" state, as if nothing had happened. Reassignment is the operator's
+ * problem to solve invisibly, so nothing downstream of this may surface a
+ * declined assignment to the customer.
+ */
+export function coordinated(s: State, requestId: string) {
+  return s.visits
+    .filter((v) => v.requestId === requestId && v.status !== "Cancelled")
+    .some((v) =>
+      s.assignments.some(
+        (a) =>
+          a.visitId === v.id &&
+          a.providerId === v.providerId &&
+          !["Declined", "Expired"].includes(a.status),
+      ),
+    );
+}
+/** A quote is only customer-visible once the request is genuinely coordinated. */
+export function quoted(s: State, requestId: string) {
+  const q = s.quotes.find(
+    (q) => q.requestId === requestId && q.status !== "Superseded",
+  );
+  return !!q && q.amount > 0 && coordinated(s, requestId);
+}
+/**
+ * Three-way AND, not two. Approval and acceptance are not enough: a visit is not
+ * confirmed until a time actually exists for it.
+ */
+export function confirmed(s: State, requestId: string) {
+  const q = s.quotes.find(
+    (q) => q.requestId === requestId && q.status !== "Superseded",
+  );
+  const accepted = s.visits
+    .filter((v) => v.requestId === requestId && v.status !== "Cancelled")
+    .some(
+      (v) =>
+        !!v.start &&
+        s.assignments.some(
+          (a) =>
+            a.visitId === v.id &&
+            a.providerId === v.providerId &&
+            a.status === "Accepted",
+        ),
+    );
+  return q?.status === "Approved" && accepted;
 }
 export function log(s: State, text: string) {
   s.events.unshift({ id: uid(), text, at: new Date(s.clock).toISOString() });

@@ -264,22 +264,6 @@
 :root[data-theme="light"] .customer-heading .eyebrow {
   color: var(--accent-text);
 }
-:root[data-theme="light"] .stepper:before {
-  background: var(--panel);
-}
-:root[data-theme="light"] .stepper b {
-  background: var(--panel);
-  color: var(--text);
-  border-color: var(--muted);
-}
-:root[data-theme="light"] .stepper .done b {
-  background: var(--accent);
-  color: var(--on-accent);
-  border-color: var(--accent);
-}
-:root[data-theme="light"] .stepper .done small {
-  color: var(--text);
-}
 :root[data-theme="light"] .intake-task textarea {
   background: var(--panel);
   border-color: var(--muted);
@@ -589,23 +573,6 @@
   background: var(--accent-soft);
   border-color: var(--line);
   color: inherit;
-}
-:root[data-theme] .stepper:before {
-  background: var(--line);
-}
-:root[data-theme] .stepper b {
-  background: var(--panel);
-  color: var(--muted);
-  border-color: var(--line);
-}
-:root[data-theme] .stepper .done b,
-:root[data-theme] .stepper .active b {
-  background: var(--accent);
-  border-color: var(--accent);
-  color: var(--on-accent);
-}
-:root[data-theme] .stepper .done small {
-  color: var(--accent-text);
 }
 :root[data-theme] .demo-dot {
   background: var(--accent);

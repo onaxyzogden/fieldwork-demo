@@ -707,7 +707,7 @@ function App() {
         customerId: customer,
         name:
           s.requests.find((r) => r.customerId === customer)?.name ||
-          "Sarah Mitchell",
+          "Sarah Lin",
         address: "",
         city: "Oakville",
         status: "Draft",

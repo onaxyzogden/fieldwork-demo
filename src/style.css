@@ -1005,46 +1005,6 @@ footer {
 .customer-heading .eyebrow {
   color: var(--accent-text);
 }
-.stepper {
-  display: flex;
-  justify-content: space-between;
-  margin: var(--space-8) var(--space-6);
-  position: relative;
-}
-.stepper:before {
-  content: "";
-  position: absolute;
-  top: 13px;
-  left: 25px;
-  right: 25px;
-  height: 1px;
-  background: var(--panel);
-}
-.stepper > span {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-2);
-  align-items: center;
-  position: relative;
-}
-.stepper b {
-  display: grid;
-  place-items: center;
-  border: 1px solid var(--panel);
-  background: var(--panel);
-  border-radius: var(--radius-pill);
-  height: 27px;
-  width: 27px;
-  color: var(--muted);
-}
-.stepper .done b {
-  background: var(--accent);
-  border-color: var(--accent);
-  color: var(--on-accent);
-}
-.stepper .done small {
-  color: var(--accent-text);
-}
 .intake {
   padding: var(--space-8);
 }
@@ -1198,20 +1158,51 @@ footer {
   border-color: var(--accent-text);
   background: var(--surface-raised);
 }
-.status-track {
-  display: grid;
-  grid-template-columns: repeat(4, 1fr);
+/* Canonical stepper. One motif, two call sites: the customer status track and
+   the intake wizard's mini-progress header (.intake-steps). Do not add a third. */
+.status-track,
+.intake-steps {
+  display: flex;
   gap: var(--space-2);
   margin: var(--space-6) 0;
 }
-.status-track > div {
+.status-track > *,
+.intake-steps > * {
+  flex: 1;
+  min-width: 0;
   display: flex;
-  flex-direction: column;
+  align-items: center;
   gap: var(--space-2);
-  color: var(--muted);
+  color: var(--ink-muted);
+  padding-top: var(--space-2);
+  border-top: 2px solid var(--line);
 }
-.status-track .complete {
+.status-track .done,
+.status-track .complete,
+.intake-steps .done {
   color: var(--success);
+  border-top-color: var(--success-fill);
+}
+.status-track .active,
+.intake-steps .active,
+.intake-steps [aria-current] {
+  color: var(--accent-text);
+  border-top-color: var(--accent);
+}
+/* Validation. Colour comes from CSS, never computed in JS (DESIGN.md), and the
+   message sits beside the field rather than in a tooltip, which never reaches
+   keyboard or screen-reader users. */
+.field-error input,
+.field-error select,
+.field-error textarea {
+  border-color: var(--danger-fill);
+}
+.field-message {
+  color: var(--danger);
+  font-size: var(--text-label);
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
 }
 .note {
   padding: var(--space-3) var(--space-4);
@@ -1627,9 +1618,6 @@ footer {
   .customer-heading h1 {
     max-width: 340px;
     margin: auto;
-  }
-  .stepper {
-    margin: var(--space-6) var(--space-1);
   }
   .intake {
     padding: var(--space-5);
@@ -2061,13 +2049,5 @@ main button,
   }
   .payment-method {
     flex-wrap: wrap;
-  }
-  .stepper {
-    gap: var(--space-1);
-  }
-  .stepper > span {
-    min-width: 0;
-    flex: 1;
-    text-align: center;
   }
 }
