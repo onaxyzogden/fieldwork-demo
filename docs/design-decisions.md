@@ -79,3 +79,27 @@ The same round removed the post-accept interstitial (a receipt screen behind its
 ## Boundaries
 
 `src/work.ts` and `src/dispatch.ts` are unchanged — every fix in this round was a UI consolidation over model-layer behavior that was already correct. All 218 application tests pass unmodified, which was the check that this stayed true.
+
+# Design decisions — customer round
+
+## ADR 013: A status badge borrows its words from the explanation next to it, never from the state machine
+
+Accepted. The customer's accordion header rendered `x.status` verbatim — "Awaiting Provider Acceptance," "Awaiting Quote Approval" — the dispatch layer's own vocabulary, shown to the one person with no reason to know it, directly above a hand-written note already explaining the same fact in plain language. Two vocabularies for one fact is the same failure ADR 010 and ADR 011 found on the operator's screen, just customer-facing this time.
+
+The fix keeps `badge()`'s existing colour logic (now extracted into `badgeTone()`, keyed off the real status so nothing about correctness changes) and adds a customer-only word list that borrows its phrasing from the note beside it: "Matching you with a provider," not "Awaiting Provider Acceptance." Anywhere a badge and a prose explanation of the same state sit next to each other, they should read like they were written by the same person.
+
+## ADR 014: A progress tracker that only moves forward must not render for something that stopped
+
+Accepted. The Received → Quote → Confirmed tracker has no vocabulary for "this ended" — every step is a step toward completion. Rendering it for a Cancelled or Declined request made a terminated request look like a paused pipeline. It's now replaced by a single terminal line for those two statuses, and `badgeTone()`'s red rule was extended to include Cancelled (Declined already matched), so both terminal states read consistently.
+
+Found in the same pass: the plain-language note's own suppression list excluded Confirmed, Cancelled and Draft, but not Declined — a declined request was still told "we're matching you with a provider," which is not merely uninformative but actively wrong. Declined joins the suppression list.
+
+## ADR 015: Two controls with one label must have one behavior
+
+Accepted. The customer's two "New request" entry points — the nav button and the trailing button at the bottom of Home — carried the same label and apparent intent but different guards: one resumed an active draft, the other always created a fresh one regardless of what the customer already had open. Same shape as ADR 010's `Do It Myself` finding on the operator screen: a decision reachable through more than one control only stays safe if every path agrees.
+
+Both now call a single `startOrResumeRequest()` that checks for _any_ existing incomplete draft — not just whichever request happens to be currently active — before ever creating a second one.
+
+## Boundaries
+
+`src/CustomerIntake.tsx`, `src/work.ts` and `src/dispatch.ts` are unchanged. `completeEntry()`'s unused `uncertain` parameter was removed (its capability was already fully covered by the per-question "Not sure" button the UI actually uses); `src/intake.test.ts` was updated to exercise the same real path rather than the removed flag, preserving every invariant it checked.

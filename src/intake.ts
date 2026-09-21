@@ -52,11 +52,7 @@ export function missingQuestions(t: Task) {
     a = { ...inferredAnswers(t.description), ...t.answers };
   return i.questions.filter((q) => !a[answerKey(i, q)]?.trim());
 }
-export function completeEntry(t: Task, uncertain = false) {
-  const i = getIssue(t.description);
-  if (uncertain)
-    for (const q of missingQuestions(t))
-      t.answers[answerKey(i, q)] = "Not sure";
+export function completeEntry(t: Task) {
   if (missingQuestions(t).length) return false;
   t.entryStage = "done";
   if (Object.values(t.answers).some((a) => /not sure|unknown/i.test(a)))
