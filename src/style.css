@@ -1,4 +1,3 @@
-
 * {
   box-sizing: border-box;
 }
@@ -971,6 +970,7 @@ footer {
 .quote {
   margin-top: var(--space-5);
   background: var(--gradient-surface);
+  border-radius: var(--radius-md);
 }
 .quote h2 {
   margin: var(--space-4) 0;
@@ -1070,21 +1070,6 @@ footer {
   padding: var(--space-4);
   background: var(--bg);
   border-color: var(--panel);
-}
-.add-task {
-  width: 100%;
-  background: transparent;
-  border: 1px dashed var(--panel);
-  border-radius: var(--radius-md);
-  padding: var(--space-5);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: var(--space-2);
-  color: var(--accent-text);
-}
-.add-task:hover {
-  background: var(--panel);
 }
 .help {
   display: flex;
@@ -1203,7 +1188,9 @@ footer {
   background: var(--surface-raised);
 }
 /* Canonical stepper. One motif, two call sites: the customer status track and
-   the intake wizard's mini-progress header (.intake-steps). Do not add a third. */
+   the intake wizard's mini-progress header (.intake-steps). Do not add a third.
+   Plain centered text per step, no icon — the shared Customer design reference
+   marks progress with the border-top colour alone. */
 .status-track,
 .intake-steps {
   display: flex;
@@ -1214,9 +1201,8 @@ footer {
 .intake-steps > * {
   flex: 1;
   min-width: 0;
-  display: flex;
-  align-items: center;
-  gap: var(--space-2);
+  text-align: center;
+  font-size: var(--text-caption);
   color: var(--ink-muted);
   padding-top: var(--space-2);
   border-top: 2px solid var(--line);
@@ -1233,10 +1219,13 @@ footer {
   color: var(--accent-text);
   border-top-color: var(--accent);
 }
-/* Intake: completed steps collapse to a summary row that can be reopened. */
+/* Intake: completed steps collapse to a summary row that can be reopened.
+   The checkmark sits inside a solid filled circle (not a bare icon) — the
+   same treatment for every collapsed step, address and tasks alike. */
 .step-summary {
   display: flex;
   align-items: center;
+  justify-content: space-between;
   gap: var(--space-3);
   padding: var(--space-3) var(--space-4);
   border: 1px solid var(--line);
@@ -1246,10 +1235,15 @@ footer {
 .step-summary > span {
   display: flex;
   align-items: center;
-  gap: var(--space-2);
+  gap: var(--space-3);
   flex: 1;
   min-width: 0;
-  flex-wrap: wrap;
+}
+.step-summary-text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
 }
 .step-summary small {
   color: var(--muted);
@@ -1259,40 +1253,82 @@ footer {
   min-width: 0;
 }
 .step-summary-check {
-  color: var(--success);
+  width: 22px;
+  height: 22px;
+  border-radius: var(--radius-pill);
+  background: var(--success);
+  color: var(--on-accent);
+  display: flex;
+  align-items: center;
+  justify-content: center;
   flex-shrink: 0;
 }
-/* Stated timing preference. A flat scrollable list of days rather than a
-   calendar modal — the same data capture for a fraction of the build. */
-.day-chips {
+/* A step not yet reached: muted, non-interactive, named but inert. */
+.step-upcoming {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-1) 0;
+  opacity: 0.4;
+  pointer-events: none;
+}
+.step-upcoming-ring {
+  width: 22px;
+  height: 22px;
+  border-radius: var(--radius-pill);
+  border: 1px solid var(--border-strong);
+  flex-shrink: 0;
+}
+/* Stated timing preference — a vertical scrollable list of the next ten days,
+   not a calendar modal. Each row expands in place to its own Morning /
+   Afternoon / Evening toggles once selected, rather than a separate summary
+   block collecting every selected day's toggles afterward. */
+.date-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+.date-chip {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  border: 1px solid var(--border-strong);
+  background: none;
+  color: var(--text);
+  border-radius: var(--radius-md);
+  padding: var(--space-3) var(--space-4);
+  min-height: 44px;
+  text-align: left;
+}
+.date-chip.selected {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+  color: var(--accent-text);
+}
+.time-pills {
   display: flex;
   gap: var(--space-2);
-  overflow-x: auto;
-  padding-bottom: var(--space-2);
-  flex-wrap: wrap;
+  padding: var(--space-2) 0 0;
 }
-.day-chip {
-  border: 1px solid var(--line);
+.time-pill {
+  flex: 1;
+  border: 1px solid var(--border-strong);
   background: var(--surface-raised);
-  color: var(--text);
-  border-radius: var(--radius-pill);
-  padding: var(--space-2) var(--space-4);
-  min-height: 44px;
-  white-space: nowrap;
-}
-.day-chip.selected {
-  background: var(--accent);
-  border-color: var(--accent);
-  color: var(--on-accent);
-  font-weight: 600;
-}
-.day-parts {
-  margin: var(--space-3) 0;
-}
-.day-parts > small {
-  display: block;
   color: var(--muted);
-  margin-bottom: var(--space-2);
+  border-radius: var(--radius-sm);
+  padding: var(--space-2) var(--space-1);
+  font-size: var(--text-caption);
+  text-align: center;
+  min-height: 36px;
+}
+.time-pill.selected {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+  color: var(--accent-text);
+}
+.new-request-trailing {
+  margin-top: var(--space-4);
 }
 /* Customer home accordion. A request expands in place; there is no separate
    detail screen for one to drift out of sync with. */
@@ -1354,12 +1390,24 @@ footer {
 /* Operator note. Visually distinct from ordinary cards because it is the one
    place the customer is being asked for something. One question, one reply. */
 .operator-note {
-  --card-border: var(--accent);
-  --card-surface: var(--accent-soft);
   margin: var(--space-4) 0;
 }
-.operator-note .eyebrow {
+/* Waiting on a reply: an accent-colour border, unfilled — the one place the
+   customer is being asked for something, without the weight of a solid card. */
+.operator-note.waiting {
+  --card-border: var(--accent);
+  --card-surface: transparent;
+}
+.operator-note.waiting .eyebrow {
   color: var(--accent-text);
+}
+/* Answered: de-emphasized back to a neutral, filled note once resolved. */
+.operator-note.answered {
+  --card-border: var(--line);
+  --card-surface: var(--surface-raised);
+}
+.operator-note.answered .eyebrow {
+  color: var(--ink-muted);
 }
 .operator-note-reply {
   margin-top: var(--space-3);
@@ -1388,6 +1436,19 @@ footer {
   align-items: center;
   gap: var(--space-2);
 }
+/* A text answer with its own "Not sure" one tap away, rather than a single
+   bulk button for every unanswered question in the task. */
+.field-with-action {
+  display: flex;
+  gap: var(--space-2);
+}
+.field-with-action input {
+  flex: 1;
+  min-width: 0;
+}
+.field-with-action .text-button {
+  white-space: nowrap;
+}
 .note {
   padding: var(--space-3) var(--space-4);
   background: var(--panel);
@@ -1396,14 +1457,43 @@ footer {
   color: var(--muted);
   margin: var(--space-4) 0;
 }
+/* Once submitted, a task is a flat divider row, not a card — the boxed
+   treatment stays for the intake editor, where a task is still being worked
+   on; once it is just being reviewed, a card per task is more weight than the
+   content needs. */
 .portal-task {
+  display: flex;
+  gap: var(--space-3);
+  align-items: flex-start;
+  padding-top: var(--space-4);
   border-top: 1px solid var(--line);
 }
-.portal-task h4 {
-  margin: 0;
+.portal-task-icon {
+  width: 32px;
+  height: 32px;
+  border-radius: var(--radius-md);
+  background: var(--surface-raised);
+  color: var(--accent);
   display: flex;
-  gap: var(--space-2);
   align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+.portal-task-body {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+.portal-task-body h4 {
+  margin: 0;
+  font-size: var(--text-label);
+  font-weight: 600;
+}
+.portal-task-body p {
+  margin: 0;
+  font-size: var(--text-caption);
 }
 .offer {
   margin-bottom: var(--space-6);

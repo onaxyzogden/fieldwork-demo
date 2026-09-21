@@ -189,9 +189,11 @@ function TaskAnswers({ task }: { task: Task }) {
 function ClarificationFields({
   task,
   onChange,
+  attempted,
 }: {
   task: Task;
   onChange: (patch: Partial<Task>) => void;
+  attempted?: boolean;
 }) {
   const issue = getIssue(task.description);
   const inferred = inferredAnswers(task.description);
@@ -240,15 +242,22 @@ function ClarificationFields({
       )}
       {issue.questions.map((q) => {
         const key = answerKey(issue, q);
+        const answered = !!(task.answers[key] ?? inferred[key])?.trim();
+        const showError = !!attempted && !answered;
         const field = (
-          <label className="field" key={key}>
+          <label
+            className={"field" + (showError ? " field-error" : "")}
+            key={key}
+          >
             {q.label}
             {key in inferred && !(key in task.answers) && (
               <small>From your description — please check this answer.</small>
             )}
             {q.options ? (
               <select
+                id={"q-" + task.id + "-" + key}
                 value={task.answers[key] ?? inferred[key] ?? ""}
+                aria-invalid={showError || undefined}
                 onChange={(e) => setAnswer(key, e.target.value)}
               >
                 <option value="">Choose an answer…</option>
@@ -257,11 +266,30 @@ function ClarificationFields({
                 ))}
               </select>
             ) : (
-              <input
-                value={task.answers[key] || ""}
-                placeholder="Add details, or enter Not sure"
-                onChange={(e) => setAnswer(key, e.target.value)}
-              />
+              /* A standalone "Not sure" beside the field, not just placeholder
+                 text suggesting it — the escape hatch stays one tap away
+                 whether or not the question was ever attempted. */
+              <div className="field-with-action">
+                <input
+                  id={"q-" + task.id + "-" + key}
+                  value={task.answers[key] || ""}
+                  placeholder="Add details, or enter Not sure"
+                  aria-invalid={showError || undefined}
+                  onChange={(e) => setAnswer(key, e.target.value)}
+                />
+                <button
+                  type="button"
+                  className="text-button"
+                  onClick={() => setAnswer(key, "Not sure")}
+                >
+                  Not sure
+                </button>
+              </div>
+            )}
+            {showError && (
+              <span className="field-message" role="alert">
+                Answer this, or tap Not sure.
+              </span>
             )}
           </label>
         );
@@ -1615,7 +1643,12 @@ function App() {
                   {r.operatorNote && (
                     /* Single Q&A slot: waiting, then answered. Asking again
                        replaces it rather than growing a history. */
-                    <section className="card operator-note">
+                    <section
+                      className={
+                        "card operator-note " +
+                        (r.customerReply ? "answered" : "waiting")
+                      }
+                    >
                       <span className="eyebrow">
                         {r.customerReply
                           ? "CUSTOMER ANSWERED"
@@ -2399,9 +2432,6 @@ function App() {
           )}
           {role === "Customer" && (
             <div className="customer-wrap">
-              <div className="account-row">
-                <span className="eyebrow">CUSTOMER PORTAL</span>
-              </div>
               {/* The prototype has to simulate several people to be testable at
                   all. Tappable pills, the same visual idiom as every other chip
                   here, rather than a separate control type. The roster is the
@@ -2441,8 +2471,12 @@ function App() {
                   update={update}
                   notify={notify}
                   photos={taskPhotos}
-                  questions={(t, change) => (
-                    <ClarificationFields task={t} onChange={change} />
+                  questions={(t, change, attempted) => (
+                    <ClarificationFields
+                      task={t}
+                      onChange={change}
+                      attempted={attempted}
+                    />
                   )}
                   pay={(start) => {
                     setSlot(start);
@@ -2457,9 +2491,6 @@ function App() {
                       <h1>Home, handled.</h1>
                       <p>Your requests and upcoming visits.</p>
                     </div>
-                    <button className="primary" onClick={newRequest}>
-                      <Plus size={16} /> New request
-                    </button>
                   </div>
                   {/* Accordion, not a tab strip into a separate detail screen.
                       Everything about a request opens inline underneath its own
@@ -2536,7 +2567,8 @@ function App() {
                                 <div className="status-track">
                                   {/* Three steps, not four. "Provider coordinated" was
                             internal handoff the customer could not act on; it
-                            survives as the prose note below, not as a step. */}
+                            survives as the prose note below, not as a step.
+                            Text only, no icon — colour carries the state. */}
                                   {[
                                     {
                                       label: "Received",
@@ -2563,8 +2595,7 @@ function App() {
                                       }
                                       key={x.label}
                                     >
-                                      <CheckCircle2 size={16} />
-                                      <span>{x.label}</span>
+                                      {x.label}
                                     </div>
                                   ))}
                                 </div>
@@ -2575,10 +2606,14 @@ function App() {
                                 /* One contextual line, chosen from derived state — not a
                          log. When a contractor declines, coordinated reverts to
                          false and this falls back to "matching", which is what
-                         keeps the decline invisible to the customer. */
+                         keeps the decline invisible to the customer. Needs Review
+                         is its own message only until coordination catches up —
+                         an operator can still assign a reviewed request, and the
+                         customer should see that progress once it happens. */
                                 <p className="note">
-                                  {r.status === "Needs Review"
-                                    ? "Your request needs a closer look. We’ll coordinate a suitable provider."
+                                  {r.status === "Needs Review" &&
+                                  !coordinated(s, r.id)
+                                    ? "A coordinator is reviewing your request and will follow up shortly."
                                     : !coordinated(s, r.id)
                                       ? "We’re matching your request with a provider."
                                       : !quoted(s, r.id)
@@ -2607,9 +2642,16 @@ function App() {
                               {r.operatorNote && (
                                 /* One question, one reply. Not a thread: see §7.3 — a new
                          question replaces this pair rather than appending. */
-                                <div className="card operator-note">
+                                <div
+                                  className={
+                                    "card operator-note " +
+                                    (r.customerReply ? "answered" : "waiting")
+                                  }
+                                >
                                   <span className="eyebrow">
-                                    A QUESTION FOR YOU
+                                    {r.customerReply
+                                      ? "OPERATOR ASKED"
+                                      : "OPERATOR HAS A QUESTION"}
                                   </span>
                                   <p>{r.operatorNote}</p>
                                   {r.customerReply ? (
@@ -2632,14 +2674,16 @@ function App() {
                                 </div>
                               )}
                               {tasks.map((t) => (
-                                <div className="card portal-task" key={t.id}>
-                                  <h4>
+                                <div className="portal-task" key={t.id}>
+                                  <span className="portal-task-icon">
                                     <Wrench size={16} />
-                                    {t.summary}
-                                  </h4>
-                                  <p>{t.description}</p>
-                                  <TaskAnswers task={t} />
-                                  {taskPhotos(t)}
+                                  </span>
+                                  <div className="portal-task-body">
+                                    <h4>{t.summary}</h4>
+                                    <p>{t.description}</p>
+                                    <TaskAnswers task={t} />
+                                    {taskPhotos(t)}
+                                  </div>
                                 </div>
                               ))}
                               {quotePanel()}
@@ -2650,6 +2694,15 @@ function App() {
                       );
                     })}
                   </div>
+                  {/* The primary action sits after the list, not before it —
+                      reviewing what already exists comes first; starting
+                      something new is the trailing action. */}
+                  <button
+                    className="primary full new-request-trailing"
+                    onClick={newRequest}
+                  >
+                    <Plus size={16} /> New request
+                  </button>
                 </>
               )}
             </div>
@@ -2958,7 +3011,11 @@ function App() {
                           "Instant booking confirmed · demo receipt issued",
                         );
                       });
-                      setStep(5);
+                      // Straight back to Home, same as an ordinary submit —
+                      // the accordion's own visit card shows the confirmation,
+                      // so there is no separate receipt screen to detour
+                      // through here either.
+                      setPage("My bookings");
                     } else if (quote) {
                       update(
                         (d) => {

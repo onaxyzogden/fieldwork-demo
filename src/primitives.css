@@ -270,13 +270,6 @@
   background: var(--panel);
   border-color: var(--muted);
 }
-:root[data-theme="light"] .add-task {
-  color: var(--accent-text);
-  border-color: var(--muted);
-}
-:root[data-theme="light"] .add-task:hover {
-  background: var(--panel);
-}
 :root[data-theme="light"] .help {
   color: var(--text);
 }
@@ -415,8 +408,6 @@
 }
 
 /* Shared blue brand tokens. --amber remains a compatibility alias for existing accent consumers. */
-
-
 
 :root[data-theme] .sidebar,
 :root[data-theme] .topbar,
