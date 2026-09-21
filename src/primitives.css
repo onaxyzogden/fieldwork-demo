@@ -180,9 +180,11 @@
   color: var(--text);
   border-color: var(--muted);
 }
+/* A placeholder at full text colour reads as an entered value. It is a hint,
+   so it sits a step below the ink the field's own content uses. */
 :root[data-theme="light"] input::placeholder,
 :root[data-theme="light"] textarea::placeholder {
-  color: var(--text);
+  color: var(--ink-muted);
 }
 :root[data-theme="light"] input:focus,
 :root[data-theme="light"] textarea:focus,

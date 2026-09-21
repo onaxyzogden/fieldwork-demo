@@ -1223,6 +1223,67 @@ footer {
   color: var(--accent-text);
   border-top-color: var(--accent);
 }
+/* Intake: completed steps collapse to a summary row that can be reopened. */
+.step-summary {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-3) var(--space-4);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+  margin-bottom: var(--space-3);
+}
+.step-summary > span {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  flex: 1;
+  min-width: 0;
+  flex-wrap: wrap;
+}
+.step-summary small {
+  color: var(--muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  min-width: 0;
+}
+.step-summary-check {
+  color: var(--success);
+  flex-shrink: 0;
+}
+/* Stated timing preference. A flat scrollable list of days rather than a
+   calendar modal — the same data capture for a fraction of the build. */
+.day-chips {
+  display: flex;
+  gap: var(--space-2);
+  overflow-x: auto;
+  padding-bottom: var(--space-2);
+  flex-wrap: wrap;
+}
+.day-chip {
+  border: 1px solid var(--line);
+  background: var(--surface-raised);
+  color: var(--text);
+  border-radius: var(--radius-pill);
+  padding: var(--space-2) var(--space-4);
+  min-height: 44px;
+  white-space: nowrap;
+}
+.day-chip.selected {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: var(--on-accent);
+  font-weight: 600;
+}
+.day-parts {
+  margin: var(--space-3) 0;
+}
+.day-parts > small {
+  display: block;
+  color: var(--muted);
+  margin-bottom: var(--space-2);
+}
 /* Customer home accordion. A request expands in place; there is no separate
    detail screen for one to drift out of sync with. */
 .request-accordion {
@@ -1298,9 +1359,16 @@ footer {
 /* Validation. Colour comes from CSS, never computed in JS (DESIGN.md), and the
    message sits beside the field rather than in a tooltip, which never reaches
    keyboard or screen-reader users. */
-.field-error input,
-.field-error select,
-.field-error textarea {
+/* The class is repeated deliberately, to reach specificity 0-3-1. The theme
+   input rules in primitives.css are `:root[data-theme] input`, and `:root` is a
+   pseudo-class, so those are 0-2-1 — a single or doubled `.field-error` ties
+   them and loses on source order, leaving the field grey. */
+.field-error.field-error.field-error input,
+.field-error.field-error.field-error select,
+.field-error.field-error.field-error textarea,
+.field-error.field-error.field-error input:focus,
+.field-error.field-error.field-error select:focus,
+.field-error.field-error.field-error textarea:focus {
   border-color: var(--danger-fill);
 }
 .field-message {

@@ -1,5 +1,12 @@
 import React, { useEffect, useRef, useState } from "react";
-import { MapPin, ListChecks, CalendarDays, Mail, Home } from "lucide-react";
+import {
+  MapPin,
+  ListChecks,
+  CalendarDays,
+  Mail,
+  Home,
+  Check,
+} from "lucide-react";
 import {
   type State,
   type Request,
@@ -15,6 +22,12 @@ import {
   entryTasks,
   taskLabel,
   validAddress,
+  validStreet,
+  validPostal,
+  cities,
+  upcomingDays,
+  dayParts,
+  dayLabel,
   missingQuestions,
   completeEntry,
   intakeOptions,
@@ -43,7 +56,7 @@ export default function CustomerIntake({
   const tasks = entryTasks(s, r.id),
     all = s.tasks.filter((t) => t.requestId === r.id && !t.mergedInto);
   const done = r.status !== "Draft",
-    screen = done ? "done" : r.intakeScreen || "tasks";
+    screen = done ? "done" : r.intakeScreen || "address";
   const editing =
     r.editingTaskId === null
       ? undefined
@@ -69,8 +82,18 @@ export default function CustomerIntake({
       null,
     ),
     [more, setMore] = useState(false);
+  /* Per-field validation state for the address step. Two independently
+     triggerable errors, each with its own message and its own focus target —
+     not one "form is invalid" flag. */
+  const [addressError, setAddressError] = useState<{
+    street?: string;
+    postal?: string;
+  }>({});
+  const [descriptionError, setDescriptionError] = useState("");
   const dialog = useRef<HTMLDialogElement>(null),
-    editor = useRef<HTMLTextAreaElement>(null);
+    editor = useRef<HTMLTextAreaElement>(null),
+    streetRef = useRef<HTMLInputElement>(null),
+    postalRef = useRef<HTMLInputElement>(null);
   const patchRequest = (patch: Partial<Request>) =>
     update((d) =>
       Object.assign(
@@ -108,6 +131,47 @@ export default function CustomerIntake({
       timing: dateLabel(o.start),
     });
     setMore(false);
+  };
+  /**
+   * Continue out of the address step. The button is never disabled: it always
+   * clicks, and if something blocks it we mark that field, say why beside it,
+   * and put the caret there.
+   */
+  const advanceAddress = () => {
+    const errs: { street?: string; postal?: string } = {};
+    if (!validStreet(r)) errs.street = "Add the street number and name.";
+    if (!validPostal(r))
+      errs.postal = "Enter a Canadian postal code, for example L6J 4S7.";
+    setAddressError(errs);
+    if (errs.street) return streetRef.current?.focus();
+    if (errs.postal) return postalRef.current?.focus();
+    patchRequest({ intakeScreen: "tasks" });
+  };
+  /** Reopen an earlier step without discarding anything entered after it. */
+  const goto = (to: "address" | "tasks" | "booking") =>
+    patchRequest({ intakeScreen: to, editingTaskId: null });
+  const togglePreferredDay = (date: string) => {
+    const current = r.preferredSlots || [];
+    patchRequest({
+      preferredSlots: current.some((p) => p.date === date)
+        ? current.filter((p) => p.date !== date)
+        : [...current, { date, times: [] }],
+    });
+  };
+  const togglePreferredTime = (date: string, part: string) => {
+    const current = r.preferredSlots || [];
+    patchRequest({
+      preferredSlots: current.map((p) =>
+        p.date === date
+          ? {
+              ...p,
+              times: p.times.includes(part)
+                ? p.times.filter((x) => x !== part)
+                : [...p.times, part],
+            }
+          : p,
+      ),
+    });
   };
   const open = (t: Task) =>
     patchRequest({ editingTaskId: t.id, intakeScreen: "tasks" });
@@ -263,20 +327,173 @@ export default function CustomerIntake({
   );
   return (
     <div className="customer-intake">
+      {/* Same stepper motif as the customer status track, not a second one. */}
       <nav className="intake-steps" aria-label="Request progress">
-        {["Tasks", "Where and when", "Done"].map((label, i) => (
-          <span
-            key={label}
-            aria-current={
-              i === (screen === "tasks" ? 0 : screen === "booking" ? 1 : 2)
-                ? "step"
-                : undefined
-            }
-          >
-            {i + 1} · {label}
-          </span>
-        ))}
+        {["Address", "Tasks", "Timing"].map((label, i) => {
+          // On the receipt every step is behind you, so none is still "active".
+          const at =
+            screen === "address"
+              ? 0
+              : screen === "tasks"
+                ? 1
+                : screen === "done"
+                  ? 3
+                  : 2;
+          return (
+            <span
+              key={label}
+              className={i < at ? "done" : i === at ? "active" : ""}
+              aria-current={i === at ? "step" : undefined}
+            >
+              {label}
+            </span>
+          );
+        })}
       </nav>
+      {/* Completed steps collapse to a summary row with an Edit that reopens
+          them without discarding anything entered since. */}
+      {screen !== "address" && screen !== "done" && (
+        <div className="step-summary">
+          <span>
+            <Check size={16} className="step-summary-check" />
+            <strong>{r.address}</strong>
+            <small>{r.city}</small>
+          </span>
+          <button className="text-button" onClick={() => goto("address")}>
+            Edit
+          </button>
+        </div>
+      )}
+      {screen === "booking" && (
+        <div className="step-summary">
+          <span>
+            <Check size={16} className="step-summary-check" />
+            <strong>
+              {tasks.length} {tasks.length === 1 ? "task" : "tasks"}
+            </strong>
+            <small>{tasks.map(taskLabel).join(" · ")}</small>
+          </span>
+          <button className="text-button" onClick={() => goto("tasks")}>
+            Edit
+          </button>
+        </div>
+      )}
+      {screen === "address" && (
+        <>
+          <header className="customer-heading">
+            <h1>Where should we come?</h1>
+            <p>One address for everything on your list.</p>
+          </header>
+          <section className="customer-address-section">
+            <label
+              className={"field" + (addressError.street ? " field-error" : "")}
+            >
+              Service address
+              <input
+                ref={streetRef}
+                autoComplete="street-address"
+                value={r.address}
+                aria-invalid={!!addressError.street || undefined}
+                aria-describedby={
+                  addressError.street ? "address-street-error" : undefined
+                }
+                placeholder="Street number and street name"
+                onChange={(e) => {
+                  patchRequest({ address: e.target.value });
+                  if (addressError.street)
+                    setAddressError((x) => ({ ...x, street: undefined }));
+                }}
+              />
+              {addressError.street && (
+                <span
+                  className="field-message"
+                  id="address-street-error"
+                  role="alert"
+                >
+                  {addressError.street}
+                </span>
+              )}
+            </label>
+            <div className="address-pair">
+              <label className="field">
+                Municipality
+                <select
+                  value={r.city}
+                  onChange={(e) => patchRequest({ city: e.target.value })}
+                >
+                  {cities.map((c) => (
+                    <option key={c}>{c}</option>
+                  ))}
+                </select>
+              </label>
+              <label
+                className={
+                  "field" + (addressError.postal ? " field-error" : "")
+                }
+              >
+                Postal code
+                <input
+                  ref={postalRef}
+                  autoComplete="postal-code"
+                  value={r.postalCode || ""}
+                  aria-invalid={!!addressError.postal || undefined}
+                  aria-describedby={
+                    addressError.postal ? "address-postal-error" : undefined
+                  }
+                  placeholder="L6J 4S7"
+                  onChange={(e) => {
+                    patchRequest({ postalCode: e.target.value });
+                    if (addressError.postal)
+                      setAddressError((x) => ({ ...x, postal: undefined }));
+                  }}
+                />
+                {addressError.postal && (
+                  <span
+                    className="field-message"
+                    id="address-postal-error"
+                    role="alert"
+                  >
+                    {addressError.postal}
+                  </span>
+                )}
+              </label>
+            </div>
+            <details>
+              <summary>Unit and access notes (optional)</summary>
+              <label className="field">
+                Unit
+                <input
+                  value={r.unit || ""}
+                  onChange={(e) => patchRequest({ unit: e.target.value })}
+                />
+              </label>
+              <label className="field">
+                Access and parking notes
+                <textarea
+                  value={r.notes}
+                  onChange={(e) => patchRequest({ notes: e.target.value })}
+                />
+              </label>
+            </details>
+            {validAddress(r) && (
+              <div className="customer-location-preview">
+                <MapPin size={32} />
+                <strong>
+                  {r.address}
+                  <br />
+                  {r.city}
+                </strong>
+                <small>Illustrative location · simulated, not geocoded</small>
+              </div>
+            )}
+          </section>
+          <div className="intake-bottom">
+            <button className="primary full" onClick={advanceAddress}>
+              Continue →
+            </button>
+          </div>
+        </>
+      )}
       {screen === "tasks" && (
         <>
           <header className="customer-heading">
@@ -307,17 +524,44 @@ export default function CustomerIntake({
                         <small>
                           {t.photos.length} photos ·{" "}
                           {t.entryStage === "done"
-                            ? "Details saved · Edit"
+                            ? "Details saved"
                             : "Details to finish"}
                         </small>
                       </span>
                     </button>
+                    {t.entryStage === "done" && (
+                      <span
+                        className={
+                          "badge " +
+                          (t.reviewed ? "badge-success" : "badge-urgent")
+                        }
+                      >
+                        {t.reviewed ? "Reviewed" : "Needs review"}
+                      </span>
+                    )}
                     <details className="task-menu">
                       <summary aria-label={"Actions for " + taskLabel(t)}>
                         •••
                       </summary>
-                      <button className="secondary" onClick={() => open(t)}>
-                        Edit task
+                      {/* Two edits, not one. Fixing a typo in the description
+                          must not cost you every clarifying answer. */}
+                      <button
+                        className="secondary"
+                        onClick={() => {
+                          patchTask(t.id, { entryStage: "details" });
+                          open(t);
+                        }}
+                      >
+                        Edit answers
+                      </button>
+                      <button
+                        className="secondary"
+                        onClick={() => {
+                          patchTask(t.id, { entryStage: "description" });
+                          open(t);
+                        }}
+                      >
+                        Edit description
                       </button>
                       <button
                         className="text-button"
@@ -333,7 +577,13 @@ export default function CustomerIntake({
                 ))}
             </div>
             {editing && (
-              <div className="active-task customer-task-card" key={editing.id}>
+              <div
+                className={
+                  "active-task customer-task-card" +
+                  (descriptionError ? " field-error" : "")
+                }
+                key={editing.id}
+              >
                 <div className="row between">
                   <label htmlFor={"task-description-" + editing.id}>
                     {tasks.length === 0 ? "First task" : "Describe this task"}
@@ -350,14 +600,28 @@ export default function CustomerIntake({
                   id={"task-description-" + editing.id}
                   value={editing.description}
                   placeholder="Describe what you need done…"
-                  onChange={(e) =>
+                  aria-invalid={!!descriptionError || undefined}
+                  aria-describedby={
+                    descriptionError ? "task-description-error" : undefined
+                  }
+                  onChange={(e) => {
+                    if (descriptionError) setDescriptionError("");
                     patchTask(editing.id, {
                       description: e.target.value,
                       ...classify(e.target.value),
                       entryStage: "description",
-                    })
-                  }
+                    });
+                  }}
                 />
+                {descriptionError && (
+                  <span
+                    className="field-message"
+                    id="task-description-error"
+                    role="alert"
+                  >
+                    {descriptionError}
+                  </span>
+                )}
                 {photos(editing)}
                 {editing.entryStage === "details" ? (
                   <div className="task-details">
@@ -385,10 +649,17 @@ export default function CustomerIntake({
                 ) : (
                   <button
                     className="secondary"
-                    disabled={!editing.description.trim()}
-                    onClick={() =>
-                      patchTask(editing.id, { entryStage: "details" })
-                    }
+                    onClick={() => {
+                      if (!editing.description.trim()) {
+                        setDescriptionError(
+                          "Describe what you need done before saving.",
+                        );
+                        editor.current?.focus();
+                        return;
+                      }
+                      setDescriptionError("");
+                      patchTask(editing.id, { entryStage: "details" });
+                    }}
                   >
                     Save task
                   </button>
@@ -436,98 +707,66 @@ export default function CustomerIntake({
       {screen === "booking" && (
         <>
           <header className="customer-heading">
-            <h1>Where and when?</h1>
-            <p>One address for everything on your list.</p>
+            <h1>When works for you?</h1>
+            <p>
+              Optional — tell us your preference, or send the request and we’ll
+              find a time.
+            </p>
           </header>
-          <section className="card customer-summary-card">
-            <div className="row between">
-              <strong>
-                {tasks.length} {tasks.length === 1 ? "task" : "tasks"} requested
-              </strong>
-              <button
-                className="text-button"
-                onClick={() =>
-                  patchRequest({ intakeScreen: "tasks", editingTaskId: null })
-                }
-              >
-                Edit tasks
-              </button>
+          {/* Stated preference. A flat list of the next 10 days rather than a
+              calendar modal: the same data, far less to build and to use. This
+              is a wish, not a booking, and submitting with nothing chosen is a
+              perfectly good answer. */}
+          <section className="customer-timing-section">
+            <h3>Days that suit you</h3>
+            <div className="day-chips">
+              {upcomingDays(s.clock).map((d) => {
+                const picked = r.preferredSlots?.some((p) => p.date === d.date);
+                return (
+                  <button
+                    key={d.date}
+                    className={"day-chip" + (picked ? " selected" : "")}
+                    aria-pressed={picked}
+                    onClick={() => togglePreferredDay(d.date)}
+                  >
+                    {d.label}
+                  </button>
+                );
+              })}
             </div>
-            <ul className="customer-task-list">
-              {tasks.map((t) => (
-                <li key={t.id}>
-                  <ListChecks size={20} />
-                  <span>{taskLabel(t)}</span>
-                </li>
-              ))}
-            </ul>
-          </section>
-          <section className="customer-address-section">
-            <h3>Where should we come?</h3>
+            {r.preferredSlots?.map((p) => (
+              <div className="day-parts" key={p.date}>
+                <small>{dayLabel(p.date)}</small>
+                <div className="day-chips">
+                  {dayParts.map((part) => (
+                    <button
+                      key={part}
+                      className={
+                        "day-chip" + (p.times.includes(part) ? " selected" : "")
+                      }
+                      aria-pressed={p.times.includes(part)}
+                      aria-label={`${part} on ${p.date}`}
+                      onClick={() => togglePreferredTime(p.date, part)}
+                    >
+                      {part}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            ))}
             <label className="field">
-              Service address
-              <input
-                autoComplete="street-address"
-                value={r.address}
-                placeholder="Street number and street name"
-                onChange={(e) => patchRequest({ address: e.target.value })}
+              Timing constraints (optional)
+              <textarea
+                value={r.timingConstraints || ""}
+                placeholder="Baby is napping from 3–4pm. Please do not arrive during those times."
+                onChange={(e) =>
+                  patchRequest({ timingConstraints: e.target.value })
+                }
               />
             </label>
-            <div className="address-pair">
-              <label className="field">
-                Municipality
-                <select
-                  value={r.city}
-                  onChange={(e) => patchRequest({ city: e.target.value })}
-                >
-                  {["Oakville", "Burlington", "Milton", "Mississauga"].map(
-                    (c) => (
-                      <option key={c}>{c}</option>
-                    ),
-                  )}
-                </select>
-              </label>
-              <label className="field">
-                Postal code
-                <input
-                  autoComplete="postal-code"
-                  value={r.postalCode || ""}
-                  placeholder="L6J 4S7"
-                  onChange={(e) => patchRequest({ postalCode: e.target.value })}
-                />
-              </label>
-            </div>
-            <details>
-              <summary>Unit and access notes (optional)</summary>
-              <label className="field">
-                Unit
-                <input
-                  value={r.unit || ""}
-                  onChange={(e) => patchRequest({ unit: e.target.value })}
-                />
-              </label>
-              <label className="field">
-                Access and parking notes
-                <textarea
-                  value={r.notes}
-                  onChange={(e) => patchRequest({ notes: e.target.value })}
-                />
-              </label>
-            </details>
-            {validAddress(r) && (
-              <div className="customer-location-preview">
-                <MapPin size={32} />
-                <strong>
-                  {r.address}
-                  <br />
-                  {r.city}
-                </strong>
-                <small>Illustrative location · simulated, not geocoded</small>
-              </div>
-            )}
           </section>
           <section className="customer-timing-section">
-            <h3>{referral ? "Referral review" : "When works for you?"}</h3>
+            <h3>{referral ? "Referral review" : "Available appointments"}</h3>
             {referral ? (
               <p className="warning">
                 This includes a service we do not book through the platform.
@@ -632,9 +871,13 @@ export default function CustomerIntake({
                 </p>
                 <button
                   className="primary full"
-                  disabled={!selectionValid}
                   onClick={() => {
-                    if (validAddress(r) && selectionValid) pay(selected!.start);
+                    if (!selectionValid)
+                      return notify(
+                        "Choose an appointment time before booking.",
+                      );
+                    if (!validAddress(r)) return goto("address");
+                    pay(selected!.start);
                   }}
                 >
                   Book & pay $129

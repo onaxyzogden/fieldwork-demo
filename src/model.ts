@@ -406,9 +406,12 @@ export function seed(): State {
   // customer's own view both exercise it without needing a fresh intake run.
   const withPreference = requests.find((r) => r.id === "r3");
   if (withPreference) {
-    const day = new Date(clock + 3 * 86400000);
+    const day = torontoParts(new Date(clock + 3 * 86400000));
     withPreference.preferredSlots = [
-      { date: day.toISOString().slice(0, 10), times: ["Morning", "Afternoon"] },
+      {
+        date: `${day.year}-${day.month}-${day.day}`,
+        times: ["Morning", "Afternoon"],
+      },
     ];
     withPreference.timingConstraints =
       "Baby is napping from 3–4pm. Please do not arrive during those times.";

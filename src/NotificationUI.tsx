@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { type State, type Visit, dateLabel, providers } from "./model";
 import { inbox, sendMessage } from "./notifications";
 type Update = (fn: (s: State) => void, msg?: string) => void;
@@ -65,6 +65,8 @@ export function MessageThread({
   update: Update;
 }) {
   const [text, setText] = useState("");
+  const [error, setError] = useState("");
+  const box = useRef<HTMLTextAreaElement>(null);
   return (
     <details className="work-task message-thread" id={"messages-" + visit.id}>
       <summary>
@@ -108,17 +110,32 @@ export function MessageThread({
               a.status === "Accepted",
           )) && (
           <>
-            <label className="field">
+            <label className={"field" + (error ? " field-error" : "")}>
               Message
               <textarea
+                ref={box}
                 value={text}
-                onChange={(e) => setText(e.target.value)}
+                aria-invalid={!!error || undefined}
+                aria-describedby={error ? "message-error" : undefined}
+                onChange={(e) => {
+                  setText(e.target.value);
+                  if (error) setError("");
+                }}
               />
+              {error && (
+                <span className="field-message" id="message-error" role="alert">
+                  {error}
+                </span>
+              )}
             </label>
             <button
               className="secondary"
-              disabled={!text.trim()}
               onClick={() => {
+                if (!text.trim()) {
+                  setError("Write a message before sending.");
+                  box.current?.focus();
+                  return;
+                }
                 update((d) => {
                   sendMessage(d, visit.id, sender, text);
                 }, "Message sent · in-app simulation");

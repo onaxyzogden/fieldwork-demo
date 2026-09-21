@@ -6,6 +6,7 @@ import {
   eligible,
   providers,
   instantEligible,
+  torontoParts,
 } from "./model";
 import { getIssue, inferredAnswers, answerKey } from "./clarification";
 export const entryTasks = (s: State, id: string) =>
@@ -15,10 +16,37 @@ export const entryTasks = (s: State, id: string) =>
 export const taskLabel = (t: Task) =>
   t.description.trim().replace(/\s+/g, " ").slice(0, 48) +
   (t.description.trim().length > 48 ? "…" : "");
-export const validAddress = (r: Request) =>
-  !!r.address.trim() &&
-  ["Oakville", "Burlington", "Milton", "Mississauga"].includes(r.city) &&
+export const cities = ["Oakville", "Burlington", "Milton", "Mississauga"];
+/* Per-field, so a blocked Continue can mark and focus the one field at fault
+   rather than reporting "the form is invalid". */
+export const validStreet = (r: Request) => !!r.address.trim();
+export const validCity = (r: Request) => cities.includes(r.city);
+export const validPostal = (r: Request) =>
   /^[A-Z]\d[A-Z]\s?\d[A-Z]\d$/i.test(r.postalCode || "");
+export const validAddress = (r: Request) =>
+  validStreet(r) && validCity(r) && validPostal(r);
+/**
+ * A stated preference day, rendered the one way everywhere it appears.
+ * The stored key is a Toronto calendar date, so it must be read back as one:
+ * formatting the raw instant instead lands a day out whenever UTC and Toronto
+ * disagree, which is most of the evening.
+ */
+export const dayLabel = (date: string) =>
+  new Date(date + "T12:00:00Z").toLocaleDateString("en-CA", {
+    timeZone: "America/Toronto",
+    weekday: "short",
+    month: "short",
+    day: "numeric",
+  });
+/** The next 10 days, for the flat tap-to-select date list at intake. */
+export function upcomingDays(from: number) {
+  return Array.from({ length: 10 }, (_, i) => {
+    const p = torontoParts(new Date(from + i * 86400000));
+    const date = `${p.year}-${p.month}-${p.day}`;
+    return { date, label: dayLabel(date) };
+  });
+}
+export const dayParts = ["Morning", "Afternoon", "Evening"];
 export function missingQuestions(t: Task) {
   const i = getIssue(t.description),
     a = { ...inferredAnswers(t.description), ...t.answers };

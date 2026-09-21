@@ -4,7 +4,7 @@ import ContractorWork, { JobWork } from "./ContractorWork";
 import { OperatorHome, OperatorToday } from "./OperatorWork";
 import { bucket, workIssue, workStatus } from "./work";
 import CustomerIntake from "./CustomerIntake";
-import { validAddress } from "./intake";
+import { validAddress, dayLabel } from "./intake";
 import {
   getIssue,
   matchIssues,
@@ -338,6 +338,7 @@ function App() {
   const [page, setPage] = useState("Home");
   const [active, setActive] = useState("r2");
   const [expanded, setExpanded] = useState(true);
+  const [payError, setPayError] = useState(false);
   const [contractor, setContractor] = useState("marcus");
   const [contractorVisit, setContractorVisit] = useState("");
   const [customer, setCustomer] = useState("c2");
@@ -737,12 +738,17 @@ function App() {
             </button>
             <button
               className="secondary"
-              disabled={
-                !replacementOptions(s, v).some(
-                  (o) => o.provider.id === "yousef",
+              onClick={() => {
+                if (
+                  !replacementOptions(s, v).some(
+                    (o) => o.provider.id === "yousef",
+                  )
                 )
-              }
-              onClick={() => beginReassign(v, true)}
+                  return notify(
+                    "No slot fits this visit on your own calendar. Offer it to another contractor.",
+                  );
+                beginReassign(v, true);
+              }}
             >
               Do It Myself
             </button>
@@ -966,10 +972,22 @@ function App() {
               </text>
             </g>
           ))}
-          <text x="282" y="75" fill="var(--muted)" fontSize="14" letterSpacing="4">
+          <text
+            x="282"
+            y="75"
+            fill="var(--muted)"
+            fontSize="14"
+            letterSpacing="4"
+          >
             OAKVILLE
           </text>
-          <text x="440" y="273" fill="var(--surface-raised)" fontSize="11" letterSpacing="3">
+          <text
+            x="440"
+            y="273"
+            fill="var(--surface-raised)"
+            fontSize="11"
+            letterSpacing="3"
+          >
             LAKE ONTARIO
           </text>
           <text x="30" y="35" fill="var(--muted)" fontSize="10">
@@ -1584,14 +1602,7 @@ function App() {
                           {r.preferredSlots
                             ?.map(
                               (p) =>
-                                `${new Date(
-                                  p.date + "T12:00:00Z",
-                                ).toLocaleDateString("en-CA", {
-                                  timeZone: "America/Toronto",
-                                  weekday: "short",
-                                  month: "short",
-                                  day: "numeric",
-                                })}${p.times.length ? ` (${p.times.join(", ")})` : ""}`,
+                                `${dayLabel(p.date)}${p.times.length ? ` (${p.times.join(", ")})` : ""}`,
                             )
                             .join(" · ") || "No specific day"}
                           {r.timingConstraints
@@ -1686,7 +1697,9 @@ function App() {
                           setModal("Request information");
                         }}
                       >
-                        {r.operatorNote ? "Ask something else" : "Need More Info"}
+                        {r.operatorNote
+                          ? "Ask something else"
+                          : "Need More Info"}
                       </button>
                       <details>
                         <summary>More actions</summary>
@@ -2152,8 +2165,17 @@ function App() {
                         </div>
                         <button
                           className="primary actions"
-                          disabled={!match.eligible || !opts.length}
-                          onClick={createVisit}
+                          onClick={() => {
+                            if (!match.eligible)
+                              return notify(
+                                "This provider is not eligible for every selected task.",
+                              );
+                            if (!opts.length)
+                              return notify(
+                                "No appointment fits this scope. Adjust the tasks or choose another provider.",
+                              );
+                            createVisit();
+                          }}
                         >
                           {provider === "yousef"
                             ? "Create visit"
@@ -2385,7 +2407,11 @@ function App() {
                   here, rather than a separate control type. The roster is the
                   customer list itself, so someone with no requests yet is still
                   selectable — identity does not depend on owning a row. */}
-              <div className="identity-switch" role="group" aria-label="Viewing as">
+              <div
+                className="identity-switch"
+                role="group"
+                aria-label="Viewing as"
+              >
                 <span className="eyebrow">VIEWING AS</span>
                 {customers.map((c) => (
                   <button
@@ -2397,9 +2423,7 @@ function App() {
                     aria-pressed={customer === c.id}
                     onClick={() => {
                       setCustomer(c.id);
-                      const own = s.requests.find(
-                        (x) => x.customerId === c.id,
-                      );
+                      const own = s.requests.find((x) => x.customerId === c.id);
                       if (own) setActive(own.id);
                       setStep(0);
                       setPage("Home");
@@ -2466,7 +2490,10 @@ function App() {
                               "Photos added")
                           : x.address || "Request · " + x.id.toUpperCase();
                       return (
-                        <section className="card request-accordion-item" key={x.id}>
+                        <section
+                          className="card request-accordion-item"
+                          key={x.id}
+                        >
                           <button
                             className="accordion-head"
                             aria-expanded={open}
@@ -2495,124 +2522,126 @@ function App() {
                           </button>
                           {!open ? null : (
                             <div id={"request-" + x.id}>
-                    {r.status === "Draft" ? (
-                      <button
-                        className="primary"
-                        onClick={() => {
-                          setPage("New request");
-                          setStep(0);
-                        }}
-                      >
-                        Continue request <ArrowRight size={16} />
-                      </button>
-                    ) : (
-                      <div className="status-track">
-                        {/* Three steps, not four. "Provider coordinated" was
+                              {r.status === "Draft" ? (
+                                <button
+                                  className="primary"
+                                  onClick={() => {
+                                    setPage("New request");
+                                    setStep(0);
+                                  }}
+                                >
+                                  Continue request <ArrowRight size={16} />
+                                </button>
+                              ) : (
+                                <div className="status-track">
+                                  {/* Three steps, not four. "Provider coordinated" was
                             internal handoff the customer could not act on; it
                             survives as the prose note below, not as a step. */}
-                        {[
-                          {
-                            label: "Received",
-                            done: true,
-                          },
-                          {
-                            label: "Quote",
-                            done: quote?.status === "Approved",
-                            active: quoted(s, r.id),
-                          },
-                          {
-                            label: "Confirmed",
-                            done: confirmed(s, r.id),
-                          },
-                        ].map((x) => (
-                          <div
-                            className={
-                              "status-step " +
-                              (x.done ? "done" : x.active ? "active" : "")
-                            }
-                            key={x.label}
-                          >
-                            <CheckCircle2 size={16} />
-                            <span>{x.label}</span>
-                          </div>
-                        ))}
-                      </div>
-                    )}
-                    {!["Confirmed", "Cancelled", "Draft"].includes(
-                      r.status,
-                    ) && (
-                      /* One contextual line, chosen from derived state — not a
+                                  {[
+                                    {
+                                      label: "Received",
+                                      done: true,
+                                    },
+                                    {
+                                      label: "Quote",
+                                      done: quote?.status === "Approved",
+                                      active: quoted(s, r.id),
+                                    },
+                                    {
+                                      label: "Confirmed",
+                                      done: confirmed(s, r.id),
+                                    },
+                                  ].map((x) => (
+                                    <div
+                                      className={
+                                        "status-step " +
+                                        (x.done
+                                          ? "done"
+                                          : x.active
+                                            ? "active"
+                                            : "")
+                                      }
+                                      key={x.label}
+                                    >
+                                      <CheckCircle2 size={16} />
+                                      <span>{x.label}</span>
+                                    </div>
+                                  ))}
+                                </div>
+                              )}
+                              {!["Confirmed", "Cancelled", "Draft"].includes(
+                                r.status,
+                              ) && (
+                                /* One contextual line, chosen from derived state — not a
                          log. When a contractor declines, coordinated reverts to
                          false and this falls back to "matching", which is what
                          keeps the decline invisible to the customer. */
-                      <p className="note">
-                        {r.status === "Needs Review"
-                          ? "Your request needs a closer look. We’ll coordinate a suitable provider."
-                          : !coordinated(s, r.id)
-                            ? "We’re matching your request with a provider."
-                            : !quoted(s, r.id)
-                              ? "A provider has been matched. We’re preparing your quote."
-                              : "Your appointment is not confirmed until provider acceptance, quote approval, and any required payment are complete."}
-                      </p>
-                    )}
-                    {!!r.preferredSlots?.length || r.timingConstraints ? (
-                      /* The customer's own stated preference, always visible to
+                                <p className="note">
+                                  {r.status === "Needs Review"
+                                    ? "Your request needs a closer look. We’ll coordinate a suitable provider."
+                                    : !coordinated(s, r.id)
+                                      ? "We’re matching your request with a provider."
+                                      : !quoted(s, r.id)
+                                        ? "A provider has been matched. We’re preparing your quote."
+                                        : "Your appointment is not confirmed until provider acceptance, quote approval, and any required payment are complete."}
+                                </p>
+                              )}
+                              {!!r.preferredSlots?.length ||
+                              r.timingConstraints ? (
+                                /* The customer's own stated preference, always visible to
                          them and never quietly dropped. */
-                      <p className="note">
-                        Your preference:{" "}
-                        {r.preferredSlots
-                          ?.map(
-                            (p) =>
-                              `${new Date(p.date + "T12:00:00Z").toLocaleDateString(
-                                "en-CA",
-                                {
-                                  timeZone: "America/Toronto",
-                                  weekday: "short",
-                                  month: "short",
-                                  day: "numeric",
-                                },
-                              )}${p.times.length ? ` (${p.times.join(", ")})` : ""}`,
-                          )
-                          .join(" · ") || "no specific day"}
-                        {r.timingConstraints ? ` — ${r.timingConstraints}` : ""}
-                      </p>
-                    ) : null}
-                    {r.notes && <p className="note">{r.notes}</p>}
-                    {r.operatorNote && (
-                      /* One question, one reply. Not a thread: see §7.3 — a new
+                                <p className="note">
+                                  Your preference:{" "}
+                                  {r.preferredSlots
+                                    ?.map(
+                                      (p) =>
+                                        `${dayLabel(p.date)}${p.times.length ? ` (${p.times.join(", ")})` : ""}`,
+                                    )
+                                    .join(" · ") || "no specific day"}
+                                  {r.timingConstraints
+                                    ? ` — ${r.timingConstraints}`
+                                    : ""}
+                                </p>
+                              ) : null}
+                              {r.notes && <p className="note">{r.notes}</p>}
+                              {r.operatorNote && (
+                                /* One question, one reply. Not a thread: see §7.3 — a new
                          question replaces this pair rather than appending. */
-                      <div className="card operator-note">
-                        <span className="eyebrow">A QUESTION FOR YOU</span>
-                        <p>{r.operatorNote}</p>
-                        {r.customerReply ? (
-                          <p className="operator-note-reply">
-                            <strong>Your reply:</strong> {r.customerReply}
-                          </p>
-                        ) : (
-                          <NoteReply
-                            onSend={(reply) =>
-                              update((d) => {
-                                d.requests.find(
-                                  (x) => x.id === r.id,
-                                )!.customerReply = reply;
-                                log(d, "Customer replied: " + reply);
-                              }, "Reply shared with Yousef")
-                            }
-                          />
-                        )}
-                      </div>
-                    )}
-                    {tasks.map((t) => (
-                      <div className="card portal-task" key={t.id}>
-                        <h4>
-                          <Wrench size={16} />
-                          {t.summary}
-                        </h4>
-                        <p>{t.description}</p>
-                        <TaskAnswers task={t} />
-                        {taskPhotos(t)}
-                      </div>
-                    ))}
+                                <div className="card operator-note">
+                                  <span className="eyebrow">
+                                    A QUESTION FOR YOU
+                                  </span>
+                                  <p>{r.operatorNote}</p>
+                                  {r.customerReply ? (
+                                    <p className="operator-note-reply">
+                                      <strong>Your reply:</strong>{" "}
+                                      {r.customerReply}
+                                    </p>
+                                  ) : (
+                                    <NoteReply
+                                      onSend={(reply) =>
+                                        update((d) => {
+                                          d.requests.find(
+                                            (x) => x.id === r.id,
+                                          )!.customerReply = reply;
+                                          log(d, "Customer replied: " + reply);
+                                        }, "Reply shared with Yousef")
+                                      }
+                                    />
+                                  )}
+                                </div>
+                              )}
+                              {tasks.map((t) => (
+                                <div className="card portal-task" key={t.id}>
+                                  <h4>
+                                    <Wrench size={16} />
+                                    {t.summary}
+                                  </h4>
+                                  <p>{t.description}</p>
+                                  <TaskAnswers task={t} />
+                                  {taskPhotos(t)}
+                                </div>
+                              ))}
                               {quotePanel()}
                               {visits.map(visitCard)}
                             </div>
@@ -3033,22 +3062,44 @@ function App() {
                           Customer price is unchanged.
                         </p>
                         {provider !== "yousef" && (
-                          <label className="field">
+                          <label
+                            className={
+                              "field" + (payError ? " field-error" : "")
+                            }
+                            htmlFor="reoffer-pay"
+                          >
                             Replacement contractor pay (CAD)
                             <input
+                              id="reoffer-pay"
                               type="number"
                               min={choice.minimumPay}
                               value={pay}
-                              onChange={(e) => setPay(Number(e.target.value))}
+                              aria-invalid={payError || undefined}
+                              onChange={(e) => {
+                                if (payError) setPayError(false);
+                                setPay(Number(e.target.value));
+                              }}
                             />
+                            {payError && (
+                              <span className="field-message" role="alert">
+                                Pay at least {money(choice.minimumPay)} for this
+                                replacement.
+                              </span>
+                            )}
                           </label>
                         )}
                         <button
                           className="primary full actions"
-                          disabled={
-                            provider !== "yousef" && pay < choice.minimumPay
-                          }
                           onClick={() => {
+                            if (
+                              provider !== "yousef" &&
+                              pay < choice.minimumPay
+                            ) {
+                              setPayError(true);
+                              document.getElementById("reoffer-pay")?.focus();
+                              return;
+                            }
+                            setPayError(false);
                             update((d) => {
                               reoffer(d, v.id, provider, choice.start!, pay);
                             });
