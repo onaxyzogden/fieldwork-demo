@@ -61,7 +61,6 @@ import {
   money,
   dateLabel,
   log,
-  reconcile,
   slots,
   available,
   eligible,
@@ -90,7 +89,7 @@ import "./customer-concept.css";
 import "./operator-concept.css";
 import "./contractor-concept.css";
 import "./cards.css";
-import { deliverUpdates, inbox } from "./notifications";
+import { inbox } from "./notifications";
 import { NotificationInbox, MessageThread } from "./NotificationUI";
 import {
   migrateDispatch,
@@ -100,7 +99,7 @@ import {
   reassignmentForScope,
   reoffer,
 } from "./dispatch";
-const KEY = "fieldwork-demo-v1";
+import { KEY, load, save, commit } from "./store";
 /**
  * Submit-type actions stay enabled and validate on click.
  *
@@ -361,9 +360,7 @@ function Workspace({
   const [role, setRole] = useState<Role>(initialRole);
   const idPrefix = compareMode ? role + "-" : "";
   React.useEffect(() => {
-    try {
-      localStorage.setItem(KEY, JSON.stringify(s));
-    } catch {}
+    save(s);
   }, []);
   const [page, setPage] = useState("Home");
   const [active, setActive] = useState("r2");
@@ -458,16 +455,7 @@ function Workspace({
   }, [sidebar]);
   const [override, setOverride] = useState("");
   const update = (fn: (d: State) => void, msg?: string) => {
-    setS((prev) => {
-      const d = migrateDispatch(structuredClone(prev));
-      fn(d);
-      reconcile(d);
-      deliverUpdates(prev, d);
-      try {
-        localStorage.setItem(KEY, JSON.stringify(d));
-      } catch {}
-      return d;
-    });
+    setS((prev) => commit(prev, fn));
     if (msg) {
       setToast(msg);
       setTimeout(() => setToast(""), 3500);
@@ -2892,7 +2880,7 @@ function Workspace({
                   onClick={() => {
                     const d = migrateDispatch(seed());
                     setS(d);
-                    localStorage.setItem(KEY, JSON.stringify(d));
+                    save(d);
                     setActive("r2");
                     setCustomer("c2");
                     setStep(0);
@@ -3484,15 +3472,17 @@ function App() {
       return "light";
     }
   });
-  const [s, setS] = useState<State>(() => {
-    try {
-      return migrateDispatch(
-        JSON.parse(localStorage.getItem(KEY) || "null") || seed(),
-      );
-    } catch {
-      return migrateDispatch(seed());
-    }
-  });
+  const [s, setS] = useState<State>(load);
+  /* The customer's assessment link is a separate page, so their approval lands
+     in another tab. Without this the operator would be looking at a stale
+     screen until they reloaded. */
+  React.useEffect(() => {
+    const sync = (e: StorageEvent) => {
+      if (e.key === KEY && e.newValue) setS(load());
+    };
+    window.addEventListener("storage", sync);
+    return () => window.removeEventListener("storage", sync);
+  }, []);
   const [compare, setCompare] = useState(false);
   if (!compare)
     return (
