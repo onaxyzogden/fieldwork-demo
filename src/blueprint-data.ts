@@ -26,7 +26,7 @@ export const stages: Stage[] = [
     lanes: {
       Customer: {
         title: "Describe each task",
-        body: "Tasks → Where and when → Done. Photos and clarification answers belong to each task. Preferred time is not a confirmed appointment.",
+        body: "Address → Tasks → Timing. Photos and clarification answers belong to each task. Timing is optional, and a stated preference is not a confirmed appointment.",
       },
       Operator: {
         title: "New work to review",
@@ -57,7 +57,7 @@ export const stages: Stage[] = [
     lanes: {
       Customer: {
         title: "Review is pending",
-        body: "Sees request progress and any information request. Can add task-specific photos and respond with details.",
+        body: "Sees request progress and the operator's question, if one is outstanding. Can add task-specific photos and reply once.",
       },
       Operator: {
         title: "Review and price",
