@@ -448,7 +448,12 @@ export default function ContractorWork({
             (tab === "Today"
               ? dayKey(v.start) === today ||
                 (!!v.execution?.startedAt && !v.execution.finishedAt)
-              : dayKey(v.start) > today))
+              : // Today claims anything in progress regardless of its
+                // scheduled date (an overrunning job shouldn't vanish); this
+                // exclusion is what keeps that same visit from also showing
+                // here if it was started ahead of its scheduled date.
+                dayKey(v.start) > today &&
+                !(v.execution?.startedAt && !v.execution.finishedAt)))
       );
     })
     .sort(
