@@ -2298,3 +2298,90 @@ main button,
 .contractor-task-list li {
   margin: var(--space-1) 0;
 }
+/* Compare mode: Customer, Operator and Contractor render as three full,
+   independently-navigable Workspace instances side by side. Two problems
+   only exist here. First, .sidebar/.modal-backdrop/.drawer-backdrop/.toast
+   are all `position: fixed`, i.e. relative to the whole browser viewport —
+   fine when one Workspace owns the page, wrong once three share it. Giving
+   each column its own transformed, height-bound box makes it the
+   containing block for its own fixed descendants, so each one now pins to
+   its own column instead of the shared viewport, with no change to any of
+   those rules. Second, every existing responsive rule below keys off the
+   real viewport width, which stays desktop-wide here even though a column
+   is phone-narrow, so a column reuses the same narrow-screen rules those
+   breakpoints already define, applied by class instead of width. Other
+   breakpoints are left alone: a compare column is deliberately a denser
+   view, not a full re-certification of every responsive rule at this width. */
+.compare-row {
+  display: flex;
+  gap: var(--space-4);
+  overflow-x: auto;
+  height: 100vh;
+  box-sizing: border-box;
+  padding: var(--space-4);
+}
+.compare-column {
+  position: relative;
+  transform: translateZ(0);
+  height: 100%;
+  min-height: 0;
+  overflow-y: auto;
+  overflow-x: hidden;
+  flex: 1 0 420px;
+  max-width: 520px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+}
+.compare-column .sidebar {
+  transform: translateX(-100%);
+  transition: transform var(--motion-fast);
+  overflow-y: auto;
+}
+.compare-column .sidebar:not(.open) {
+  visibility: hidden;
+  pointer-events: none;
+}
+.compare-column .sidebar.open {
+  visibility: visible;
+  transform: translateX(0);
+}
+.compare-column .shell {
+  margin-left: 0;
+}
+.compare-column .mobile-menu {
+  display: block;
+}
+.compare-column .toast {
+  left: 50%;
+}
+.compare-column .requests-layout {
+  grid-template-columns: 1fr;
+}
+.compare-column .queue {
+  position: static;
+  display: flex;
+  overflow-x: auto;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  padding: var(--space-3);
+}
+.compare-column .queue-item {
+  width: auto;
+  min-width: 130px;
+  flex: 1;
+  padding: var(--space-2);
+}
+.compare-column .queue-item p,
+.compare-column .queue-item small {
+  display: none;
+}
+.compare-column .queue-item .badge {
+  margin-top: var(--space-2);
+}
+.compare-column .mobile-request-browser {
+  display: block;
+  margin-bottom: var(--space-4);
+}
+.compare-column .operator-concept > .queue:not(.queue-open) {
+  display: none;
+}
