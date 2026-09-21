@@ -4,6 +4,7 @@ import ContractorWork, { JobWork } from "./ContractorWork";
 import { OperatorHome, OperatorToday } from "./OperatorWork";
 import Walkthroughs from "./Walkthroughs";
 import Assessment from "./Assessment";
+import PropertyRecord from "./PropertyRecord";
 import { bucket, workIssue, workStatus } from "./work";
 import CustomerIntake from "./CustomerIntake";
 import { validAddress, dayLabel } from "./intake";
@@ -92,6 +93,7 @@ import "./customer-concept.css";
 import "./operator-concept.css";
 import "./contractor-concept.css";
 import "./cards.css";
+import "./assessment.css";
 import { inbox } from "./notifications";
 import { NotificationInbox, MessageThread } from "./NotificationUI";
 import {
@@ -508,6 +510,13 @@ function Workspace({
   const tasks = s.tasks.filter((t) => t.requestId === r.id && !t.mergedInto);
   /* The signed-in customer's own requests. A draft only counts once it carries
      something — an address, a description or a photo. */
+  /* Only properties that have actually been walked: an empty history is not
+     worth a collapsed panel telling the customer there is nothing in it. */
+  const customerProperties = s.properties.filter(
+    (p) =>
+      p.customerId === customer &&
+      s.walkthroughs.some((w) => w.propertyId === p.id),
+  );
   const ownRequests = s.requests.filter(
     (x) =>
       x.customerId === customer &&
@@ -2735,6 +2744,16 @@ function Workspace({
                   >
                     <Plus size={16} /> New request
                   </button>
+                  {/* Collapsed and below the bookings: the walkthrough history
+                      is a reference, not the thing the customer came for. */}
+                  {customerProperties.map((p) => (
+                    <details className="card panel" key={p.id}>
+                      <summary>
+                        <strong>Maintenance record · {p.address}</strong>
+                      </summary>
+                      <PropertyRecord s={s} propertyId={p.id} />
+                    </details>
+                  ))}
                 </>
               )}
             </div>

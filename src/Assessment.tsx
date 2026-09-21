@@ -27,6 +27,7 @@ import {
 } from "./pmw";
 import { KEY, load, commit } from "./store";
 import AssessmentPrint from "./AssessmentPrint";
+import PropertyRecord from "./PropertyRecord";
 import "./tokens.css";
 import "./style.css";
 import "./typography.css";
@@ -91,7 +92,17 @@ export default function Assessment({ assessmentId }: { assessmentId: string }) {
     s.tasks
       .filter((t) => t.requestId === request.id)
       .every((t) => t.status === "Completed");
-  const step = done ? 4 : visit && paid ? 3 : paid ? 2 : request ? 1 : 0;
+  /* The first step not yet reached: everything before it is done, it is the
+     one in progress. Reviewing the findings counts as reached on arrival. */
+  const step = !request
+    ? 1
+    : !paid
+      ? 2
+      : !visit
+        ? 3
+        : !done
+          ? 4
+          : TRACK.length;
 
   const submit = () => {
     if (!totals.approved.length)
@@ -292,6 +303,15 @@ export default function Assessment({ assessmentId }: { assessmentId: string }) {
             </p>
             <button className="secondary">Create an account later</button>
           </section>
+        )}
+
+        {request && property && (
+          <details className="card panel">
+            <summary>
+              <strong>This property's maintenance record</strong>
+            </summary>
+            <PropertyRecord s={s} propertyId={property.id} />
+          </details>
         )}
 
         <footer className="assessment-foot">

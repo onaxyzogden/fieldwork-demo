@@ -74,6 +74,19 @@
   border-color: var(--accent-text);
   background: var(--accent-soft);
 }
+.property-record section {
+  margin-top: var(--space-5);
+}
+.record-item {
+  padding: var(--space-3) 0;
+  border-bottom: 1px solid var(--line);
+}
+.record-item:last-child {
+  border-bottom: 0;
+}
+.record-item .photos img {
+  max-height: var(--space-30);
+}
 .assessment-foot {
   margin-top: var(--space-6);
   padding-top: var(--space-5);

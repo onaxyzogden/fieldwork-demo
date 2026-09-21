@@ -32,6 +32,7 @@ import {
   sendWalkthrough,
 } from "./pmw";
 import { assessmentLink } from "./store";
+import PropertyRecord from "./PropertyRecord";
 
 type Props = {
   s: State;
@@ -328,6 +329,13 @@ function WalkthroughDetail({
           <Plus size={16} /> Add finding
         </button>
       )}
+
+      <details className="card panel">
+        <summary>
+          <strong>Property maintenance record</strong>
+        </summary>
+        <PropertyRecord s={s} propertyId={w.propertyId} links />
+      </details>
     </>
   );
 }
