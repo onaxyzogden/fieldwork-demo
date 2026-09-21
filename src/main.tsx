@@ -3,6 +3,7 @@ import Blueprint from "./Blueprint";
 import ContractorWork, { JobWork } from "./ContractorWork";
 import { OperatorHome, OperatorToday } from "./OperatorWork";
 import Walkthroughs from "./Walkthroughs";
+import Assessment from "./Assessment";
 import { bucket, workIssue, workStatus } from "./work";
 import CustomerIntake from "./CustomerIntake";
 import { validAddress, dayLabel } from "./intake";
@@ -3525,12 +3526,18 @@ function App() {
     </div>
   );
 }
+/**
+ * The whole router. The customer's assessment is a link they open, so it has to
+ * be addressable — and in a prototype with no backend, a URL parameter is what a
+ * link can be. The page says as much rather than implying the link is secret.
+ */
+function pickView() {
+  const params = new URLSearchParams(window.location.search);
+  if (params.get("view") === "blueprint") return <Blueprint />;
+  if (params.get("view") === "assessment")
+    return <Assessment assessmentId={params.get("id") || ""} />;
+  return <App />;
+}
 createRoot(document.getElementById("root")!).render(
-  <React.StrictMode>
-    {new URLSearchParams(window.location.search).get("view") === "blueprint" ? (
-      <Blueprint />
-    ) : (
-      <App />
-    )}
-  </React.StrictMode>,
+  <React.StrictMode>{pickView()}</React.StrictMode>,
 );
