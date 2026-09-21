@@ -1,0 +1,623 @@
+import { useState } from "react";
+import {
+  ArrowLeft,
+  ArrowRight,
+  Camera,
+  ClipboardCheck,
+  Copy,
+  ExternalLink,
+  Plus,
+  Send,
+  Trash2,
+} from "lucide-react";
+import {
+  type State,
+  type Finding,
+  type Walkthrough,
+  money,
+  dateLabel,
+  customerName,
+  uid,
+} from "./model";
+import { cities } from "./intake";
+import {
+  addFinding,
+  assessmentTotals,
+  convertApproved,
+  createWalkthrough,
+  findingState,
+  findingsFor,
+  money2,
+  quotable,
+  sendWalkthrough,
+} from "./pmw";
+import { assessmentLink } from "./store";
+
+type Props = {
+  s: State;
+  update: (fn: (d: State) => void, msg?: string) => void;
+  notify: (msg: string) => void;
+  openRequest: (id: string) => void;
+};
+
+const statusTone = (w: Walkthrough) =>
+  w.status === "Converted" ? "green" : w.status === "Sent" ? "" : "neutral";
+
+export default function Walkthroughs({
+  s,
+  update,
+  notify,
+  openRequest,
+}: Props) {
+  const [openId, setOpenId] = useState("");
+  const open = s.walkthroughs.find((w) => w.id === openId);
+  return open ? (
+    <WalkthroughDetail
+      s={s}
+      walkthrough={open}
+      update={update}
+      notify={notify}
+      openRequest={openRequest}
+      back={() => setOpenId("")}
+    />
+  ) : (
+    <WalkthroughList s={s} update={update} notify={notify} open={setOpenId} />
+  );
+}
+
+function WalkthroughList({
+  s,
+  update,
+  notify,
+  open,
+}: {
+  s: State;
+  update: Props["update"];
+  notify: Props["notify"];
+  open: (id: string) => void;
+}) {
+  const [creating, setCreating] = useState(false);
+  const [propertyId, setPropertyId] = useState(s.properties[0]?.id || "");
+  const [address, setAddress] = useState("");
+  const [city, setCity] = useState(cities[0]);
+  const [customerId, setCustomerId] = useState("c2");
+  const groups = [
+    ["Draft", "In progress"],
+    ["Sent", "With the customer"],
+    ["Converted", "Became work"],
+  ] as const;
+
+  const start = () => {
+    if (propertyId === "new" && !address.trim())
+      return notify("Enter the property address to start a walkthrough.");
+    const id = uid();
+    update((d) => {
+      let target = propertyId;
+      if (target === "new") {
+        target = uid();
+        d.properties.push({
+          id: target,
+          customerId,
+          address: address.trim(),
+          city,
+        });
+      }
+      const w = createWalkthrough(d, target);
+      w.id = id;
+    }, "Walkthrough started");
+    setCreating(false);
+    setAddress("");
+    open(id);
+  };
+
+  return (
+    <>
+      <div className="heading">
+        <div>
+          <span className="eyebrow">PROACTIVE MAINTENANCE</span>
+          <h1>Property walkthroughs</h1>
+          <p>
+            Walk a property, record what you see, and let the customer choose
+            what to approve.
+          </p>
+        </div>
+        <button className="primary" onClick={() => setCreating(!creating)}>
+          <Plus size={16} /> New walkthrough
+        </button>
+      </div>
+      {creating && (
+        <section className="card panel">
+          <div className="panel-title">
+            <h3>Start a walkthrough</h3>
+          </div>
+          <label className="field">
+            Property
+            <select
+              value={propertyId}
+              onChange={(e) => setPropertyId(e.target.value)}
+            >
+              {s.properties.map((p) => (
+                <option key={p.id} value={p.id}>
+                  {p.address}, {p.city} · {customerName(p.customerId)}
+                </option>
+              ))}
+              <option value="new">Add a new property…</option>
+            </select>
+          </label>
+          {propertyId === "new" && (
+            <>
+              <label className="field">
+                Street address
+                <input
+                  value={address}
+                  onChange={(e) => setAddress(e.target.value)}
+                  placeholder="120 Kerr Street"
+                />
+              </label>
+              <div className="row">
+                <label className="mini-field">
+                  City
+                  <select value={city} onChange={(e) => setCity(e.target.value)}>
+                    {cities.map((c) => (
+                      <option key={c}>{c}</option>
+                    ))}
+                  </select>
+                </label>
+                <label className="mini-field">
+                  Owner / manager
+                  <select
+                    value={customerId}
+                    onChange={(e) => setCustomerId(e.target.value)}
+                  >
+                    {["c1", "c2", "c3", "c4", "c5"].map((id) => (
+                      <option key={id} value={id}>
+                        {customerName(id)}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+              </div>
+            </>
+          )}
+          <button className="primary" onClick={start}>
+            Start walkthrough <ArrowRight size={16} />
+          </button>
+        </section>
+      )}
+      {!s.walkthroughs.length && !creating && (
+        <section className="card panel">
+          <p className="note">
+            No walkthroughs yet. Start one to record findings against a
+            property.
+          </p>
+        </section>
+      )}
+      {groups.map(([status, caption]) => {
+        const rows = s.walkthroughs.filter((w) => w.status === status);
+        if (!rows.length) return null;
+        return (
+          <section className="card panel" key={status}>
+            <div className="panel-title">
+              <h3>{caption}</h3>
+              <span className="count">{rows.length}</span>
+            </div>
+            {rows.map((w) => {
+              const property = s.properties.find((p) => p.id === w.propertyId);
+              const totals = assessmentTotals(s, w.id);
+              return (
+                <button
+                  className="queue-item"
+                  key={w.id}
+                  onClick={() => open(w.id)}
+                >
+                  <p>
+                    <strong>{w.assessmentId}</strong>
+                    <span className={"badge " + statusTone(w)}>{w.status}</span>
+                  </p>
+                  <small>
+                    {property?.address}, {property?.city} ·{" "}
+                    {totals.findings.length} finding
+                    {totals.findings.length === 1 ? "" : "s"}
+                    {totals.approved.length
+                      ? ` · ${money(totals.subtotal)} approved`
+                      : ""}
+                  </small>
+                </button>
+              );
+            })}
+          </section>
+        );
+      })}
+    </>
+  );
+}
+
+function WalkthroughDetail({
+  s,
+  walkthrough: w,
+  update,
+  notify,
+  openRequest,
+  back,
+}: {
+  s: State;
+  walkthrough: Walkthrough;
+  update: Props["update"];
+  notify: Props["notify"];
+  openRequest: Props["openRequest"];
+  back: () => void;
+}) {
+  const property = s.properties.find((p) => p.id === w.propertyId);
+  const totals = assessmentTotals(s, w.id);
+  const findings = findingsFor(s, w.id);
+  const draft = w.status === "Draft";
+  const converted = s.requests.find((r) => r.walkthroughId === w.id);
+  const link = assessmentLink(w.assessmentId);
+
+  const patch = (id: string, values: Partial<Finding>, msg?: string) =>
+    update((d) => {
+      const f = d.findings.find((f) => f.id === id);
+      if (f) Object.assign(f, values);
+    }, msg);
+
+  const attach = (f: Finding, file?: File) => {
+    if (!file) return;
+    if (file.size > 1500000)
+      return notify("Choose an image smaller than 1.5 MB for this local demo.");
+    const reader = new FileReader();
+    reader.onload = () =>
+      patch(f.id, { photos: [...f.photos, String(reader.result)] });
+    reader.readAsDataURL(file);
+  };
+
+  return (
+    <>
+      <button className="text-button" onClick={back}>
+        <ArrowLeft size={16} /> All walkthroughs
+      </button>
+      <div className="heading">
+        <div>
+          <span className="eyebrow">ASSESSMENT {w.assessmentId}</span>
+          <h1>
+            {property?.address}, {property?.city}
+          </h1>
+          <p>
+            {customerName(property?.customerId || "")} ·{" "}
+            {dateLabel(w.sentAt || w.date)}
+          </p>
+        </div>
+        <span className={"badge " + statusTone(w)}>{w.status}</span>
+      </div>
+
+      <NextStep
+        s={s}
+        walkthrough={w}
+        totals={totals}
+        link={link}
+        notify={notify}
+        update={update}
+        openRequest={openRequest}
+        converted={converted?.id}
+      />
+
+      {findings.map((f) => (
+        <FindingCard
+          key={f.id}
+          s={s}
+          finding={f}
+          editable={draft}
+          patch={patch}
+          attach={attach}
+          remove={() =>
+            update((d) => {
+              d.findings = d.findings.filter((x) => x.id !== f.id);
+            }, "Finding removed")
+          }
+        />
+      ))}
+
+      {draft && (
+        <button
+          className="secondary full actions"
+          onClick={() =>
+            update((d) => {
+              addFinding(d, w.id);
+            }, "Finding added")
+          }
+        >
+          <Plus size={16} /> Add finding
+        </button>
+      )}
+    </>
+  );
+}
+
+/** One card, one decision: what this walkthrough needs from the operator now. */
+function NextStep({
+  s,
+  walkthrough: w,
+  totals,
+  link,
+  notify,
+  update,
+  openRequest,
+  converted,
+}: {
+  s: State;
+  walkthrough: Walkthrough;
+  totals: ReturnType<typeof assessmentTotals>;
+  link: string;
+  notify: Props["notify"];
+  update: Props["update"];
+  openRequest: Props["openRequest"];
+  converted?: string;
+}) {
+  const unpriced = totals.findings.filter(
+    (f) => f.pricing === "Quoted" && !quotable(f),
+  );
+  const copy = () =>
+    navigator.clipboard
+      ?.writeText(link)
+      .then(() => notify("Assessment link copied"))
+      .catch(() => notify(link));
+
+  if (w.status === "Converted")
+    return (
+      <section className="card panel op-decision op-tone-complete">
+        <div className="op-decision-head">
+          <h3>Approved work is in the queue</h3>
+          <p>
+            {totals.approved.length} finding
+            {totals.approved.length === 1 ? "" : "s"} became tasks on one
+            request. Schedule it like any other job.
+          </p>
+        </div>
+        <div className="op-decision-actions">
+          {converted && (
+            <button className="primary" onClick={() => openRequest(converted)}>
+              Open the request <ArrowRight size={16} />
+            </button>
+          )}
+        </div>
+      </section>
+    );
+
+  if (w.status === "Sent")
+    return (
+      <section className="card panel op-decision">
+        <div className="op-decision-head">
+          <h3>
+            {totals.approved.length
+              ? `${totals.approved.length} approved · ready to convert`
+              : "Waiting on the customer"}
+          </h3>
+          <p>
+            {totals.approved.length
+              ? `${money(totals.subtotal)} plus ${money2(totals.tax)} tax.`
+              : "The customer opens the link below to review the findings. Nothing is scheduled until they approve and a payment method is on file."}
+          </p>
+        </div>
+        <div className="op-decision-actions">
+          {totals.approved.length > 0 && (
+            <button
+              className="primary"
+              onClick={() =>
+                update((d) => {
+                  convertApproved(d, w.id);
+                }, "Approved findings converted into work")
+              }
+            >
+              Convert {totals.approved.length} approved
+            </button>
+          )}
+          <button className="secondary" onClick={copy}>
+            <Copy size={16} /> Copy link
+          </button>
+          <button className="text-button" onClick={() => window.open(link)}>
+            <ExternalLink size={16} /> Open as the customer
+          </button>
+        </div>
+      </section>
+    );
+
+  return (
+    <section className="card panel op-decision">
+      <div className="op-decision-head">
+        <h3>
+          {!totals.findings.length
+            ? "Record what you saw"
+            : unpriced.length
+              ? `${unpriced.length} finding${unpriced.length === 1 ? "" : "s"} still need a price`
+              : "Ready to send"}
+        </h3>
+        <p>
+          {!totals.findings.length
+            ? "Add one finding per issue. Each is approved or deferred on its own."
+            : unpriced.length
+              ? "Price it, or mark it as needing further assessment if you cannot scope it responsibly from a walkthrough."
+              : `${totals.findings.length} finding${totals.findings.length === 1 ? "" : "s"} ready for the customer to review.`}
+        </p>
+      </div>
+      <div className="op-decision-actions">
+        <button
+          className="primary"
+          onClick={() => {
+            if (!totals.findings.length)
+              return notify("Add at least one finding before sending.");
+            if (unpriced.length)
+              return notify(
+                "Give every finding a price, or mark it as further assessment required.",
+              );
+            update((d) => {
+              sendWalkthrough(d, w.id);
+            }, "Assessment sent to the customer");
+          }}
+        >
+          <Send size={16} /> Send to customer
+        </button>
+      </div>
+    </section>
+  );
+}
+
+function FindingCard({
+  s,
+  finding: f,
+  editable,
+  patch,
+  attach,
+  remove,
+}: {
+  s: State;
+  finding: Finding;
+  editable: boolean;
+  patch: (id: string, values: Partial<Finding>, msg?: string) => void;
+  attach: (f: Finding, file?: File) => void;
+  remove: () => void;
+}) {
+  const state = findingState(s, f);
+  const number = String(f.number).padStart(2, "0");
+  return (
+    <details className="card panel work-task" open={editable}>
+      <summary>
+        <strong>
+          {number} · {f.title || "Untitled finding"}
+        </strong>
+        <span className="badge">{state}</span>
+      </summary>
+      {editable ? (
+        <>
+          <div className="row">
+            <label className="mini-field">
+              Area / location
+              <input
+                value={f.area}
+                placeholder="Main floor hallway"
+                onChange={(e) => patch(f.id, { area: e.target.value })}
+              />
+            </label>
+            <label className="mini-field">
+              Short title
+              <input
+                value={f.title}
+                placeholder="Door rubbing against frame"
+                onChange={(e) => patch(f.id, { title: e.target.value })}
+              />
+            </label>
+          </div>
+          <label className="field">
+            Observed condition
+            <textarea
+              value={f.observed}
+              placeholder="What is visibly wrong, in plain language."
+              onChange={(e) => patch(f.id, { observed: e.target.value })}
+            />
+          </label>
+          <label className="field">
+            Proposed work
+            <textarea
+              value={f.proposed}
+              placeholder="The repair you would carry out. This becomes the task if approved."
+              onChange={(e) => patch(f.id, { proposed: e.target.value })}
+            />
+          </label>
+          <div className="photos">
+            {f.photos.map((src, i) => (
+              <img key={i} src={src} alt={`Finding ${number} condition`} />
+            ))}
+            <label className="photo-add">
+              <Camera size={16} /> Add photo
+              <input
+                type="file"
+                accept="image/*"
+                onChange={(e) => attach(f, e.target.files?.[0])}
+              />
+            </label>
+          </div>
+          <div className="row">
+            <label className="mini-field">
+              Pricing
+              <select
+                value={f.pricing}
+                onChange={(e) =>
+                  patch(f.id, {
+                    pricing: e.target.value as Finding["pricing"],
+                    ...(e.target.value === "Further Assessment Required"
+                      ? { price: undefined }
+                      : {}),
+                  })
+                }
+              >
+                <option>Quoted</option>
+                <option>Further Assessment Required</option>
+              </select>
+            </label>
+            {f.pricing === "Quoted" && (
+              <label className="mini-field">
+                Estimated price (CAD)
+                <input
+                  type="number"
+                  min="1"
+                  value={f.price ?? ""}
+                  onChange={(e) =>
+                    patch(f.id, {
+                      price: e.target.value ? Number(e.target.value) : undefined,
+                    })
+                  }
+                />
+              </label>
+            )}
+          </div>
+          {f.pricing === "Further Assessment Required" && (
+            <p className="note">
+              The customer sees this as pending assessment, with no price and no
+              approval control. It cannot become work until you scope it.
+            </p>
+          )}
+          <label className="field">
+            Note for the customer
+            <input
+              value={f.customerNotes}
+              placeholder="Optional, shown on the assessment."
+              onChange={(e) => patch(f.id, { customerNotes: e.target.value })}
+            />
+          </label>
+          <label className="field">
+            Internal note
+            <input
+              value={f.internalNotes}
+              placeholder="Not shown to the customer."
+              onChange={(e) => patch(f.id, { internalNotes: e.target.value })}
+            />
+          </label>
+          <button className="text-button" onClick={remove}>
+            <Trash2 size={16} /> Remove finding
+          </button>
+        </>
+      ) : (
+        <>
+          <small>{f.area}</small>
+          <p>{f.observed}</p>
+          <p>
+            <strong>Proposed:</strong> {f.proposed}
+          </p>
+          <div className="photos">
+            {f.photos.map((src, i) => (
+              <img key={i} src={src} alt={`Finding ${number} condition`} />
+            ))}
+          </div>
+          <p>
+            {f.pricing === "Quoted" ? (
+              <strong>{money(f.price || 0)} + applicable tax</strong>
+            ) : (
+              <span className="badge neutral">
+                <ClipboardCheck size={16} /> Assessment required
+              </span>
+            )}
+          </p>
+          {f.customerNotes && <p className="note">{f.customerNotes}</p>}
+        </>
+      )}
+    </details>
+  );
+}

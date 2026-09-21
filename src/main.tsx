@@ -2,6 +2,7 @@ import { suitableProviders } from "./suitability";
 import Blueprint from "./Blueprint";
 import ContractorWork, { JobWork } from "./ContractorWork";
 import { OperatorHome, OperatorToday } from "./OperatorWork";
+import Walkthroughs from "./Walkthroughs";
 import { bucket, workIssue, workStatus } from "./work";
 import CustomerIntake from "./CustomerIntake";
 import { validAddress, dayLabel } from "./intake";
@@ -48,6 +49,7 @@ import {
   Sun,
   Moon,
   Menu,
+  ClipboardCheck,
 } from "lucide-react";
 import {
   type State,
@@ -1432,6 +1434,7 @@ function Workspace({
             ? [
                 [LayoutDashboard, "Home"],
                 [ListTodo, "Requests"],
+                [ClipboardCheck, "Walkthroughs"],
                 [Navigation, "Today"],
                 [MoreHorizontal, "More"],
               ]
@@ -2360,6 +2363,17 @@ function Workspace({
                 </div>
               </div>
             </>
+          )}
+          {role === "Operator" && page === "Walkthroughs" && (
+            <Walkthroughs
+              s={s}
+              update={update}
+              notify={notify}
+              openRequest={(id) => {
+                choose(id);
+                setPage("Requests");
+              }}
+            />
           )}
           {role === "Operator" && page === "Today" && (
             <OperatorToday

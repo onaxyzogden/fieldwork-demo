@@ -15,6 +15,14 @@ export function load(): State {
   }
 }
 
+/**
+ * The customer's assessment link. A URL parameter, not a secret — the
+ * assessment page says so, the way the demo bar labels the rest of the
+ * prototype.
+ */
+export const assessmentLink = (assessmentId: string) =>
+  `${location.origin}${location.pathname}?view=assessment&id=${encodeURIComponent(assessmentId)}`;
+
 export function save(s: State) {
   try {
     localStorage.setItem(KEY, JSON.stringify(s));
