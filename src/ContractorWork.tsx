@@ -1,6 +1,13 @@
 import { questionAnswers } from "./clarification";
 import { useState, useRef, useEffect, type ReactNode } from "react";
-import { type State, type Visit, providers, money, dateLabel } from "./model";
+import {
+  type State,
+  type Visit,
+  providers,
+  money,
+  dateLabel,
+  customerName,
+} from "./model";
 import {
   canWork,
   execute,
@@ -486,7 +493,7 @@ export default function ContractorWork({
                   {s.tasks.find((t) => v.taskIds.includes(t.id))?.summary}
                 </h2>
                 <p>
-                  {r.city} · {dateLabel(v.start)}
+                  {customerName(r.customerId)} · {r.city} · {dateLabel(v.start)}
                 </p>
                 <p>
                   {v.duration} minutes · {v.taskIds.length} tasks
@@ -638,10 +645,18 @@ export default function ContractorWork({
                     {s.tasks.find((t) => v.taskIds.includes(t.id))?.summary}
                   </h2>
                   <p>
-                    {r.city} · {dateLabel(v.start)}
+                    {customerName(r.customerId)} · {r.city} ·{" "}
+                    {dateLabel(v.start)}
                   </p>
+                  <ul className="contractor-task-list">
+                    {s.tasks
+                      .filter((t) => v.taskIds.includes(t.id))
+                      .map((t) => (
+                        <li key={t.id}>{t.summary}</li>
+                      ))}
+                  </ul>
                   <p>
-                    {v.taskIds.length} tasks · {v.duration} minutes ·{" "}
+                    {v.duration} minutes ·{" "}
                     {s.tasks
                       .filter((t) => v.taskIds.includes(t.id))
                       .reduce((n, t) => n + t.photos.length, 0)}{" "}

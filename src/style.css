@@ -28,10 +28,10 @@ a {
 button {
   cursor: pointer;
 }
-button:disabled {
-  opacity: 0.4;
-  cursor: not-allowed;
-}
+/* No styling for button:disabled, because no submit-type button in this app is
+   disabled. Actions stay enabled and validate on click; see .field-error. The
+   0.4-opacity grey-out this rule used to apply is the contrast failure that
+   argument is about, so leaving it here would only invite the pattern back. */
 button:focus-visible,
 a:focus-visible {
   outline: 2px solid var(--accent-text);
@@ -603,6 +603,16 @@ button.badge {
   align-items: center;
   gap: var(--space-2);
   margin: var(--space-3) 0 var(--space-5);
+}
+/* Driven by aria-pressed, so the state a screen reader announces and the state
+   you can see are the same thing. A tinted pill beside a grey one is too close
+   to call at a glance in light mode, so the active identity takes solid accent —
+   the same treatment as a selected day chip. */
+.identity-switch .badge[aria-pressed="true"] {
+  background: var(--accent);
+  color: var(--on-accent);
+  border-color: var(--accent);
+  font-weight: 600;
 }
 .route-panel {
   display: flex;
@@ -2224,4 +2234,14 @@ main button,
   .payment-method {
     flex-wrap: wrap;
   }
+}
+/* Contractor job cards list every task. A count is not enough to decide on an
+   offer — the contractor needs to see what the work actually is. */
+.contractor-task-list {
+  margin: var(--space-2) 0;
+  padding-left: var(--space-5);
+  color: var(--muted);
+}
+.contractor-task-list li {
+  margin: var(--space-1) 0;
 }
