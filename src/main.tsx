@@ -757,18 +757,44 @@ function App() {
     setStep(0);
     setPage("New request");
   };
+  /* Both "New request" entry points must agree: if this customer already
+     has an unfinished draft, resume it — never spawn a silent second one
+     just because a different button was clicked. */
+  const startOrResumeRequest = () => {
+    const draft = ownRequests.filter((x) => x.status === "Draft").at(-1);
+    if (draft) {
+      setActive(draft.id);
+      setStep(0);
+      setPage("New request");
+    } else {
+      newRequest();
+    }
+  };
+  const badgeTone = (status: string) =>
+    /Confirmed|Accepted|Paid|Instant/.test(status)
+      ? "green"
+      : /Review|Declined|Expired|Failed|Cancelled/.test(status)
+        ? "red"
+        : "";
   const badge = (status: string) => (
-    <span
-      className={
-        "badge " +
-        (/Confirmed|Accepted|Paid|Instant/.test(status)
-          ? "green"
-          : /Review|Declined|Expired|Failed/.test(status)
-            ? "red"
-            : "")
-      }
-    >
-      {status}
+    <span className={"badge " + badgeTone(status)}>{status}</span>
+  );
+  /* The customer's own status badge never shows the raw dispatch/operator
+     status string — "Awaiting Provider Acceptance" is jargon to the one
+     person with no stake in that state machine, and it clashed with the
+     plain-language note rendered right below it. Colour still keys off the
+     real status via badgeTone(); only the words change. */
+  const customerStatusText = (status: string) =>
+    ({
+      "Needs Review": "In review",
+      "Awaiting Provider Acceptance": "Matching you with a provider",
+      "Awaiting Quote Approval": "Quote ready",
+      "Awaiting Payment": "Payment due",
+      "Information requested": "Waiting on your reply",
+    })[status] || status;
+  const customerBadge = (status: string) => (
+    <span className={"badge " + badgeTone(status)}>
+      {customerStatusText(status)}
     </span>
   );
   const taskPhotos = (t: Task) => (
@@ -1406,8 +1432,7 @@ function App() {
               key={label}
               className={page === label ? "active" : ""}
               onClick={() => {
-                if (label === "New request" && r.status !== "Draft")
-                  newRequest();
+                if (label === "New request") startOrResumeRequest();
                 else setPage(label);
                 setSidebar(false);
               }}
@@ -2493,7 +2518,7 @@ function App() {
                                 {count === 1 ? "task" : "tasks"}
                               </small>
                             </span>
-                            {badge(x.status)}
+                            {customerBadge(x.status)}
                             <ChevronDown
                               size={20}
                               className={open ? "chevron open" : "chevron"}
@@ -2511,6 +2536,17 @@ function App() {
                                 >
                                   Continue request <ArrowRight size={16} />
                                 </button>
+                              ) : ["Cancelled", "Declined"].includes(
+                                  r.status,
+                                ) ? (
+                                /* A cancelled/declined request is not a
+                                   pipeline paused mid-step — the tracker
+                                   only ever shows forward progress, so it
+                                   has no honest way to represent "stopped."
+                                   Say so directly instead. */
+                                <p className="note">
+                                  This request was {r.status.toLowerCase()}.
+                                </p>
                               ) : (
                                 <div className="status-track">
                                   {/* Three steps, not four. "Provider coordinated" was
@@ -2548,9 +2584,12 @@ function App() {
                                   ))}
                                 </div>
                               )}
-                              {!["Confirmed", "Cancelled", "Draft"].includes(
-                                r.status,
-                              ) && (
+                              {![
+                                "Confirmed",
+                                "Cancelled",
+                                "Declined",
+                                "Draft",
+                              ].includes(r.status) && (
                                 /* One contextual line, chosen from derived state — not a
                          log. When a contractor declines, coordinated reverts to
                          false and this falls back to "matching", which is what
@@ -2647,7 +2686,7 @@ function App() {
                       something new is the trailing action. */}
                   <button
                     className="primary full new-request-trailing"
-                    onClick={newRequest}
+                    onClick={startOrResumeRequest}
                   >
                     <Plus size={16} /> New request
                   </button>

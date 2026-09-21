@@ -35,10 +35,15 @@ describe("three-screen intake", () => {
     expect(t.entryStage).toBe("done");
     expect(t.reviewed).toBe(false);
   });
-  it("requires outstanding details or explicit uncertainty", () => {
+  it("requires outstanding details before completing", () => {
     const t = seed().tasks[0];
     expect(completeEntry(t)).toBe(false);
-    expect(completeEntry(t, true)).toBe(true);
+    // Mark every missing question "Not sure" the way the UI actually does —
+    // per question, via the inline button — not through a bulk flag.
+    const i = getIssue(t.description);
+    for (const q of missingQuestions(t))
+      t.answers[answerKey(i, q)] = "Not sure";
+    expect(completeEntry(t)).toBe(true);
     expect(t.reviewed).toBe(false);
     expect(missingQuestions(t)).toHaveLength(0);
     expect(instantEligible([t])).toBe(false);

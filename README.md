@@ -253,3 +253,66 @@ Browser checks walked offer → accept → on my way → start → outcomes → 
 finish for all four demo identities, confirming one primary action and one status
 line at each stage, and re-ran the contrast/overflow audit at 390/768/1280px in both
 themes: zero horizontal overflow, zero text nodes below WCAG AA.
+
+## Customer simplification round
+
+Audited against the same procedure as the operator and contractor rounds: the
+role's remit was already written down (`src/blueprint-data.ts`'s Customer lane
+on every stage — describe the job, answer and clarify, decide on price, track
+status, adjust a confirmed visit, communicate), so this round mapped every
+control against it directly. The screen was already close to sound — no
+five-cluster redundancy, ADR 008 validation applied everywhere, the two
+task-edit paths and the Q&A-vs-message-thread split were already correct — so
+the changes here are about the vocabulary and consistency of what's shown,
+not the structure.
+
+**The header badge stops speaking dispatch jargon.** It used to render the
+raw internal status verbatim — "Awaiting Provider Acceptance", "Awaiting
+Quote Approval" — directly above a hand-written, friendly note explaining the
+same fact in plain language a few lines down. The badge now uses the same
+vocabulary as the note ("Matching you with a provider", "Quote ready",
+"Waiting on your reply"), coloured by the real underlying status so nothing
+about the colour logic changed, just the words.
+
+**A cancelled or declined request stops looking like a paused pipeline.** The
+Received → Quote → Confirmed tracker only ever shows forward progress, so a
+terminated request rendering it looked like work-in-progress. It's replaced
+with a single terminal line for Cancelled/Declined requests. The plain-language
+note's suppression list was also missing "Declined" — a declined request was
+still shown "We're matching your request with a provider," which is worse than
+unhelpful, it's wrong. Both terminal statuses now read as red, extending the
+same badge colour rule used everywhere else in the app.
+
+**Two "New request" entry points now agree.** The nav button used to resume
+the customer's active request only if it happened to already be a Draft; the
+trailing "+ New request" button at the bottom of Home always created a fresh
+one regardless — so a customer sitting on an unfinished draft could end up
+with a second, orphaned one depending on which button they happened to press.
+Both now call one helper that checks for _any_ existing incomplete draft
+before ever creating a new one.
+
+**Cut:** `completeEntry()`'s `uncertain` bulk-complete parameter. It let a
+caller mark every missing question "Not sure" and force-complete a task in
+one call, and was exercised only by its own test — the actual UI only ever
+uses the already-shipped per-question inline "Not sure" button, which
+satisfies the same requirement one answer at a time. The bulk path didn't add
+a capability; it duplicated one that already existed through a different
+route.
+
+Files: `src/main.tsx` (badge vocabulary, tracker terminal state, the two
+`New request` entry points), `src/intake.ts` and `src/intake.test.ts`
+(`completeEntry`'s signature). `src/CustomerIntake.tsx`, `src/work.ts` and
+`src/dispatch.ts` are untouched — the intake wizard itself was the cleanest
+part of the surface, and every fix here was presentation or a request-creation
+guard, never dispatch or execution logic.
+
+Validation: 218 application tests plus 8 catalogue tests (unmodified except
+the one test whose assertions now route through the same per-question path
+the UI actually uses), `npm run design:check` and the production build pass.
+Browser checks walked a request through Submitted, Needs Review, Awaiting
+Provider Acceptance/Quote Approval, Confirmed, Cancelled and Declined,
+confirming the badge and note always agree and a terminated request never
+shows the progress tracker; confirmed both "New request" entry points resume
+the same draft rather than creating a second; re-ran the contrast/overflow
+audit at 390/768/1280px in both themes: zero horizontal overflow, zero text
+nodes below WCAG AA.
