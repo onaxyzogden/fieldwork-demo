@@ -1522,7 +1522,7 @@ function Workspace({
               <>
                 <span className="chosen">{role}</span>
                 <button className="text-button" onClick={onExitCompare}>
-                  <X size={16} /> Exit compare
+                  <X size={16} /> Exit side by side
                 </button>
               </>
             ) : (
@@ -1548,7 +1548,7 @@ function Workspace({
                   ),
                 )}
                 <button className="text-button" onClick={onEnterCompare}>
-                  <Layers size={16} /> Compare
+                  <Layers size={16} /> Side by side
                 </button>
               </>
             )}

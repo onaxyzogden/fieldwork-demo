@@ -155,3 +155,29 @@ Found in the same pass: `blueprint.css` declared a global, unscoped `@page { siz
 ## Boundaries
 
 `reconcile()`, `src/dispatch.ts`, `src/work.ts`, `src/ContractorWork.tsx` and `src/CustomerIntake.tsx` are unchanged: PMW is new records and new surfaces over an execution pipeline that already worked. The existing tests pass unmodified, which is the check that this stayed true. The guest assessment link is a URL parameter, not a secured link, and the page says so; account creation after completion is invited but does nothing, since the brief's Phase 4 is out of scope.
+
+# Design decisions — matching the reference artboard
+
+## ADR 022: The reference confirmed the palette rather than replacing it
+
+Accepted. The product owner preferred an earlier Claude-chat design and supplied its export. Comparing it to `tokens.css` settled a question that had been open by assumption: the two are the same system. `--surface-0 #12151a`, `--surface-1 #1b1f26`, `--surface-2 #242a33`, `--accent #e3a95e`, `--accent-soft-ink #f0cd96` and the 6/10/16 radius scale are identical values under different names, and the reference's own header comment describes replacing "the competing blue-theme.css accent system" — ADR 001 → ADR 006, recorded in the file that became ours.
+
+Two things follow. **ADR 006 stands**: amber is confirmed as the brand by the very design that was held up against it, not overturned. And the visible gap was never the palette — **it was that the app booted into light**, which is now changed. Dark is what a first visit gets; the toggle still remembers anyone who prefers light, and the assessment page stays forced light because it is a printable document.
+
+A caution worth recording, since it nearly sent this round the wrong way: the brief began from a screenshot, and reading colour off a PNG produced a confident, wrong claim that the reference used blue titles. It uses `--ink-primary #eef1f6`, a near-white that reads cool against a dark card. Sample the source, not the picture.
+
+## ADR 023: Tone belongs to the icon, and a card is one surface
+
+Accepted. Two habits had accumulated on the operator's Home that the reference does not share.
+
+**Tone was colouring text.** A declined job set `color: var(--warning)` on the whole row, so its heading rendered as a warning label rather than a heading. In the reference a declined row has a red icon tile and an ordinary title. Tone now applies to the tile alone — background and glyph — and `--tone` survives only because the decision card on the request detail still draws a stripe from it.
+
+**"Today at a glance" was four boxes.** The card was a surface, and each statistic inside it had its own filled, bordered tile. The reference gives the card the only surface and lets the numbers sit on it. They remain buttons, because all three navigate; the affordance the tile used to carry moved to hover and the focus ring, which is the honest trade — a control that looks inert but isn't would be worse than a heavy one.
+
+The general rule: **inside a card, content does not get its own surface**, the row's tinted icon tile being the deliberate exception.
+
+Alongside this, `--link` joins the palette in both themes for pressable card titles and genuine anchors. It is opt-in through a `.link` class rather than a bare `a` rule, because several anchors in this app wrap images rather than words.
+
+## Boundaries
+
+The role header is untouched, as asked: the sidebar, demo bar and topbar keep their structure and pick up the default theme like everything else. Only the operator's Home was restyled — the customer, contractor, walkthrough and assessment screens were re-audited for contrast in both themes but not redesigned. "Compare" is renamed "Side by side" after the reference's own label; the `.compare-*` class names keep their spelling.
