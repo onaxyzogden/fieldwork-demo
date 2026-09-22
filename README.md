@@ -589,3 +589,58 @@ overlays still measure the viewport in normal mode and the column in side by
 side, that each column's drawer still opens inside its own column, and that no
 card text box is under 200px; the 39-check contrast and overflow audit at
 390/768/1280 in both themes passes with zero console errors.
+
+## What happens when things go wrong
+
+A prototype that keeps everything in one `localStorage` key has three failure
+modes worth designing for, and all three used to be silent. An audit before
+live testing reproduced each one end to end; these are the fixes.
+
+**A write that does not land says so.** `save()` wrapped `setItem` in an empty
+`catch`, so a full origin was invisible from the inside: the change stayed in
+memory, the screen still showed it, and the reload was the first anyone heard.
+It was reachable — photos were stored as base64 data URLs, so the third photo
+overflowed the budget and _every_ write after it was discarded while a toast
+said "Finding added". Photos are now downscaled on the way in (1600px longest
+edge, JPEG) — six 1.4 MB photos take 2.6 MB where two took 3.8 MB — and a write
+that still fails raises a banner that stays until one succeeds. The banner
+takes its own room at the top of the page rather than covering the controls it
+tells you to use.
+
+**A state that cannot be rendered gets a screen.** Every screen resolves the
+active request and its tasks up front and uses them without guards, so records
+that do not line up throw during render, React unmounts, and — because the
+state is in `localStorage` — every reload does it again. Four reproductions all
+ended in a blank page with no message. There is now a shape check in `load()`
+for the collections the migrations never touch, and an error boundary for the
+disagreements a shape check cannot see. Both land on a recovery screen that
+explains the situation and offers a reset. **The broken state is left on disk**
+until the reset is pressed: discarding someone's work is their decision, not a
+catch block's.
+
+**Sending an assessment is a rule about the data.** The gate checked price in
+one button's `onClick`, so a finding with a price and no title reached the
+customer as `01 · Untitled finding · $450` with an Approve button under it.
+`sendBlockers()` now answers why an assessment cannot go out, finding by
+finding, and `sendWalkthrough()` refuses when it returns anything — the same
+argument ADR 019 makes for approval. A finding needs a title and either a price
+or the "further assessment required" classification; observed and proposed stay
+optional. The reasons appear on the fields that are wrong, on the first attempt
+to send, following the customer intake's idiom rather than the toast it
+replaces.
+
+Validation: 264 tests (17 new, covering the shape check, the save-failure
+signal and the send rule), `npm run design:check` and the build pass. 21
+browser checks re-run each original reproduction against the fix: six photos
+persist and survive a reload; a write that genuinely cannot fit raises the
+banner, announces it as an alert, leaves the chrome visible and clears when a
+write lands again; all four blank-page states reach the recovery screen with
+the broken state still on disk, and Reset brings the app back; an untitled
+priced finding cannot be sent and says why on the field, while a named one
+still sends. The existing contrast and overflow audit and the container-query
+layout checks pass unchanged.
+
+Known and deliberately not addressed here: `Workspace` is still one 3,155-line
+component, ~600 lines of CSS still match no markup, and `typography.css` still
+overrides `style.css` unconditionally in 30 places. Those are friction, not
+breakage.

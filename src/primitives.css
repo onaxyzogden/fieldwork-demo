@@ -895,3 +895,81 @@
     margin-top: 0;
   }
 }
+
+/* The write-failure banner. Rendered outside any Workspace, so side by side
+   shows one and not three, and it takes its own room at the top of the page
+   rather than covering anything: an alert that hides the role switcher and the
+   demo bar would be covering the controls it is telling you to go and use. It
+   sticks while the page scrolls, because the condition it reports does not
+   stop being true further down.
+
+   Above the toast in stacking order — a toast says what just happened, this
+   says that what just happened was not kept. */
+#root:has(> .save-warning) {
+  display: flex;
+  flex-direction: column;
+  min-height: 100dvh;
+}
+#root:has(> .save-warning) > .compare-row {
+  height: auto;
+  min-height: 0;
+  flex: 1;
+}
+.save-warning {
+  position: sticky;
+  top: 0;
+  z-index: var(--z-tooltip);
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: var(--space-1) var(--space-3);
+  padding: var(--space-3) var(--space-5);
+  background: var(--danger-soft);
+  color: var(--danger);
+  border-bottom: 1px solid var(--danger);
+  box-shadow: var(--shadow-md);
+}
+.save-warning strong {
+  white-space: nowrap;
+}
+.save-warning span {
+  color: var(--text);
+  min-width: 0;
+}
+
+/* The recovery screen. It replaces the whole app, so it carries its own
+   centring rather than relying on a shell that is not there. */
+.recovery {
+  min-height: 100dvh;
+  display: grid;
+  place-items: center;
+  padding: var(--space-6);
+  background: var(--bg);
+}
+.recovery-card {
+  max-width: 34rem;
+}
+.recovery-card h1 {
+  margin: var(--space-3) 0 var(--space-5);
+}
+.recovery-card p {
+  color: var(--muted);
+  margin-bottom: var(--space-4);
+}
+.recovery-card .actions {
+  margin-top: var(--space-6);
+  gap: var(--space-3);
+}
+.recovery-detail {
+  margin-top: var(--space-6);
+  color: var(--muted);
+}
+.recovery-detail pre {
+  white-space: pre-wrap;
+  overflow-wrap: break-word;
+  margin-top: var(--space-3);
+  padding: var(--space-4);
+  background: var(--surface-raised);
+  border-radius: var(--radius-md);
+  font-size: var(--text-caption);
+}

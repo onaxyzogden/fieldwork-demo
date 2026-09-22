@@ -209,3 +209,43 @@ The customer accordion header needed the matching fix on the flex side: it wraps
 ## Boundaries
 
 No `.tsx` changed. `blueprint.css` keeps its own `@media` rules and its two `anywhere` declarations: the blueprint renders as a top-level view outside `.shell`, so it has no container to ask. The sidebar-width ladder in `style.css` (205px at 1150, 185px at 800) is dead code — `typography.css` sets a flat 17rem later in the cascade — and is left alone here rather than folded into a layout change.
+
+# Design decisions — hardening before live testing
+
+## ADR 026: A write that does not land has to say so
+
+Accepted. Everything the demo knows lives in one `localStorage` key, and `save()` wrapped the write in an empty `catch`. That made a full origin invisible from the inside: `setItem` throws, the change stays in memory, the screen still shows it, and the next reload is the first anyone hears about it.
+
+It was reachable, not theoretical. Photos were stored as base64 data URLs — a 1.4 MB file becoming ~1.9 MB of string — so the third photo overflowed a 5 MB budget. Measured before the change: photo 1 stored, photo 2 stored, photo 3 silently dropped, photo 4 silently dropped, and the finding created alongside it dropped too, while a toast said "Finding added". Once the ceiling is hit **every** later write is discarded, so an operator can complete and send a whole walkthrough that half-exists on reload.
+
+Two changes, because the cause and the symptom are different problems. **Photos are downscaled on the way in** (`photos.ts`: 1600px longest edge, JPEG at 0.82), which moves the ceiling far enough away that ordinary use does not reach it — six 1.4 MB photos now occupy 2.6 MB where two occupied 3.8 MB, and a real photograph compresses far better than the incompressible test image those numbers come from. And **`save()` reports**, so a write that still fails raises a banner that stays until one succeeds.
+
+The banner takes its own room at the top of the page rather than covering it. An alert that hides the role switcher and the demo bar would be covering the controls it is telling you to go and use.
+
+The generous file cap that replaced the old 1.5 MB one is worth stating plainly: 1.5 MB rejected ordinary phone photos for being ordinary phone photos. The cap now exists only to refuse a file too large to decode comfortably; fitting the result into storage is the downscaler's job, not the user's.
+
+## ADR 027: A state that cannot be rendered gets a screen, not a blank page
+
+Accepted. Every screen resolves the active request, its tasks and its visit up front and uses them without guards — 48 `find(...)!` assertions across the source. A saved state whose records do not line up throws during render, React unmounts the tree, and because the state is in `localStorage` every reload does it again. Four reproductions, all ending in a blank page with no message: `tasks` missing, an assignment pointing at a visit that is gone, a visit pointing at a missing request, a task pointing at a missing request.
+
+`load()`'s existing `try`/`catch` was not the guard it looked like. It only covered what the migrations happen to touch: `migratePmw` backfills `properties`/`walkthroughs`/`findings` and `migrateDispatch` iterates `requests` and `assignments`, so a state missing `requests` threw inside the migration and was caught, while a state missing `tasks` passed straight through to render. That is why the failure mode depended on which collection was absent.
+
+So: a shape check on the way in for the collections nothing else verifies, and a React error boundary for the disagreements a shape check cannot see. Both land on the same recovery screen.
+
+**The broken state is left on disk.** Reseeding silently would be the smaller change, and it would throw away whatever the person had done without telling them. Resetting is destructive, so it is a button they press, and until they press it the state is still there to be looked at.
+
+Two throws happen outside render and would escape the boundary: the cross-tab `storage` listener in `main.tsx` and in `Assessment.tsx` both call `load()` from an event. Each now logs and ignores an unreadable update rather than taking down a tab that is working fine.
+
+## ADR 028: Sending is a rule about the data, not a check in a button
+
+Accepted. ADR 019 already argued this for approval — "one enum would make 'you cannot approve this' a rule the UI enforces by hiding a button; two fields make it a rule the data enforces". The send gate had drifted the other way: `sendWalkthrough()` checked only that findings existed, and the price rule lived in the `onClick` of one button.
+
+What that allowed, reproduced end to end: a finding with a price and no title sent successfully, and the customer's assessment showed `01 · Untitled finding`, the labels "Observed." and "Proposed work." with nothing after them, `$450 + applicable tax`, and an Approve button. The `"Untitled finding"` fallback appears in six places, so the blank state was known and papered over at render time instead of prevented at write time.
+
+`sendBlockers()` now answers why an assessment cannot go out, finding by finding, and `sendWalkthrough()` refuses when it returns anything — so no surface can send what a customer could not identify. A finding needs a title and either a price or the "further assessment required" classification. Observed and proposed stay optional, because an operator standing in a hallway should be able to name and price a job without writing two paragraphs first.
+
+The screen follows the customer intake's idiom rather than its own: the reasons appear on the fields that are wrong, on the first attempt to send, and clear as they are fixed. The disappearing toast it replaces was both easy to miss and, since it only knew about price, wrong about what was missing.
+
+## Boundaries
+
+Four defects, no restructuring. The 3,155-line `Workspace`, the ~600 lines of CSS that match no markup, and `typography.css` silently overriding `style.css` were all found in the same audit and are all still there — they are friction, not breakage, and folding them into this change would have buried it. `carryForward()` remains unreachable from the UI and the seed still contains no walkthroughs.

@@ -1,7 +1,37 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useSyncExternalStore } from "react";
 import { type State, type Visit, dateLabel, providers } from "./model";
 import { inbox, sendMessage } from "./notifications";
+import { subscribeSaveHealth, isSaveFailing } from "./store";
 type Update = (fn: (s: State) => void, msg?: string) => void;
+
+/**
+ * Shown whenever a write has stopped reaching the browser's storage — almost
+ * always because this origin is out of room. It stays until a write succeeds,
+ * because the consequence it describes stays true until then: the screen is
+ * ahead of what a reload would show.
+ *
+ * Fixed to the viewport, and rendered outside any Workspace, so it appears
+ * once whatever the role, the screen, or how many columns are on the page.
+ */
+export function SaveWarning() {
+  const failing = useSyncExternalStore(
+    subscribeSaveHealth,
+    isSaveFailing,
+    isSaveFailing,
+  );
+  if (!failing) return null;
+  return (
+    <div className="save-warning" role="alert">
+      <strong>Changes are not being saved.</strong>
+      <span>
+        This browser has no room left for the demo. What you see here is
+        correct, but anything added since the last successful save will be gone
+        if you reload. Remove a photo, or reset the demo from Demo settings, to
+        free space.
+      </span>
+    </div>
+  );
+}
 export function NotificationInbox({
   s,
   recipient,

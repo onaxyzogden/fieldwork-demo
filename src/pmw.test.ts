@@ -16,6 +16,7 @@ import {
   propertyRecord,
   quotable,
   requestAssessment,
+  sendBlockers,
   sendWalkthrough,
 } from "./pmw";
 
@@ -255,6 +256,66 @@ describe("completion returns to the property record", () => {
     );
     expect(record.furtherAssessment.map((f) => f.id)).toEqual([damp.id]);
     expect(propertyRecord(s, "p1").findings).toHaveLength(0);
+  });
+});
+
+describe("what has to be true before an assessment can be sent", () => {
+  /* The rule used to live in the send button's onClick, so it bound exactly
+     one caller. A finding with a price and no title went to the customer as
+     "Untitled finding · $450" with an Approve button under it. */
+  const drafted = () => {
+    const s = seed();
+    const w = createWalkthrough(s, "p1");
+    return { s, w };
+  };
+
+  it("refuses a finding the customer cannot identify", () => {
+    const { s, w } = drafted();
+    addFinding(s, w.id, { title: "  ", price: 450 });
+    expect(sendBlockers(s, w.id).map((b) => b.reason)).toEqual(["title"]);
+    expect(sendWalkthrough(s, w.id)).toBe(false);
+    expect(s.walkthroughs[0].status).toBe("Draft");
+  });
+
+  it("refuses a quoted finding with no price", () => {
+    const { s, w } = drafted();
+    addFinding(s, w.id, { title: "Door rubbing against frame" });
+    expect(sendBlockers(s, w.id).map((b) => b.reason)).toEqual(["price"]);
+    expect(sendWalkthrough(s, w.id)).toBe(false);
+  });
+
+  it("reports every reason a finding is not ready, not just the first", () => {
+    const { s, w } = drafted();
+    addFinding(s, w.id, { title: "" });
+    expect(sendBlockers(s, w.id).map((b) => b.reason)).toEqual([
+      "title",
+      "price",
+    ]);
+  });
+
+  it("asks nothing of a finding that needs further assessment but its title", () => {
+    const { s, w } = drafted();
+    addFinding(s, w.id, {
+      title: "Damp patch below window",
+      pricing: "Further Assessment Required",
+    });
+    expect(sendBlockers(s, w.id)).toEqual([]);
+    expect(sendWalkthrough(s, w.id)).toBe(true);
+  });
+
+  it("still refuses a walkthrough with no findings at all", () => {
+    const { s, w } = drafted();
+    expect(sendWalkthrough(s, w.id)).toBe(false);
+  });
+
+  it("sends once every finding is named and priced", () => {
+    const { s, w } = drafted();
+    addFinding(s, w.id, { title: "Door rubbing against frame", price: 180 });
+    addFinding(s, w.id, { title: "Shelving pulling away", price: 220 });
+    expect(sendBlockers(s, w.id)).toEqual([]);
+    expect(sendWalkthrough(s, w.id)).toBe(true);
+    expect(s.walkthroughs[0].status).toBe("Sent");
+    expect(s.walkthroughs[0].sentAt).toBeTruthy();
   });
 });
 

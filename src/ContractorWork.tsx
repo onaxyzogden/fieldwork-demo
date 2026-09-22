@@ -17,6 +17,7 @@ import {
   workStatus,
 } from "./work";
 import { respondToOffer } from "./dispatch";
+import { storablePhotos, unreadableMessage } from "./photos";
 import { MessageThread } from "./NotificationUI";
 function Sheet({
   title,
@@ -68,6 +69,9 @@ export function JobWork({
   /* Which task is blocking Complete job, if any. Per-task, so the message and
      the focus target are the specific thing at fault. */
   const [outcomeError, setOutcomeError] = useState("");
+  /* Which task's photo field rejected a file, so the message sits on that
+     field rather than in a toast that leaves before it is read. */
+  const [photoError, setPhotoError] = useState("");
 
   const v = visit,
     x = v.execution,
@@ -242,7 +246,11 @@ export function JobWork({
                       ))}
                     </div>
                     {allowed && (
-                      <label className="field">
+                      <label
+                        className={
+                          "field" + (photoError === id ? " field-error" : "")
+                        }
+                      >
                         Add {kind} photos (optional)
                         <input
                           type="file"
@@ -250,17 +258,10 @@ export function JobWork({
                           multiple
                           onChange={async (e) => {
                             const files = Array.from(e.target.files || []);
-                            const images = await Promise.all(
-                              files.map(
-                                (f) =>
-                                  new Promise<string>((resolve) => {
-                                    const reader = new FileReader();
-                                    reader.onload = () =>
-                                      resolve(String(reader.result));
-                                    reader.readAsDataURL(f);
-                                  }),
-                              ),
-                            );
+                            const { photos: images, rejected } =
+                              await storablePhotos(files);
+                            setPhotoError(rejected ? id : "");
+                            if (!images.length) return;
                             update((d) => {
                               const current =
                                 d.visits.find((v) => v.id === visit.id)
@@ -271,6 +272,11 @@ export function JobWork({
                             });
                           }}
                         />
+                        {photoError === id && (
+                          <span className="field-message" role="alert">
+                            {unreadableMessage}
+                          </span>
+                        )}
                       </label>
                     )}
                   </div>
