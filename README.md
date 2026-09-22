@@ -317,9 +317,9 @@ the same draft rather than creating a second; re-ran the contrast/overflow
 audit at 390/768/1280px in both themes: zero horizontal overflow, zero text
 nodes below WCAG AA.
 
-## Compare mode
+## Side by side
 
-A fourth entry in the role switcher — **Compare** — renders Customer,
+A fourth entry in the role switcher — **Side by side** — renders Customer,
 Operator and Contractor side by side as three full, independently
 navigable copies of the app, so a reviewer can watch one action ripple
 across all three roles without switching back and forth.
@@ -328,7 +328,7 @@ across all three roles without switching back and forth.
 role's screens, every modal) was already one component; it's now called
 `Workspace` and takes its shared document store (`s`/`setS`) and theme as
 props instead of owning them. Normal mode renders one `Workspace`, exactly
-as before. Compare mode renders three — one per role, each with its own
+as before. Side-by-side mode renders three — one per role, each with its own
 internal `page`/`active`/`modal`/`toast` state via React's ordinary
 per-instance hooks — sharing the same `s`/`setS`, so an action taken in one
 column (a quote sent, a question asked) is visible in the others the
@@ -458,7 +458,7 @@ prices and statuses.
 
 The assessment link is a URL parameter, not a secured private link, and
 the page says so. The guest view lives outside the workspace, so it does
-not appear in Compare mode — demoing the handoff takes a second tab.
+not appear in side-by-side mode — demoing the handoff takes a second tab.
 Account creation after completion is invited but does nothing: that is
 the brief's Phase 4, deliberately out of scope, as is everything in its
 §15.
@@ -479,3 +479,53 @@ screen/print parity. `npm run design:check` and the production build
 pass. Browser-verified end to end at 390/768/1280px in both themes:
 capture, the guest link, per-finding decisions, conversion into the
 existing queue, the property record, and the printed document.
+
+## Matching the reference artboard
+
+The prototype's look was compared against an earlier design export the product
+owner preferred. Reading that export settled something that had only been
+assumed: **it is the same design system.** `--surface-0 #12151a`,
+`--surface-1 #1b1f26`, `--accent #e3a95e` and the 6/10/16 radius scale are the
+values already in `src/tokens.css` under different names, and the export's own
+header comment describes replacing "the competing blue-theme.css accent
+system" — the blue-to-amber decision recorded here as ADR 001 → ADR 006.
+
+So the palette was never the gap. Three things were.
+
+**The app opened in light.** It now opens dark, which is the design's home
+ground. The sun/moon toggle still remembers anyone who prefers light, and the
+customer's assessment page stays forced light because it is a printable
+document.
+
+**Tone was colouring text.** A declined job set a warning colour on its whole
+row, so the heading "Contractor declined" rendered as a warning label rather
+than a heading. Tone now belongs to the icon tile alone — a red tile beside an
+ordinary title — which is what the reference does.
+
+**"Today at a glance" was four boxes.** The card was a surface and each
+statistic inside it had its own filled, bordered tile. The card is now the only
+surface and the numbers sit directly on it. They are still buttons, because all
+three navigate, so the affordance the tile carried moved to hover and the focus
+ring. The rule this expresses, applied across the screen: inside a card,
+content does not get its own surface — the tinted icon tile being the
+deliberate exception.
+
+Every measurement the reference specifies already had a token: its 14px title
+is `--text-label`, its 12px meta is `--text-caption`, its 26px greeting is
+within a pixel of `--text-h3`, its tile and card radii are `--radius-md` and
+`--radius-lg`. The one addition is `--link`, for pressable card titles and
+genuine anchors, opt-in through a `.link` class rather than a bare `a` rule
+because several anchors here wrap images rather than words.
+
+"Compare" is renamed **Side by side**, after the reference's own label.
+
+Scope: the operator's Home only, with the role header left as it was. The other
+screens pick up the new default theme and were re-audited for contrast, but
+were not redesigned.
+
+Validation: 247 tests, `npm run design:check` and the production build pass
+unmodified. 56 automated browser checks pass — contrast and horizontal overflow
+across operator Home, the customer portal, the contractor view and walkthroughs
+at 390/768/1280px in **both** themes, plus first-visit theme, the light
+preference surviving a reload, side-by-side mode, and the assessment page still
+rendering and printing as a light document. Zero console errors.

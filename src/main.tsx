@@ -1522,7 +1522,7 @@ function Workspace({
               <>
                 <span className="chosen">{role}</span>
                 <button className="text-button" onClick={onExitCompare}>
-                  <X size={16} /> Exit compare
+                  <X size={16} /> Exit side by side
                 </button>
               </>
             ) : (
@@ -1548,7 +1548,7 @@ function Workspace({
                   ),
                 )}
                 <button className="text-button" onClick={onEnterCompare}>
-                  <Layers size={16} /> Compare
+                  <Layers size={16} /> Side by side
                 </button>
               </>
             )}
@@ -3497,13 +3497,15 @@ const compareRoles = ["Customer", "Operator", "Contractor"] as const;
  * with it, its own independent page/selection/modal state for free.
  */
 function App() {
+  /* Dark is the design's home ground, so it is what a first visit gets; the
+     toggle still remembers anyone who prefers light. */
   const [theme, setTheme] = useState<"light" | "dark">(() => {
     try {
-      return localStorage.getItem("fieldwork-theme") === "dark"
-        ? "dark"
-        : "light";
+      return localStorage.getItem("fieldwork-theme") === "light"
+        ? "light"
+        : "dark";
     } catch {
-      return "light";
+      return "dark";
     }
   });
   const [s, setS] = useState<State>(load);

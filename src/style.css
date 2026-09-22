@@ -43,6 +43,15 @@ a {
   color: inherit;
   text-decoration: none;
 }
+/* Opt-in, not the bare `a` rule: several anchors in this app wrap images
+   rather than words, and only text that reads as a link should be coloured
+   like one. */
+.link {
+  color: var(--link);
+}
+.link:hover {
+  color: var(--link-hover);
+}
 h1,
 h2,
 h3,
@@ -296,6 +305,11 @@ textarea::placeholder {
   background: var(--bg);
   padding: var(--space-1);
   border-radius: var(--radius-sm);
+  /* Four chips whose labels must not wrap will outgrow a phone, so the row
+     scrolls rather than pushing the page sideways — the same thing the
+     reference does with its chip row. */
+  overflow-x: auto;
+  min-width: 0;
 }
 .role-switch button {
   padding: var(--space-1) var(--space-3);
@@ -303,6 +317,9 @@ textarea::placeholder {
   background: none;
   color: var(--muted);
   border-radius: var(--radius-sm);
+  /* "Side by side" is three words; without this it stacks into three lines on
+     a phone and the chip grows to three times the height of its neighbours. */
+  white-space: nowrap;
 }
 .role-switch button.chosen {
   background: var(--surface-raised);
@@ -2197,8 +2214,7 @@ main button,
     flex: 1;
   }
   .role-switch button {
-    flex: 1;
-    min-width: 0;
+    flex: 0 0 auto;
   }
   .topbar {
     height: auto;

@@ -78,11 +78,11 @@ export default function Blueprint() {
   const [example, setExample] = useState("delegate");
   const [theme, setTheme] = useState(() => {
     try {
-      return localStorage.getItem("fieldwork-theme") === "dark"
-        ? "dark"
-        : "light";
+      return localStorage.getItem("fieldwork-theme") === "light"
+        ? "light"
+        : "dark";
     } catch {
-      return "light";
+      return "dark";
     }
   });
   useEffect(() => {

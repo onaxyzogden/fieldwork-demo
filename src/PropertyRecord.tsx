@@ -85,7 +85,11 @@ export default function PropertyRecord({
               {w.assessmentId} · {dateLabel(w.sentAt || w.date)}
             </small>
             {links && w.status !== "Draft" ? (
-              <a href={assessmentLink(w.assessmentId)} target="_blank">
+              <a
+                className="link"
+                href={assessmentLink(w.assessmentId)}
+                target="_blank"
+              >
                 Open assessment
               </a>
             ) : (

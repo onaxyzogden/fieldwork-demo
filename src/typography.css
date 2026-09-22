@@ -379,7 +379,7 @@ footer,
     width: 100%;
   }
   .role-switch button {
-    flex: 1;
+    flex: 0 0 auto;
     min-height: 2.75rem;
   }
   .scenario-strip button {
