@@ -95,7 +95,9 @@
   outline: 2px solid var(--focus);
   outline-offset: 2px;
 }
-@media (max-width: 600px) {
+/* Below 900px the sidebar is a drawer and the content area is the whole
+   window, so this threshold still means what it meant as a window rule. */
+@container workspace (max-width: 600px) {
   .card,
   .panel,
   .contractor-offer-card {

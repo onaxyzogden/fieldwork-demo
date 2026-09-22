@@ -291,7 +291,10 @@ footer,
 .photo-add {
   min-height: 2.75rem;
 }
-@media (max-width: 75rem) {
+/* Was 75rem of window. Above 900px the sidebar takes ~272px of it, so the
+   content area at a 1200px window is ~930px — that, not 1200, is the width
+   these grids were actually collapsing at. */
+@container workspace (max-width: 928px) {
   .dashboard-grid,
   .bottom-grid,
   .requests-layout {
@@ -347,6 +350,25 @@ footer,
   .topbar > .row:first-child > strong {
     font-size: var(--text-label);
   }
+  .demo-bar {
+    padding: var(--space-2) var(--space-4);
+  }
+  .demo-bar > span {
+    flex: 1 1 100%;
+    font-size: var(--text-caption);
+  }
+  .role-switch {
+    width: 100%;
+  }
+  .role-switch button {
+    flex: 0 0 auto;
+    min-height: 2.75rem;
+  }
+}
+/* The content half of the block above. The frame keeps answering to the
+   window — the sidebar becomes a drawer because the window is narrow, not
+   because a column is — while everything inside main answers to the column. */
+@container workspace (max-width: 900px) {
   .route-toolbar {
     grid-template-columns: minmax(0, 1fr);
   }
@@ -367,20 +389,6 @@ footer,
   .route-stop > a {
     grid-column: 1/-1;
     justify-content: center;
-  }
-  .demo-bar {
-    padding: var(--space-2) var(--space-4);
-  }
-  .demo-bar > span {
-    flex: 1 1 100%;
-    font-size: var(--text-caption);
-  }
-  .role-switch {
-    width: 100%;
-  }
-  .role-switch button {
-    flex: 0 0 auto;
-    min-height: 2.75rem;
   }
   .scenario-strip button {
     flex: 1 1 10rem;
@@ -412,7 +420,7 @@ footer,
     white-space: normal;
   }
 }
-@media (max-width: 30rem) {
+@container workspace (max-width: 30rem) {
   .stats,
   .roster {
     grid-template-columns: minmax(0, 1fr);
@@ -558,7 +566,7 @@ footer,
 .more-times-dialog h2 {
   margin: 0;
 }
-@media (max-width: 480px) {
+@container workspace (max-width: 480px) {
   .address-pair {
     grid-template-columns: minmax(0, 1fr);
     gap: 0;

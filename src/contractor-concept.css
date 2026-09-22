@@ -132,7 +132,9 @@
   display: block;
   color: var(--muted);
 }
-@media (max-width: 480px) {
+/* Below 900px the sidebar is a drawer and the content area is the whole
+   window, so this threshold still means what it meant as a window rule. */
+@container workspace (max-width: 480px) {
   .contractor-wrap .row.actions {
     display: grid;
     grid-template-columns: 1fr;
