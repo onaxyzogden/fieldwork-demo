@@ -34,7 +34,6 @@
   min-height: 52px;
 }
 .contractor-offer-card {
-  display: flow-root;
   margin: var(--space-4) 0;
 }
 .contractor-job-thumb {

@@ -1,6 +1,6 @@
 /* Canonical card. Legacy class hooks forward here; modifiers own layout only.
    .portal-task is deliberately NOT here: on Home it is a flat divider row
-   once a task is submitted, not a card — see .portal-task in style.css. */
+   once a task is submitted, not a card — see .portal-task in layout.css. */
 .card,
 .panel,
 .contractor-offer-card {

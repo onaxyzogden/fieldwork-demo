@@ -1,0 +1,53 @@
+/* The reset and bare-element defaults: what every tag looks like before any
+   class touches it. Split out of the old style.css, which had grown to hold
+   the reset, the layout and half the components in one 2,400-line file.
+
+   This is a cut at a source-order boundary, not a re-sort. Rules were not
+   moved past one another, because this stylesheet decides about a hundred of
+   its declarations by source position alone — see docs/design-decisions.md. */
+
+* {
+  box-sizing: border-box;
+}
+body {
+  margin: 0;
+}
+button,
+input,
+select,
+textarea {
+  font: inherit;
+}
+button,
+a,
+input,
+select,
+textarea {
+  -webkit-tap-highlight-color: transparent;
+}
+button,
+a {
+  transition:
+    background var(--motion-fast),
+    border-color var(--motion-fast),
+    transform var(--motion-fast);
+}
+button {
+  cursor: pointer;
+}
+/* No styling for button:disabled, because no submit-type button in this app is
+   disabled. Actions stay enabled and validate on click; see .field-error. The
+   0.4-opacity grey-out this rule used to apply is the contrast failure that
+   argument is about, so leaving it here would only invite the pattern back. */
+button:focus-visible,
+a:focus-visible {
+  outline: 2px solid var(--accent-text);
+  outline-offset: 4px;
+}
+button {
+  color: inherit;
+}
+a {
+  color: inherit;
+  text-decoration: none;
+}

@@ -51,7 +51,8 @@ Push changes to `main`. GitHub Actions installs dependencies, runs tests, builds
 - `src/main.tsx`: role workspaces and UI interactions.
 - `src/model.ts`: classification, scheduling, eligibility, and lifecycle state.
 - `src/dispatch.ts`: decline handling, replacement offers, and operator notifications.
-- `src/style.css`, `src/light.css`: responsive layouts and themes.
+- `src/base.css`, `src/layout.css`, `src/responsive.css`: the reset, structure and breakpoints.
+- `src/typography.css`, `src/primitives.css`: the type scale and the light/dark palettes.
 - `src/*.test.ts`: regression tests.
 
 ## Typography verification
@@ -375,7 +376,7 @@ The class-by-class overrides are deleted; what remains under
 window.
 
 Files: `src/main.tsx` only (`App` renamed to `Workspace` and parameterized;
-a new, small `App` composes one or three instances) and `src/style.css`
+a new, small `App` composes one or three instances) and `src/layout.css`
 (the `.compare-row`/`.compare-column` rules). `ContractorWork.tsx`,
 `CustomerIntake.tsx`, `NotificationUI.tsx` and the model/dispatch/work
 layers are unchanged.
@@ -641,6 +642,50 @@ still sends. The existing contrast and overflow audit and the container-query
 layout checks pass unchanged.
 
 Known and deliberately not addressed here: `Workspace` is still one 3,155-line
-component, ~600 lines of CSS still match no markup, and `typography.css` still
-overrides `style.css` unconditionally in 30 places. Those are friction, not
-breakage.
+component. The CSS findings from the same audit are addressed separately — see
+[The stylesheets](#the-stylesheets).
+
+## The stylesheets
+
+Two of the three CSS findings from the pre-testing audit are fixed here. The
+third is measured, documented, and left alone on purpose.
+
+**760 lines deleted.** Thirty-four class names — `.stats`, `.request-row`,
+`.insight`, `.route-toolbar`, `.work-mobile-nav` and the rest — existed only in
+CSS, left behind by markup that three rounds of restyling replaced. Confirmed
+absent from every `.ts`/`.tsx`/`.html` file _and_ from the live DOM on every
+screen, in every role, in side-by-side and the blueprint, before anything was
+removed. A further 22 declarations went because a later stylesheet overrode
+them unconditionally — including the whole `.sidebar { width }` and
+`.shell { margin-left }` responsive ladders, four breakpoints each, none of
+which had applied since `typography.css` started setting a flat `17rem`.
+
+**`style.css` is split into three.** `base.css` (53 lines: the reset and
+bare-element defaults), `layout.css` (1,106: structure and components) and
+`responsive.css` (774: the `@media` and `@container` blocks). The cut is at
+source-order boundaries — nothing was moved past anything else — so the
+concatenated cascade is byte-for-byte what it was.
+
+**Sorting rules by concern is not yet possible, and that is the finding.**
+The plan was to make every file name true. Doing it changed **1,662 computed
+values across 98 screens**: the topbar repainted, a line-height dropped from
+1.6 to 1.5 and took every inheriting element with it, eight pixels came off a
+dozen layouts. Two rules that set the same property on the same element, where
+neither selector is more specific, are separated only by which comes later in
+the bundle — and this codebase has roughly a hundred such pairs. Grouping by
+concern moves them past one another and each crossing picks a new winner. A
+second attempt that pinned same-selector conflicts in place changed the same
+1,662 values, because most pairs are _different_ selectors matching the same
+element at equal specificity, which no static analysis of selectors can catch.
+
+So `typography.css` still holds layout and `primitives.css` still holds
+structure. Making them honest means resolving ~100 latent ambiguities one at a
+time, deciding for each which rule was meant to win. That is real work, and not
+work to do blind inside a file move.
+
+Verification: the whole thing is checked by **computed style, not by eye** —
+every rendered element's 39 layout, type and paint properties, captured across
+8 screens × 6 widths × 2 themes plus side-by-side and the blueprint (98
+screens, 17,897 elements), before and after. Identical. Plus 264 tests,
+`design:check`, the build, the 16 container-query layout checks and the
+56-check contrast and overflow audit, all unchanged.

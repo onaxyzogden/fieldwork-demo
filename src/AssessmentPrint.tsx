@@ -156,9 +156,7 @@ export default function AssessmentPrint({
         </div>
         <div>
           <dt>Date</dt>
-          <dd>
-            {w.authorization ? dateLabel(w.authorization.agreedAt) : "—"}
-          </dd>
+          <dd>{w.authorization ? dateLabel(w.authorization.agreedAt) : "—"}</dd>
         </div>
       </dl>
       <p>

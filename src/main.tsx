@@ -85,7 +85,9 @@ import "@fontsource/manrope/500.css";
 import "@fontsource/manrope/600.css";
 import "@fontsource/manrope/700.css";
 import "./tokens.css";
-import "./style.css";
+import "./base.css";
+import "./layout.css";
+import "./responsive.css";
 
 import "./typography.css";
 import "./work.css";
@@ -422,7 +424,7 @@ function Workspace({
     document.body.dataset.drawerLocks = String(locks);
     document.body.style.overflow = "hidden";
     /* Compare mode gives each column its own scroll box (see .compare-column
-       in style.css), so body's own overflow lock above doesn't stop this
+       in layout.css), so body's own overflow lock above doesn't stop this
        column's content from scrolling out from under its open drawer. */
     if (compareMode && workspaceRef.current)
       workspaceRef.current.style.overflow = "hidden";

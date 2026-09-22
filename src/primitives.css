@@ -116,36 +116,12 @@
 :root[data-theme="light"] .wave {
   color: var(--accent-text);
 }
-:root[data-theme="light"] .stat {
-  background: var(--gradient-surface);
-  border-color: var(--muted);
-}
-:root[data-theme="light"] .stat .row,
-:root[data-theme="light"] .stat svg {
-  color: var(--text);
-}
 :root[data-theme="light"] .panel {
   box-shadow: var(--shadow-sm);
 }
 :root[data-theme="light"] .count {
   background: var(--panel);
   color: var(--text);
-}
-:root[data-theme="light"] .request-row:hover {
-  background: var(--panel);
-}
-:root[data-theme="light"] .request-row p span {
-  color: var(--text);
-}
-:root[data-theme="light"] .request-icon {
-  background: var(--panel);
-  color: var(--text);
-  border-color: var(--muted);
-}
-:root[data-theme="light"] .request-icon.danger {
-  background: var(--panel);
-  color: var(--danger);
-  border-color: var(--accent-text);
 }
 :root[data-theme="light"] .badge {
   background: var(--panel);
@@ -156,17 +132,6 @@
   background: var(--panel);
   color: var(--danger);
   border-color: var(--danger);
-}
-:root[data-theme="light"] .insight {
-  background: var(--gradient-surface);
-}
-:root[data-theme="light"] .insight-icon {
-  background: var(--accent-soft);
-  color: var(--accent-text);
-  border-color: var(--accent);
-}
-:root[data-theme="light"] .insight .eyebrow {
-  color: var(--text);
 }
 :root[data-theme="light"] input,
 :root[data-theme="light"] textarea,
@@ -261,21 +226,8 @@
 :root[data-theme="light"] .customer-heading .eyebrow {
   color: var(--accent-text);
 }
-:root[data-theme="light"] .intake-task textarea {
-  background: var(--panel);
-  border-color: var(--muted);
-}
 :root[data-theme="light"] .help {
   color: var(--text);
-}
-:root[data-theme="light"] .check-circle,
-:root[data-theme="light"] .success-icon {
-  background: var(--panel);
-  border-color: var(--success);
-  color: var(--text);
-}
-:root[data-theme="light"] .summary-input {
-  background: transparent;
 }
 :root[data-theme="light"] .note {
   background: var(--panel);
@@ -286,16 +238,6 @@
   color: var(--text);
 }
 :root[data-theme="light"] .status-track .complete {
-  color: var(--text);
-}
-:root[data-theme="light"] .offer-pay {
-  background: var(--panel);
-  border-color: var(--muted);
-}
-:root[data-theme="light"] .offer-pay h1 {
-  color: var(--accent-text);
-}
-:root[data-theme="light"] .offer-facts svg {
   color: var(--text);
 }
 :root[data-theme="light"] .payment-method {
@@ -317,10 +259,6 @@
   border-color: var(--success);
   box-shadow: var(--shadow-md);
 }
-:root[data-theme="light"] .dispatch-inbox {
-  background: var(--panel);
-  border-color: var(--accent-text);
-}
 :root[data-theme="light"] .dispatch-setting {
   background: var(--panel);
   border-color: var(--accent-text);
@@ -331,9 +269,6 @@
 }
 :root[data-theme="light"] .notification-link:hover {
   background: var(--panel);
-}
-:root[data-theme="light"] .route-summary {
-  color: var(--text);
 }
 :root[data-theme="light"] footer {
   color: var(--text);
@@ -487,18 +422,6 @@
   background: var(--accent-soft);
   color: var(--accent-text);
   border-color: var(--line);
-}
-:root[data-theme] .check-circle,
-:root[data-theme] .success-icon {
-  background: var(--success-fill);
-  color: var(--success);
-  border-color: var(--panel);
-}
-:root[data-theme="light"] .check-circle,
-:root[data-theme="light"] .success-icon {
-  background: var(--panel);
-  color: var(--success-fill);
-  border-color: var(--muted);
 }
 /* Soft surface plus text token, the pairing .badge.red already uses and the one
    ADR 006 defines: both tokens flip per theme, so the chip stays readable in
