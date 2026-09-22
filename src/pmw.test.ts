@@ -15,7 +15,9 @@ import {
   nextAssessmentId,
   propertyRecord,
   quotable,
+  carryCandidates,
   requestAssessment,
+  seedWalkthroughs,
   sendBlockers,
   sendWalkthrough,
 } from "./pmw";
@@ -316,6 +318,111 @@ describe("what has to be true before an assessment can be sent", () => {
     expect(sendWalkthrough(s, w.id)).toBe(true);
     expect(s.walkthroughs[0].status).toBe("Sent");
     expect(s.walkthroughs[0].sentAt).toBeTruthy();
+  });
+});
+
+describe("the walkthroughs the demo opens with", () => {
+  it("ships one sent assessment and one draft", () => {
+    const s = seed();
+    seedWalkthroughs(s);
+    expect(s.walkthroughs.map((w) => w.status).sort()).toEqual([
+      "Draft",
+      "Sent",
+    ]);
+    expect(s.walkthroughs.map((w) => w.assessmentId)).toEqual([
+      "PMW-0001",
+      "PMW-0002",
+    ]);
+  });
+
+  /* The sent one is what a reviewer opens first, so it has to be a complete
+     assessment rather than a placeholder: priced work, unpriced work, and a
+     total that adds up. */
+  it("the sent assessment is one a customer could actually act on", () => {
+    const s = seed();
+    const { sent } = seedWalkthroughs(s);
+    expect(sendBlockers(s, sent.id)).toEqual([]);
+    expect(sent.sentAt).toBeTruthy();
+    const t = assessmentTotals(s, sent.id);
+    expect(t.findings).toHaveLength(3);
+    expect(t.findings.filter((f) => quotable(f))).toHaveLength(2);
+    expect(
+      t.findings.filter((f) => f.pricing === "Further Assessment Required"),
+    ).toHaveLength(1);
+    expect(t.findings.every((f) => f.title && f.observed && f.proposed)).toBe(
+      true,
+    );
+  });
+
+  it("every seeded finding hangs off a property that exists", () => {
+    const s = seed();
+    seedWalkthroughs(s);
+    for (const w of s.walkthroughs)
+      expect(s.properties.some((p) => p.id === w.propertyId)).toBe(true);
+    for (const f of s.findings)
+      expect(s.walkthroughs.some((w) => w.id === f.walkthroughId)).toBe(true);
+  });
+});
+
+describe("carrying an unresolved finding into a later walkthrough", () => {
+  /* A property walked twice: the first visit leaves one deferred item and one
+     nobody could price, which is the whole reason to come back. */
+  const twice = () => {
+    const s = seed();
+    const first = createWalkthrough(s, "p1");
+    const deferred = addFinding(s, first.id, {
+      title: "Gutter needs clearing",
+      price: 120,
+    });
+    const unpriced = addFinding(s, first.id, {
+      title: "Damp patch below window",
+      pricing: "Further Assessment Required",
+    });
+    const priced = addFinding(s, first.id, { title: "Door sticks", price: 90 });
+    sendWalkthrough(s, first.id);
+    decide(s, deferred.id, "Not Now");
+    decide(s, priced.id, "Approved");
+    const second = createWalkthrough(s, "p1");
+    return { s, first, second, deferred, unpriced, priced };
+  };
+
+  it("offers the deferred and the unpriced, and nothing else", () => {
+    const { s, second, deferred, unpriced } = twice();
+    expect(
+      carryCandidates(s, second.id)
+        .map((f) => f.id)
+        .sort(),
+    ).toEqual([deferred.id, unpriced.id].sort());
+  });
+
+  it("offers nothing on a walkthrough that has already been sent", () => {
+    const { s, first } = twice();
+    expect(carryCandidates(s, first.id)).toEqual([]);
+  });
+
+  it("restates the finding and supersedes the original", () => {
+    const { s, second, unpriced } = twice();
+    const copy = carryForward(s, unpriced.id, second.id)!;
+    expect(copy.walkthroughId).toBe(second.id);
+    expect(copy.title).toBe(unpriced.title);
+    expect(copy.carriedFrom).toBe(unpriced.id);
+    expect(s.findings.find((f) => f.id === unpriced.id)!.resolvedBy).toBe(
+      copy.id,
+    );
+    expect(
+      findingState(
+        s,
+        s.findings.find((f) => f.id === unpriced.id)!,
+      ),
+    ).toBe("Superseded");
+  });
+
+  it("stops offering what has already been carried", () => {
+    const { s, second, deferred, unpriced } = twice();
+    carryForward(s, unpriced.id, second.id);
+    expect(carryCandidates(s, second.id).map((f) => f.id)).toEqual([
+      deferred.id,
+    ]);
   });
 });
 

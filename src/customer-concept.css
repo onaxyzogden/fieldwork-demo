@@ -150,10 +150,6 @@
 .customer-wrap .portal-task .photos {
   flex-wrap: wrap;
 }
-.customer-wrap .portal-tabs button {
-  white-space: normal;
-  overflow-wrap: break-word;
-}
 /* 900px is where the sidebar becomes a drawer, so window and content area
    agree here; the rule now also fires for a narrow side-by-side column. */
 @container workspace (max-width: 900px) {

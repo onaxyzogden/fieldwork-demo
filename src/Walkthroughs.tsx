@@ -20,10 +20,13 @@ import {
   uid,
 } from "./model";
 import { cities } from "./intake";
+import { useFieldErrors } from "./fields";
 import { storablePhoto, unreadableMessage } from "./photos";
 import {
   type SendBlocker,
   addFinding,
+  carryCandidates,
+  carryForward,
   assessmentTotals,
   convertApproved,
   createWalkthrough,
@@ -79,6 +82,7 @@ function WalkthroughList({
   notify: Props["notify"];
   open: (id: string) => void;
 }) {
+  const { fail, clear, fieldClass, invalid, Message } = useFieldErrors();
   const [creating, setCreating] = useState(false);
   const [propertyId, setPropertyId] = useState(s.properties[0]?.id || "");
   const [address, setAddress] = useState("");
@@ -92,7 +96,7 @@ function WalkthroughList({
 
   const start = () => {
     if (propertyId === "new" && !address.trim())
-      return notify("Enter the property address to start a walkthrough.");
+      return fail("address", "Enter the property address to start here.");
     const id = uid();
     update((d) => {
       let target = propertyId;
@@ -149,13 +153,18 @@ function WalkthroughList({
           </label>
           {propertyId === "new" && (
             <>
-              <label className="field">
+              <label className={fieldClass("address")}>
                 Street address
                 <input
                   value={address}
-                  onChange={(e) => setAddress(e.target.value)}
+                  {...invalid("address")}
+                  onChange={(e) => {
+                    clear("address");
+                    setAddress(e.target.value);
+                  }}
                   placeholder="120 Kerr Street"
                 />
+                <Message field="address" />
               </label>
               <div className="row">
                 <label className="mini-field">
@@ -257,14 +266,17 @@ function WalkthroughDetail({
   const totals = assessmentTotals(s, w.id);
   const findings = findingsFor(s, w.id);
   const draft = w.status === "Draft";
+  /* What earlier visits to this property left unresolved. Only while this one
+     is still a draft: carrying into a sent assessment would change what the
+     customer is already looking at. */
+  const carryable = carryCandidates(s, w.id);
   /* What is standing between this assessment and the customer, and whether the
      operator has asked to send yet. Incomplete is the normal state of a card
      being filled in, so the messages appear on the first attempt, not before. */
   const blockers = sendBlockers(s, w.id);
   const [revealed, setRevealed] = useState(false);
   const send = () => {
-    if (!totals.findings.length)
-      return notify("Add at least one finding before sending.");
+    if (!totals.findings.length) return setRevealed(true);
     if (blockers.length) return setRevealed(true);
     update((d) => {
       sendWalkthrough(d, w.id);
@@ -279,11 +291,14 @@ function WalkthroughDetail({
       if (f) Object.assign(f, values);
     }, msg);
 
+  /** Reports whether the file made it in, so the card holding the control can
+      put the reason under that control rather than in a passing toast. */
   const attach = async (f: Finding, file?: File) => {
-    if (!file) return;
+    if (!file) return true;
     const stored = await storablePhoto(file);
-    if (!stored) return notify(unreadableMessage);
+    if (!stored) return false;
     patch(f.id, { photos: [...f.photos, stored] });
+    return true;
   };
 
   return (
@@ -316,6 +331,7 @@ function WalkthroughDetail({
         converted={converted?.id}
         blockers={blockers}
         send={send}
+        revealedEmpty={revealed && !totals.findings.length}
       />
 
       {findings.map((f) => (
@@ -353,6 +369,44 @@ function WalkthroughDetail({
           <Plus size={16} /> Add finding
         </button>
       )}
+      {draft && !!carryable.length && (
+        <section className="card panel">
+          <div className="panel-title">
+            <h3>Still open from earlier visits</h3>
+            <span className="count">{carryable.length}</span>
+          </div>
+          <p className="note">
+            Items the customer deferred, and items that needed a closer look.
+            Carrying one restates it here, with its own price and its own
+            decision, and marks the original as superseded.
+          </p>
+          {carryable.map((f) => (
+            <div className="row between carry-forward" key={f.id}>
+              <div>
+                <strong>{f.title || "Untitled finding"}</strong>
+                <small>
+                  {f.area ? f.area + " · " : ""}
+                  {findingState(s, f)} ·{" "}
+                  {dateLabel(
+                    s.walkthroughs.find((x) => x.id === f.walkthroughId)
+                      ?.date || w.date,
+                  )}
+                </small>
+              </div>
+              <button
+                className="secondary"
+                onClick={() =>
+                  update((d) => {
+                    carryForward(d, f.id, w.id);
+                  }, "Carried into this walkthrough")
+                }
+              >
+                Carry forward <ArrowRight size={16} />
+              </button>
+            </div>
+          ))}
+        </section>
+      )}
 
       <details className="card panel">
         <summary>
@@ -376,6 +430,7 @@ function NextStep({
   converted,
   blockers,
   send,
+  revealedEmpty,
 }: {
   s: State;
   walkthrough: Walkthrough;
@@ -387,6 +442,8 @@ function NextStep({
   converted?: string;
   blockers: SendBlocker[];
   send: () => void;
+  /** The operator pressed send with nothing recorded yet. */
+  revealedEmpty: boolean;
 }) {
   const incomplete = new Set(blockers.map((b) => b.finding.id)).size;
   const copy = () =>
@@ -472,6 +529,11 @@ function NextStep({
               : `${totals.findings.length} finding${totals.findings.length === 1 ? "" : "s"} ready for the customer to review.`}
         </p>
       </div>
+      {revealedEmpty && (
+        <span className="field-message" role="alert">
+          Add at least one finding before sending.
+        </span>
+      )}
       <div className="op-decision-actions">
         <button className="primary" onClick={send}>
           <Send size={16} /> Send to customer
@@ -494,7 +556,7 @@ function FindingCard({
   finding: Finding;
   editable: boolean;
   patch: (id: string, values: Partial<Finding>, msg?: string) => void;
-  attach: (f: Finding, file?: File) => void;
+  attach: (f: Finding, file?: File) => Promise<boolean>;
   remove: () => void;
   /* Only after the operator has tried to send: a card being incomplete while
      it is still being filled in is not an error, it is a card being filled
@@ -502,6 +564,7 @@ function FindingCard({
   blockers?: SendBlocker["reason"][];
 }) {
   const state = findingState(s, f);
+  const [photoRejected, setPhotoRejected] = useState(false);
   const blocked = (reason: SendBlocker["reason"]) =>
     (blockers || []).includes(reason);
   const number = String(f.number).padStart(2, "0");
@@ -564,14 +627,24 @@ function FindingCard({
             {f.photos.map((src, i) => (
               <img key={i} src={src} alt={`Finding ${number} condition`} />
             ))}
-            <label className="photo-add">
+            <label
+              className={"photo-add" + (photoRejected ? " field-error" : "")}
+            >
               <Camera size={16} /> Add photo
               <input
                 type="file"
                 accept="image/*"
-                onChange={(e) => attach(f, e.target.files?.[0])}
+                aria-invalid={photoRejected || undefined}
+                onChange={async (e) =>
+                  setPhotoRejected(!(await attach(f, e.target.files?.[0])))
+                }
               />
             </label>
+            {photoRejected && (
+              <span className="field-message" role="alert">
+                {unreadableMessage}
+              </span>
+            )}
           </div>
           <div className="row">
             <label className="mini-field">

@@ -118,17 +118,6 @@ footer,
   font-size: var(--text-brand);
   line-height: 1.5;
 }
-.price-total b,
-.stat h2,
-.pulse b {
-  font-size: var(--text-h2);
-  line-height: 1.5;
-}
-.price-total small,
-.offer-pay small {
-  font-size: var(--text-label);
-  line-height: 1.5;
-}
 /* Larger type gets room to reflow; fixed-height chrome must grow with zoom. */
 .demo-bar,
 .topbar {
@@ -184,31 +173,6 @@ footer,
 .panel-title > .text-button {
   flex: 0 1 auto;
 }
-.stats {
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-}
-.stat .row {
-  align-items: flex-start;
-}
-.stat .row > span {
-  flex: 1;
-}
-.pulse > div {
-  min-width: 0;
-}
-.pulse span {
-  font-size: var(--text-label);
-  line-height: 1.5;
-}
-.request-row .row.between > strong {
-  flex: 1 1 10rem;
-}
-.request-row .row.between > svg {
-  margin-left: auto;
-}
-.request-row .badge {
-  max-width: 100%;
-}
 .detail-meta {
   flex-wrap: wrap;
 }
@@ -233,31 +197,6 @@ footer,
 }
 .visit-card .row.between > strong {
   flex: 1 1 15rem;
-}
-.route-toolbar {
-  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) auto;
-}
-.route-stop > .grow {
-  flex: 1 1 16rem;
-}
-.route-stop > button,
-.route-stop > a {
-  flex: 0 1 auto;
-}
-.account-row {
-  gap: var(--space-4);
-}
-.account-row select {
-  max-width: 100%;
-}
-.offer-pay {
-  gap: var(--space-4);
-}
-.confirm-task .grow {
-  flex-basis: 12rem;
-}
-.summary-input {
-  font-size: var(--text-body);
 }
 .modal {
   width: 38rem;
@@ -302,9 +241,6 @@ footer,
   }
   .queue {
     position: static;
-  }
-  .stats {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
   .slot-grid {
     grid-template-columns: minmax(0, 1fr);
@@ -369,26 +305,8 @@ footer,
    window — the sidebar becomes a drawer because the window is narrow, not
    because a column is — while everything inside main answers to the column. */
 @container workspace (max-width: 900px) {
-  .route-toolbar {
-    grid-template-columns: minmax(0, 1fr);
-  }
-  .route-toolbar > button {
-    grid-column: auto;
-  }
   .intake > .row:has(.field) {
     grid-template-columns: minmax(0, 1fr);
-  }
-  .route-stop {
-    display: grid;
-    grid-template-columns: 2rem minmax(0, 1fr);
-  }
-  .route-stop > .grow {
-    grid-column: 2;
-  }
-  .route-stop > button,
-  .route-stop > a {
-    grid-column: 1/-1;
-    justify-content: center;
   }
   .scenario-strip button {
     flex: 1 1 10rem;
@@ -403,12 +321,6 @@ footer,
   }
   .heading > .primary {
     min-height: 2.75rem;
-  }
-  .dispatch-inbox > .row {
-    align-items: flex-start;
-  }
-  .dispatch-inbox h3 {
-    flex: 1 1 14rem;
   }
   .provider-card {
     flex-wrap: wrap;
@@ -425,48 +337,13 @@ footer,
   .roster {
     grid-template-columns: minmax(0, 1fr);
   }
-  .pulse {
-    grid-template-columns: minmax(0, 1fr);
-    gap: var(--space-4);
-  }
-  .pulse > div {
-    border-right: 0;
-    border-bottom: 1px solid var(--line);
-    padding: 0 0 var(--space-4);
-  }
-  .pulse > div:last-child {
-    border: 0;
-    padding: 0;
-  }
-  .pulse span {
-    margin-top: 0;
-  }
   .panel,
   .intake,
   .offer {
     padding: var(--space-4);
   }
-  .request-list {
-    margin-left: -1rem;
-    margin-right: -1rem;
-  }
-  .request-row {
-    padding: var(--space-4);
-  }
-  .insight {
-    flex-wrap: wrap;
-  }
-  .insight > div:last-child {
-    flex: 1 1 100%;
-  }
-  .account-row > * {
-    flex: 1 1 100%;
-  }
   .modal {
     padding: var(--space-4);
-  }
-  .offer-facts {
-    grid-template-columns: minmax(0, 1fr);
   }
 }
 .task-answers {
@@ -507,7 +384,7 @@ footer,
   max-width: 760px;
   margin: 0 auto;
 }
-/* Type only. Layout and state colour belong to the canonical stepper in style.css. */
+/* Type only. Layout and state colour belong to the canonical stepper in layout.css. */
 .intake-steps {
   font-size: var(--text-caption);
 }
@@ -580,10 +457,4 @@ footer,
 }
 .customer-intake .customer-heading {
   text-align: left;
-}
-.intake-main .account-row {
-  margin: var(--space-2) 0;
-}
-.intake-main .account-row > .eyebrow {
-  display: none;
 }

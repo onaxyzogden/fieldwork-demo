@@ -78,6 +78,8 @@ import {
   confirmed,
 } from "./model";
 import { storablePhoto, unreadableMessage } from "./photos";
+import { Sidebar, DemoBar, Topbar, DemoSettings } from "./Shell";
+import { useFieldErrors } from "./fields";
 import "@fontsource/dm-sans/400.css";
 import "@fontsource/dm-sans/500.css";
 import "@fontsource/dm-sans/600.css";
@@ -85,7 +87,9 @@ import "@fontsource/manrope/500.css";
 import "@fontsource/manrope/600.css";
 import "@fontsource/manrope/700.css";
 import "./tokens.css";
-import "./style.css";
+import "./base.css";
+import "./layout.css";
+import "./responsive.css";
 
 import "./typography.css";
 import "./work.css";
@@ -105,7 +109,7 @@ import {
   reassignmentForScope,
   reoffer,
 } from "./dispatch";
-import { KEY, load, save, commit } from "./store";
+import { KEY, load, save, commit, freshDemo } from "./store";
 import { Boundary } from "./Recovery";
 import { SaveWarning } from "./NotificationUI";
 /**
@@ -407,6 +411,18 @@ function Workspace({
   const [fail, setFail] = useState(false);
   const [sidebar, setSidebar] = useState(false);
   const menuTrigger = React.useRef<HTMLButtonElement>(null);
+  /* Validation that names a field says so on the field. See fields.tsx for
+     why this stopped being seventeen toasts. */
+  /* `fail` is renamed here: the payment simulation above already owns that
+     word for "make this charge decline". */
+  const {
+    fail: invalidate,
+    clear,
+    clearAll,
+    fieldClass,
+    invalid,
+    Message,
+  } = useFieldErrors();
   React.useEffect(() => {
     if (!sidebar) return;
     const drawer = workspaceRef.current?.querySelector<HTMLElement>(".sidebar");
@@ -422,7 +438,7 @@ function Workspace({
     document.body.dataset.drawerLocks = String(locks);
     document.body.style.overflow = "hidden";
     /* Compare mode gives each column its own scroll box (see .compare-column
-       in style.css), so body's own overflow lock above doesn't stop this
+       in layout.css), so body's own overflow lock above doesn't stop this
        column's content from scrolling out from under its open drawer. */
     if (compareMode && workspaceRef.current)
       workspaceRef.current.style.overflow = "hidden";
@@ -664,10 +680,14 @@ function Workspace({
     }
     const chosen = tasks.filter((t) => ids.includes(t.id));
     if (chosen.some((t) => !t.reviewed))
-      return notify("Review all selected tasks before scheduling.");
+      return invalidate(
+        "tasks",
+        "Review all selected tasks before scheduling.",
+      );
     if (!eligible(provider, chosen))
-      return notify(
-        "Choose a provider with the required skills and restricted-work eligibility.",
+      return invalidate(
+        "provider",
+        "This provider lacks the required skills or restricted-work eligibility for the selected tasks.",
       );
     if (
       s.visits.some(
@@ -675,14 +695,17 @@ function Workspace({
           v.status !== "Cancelled" && v.taskIds.some((id) => ids.includes(id)),
       )
     )
-      return notify(
+      return invalidate(
+        "tasks",
         "These tasks already belong to a visit. Remove that visit before regrouping.",
       );
     const sl = opts.find((o) => o.start === slot) || opts[0];
     if (!sl)
-      return notify(
+      return invalidate(
+        "slot",
         "No appointment fits. Try a shorter visit or another provider.",
       );
+    clearAll();
     update(
       (d) => {
         const id = uid();
@@ -718,6 +741,8 @@ function Workspace({
     const choice = options.find((o) =>
       self ? o.provider.id === "yousef" : o.provider.id !== "yousef",
     );
+    /* Stays a toast on purpose: this refuses to open the reassignment panel at
+       all, so there is no field on screen for the message to sit beside. */
     if (self && !choice)
       return notify(
         "Yousef cannot currently cover this visit's scope and availability. Review the tasks or choose another eligible provider.",
@@ -747,7 +772,8 @@ function Workspace({
   const photo = async (t: Task, file?: File) => {
     if (!file) return;
     const stored = await storablePhoto(file);
-    if (!stored) return notify(unreadableMessage);
+    if (!stored) return invalidate("photo-" + t.id, unreadableMessage);
+    clear("photo-" + t.id);
     patchTask(t.id, { photos: [...t.photos, stored] });
   };
   const newRequest = () => {
@@ -830,6 +856,7 @@ function Workspace({
           onChange={(e) => photo(t, e.target.files?.[0])}
         />
       </label>
+      <Message field={"photo-" + t.id} />
     </div>
   );
   const visitCard = (v: Visit) => (
@@ -1367,16 +1394,21 @@ function Workspace({
               >
                 Decline request
               </button>
-              <label className="mini-field">
+              <label className={fieldClass("mode", "mini-field")}>
                 Booking mode
                 <select
                   value={r.mode}
+                  {...invalid("mode")}
                   onChange={(e) => {
                     if (
                       e.target.value === "Instant Book" &&
                       !instantEligible(tasks)
                     )
-                      return notify("This scope requires Request to Book.");
+                      return invalidate(
+                        "mode",
+                        "This scope requires Request to Book — it contains work that cannot be booked instantly.",
+                      );
+                    clear("mode");
                     update((d) => {
                       d.requests.find((q) => q.id === r.id)!.mode =
                         e.target.value;
@@ -1387,6 +1419,7 @@ function Workspace({
                   <option>Request to Book</option>
                   <option>Instant Book</option>
                 </select>
+                <Message field="mode" />
               </label>
             </details>
           </div>
@@ -1400,217 +1433,41 @@ function Workspace({
       data-role={role}
       ref={workspaceRef}
     >
-      {sidebar && (
-        <button
-          className="drawer-backdrop"
-          aria-label="Close navigation"
-          onClick={() => setSidebar(false)}
-        />
-      )}
-      <aside
-        id={idPrefix + "workspace-navigation"}
-        role={sidebar ? "dialog" : undefined}
-        aria-modal={sidebar || undefined}
-        aria-label="Workspace navigation"
-        className={"sidebar " + (sidebar ? "open" : "")}
-      >
-        {sidebar && (
-          <button
-            className="text-button drawer-close"
-            onClick={() => setSidebar(false)}
-          >
-            Close navigation ×
-          </button>
-        )}
-        <a className="brand" href="#" onClick={(e) => e.preventDefault()}>
-          <span className="brand-icon">
-            <Wrench size={20} />
-          </span>
-          fieldwork<span className="brand-dot">.</span>
-        </a>
-        <div className="workspace">
-          <div className="avatar amber">YH</div>
-          <div>
-            <strong>Yousef’s workspace</strong>
-            <small>Halton & Greater Toronto</small>
-          </div>
-          <span className="online" />
-        </div>
-        <span className="nav-caption">WORKSPACE</span>
-        <nav>
-          {(role === "Operator"
-            ? [
-                [LayoutDashboard, "Home"],
-                [ListTodo, "Requests"],
-                [ClipboardCheck, "Walkthroughs"],
-                [Navigation, "Today"],
-                [MoreHorizontal, "More"],
-              ]
-            : role === "Customer"
-              ? [
-                  [Plus, "New request"],
-                  [CalendarDays, "My bookings"],
-                ]
-              : [[Briefcase, "Your Work"]]
-          ).map(([Icon, label]: any) => (
-            <button
-              key={label}
-              className={page === label ? "active" : ""}
-              onClick={() => {
-                if (label === "New request") startOrResumeRequest();
-                else setPage(label);
-                setSidebar(false);
-              }}
-            >
-              <Icon size={24} />
-              {label}
-              {label === "Requests" && (
-                <span className="nav-count">
-                  {s.requests.filter((r) => r.status !== "Draft").length}
-                </span>
-              )}
-            </button>
-          ))}
-        </nav>
-        <div className="sidebar-bottom">
-          <div className="service-zone">
-            <span className="online" /> Service area active
-            <small>Oakville · Burlington · Milton</small>
-          </div>
-          <button
-            className="text-button"
-            onClick={() => {
-              setSidebar(false);
-              setModal("Demo settings");
-            }}
-          >
-            <Settings size={16} /> Demo settings
-          </button>
-          <div className="profile">
-            <div className="avatar">
-              {role === "Operator"
-                ? "YH"
-                : role === "Customer"
-                  ? "SM"
-                  : providers.find((p) => p.id === contractor)?.initials}
-            </div>
-            <div>
-              <strong>
-                {role === "Operator"
-                  ? "Yousef Haddad"
-                  : role === "Customer"
-                    ? "Customer portal"
-                    : providers.find((p) => p.id === contractor)?.name}
-              </strong>
-              <small>{role} view</small>
-            </div>
-          </div>
-        </div>
-      </aside>
+      <Sidebar
+        s={s}
+        role={role}
+        page={page}
+        setPage={setPage}
+        open={sidebar}
+        setOpen={setSidebar}
+        idPrefix={idPrefix}
+        contractor={contractor}
+        setModal={setModal}
+        startOrResumeRequest={startOrResumeRequest}
+      />
       <div className="shell">
-        <div className="demo-bar">
-          <span>
-            <span className="demo-dot" /> INTERACTIVE PROTOTYPE{" "}
-            <span className="demo-extra">
-              · All data and transactions are simulated
-            </span>
-          </span>
-          <div className="role-switch">
-            {compareMode ? (
-              <>
-                <span className="chosen">{role}</span>
-                <button className="text-button" onClick={onExitCompare}>
-                  <X size={16} /> Exit side by side
-                </button>
-              </>
-            ) : (
-              <>
-                {(["Customer", "Operator", "Contractor"] as const).map((x) => (
-                  <button
-                    key={x}
-                    className={role === x ? "chosen" : ""}
-                    onClick={() => {
-                      setRole(x);
-                      setPage(
-                        x === "Operator"
-                          ? "Home"
-                          : x === "Customer"
-                            ? "My bookings"
-                            : "Your Work",
-                      );
-                    }}
-                  >
-                    {x}
-                  </button>
-                ))}
-                <button className="text-button" onClick={onEnterCompare}>
-                  <Layers size={16} /> Side by side
-                </button>
-              </>
-            )}
-          </div>
-        </div>
-        <header className="topbar">
-          <div className="row">
-            <button
-              className="mobile-menu icon-button"
-              ref={menuTrigger}
-              aria-label="Open navigation"
-              aria-expanded={sidebar}
-              aria-controls={idPrefix + "workspace-navigation"}
-              onClick={() => setSidebar(!sidebar)}
-            >
-              <Menu />
-            </button>
-            <span>{role}</span>
-            <ChevronRight size={16} />
-            <strong>{page}</strong>
-          </div>
-          <div className="row">
-            <span className="top-date">
-              {new Date(s.clock).toLocaleDateString("en-CA", {
-                weekday: "long",
-                month: "long",
-                day: "numeric",
-              })}
-            </span>
-            <button
-              className="icon-button"
-              aria-label={
-                theme === "light"
-                  ? "Switch to dark mode"
-                  : "Switch to light mode"
-              }
-              title={
-                theme === "light"
-                  ? "Switch to dark mode"
-                  : "Switch to light mode"
-              }
-              onClick={() => setTheme(theme === "light" ? "dark" : "light")}
-            >
-              {theme === "light" ? <Moon size={20} /> : <Sun size={20} />}
-            </button>
-            <button
-              className="icon-button"
-              aria-label={`View notifications (${notices.filter((n) => !n.read).length} unread)`}
-              onClick={() => setModal("Notifications")}
-            >
-              <Bell size={20} />
-              {!!notices.filter((n) => !n.read).length && (
-                <span className="notification-count">
-                  {notices.filter((n) => !n.read).length}
-                </span>
-              )}
-            </button>
-            <div className="avatar small">
-              {role === "Operator"
-                ? "YH"
-                : role === "Customer"
-                  ? "SM"
-                  : providers.find((p) => p.id === contractor)?.initials}
-            </div>
-          </div>
-        </header>
+        <DemoBar
+          role={role}
+          setRole={setRole}
+          setPage={setPage}
+          compareMode={compareMode}
+          onEnterCompare={onEnterCompare}
+          onExitCompare={onExitCompare}
+        />
+        <Topbar
+          s={s}
+          role={role}
+          page={page}
+          open={sidebar}
+          setOpen={setSidebar}
+          idPrefix={idPrefix}
+          contractor={contractor}
+          theme={theme}
+          setTheme={setTheme}
+          setModal={setModal}
+          unread={notices.filter((n) => !n.read).length}
+          menuTrigger={menuTrigger}
+        />
         {notices.find((n) => !n.read) && (
           <div className="incoming-notice" role="status">
             <Bell size={16} />
@@ -1989,13 +1846,19 @@ function Workspace({
                                   ))}
                               </select>
                             </label>
-                            <label className="mini-field">
+                            <label
+                              className={fieldClass(
+                                "duration-" + t.id,
+                                "mini-field",
+                              )}
+                            >
                               Duration (min)
                               <input
                                 type="number"
                                 min="15"
                                 max="480"
                                 value={t.duration}
+                                {...invalid("duration-" + t.id)}
                                 onChange={(e) => {
                                   if (
                                     visits.some(
@@ -2004,9 +1867,11 @@ function Workspace({
                                         v.taskIds.includes(t.id),
                                     )
                                   )
-                                    return notify(
-                                      "Remove the visit before changing task duration so we can recalculate availability.",
+                                    return invalidate(
+                                      "duration-" + t.id,
+                                      "Remove the visit before changing this duration, so availability can be recalculated.",
                                     );
+                                  clear("duration-" + t.id);
                                   patchTask(t.id, {
                                     duration: Math.max(
                                       15,
@@ -2015,6 +1880,7 @@ function Workspace({
                                   });
                                 }}
                               />
+                              <Message field={"duration-" + t.id} />
                             </label>
                             <button
                               className="text-button"
@@ -2074,6 +1940,8 @@ function Workspace({
                           <p>{scopeTasks.map((t) => t.summary).join(" · ")}</p>
                           <p>{r.timing}</p>
                         </div>
+                        <Message field="tasks" />
+                        <Message field="provider" />
                         <div className="provider-options">
                           {candidates.map((c) => (
                             <button
@@ -2084,6 +1952,7 @@ function Workspace({
                                 (provider === c.provider.id ? "selected" : "")
                               }
                               onClick={() => {
+                                clear("provider");
                                 setProvider(c.provider.id);
                                 setSlot("");
                                 setOverride("");
@@ -2172,6 +2041,7 @@ function Workspace({
                           Recommended appointments{" "}
                           <span className="muted">· simulated routing</span>
                         </h4>
+                        <Message field="slot" />
                         <div className="slot-grid">
                           {opts.map((o, i) => (
                             <button
@@ -2182,7 +2052,10 @@ function Workspace({
                                   ? "selected"
                                   : "")
                               }
-                              onClick={() => setSlot(o.start)}
+                              onClick={() => {
+                                clear("slot");
+                                setSlot(o.start);
+                              }}
                             >
                               {i === 0 && (
                                 <span className="eyebrow">BEST ROUTE FIT</span>
@@ -2288,11 +2161,13 @@ function Workspace({
                           className="primary actions"
                           onClick={() => {
                             if (!match.eligible)
-                              return notify(
+                              return invalidate(
+                                "provider",
                                 "This provider is not eligible for every selected task.",
                               );
                             if (!opts.length)
-                              return notify(
+                              return invalidate(
+                                "slot",
                                 "No appointment fits this scope. Adjust the tasks or choose another provider.",
                               );
                             createVisit();
@@ -2823,111 +2698,49 @@ function Workspace({
               </button>
             </div>
             {modal === "Demo settings" && (
-              <>
-                <details className="sample-scenarios">
-                  <summary>Sample scenarios</summary>
-                  <div className="scenario-strip">
-                    <p>
-                      Open a fictional sample request. Existing demo changes are
-                      preserved.
-                    </p>
-                    {[
-                      "01 Door adjustment",
-                      "02 Four-task visit",
-                      "03 Delegate a job",
-                      "04 Needs review",
-                      "05 Decline & reassign",
-                    ].map((x, i) => (
-                      <button
-                        className={active === "r" + (i + 1) ? "selected" : ""}
-                        key={x}
-                        onClick={() => {
-                          choose("r" + (i + 1));
-                          setModal("");
-                        }}
-                      >
-                        {x}
-                      </button>
-                    ))}
-                  </div>
-                </details>
-
-                <a className="secondary" href="?view=blueprint">
-                  Developer blueprint →
-                </a>
-                {role === "Operator" && (
-                  <div className="dispatch-setting">
-                    <label className="row">
-                      <input
-                        type="checkbox"
-                        checked={s.settings?.autoReofferDeclined || false}
-                        onChange={(e) =>
-                          update((d) => {
-                            d.settings = {
-                              autoReofferDeclined: e.target.checked,
-                            };
-                            log(
-                              d,
-                              e.target.checked
-                                ? "Automatic reoffers enabled"
-                                : "Automatic reoffers disabled",
-                            );
-                          })
-                        }
-                      />{" "}
-                      Automatically reoffer declined jobs
-                    </label>
-                    <p>
-                      Offer to the next eligible contractor at the same time and
-                      pay. You’ll be notified of the outcome. If no match fits,
-                      you choose the next step. Existing declines and expired
-                      offers remain manual.
-                    </p>
-                  </div>
-                )}
-                <p>
-                  Mock data is stored in this browser. No real payments or
-                  notifications are sent.
-                </p>
-                <p>
-                  Demo policies: 24-hour change cutoff, sequential two-hour
-                  offers, weekday 9–5 availability, 15-minute setup/overrun
-                  buffer.
-                </p>
-                <button
-                  className="secondary full"
-                  onClick={() =>
-                    update((d) => {
-                      d.clock += 3 * 3600000;
-                      log(d, "Demo clock advanced 3 hours");
-                    }, "Clock advanced; offers checked for expiry")
-                  }
-                >
-                  Advance clock 3 hours
-                </button>
-                <button
-                  className="secondary full actions"
-                  onClick={() => {
-                    const d = migrateDispatch(seed());
-                    setS(d);
-                    save(d);
-                    setActive("r2");
-                    setCustomer("c2");
-                    setStep(0);
-                    setPage(
-                      role === "Operator"
-                        ? "Home"
-                        : role === "Customer"
-                          ? "My bookings"
-                          : "Your Work",
+              <DemoSettings
+                role={role}
+                autoReoffer={s.settings?.autoReofferDeclined || false}
+                activeScenario={active}
+                onChooseScenario={(id) => {
+                  choose(id);
+                  setModal("");
+                }}
+                onToggleAutoReoffer={(on) =>
+                  update((d) => {
+                    d.settings = { autoReofferDeclined: on };
+                    log(
+                      d,
+                      on
+                        ? "Automatic reoffers enabled"
+                        : "Automatic reoffers disabled",
                     );
-                    setModal("");
-                    notify("All five scenarios reset");
-                  }}
-                >
-                  <RotateCcw size={16} /> Reset all demo data
-                </button>
-              </>
+                  })
+                }
+                onAdvanceClock={() =>
+                  update((d) => {
+                    d.clock += 3 * 3600000;
+                    log(d, "Demo clock advanced 3 hours");
+                  }, "Clock advanced; offers checked for expiry")
+                }
+                onReset={() => {
+                  const d = freshDemo();
+                  setS(d);
+                  save(d);
+                  setActive("r2");
+                  setCustomer("c2");
+                  setStep(0);
+                  setPage(
+                    role === "Operator"
+                      ? "Home"
+                      : role === "Customer"
+                        ? "My bookings"
+                        : "Your Work",
+                  );
+                  setModal("");
+                  notify("All five scenarios reset");
+                }}
+              />
             )}
             {modal === "Notifications" && (
               <NotificationInbox
@@ -2968,7 +2781,10 @@ function Workspace({
                   <Check size={16} />
                 </div>
                 {modal === "Instant payment" && (
-                  <p>Selected appointment: {dateLabel(slot)}</p>
+                  <>
+                    <p>Selected appointment: {dateLabel(slot)}</p>
+                    <Message field="instant-slot" />
+                  </>
                 )}
                 <h1>
                   {money(
@@ -3008,8 +2824,9 @@ function Workspace({
                           12,
                         ).some((o) => o.start === slot);
                       if (!available)
-                        return notify(
-                          "That slot is no longer available. Choose another time.",
+                        return invalidate(
+                          "instant-slot",
+                          "That slot is no longer available. Close this and choose another time.",
                         );
                       update((d) => {
                         const req = d.requests.find((q) => q.id === r.id)!;
@@ -3377,6 +3194,7 @@ function Workspace({
                   records remain linked for audit history. Assigned tasks must
                   first be removed from their visit.
                 </p>
+                <Message field="merge" />
                 <button
                   className="primary"
                   onClick={() => {
@@ -3387,8 +3205,9 @@ function Workspace({
                           v.taskIds.some((id) => selected.includes(id)),
                       )
                     )
-                      return notify(
-                        "Remove the existing visit before merging.",
+                      return invalidate(
+                        "merge",
+                        "These tasks are already on a visit. Remove it before merging them.",
                       );
                     update((d) => {
                       const list = d.tasks.filter((t) =>
@@ -3431,8 +3250,9 @@ function Workspace({
                         v.status !== "Cancelled" && v.taskIds.includes(t.id),
                     )
                   )
-                    return notify(
-                      "Remove the existing visit before splitting.",
+                    return invalidate(
+                      "split",
+                      "This task is already on a visit. Remove it before splitting.",
                     );
                   const f = new FormData(e.currentTarget);
                   update((d) => {
@@ -3477,6 +3297,7 @@ function Workspace({
                     placeholder="Describe the separate piece of work"
                   />
                 </label>
+                <Message field="split" />
                 <button className="primary">Split into two tasks</button>
               </form>
             )}

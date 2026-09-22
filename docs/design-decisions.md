@@ -249,3 +249,73 @@ The screen follows the customer intake's idiom rather than its own: the reasons 
 ## Boundaries
 
 Four defects, no restructuring. The 3,155-line `Workspace`, the ~600 lines of CSS that match no markup, and `typography.css` silently overriding `style.css` were all found in the same audit and are all still there — they are friction, not breakage, and folding them into this change would have buried it. `carryForward()` remains unreachable from the UI and the seed still contains no walkthroughs.
+
+# Design decisions — the stylesheets
+
+## ADR 029: Six hundred lines that could never match anything
+
+Accepted. Thirty-four class names existed only in CSS: `.stats`, `.stat`, `.request-row`, `.request-list`, `.insight`, `.pulse`, `.route-stop`, `.route-toolbar`, `.offer-pay`, `.dispatch-inbox`, `.portal-tabs`, `.work-mobile-nav` and the rest. They are leftovers from markup that three rounds of restyling replaced, and they were not harmless: the container-query conversion in ADR 024 spent effort re-deriving breakpoint thresholds for rules that no element could ever match.
+
+Confirmed two ways before deleting anything — no occurrence in any `.ts`, `.tsx` or `.html`, and zero elements carrying them in the live DOM across every screen, every role, side by side and the blueprint. A further 22 declarations were deleted because a later stylesheet overrode them unconditionally, including the entire `.sidebar { width }` and `.shell { margin-left }` responsive ladders: four breakpoints each, none of which had applied since `typography.css` started setting a flat `17rem`. That flat sidebar is the real design — ADR 024's threshold arithmetic is derived from it — so the dead ladder was removed rather than revived.
+
+760 lines, and not one computed style changed.
+
+## ADR 030: This stylesheet decides about a hundred declarations by source position
+
+Accepted, and it is the reason the reorganization is a cut rather than a sort.
+
+The intent was to make every file name true: type in `typography.css`, theme in `primitives.css`, structure in a layout file. Sorting the rules that way changed **1,662 computed values across 98 screens** — the topbar repainted, eight pixels came off a dozen layouts, a line-height dropped from 1.6 to 1.5 and took every inheriting element with it.
+
+The cause is not a bug in the sort. Two rules that set the same property on the same element, where neither selector is more specific, are separated only by which one comes later in the concatenated stylesheet. This codebase has roughly a hundred such pairs, spread across files that load in a fixed order. Grouping rules by concern moves them past one another, and each crossing silently picks a new winner. A second attempt that pinned same-selector conflicts in place still changed 1,662 values, because most of the pairs are not same-selector — they are different selectors matching the same element at equal specificity, which no static rule about selectors can detect.
+
+So `style.css` is split where it can be split safely: **at source-order boundaries, with nothing moved past anything else.** `base.css` takes the reset and bare-element defaults, `layout.css` the structure and components, `responsive.css` the breakpoint blocks. The cascade is byte-for-byte what it was, proven against a 17,897-element snapshot at six widths in both themes.
+
+What is left undone is stated rather than hidden: `typography.css` still holds layout and `primitives.css` still holds structure. Making those files honest means resolving ~100 latent ambiguities one at a time, deciding for each which rule was _meant_ to win — real work, and not work to do blind inside a file move.
+
+The lesson worth keeping: a stylesheet whose rendering depends on source order cannot be reorganized by concern until that dependency is paid off. The measurement is what turned that from an opinion into a number.
+
+## Boundaries
+
+No `.tsx` changed except the import list and three comments naming the old file. `work.css`, `cards.css`, the three `-concept` files, `assessment.css` and `blueprint.css` are untouched apart from dead-rule removal.
+
+## ADR 031: The chrome comes out cleanly; the modals do not
+
+Accepted. `Workspace` held the frame and three roles' worth of screens in one 3,149-line function. The navigation drawer, the prototype banner and the topbar are the honest first thing to lift out: they are identical for every role, they are what side by side renders three of, and they depend on about ten named values rather than on Workspace's internal state. They move to `Shell.tsx` along with `identity()`, which replaces the role-to-initials ternary that appeared three times.
+
+The Demo settings dialog follows, for a different reason. It read fourteen pieces of internal state inline — `setS`, `save`, `seed`, `migrateDispatch`, `setActive`, `setCustomer`, `setStep`, `setPage` and the rest — which is what "reset the demo" genuinely needs, but not what a dialog should know. Workspace keeps the resetting and hands the component four callbacks.
+
+**The other ten modals stay.** Between them they read about twenty-five pieces of Workspace's internal state: `choose`, `reoffer`, `replacementOptions`, `notify`, `update`, and a dozen setters for the selection, the wizard step, the payment result and the contractor's current visit. Extracting them would replace inline code with a props bag of the same size — the coupling made explicit but not reduced. What would make them separable is consolidating that state behind a reducer or a context first, which is the full decomposition this round deliberately did not take on.
+
+**On performance: this changed nothing, and it was not supposed to.** Side-by-side typing cost 25.2 ms median per keystroke before and 29.1 ms after — noise. The 27 ms lives in the role bodies re-rendering three times over shared state, not in the chrome. Moving the chrome out does not touch it, and saying otherwise would be inventing a result. Workspace went from 3,149 lines to 2,911.
+
+Nothing rendered changed: the same 98-screen, 17,897-element computed-style snapshot, identical. The Demo settings dialog's four callbacks are exercised end to end — the toggle writes to state, the clock advances exactly three hours, a scenario selects and closes, and Reset restores the seed and says so.
+
+## ADR 032: Validation that names a field says so on the field
+
+Accepted. The customer intake already did this — "Enter a Canadian postal code, for example L6J 4S7." sits under the postal code box, appears on the attempt, and clears as it is fixed. Everywhere else the same job was done by a toast: a sentence that slides in over the corner of the screen, names a field the user then has to go and find, and leaves after three and a half seconds whether or not it was read. Seventeen of them had accumulated, mostly on the operator's scheduling path — the densest form in the app.
+
+The reason the toast kept winning is worth naming, because it is not laziness: `notify("…")` is one line and the inline version was six, repeated per field. `fields.tsx` is those six lines, once — `useFieldErrors()` returns `fail`, `clear`, `fieldClass`, `invalid` and a `Message` component, so a guard reads `return fail("provider", "…")` and the field gets three short additions.
+
+Sixteen of the seventeen moved. The messages were also rewritten where the toast had been vague about which control it meant: "Choose a provider with the required skills" became "This provider lacks the required skills or restricted-work eligibility for the selected tasks", because by then the message is sitting under the provider you picked.
+
+**One stays a toast, on purpose.** `beginReassign` refuses to open the reassignment panel at all when Yousef cannot cover the visit — there is no field on screen for the message to sit beside, because the screen it would sit on is the one being refused. A toast is the right shape for that, and forcing it inline would have meant inventing a field to hang it on.
+
+Buttons stay enabled and validate on click, which is the existing house rule: a control that looks inert but is not would be worse than one that explains itself when pressed.
+
+## ADR 033: The demo opens with a walkthrough already in it
+
+Accepted. `seed()` contained no walkthroughs and no findings, so the feature the last round built opened on "No walkthroughs yet" — the correct message and the wrong first impression. A reviewer clicking Walkthroughs had to do a property's worth of data entry before seeing anything it does.
+
+Two are seeded. One **sent** assessment with three findings — two priced, one needing a closer look — so the guest link, the totals, the tax line and all three finding states are real on arrival. One **draft** with a single finding, so the capture surface is real without pre-deciding what the reviewer records next.
+
+They are built by calling `createWalkthrough`, `addFinding` and `sendWalkthrough` rather than by writing record literals, so seeded content cannot drift into a shape the app would never produce. A test asserts the sent one has no `sendBlockers` — the same gate a human has to pass.
+
+`seedWalkthroughs` lives in `pmw.ts` and is called from `store.ts`, not from `seed()`, because `pmw.ts` imports `model.ts` and the reverse would be a cycle. That turns out to be the better seam: `seed()` stays the plain record set the logic tests build on, and the demo content is added at `freshDemo()` — the one place the demo actually starts, which both a first visit and "Reset all demo data" now go through.
+
+## ADR 034: carryForward gets the entry point it never had
+
+Accepted. `carryForward()` was implemented, tested, and called from nothing. Its `"Superseded"` state in `findingState()` was therefore unreachable in the running app, and `carriedFrom`/`resolvedBy` were written by no one — a documented behaviour that could not be demonstrated.
+
+A draft walkthrough now shows **Still open from earlier visits**: the findings this property's earlier visits left deferred or unpriced, each with one button. `carryCandidates()` computes the list from `propertyRecord()`, drops anything already carried into this walkthrough, and returns nothing at all for a walkthrough that has been sent — carrying into a sent assessment would change what the customer is already looking at.
+
+This is the pairing the feature was designed around: a deferred item and an item nobody could price are precisely the reasons to walk a property twice. Carrying one restates it with its own price and its own decision, and supersedes the original, so the maintenance record shows one live item rather than two copies of the same problem.

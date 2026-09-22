@@ -72,9 +72,6 @@
 .queue-item p {
   display: block;
 }
-.work-mobile-nav {
-  display: none;
-}
 .work-sheet {
   color: inherit;
   background: var(--panel);
@@ -94,34 +91,4 @@
 }
 .work-sheet .field {
   margin: var(--space-4) 0;
-}
-/* 900px is where the sidebar becomes a drawer, so window and content area
-   agree here; the rule now also fires for a narrow side-by-side column. */
-@container workspace (max-width: 900px) {
-  .work-mobile-nav {
-    display: flex;
-    position: sticky;
-    bottom: 0;
-    background: var(--panel);
-    border: 1px solid var(--line);
-    padding: var(--space-2);
-    gap: var(--space-1);
-    flex-wrap: wrap;
-    border-radius: var(--radius-md);
-    z-index: var(--z-dropdown);
-    margin: var(--space-5) 0;
-  }
-  .work-mobile-nav button {
-    flex: 1;
-    min-height: 44px;
-    background: transparent;
-    border: 0;
-    border-radius: var(--radius-md);
-    padding: var(--space-2);
-    font-size: var(--text-label);
-  }
-  .work-mobile-nav .chosen {
-    background: var(--accent);
-    color: var(--on-accent);
-  }
 }

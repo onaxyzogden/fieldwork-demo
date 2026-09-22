@@ -51,7 +51,8 @@ Push changes to `main`. GitHub Actions installs dependencies, runs tests, builds
 - `src/main.tsx`: role workspaces and UI interactions.
 - `src/model.ts`: classification, scheduling, eligibility, and lifecycle state.
 - `src/dispatch.ts`: decline handling, replacement offers, and operator notifications.
-- `src/style.css`, `src/light.css`: responsive layouts and themes.
+- `src/base.css`, `src/layout.css`, `src/responsive.css`: the reset, structure and breakpoints.
+- `src/typography.css`, `src/primitives.css`: the type scale and the light/dark palettes.
 - `src/*.test.ts`: regression tests.
 
 ## Typography verification
@@ -375,7 +376,7 @@ The class-by-class overrides are deleted; what remains under
 window.
 
 Files: `src/main.tsx` only (`App` renamed to `Workspace` and parameterized;
-a new, small `App` composes one or three instances) and `src/style.css`
+a new, small `App` composes one or three instances) and `src/layout.css`
 (the `.compare-row`/`.compare-column` rules). `ContractorWork.tsx`,
 `CustomerIntake.tsx`, `NotificationUI.tsx` and the model/dispatch/work
 layers are unchanged.
@@ -641,6 +642,103 @@ still sends. The existing contrast and overflow audit and the container-query
 layout checks pass unchanged.
 
 Known and deliberately not addressed here: `Workspace` is still one 3,155-line
-component, ~600 lines of CSS still match no markup, and `typography.css` still
-overrides `style.css` unconditionally in 30 places. Those are friction, not
-breakage.
+component. The CSS findings from the same audit are addressed separately — see
+[The stylesheets](#the-stylesheets).
+
+## The stylesheets
+
+Two of the three CSS findings from the pre-testing audit are fixed here. The
+third is measured, documented, and left alone on purpose.
+
+**760 lines deleted.** Thirty-four class names — `.stats`, `.request-row`,
+`.insight`, `.route-toolbar`, `.work-mobile-nav` and the rest — existed only in
+CSS, left behind by markup that three rounds of restyling replaced. Confirmed
+absent from every `.ts`/`.tsx`/`.html` file _and_ from the live DOM on every
+screen, in every role, in side-by-side and the blueprint, before anything was
+removed. A further 22 declarations went because a later stylesheet overrode
+them unconditionally — including the whole `.sidebar { width }` and
+`.shell { margin-left }` responsive ladders, four breakpoints each, none of
+which had applied since `typography.css` started setting a flat `17rem`.
+
+**`style.css` is split into three.** `base.css` (53 lines: the reset and
+bare-element defaults), `layout.css` (1,106: structure and components) and
+`responsive.css` (774: the `@media` and `@container` blocks). The cut is at
+source-order boundaries — nothing was moved past anything else — so the
+concatenated cascade is byte-for-byte what it was.
+
+**Sorting rules by concern is not yet possible, and that is the finding.**
+The plan was to make every file name true. Doing it changed **1,662 computed
+values across 98 screens**: the topbar repainted, a line-height dropped from
+1.6 to 1.5 and took every inheriting element with it, eight pixels came off a
+dozen layouts. Two rules that set the same property on the same element, where
+neither selector is more specific, are separated only by which comes later in
+the bundle — and this codebase has roughly a hundred such pairs. Grouping by
+concern moves them past one another and each crossing picks a new winner. A
+second attempt that pinned same-selector conflicts in place changed the same
+1,662 values, because most pairs are _different_ selectors matching the same
+element at equal specificity, which no static analysis of selectors can catch.
+
+So `typography.css` still holds layout and `primitives.css` still holds
+structure. Making them honest means resolving ~100 latent ambiguities one at a
+time, deciding for each which rule was meant to win. That is real work, and not
+work to do blind inside a file move.
+
+Verification: the whole thing is checked by **computed style, not by eye** —
+every rendered element's 39 layout, type and paint properties, captured across
+8 screens × 6 widths × 2 themes plus side-by-side and the blueprint (98
+screens, 17,897 elements), before and after. Identical. Plus 264 tests,
+`design:check`, the build, the 16 container-query layout checks and the
+56-check contrast and overflow audit, all unchanged.
+
+## Shell, validation and the PMW gaps
+
+Three more findings from the pre-testing audit, with one result that is a
+negative and is reported as one.
+
+**The shared chrome moves to `Shell.tsx`.** The navigation drawer, the
+prototype banner and the topbar were inline in `Workspace`, which is how that
+component reached 3,149 lines — the frame and three roles' worth of screens in
+one function. They are identical for every role, they are what side-by-side
+renders three of, and they need about ten named values rather than Workspace's
+internals. The Demo settings dialog follows: it read fourteen pieces of
+internal state inline, and now takes four callbacks. Workspace is 2,911 lines.
+
+**The other ten modals stay, and that is the finding.** Between them they read
+about twenty-five pieces of Workspace's internal state, so extracting them
+would replace inline code with a props bag of the same size — the coupling made
+explicit, not reduced. What would make them separable is consolidating that
+state behind a reducer first.
+
+**This did not make side-by-side faster, and was not meant to.** Typing cost
+25.2 ms median per keystroke before and 29.1 ms after — noise. The 27 ms is the
+role bodies re-rendering three times over shared state, not the chrome.
+
+**Sixteen of seventeen validation toasts now sit on the field at fault.** The
+customer intake already worked this way; everywhere else a toast named a field
+the user then had to find, and left after 3.5 seconds whether or not it was
+read. The reason the toast kept winning is not laziness — `notify("…")` is one
+line and the inline version was six, per field. `fields.tsx` is those six lines
+once, so a guard reads `return fail("provider", "…")`. Messages were rewritten
+where the toast had been vague about which control it meant. One stays a toast
+on purpose: `beginReassign` refuses to open a panel, so there is no field on
+screen for the message to sit beside.
+
+**PMW opens with a walkthrough in it.** One sent assessment — three findings,
+two priced, one needing a closer look — so the guest link, totals, tax line and
+all three finding states are real on arrival; plus one draft. They are built by
+calling the same functions the UI calls, and a test asserts the sent one passes
+`sendBlockers`, the gate a human has to.
+
+**`carryForward()` has an entry point.** It was implemented, tested and called
+from nothing, which made its `"Superseded"` state unreachable. A draft
+walkthrough now shows **Still open from earlier visits** — what this property's
+earlier visits left deferred or unpriced, each with one button. Carrying one
+restates it with its own price and decision and supersedes the original.
+
+Validation: 271 tests (7 new), `design:check` and the build. The computed-style
+snapshot (98 screens, 17,897 elements) is identical through the shell
+extraction and the validation work; after the PMW seeding, 86 of 98 screens are
+byte-identical and the 12 that changed are the walkthrough screens. Plus 21
+browser checks across the Demo settings callbacks, the converted validation
+paths and the PMW journeys, the 56-check contrast and overflow audit, the 16
+container-query layout checks, and a screen crawl reporting no console errors.

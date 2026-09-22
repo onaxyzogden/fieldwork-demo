@@ -1,0 +1,774 @@
+/* Everything that answers to a width: the @media blocks that key off the
+   browser window (frame only — see ADR 024) and the @container blocks that key
+   off the content area, plus the handful of plain rules that sit between them.
+
+   The plain rules are here rather than in layout.css because this file is a
+   cut at a source-order boundary, not a re-sort: this stylesheet settles about
+   a hundred of its declarations by source position alone, so moving a rule
+   past its neighbours changes what renders. */
+
+@container workspace (max-width: 600px) {
+  .accordion-head {
+    padding: var(--space-4);
+  }
+  .request-accordion-item > div {
+    padding: 0 var(--space-4) var(--space-4);
+  }
+}
+/* Operator note. Visually distinct from ordinary cards because it is the one
+   place the customer is being asked for something. One question, one reply. */
+.operator-note {
+  margin: var(--space-4) 0;
+}
+/* Waiting on a reply: an accent-colour border, unfilled — the one place the
+   customer is being asked for something, without the weight of a solid card. */
+.operator-note.waiting {
+  --card-border: var(--accent);
+  --card-surface: transparent;
+}
+.operator-note.waiting .eyebrow {
+  color: var(--accent-text);
+}
+/* Answered: de-emphasized back to a neutral, filled note once resolved. */
+.operator-note.answered {
+  --card-border: var(--line);
+  --card-surface: var(--surface-raised);
+}
+.operator-note.answered .eyebrow {
+  color: var(--ink-muted);
+}
+.operator-note-reply {
+  margin-top: var(--space-3);
+  padding-top: var(--space-3);
+  border-top: 1px solid var(--border-strong);
+}
+/* Validation. Colour comes from CSS, never computed in JS (DESIGN.md), and the
+   message sits beside the field rather than in a tooltip, which never reaches
+   keyboard or screen-reader users. */
+/* The class is repeated deliberately, to reach specificity 0-3-1. The theme
+   input rules in primitives.css are `:root[data-theme] input`, and `:root` is a
+   pseudo-class, so those are 0-2-1 — a single or doubled `.field-error` ties
+   them and loses on source order, leaving the field grey. */
+.field-error.field-error.field-error input,
+.field-error.field-error.field-error select,
+.field-error.field-error.field-error textarea,
+.field-error.field-error.field-error input:focus,
+.field-error.field-error.field-error select:focus,
+.field-error.field-error.field-error textarea:focus {
+  border-color: var(--danger-fill);
+}
+.field-message {
+  color: var(--danger);
+  font-size: var(--text-label);
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+/* A text answer with its own "Not sure" one tap away, rather than a single
+   bulk button for every unanswered question in the task. */
+.field-with-action {
+  display: flex;
+  gap: var(--space-2);
+}
+.field-with-action input {
+  flex: 1;
+  min-width: 0;
+}
+.field-with-action .text-button {
+  white-space: nowrap;
+}
+.note {
+  padding: var(--space-3) var(--space-4);
+  background: var(--panel);
+  border: 1px solid var(--panel);
+  border-radius: var(--radius-sm);
+  color: var(--muted);
+  margin: var(--space-4) 0;
+}
+/* Once submitted, a task is a flat divider row, not a card — the boxed
+   treatment stays for the intake editor, where a task is still being worked
+   on; once it is just being reviewed, a card per task is more weight than the
+   content needs. */
+.portal-task {
+  display: flex;
+  gap: var(--space-3);
+  align-items: flex-start;
+  padding-top: var(--space-4);
+  border-top: 1px solid var(--line);
+}
+.portal-task-icon {
+  width: 32px;
+  height: 32px;
+  border-radius: var(--radius-md);
+  background: var(--surface-raised);
+  color: var(--accent);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+.portal-task-body {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+.portal-task-body h4 {
+  margin: 0;
+  font-size: var(--text-label);
+  font-weight: 600;
+}
+.portal-task-body p {
+  margin: 0;
+  font-size: var(--text-caption);
+}
+.offer {
+  margin-bottom: var(--space-6);
+  padding: var(--space-7);
+}
+.offer > h2 {
+  margin-top: var(--space-5);
+}
+.modal-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: var(--z-toast);
+  background: var(--overlay);
+  backdrop-filter: blur(6px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-5);
+}
+.modal {
+  max-width: 100%;
+  max-height: 88vh;
+  overflow-y: auto;
+  padding: var(--space-7);
+  box-shadow: var(--shadow-modal);
+}
+.modal > p {
+  margin: var(--space-5) 0;
+}
+.modal > select {
+  width: 100%;
+}
+.payment-method {
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+  padding: var(--space-5);
+  border: 1px solid var(--panel);
+  border-radius: var(--radius-md);
+  margin: var(--space-5) 0;
+  background: var(--panel);
+}
+.payment-method small {
+  display: block;
+}
+.payment-method > svg:last-child {
+  margin-left: auto;
+  color: var(--accent-text);
+}
+.modal h1 {
+  margin: var(--space-6) 0;
+}
+.toast {
+  position: fixed;
+  bottom: 27px;
+  left: calc(50% + 100px);
+  transform: translateX(-50%);
+  z-index: var(--z-tooltip);
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  max-width: 90vw;
+  border: 1px solid var(--panel);
+  border-radius: var(--radius-md);
+  background: var(--panel);
+  color: var(--muted);
+  padding: var(--space-4) var(--space-6);
+  box-shadow: var(--shadow-md);
+  animation: appear var(--motion-fast) var(--ease-enter);
+}
+@keyframes appear {
+  from {
+    opacity: 0;
+    margin-bottom: -8px;
+  }
+  to {
+    opacity: 1;
+    margin-bottom: 0;
+  }
+}
+@media (min-width: 1500px) {
+  .topbar {
+    padding: 0 var(--space-12);
+  }
+}
+/* 1500px of window minus the 272px the sidebar occupies there: the extra
+   breathing room appears when the content area itself is wide, not when the
+   window happens to be. */
+@container workspace (min-width: 1228px) {
+  main {
+    padding: var(--space-8) var(--space-12) 0;
+  }
+  .route-map svg {
+    min-height: 280px;
+  }
+}
+@media (max-width: 1150px) {
+  .sidebar {
+    padding-left: var(--space-3);
+    padding-right: var(--space-3);
+  }
+  .demo-bar {
+    padding: 0 var(--space-5);
+  }
+  .demo-extra {
+    display: none;
+  }
+  .topbar {
+    padding: 0 var(--space-6);
+  }
+  .toast {
+    left: 55%;
+  }
+}
+/* 1150px of window minus the 272px the sidebar occupies. */
+@container workspace (max-width: 878px) {
+  main {
+    padding: var(--space-5) var(--space-6) 0;
+  }
+  .requests-layout {
+    grid-template-columns: 215px 1fr;
+    gap: var(--space-4);
+  }
+  .slot-grid {
+    grid-template-columns: 1fr;
+  }
+  .scenario-strip > span {
+    display: none;
+  }
+  .route-map svg {
+    max-height: 320px;
+  }
+}
+@media (max-width: 800px) {
+  .brand {
+    padding: 0 var(--space-1);
+  }
+  .workspace {
+    padding: var(--space-2) var(--space-1);
+    gap: var(--space-2);
+  }
+  .workspace .avatar {
+    width: 29px;
+    height: 29px;
+  }
+  .workspace .online {
+    display: none;
+  }
+  .top-date {
+    display: none;
+  }
+  .demo-bar {
+    padding: 0 var(--space-3);
+  }
+  .toast {
+    left: 50%;
+  }
+}
+/* Below 900px the sidebar is a drawer and the content area is the whole
+   window, so this threshold still means what it meant as a window rule. It now
+   measures the content area, which is what a side-by-side column narrows. */
+@container workspace (max-width: 800px) {
+  .heading {
+    align-items: flex-start;
+  }
+  .heading > .primary {
+    padding: var(--space-2);
+    white-space: nowrap;
+  }
+  .requests-layout {
+    grid-template-columns: 1fr;
+  }
+  .queue {
+    position: static;
+    display: flex;
+    overflow-x: auto;
+    gap: var(--space-2);
+    flex-wrap: wrap;
+  }
+  .queue .search {
+    width: 100%;
+  }
+  .queue > select {
+    width: 100%;
+    margin: 0;
+  }
+  .queue-item {
+    width: auto;
+    min-width: 140px;
+    flex: 1;
+  }
+  .queue-item .badge {
+    margin-top: var(--space-2);
+  }
+  .queue-item small {
+    display: none;
+  }
+  .roster {
+    grid-template-columns: 1fr;
+  }
+  .intake {
+    padding: var(--space-6);
+  }
+  .detail-meta {
+    flex-wrap: wrap;
+  }
+  .offer {
+    padding: var(--space-6);
+  }
+  .customer-wrap .heading {
+    flex-direction: column;
+  }
+}
+@media (max-width: 600px) {
+  .sidebar {
+    transform: translateX(-100%);
+    transition: transform var(--motion-fast);
+    box-shadow: var(--shadow-drawer);
+  }
+  .sidebar.open {
+    transform: translateX(0);
+  }
+  .mobile-menu {
+    display: block;
+  }
+  .topbar {
+    height: 58px;
+    padding: 0 var(--space-4);
+  }
+  .topbar .row {
+    gap: var(--space-2);
+  }
+  .demo-bar {
+    height: 43px;
+    padding: 0 var(--space-2);
+  }
+  .demo-bar > span {
+    letter-spacing: 0.6px;
+  }
+  .demo-dot {
+    margin-right: var(--space-1);
+  }
+  .modal {
+    padding: var(--space-5);
+  }
+  .toast {
+    width: calc(100% - 32px);
+    bottom: 17px;
+    padding: var(--space-4);
+    justify-content: center;
+  }
+}
+/* Below 900px the sidebar is a drawer and the content area is the whole
+   window, so this threshold still means what it meant as a window rule. It now
+   measures the content area, which is what a side-by-side column narrows. */
+@container workspace (max-width: 600px) {
+  main {
+    padding: var(--space-4) var(--space-4) 0;
+  }
+  .scenario-strip {
+    margin-right: -16px;
+    padding-right: var(--space-4);
+  }
+  .scenario-strip button {
+    padding: var(--space-2) var(--space-2);
+  }
+  .heading {
+    margin: var(--space-6) 0 var(--space-5);
+    gap: var(--space-3);
+    flex-wrap: wrap;
+  }
+  .eyebrow {
+    margin-bottom: var(--space-2);
+  }
+  .heading > .primary {
+    min-height: 36px;
+  }
+  .panel-title .text-button {
+    white-space: nowrap;
+  }
+  .route-map svg {
+    min-height: 180px;
+  }
+  footer {
+    flex-direction: column;
+    padding: var(--space-6) 0;
+    gap: var(--space-2);
+  }
+  .customer-heading {
+    margin: var(--space-7) 0;
+  }
+  .customer-heading h1 {
+    max-width: 340px;
+    margin: auto;
+  }
+  .intake {
+    padding: var(--space-5);
+  }
+  .field.grow {
+    min-width: 0;
+  }
+  .status-track {
+    gap: var(--space-1);
+  }
+  .visit-card .row {
+    align-items: flex-start;
+    gap: var(--space-2);
+  }
+  .task-review .row.between {
+    align-items: flex-start;
+  }
+  .task-review .mini-field select {
+    max-width: 220px;
+  }
+  .detail .panel-title {
+    align-items: flex-start;
+  }
+  .queue {
+    padding: var(--space-3);
+  }
+  .queue-item {
+    padding: var(--space-2);
+    min-width: 130px;
+  }
+  .slot {
+    padding: var(--space-4);
+  }
+  .mini-field {
+    max-width: 100%;
+  }
+  .panel h2 {
+    overflow-wrap: break-word;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  * {
+    animation: none !important;
+    transition: none !important;
+  }
+}
+.notification-count {
+  position: absolute;
+  right: -4px;
+  top: -4px;
+  padding: var(--space-1) var(--space-1);
+  border-radius: var(--radius-md);
+  background: var(--accent);
+  color: var(--on-accent);
+  font-weight: 700;
+}
+.notification-link {
+  width: 100%;
+  text-align: left;
+  background: none;
+  color: inherit;
+  border: 0;
+  border-bottom: 1px solid var(--line);
+  cursor: pointer;
+  padding: var(--space-4) var(--space-2);
+  border-radius: var(--radius-sm);
+}
+.notification-link.unread {
+  border-left: 3px solid var(--accent-text);
+}
+.notification-link:hover {
+  background: var(--surface-raised);
+}
+.notification-link span {
+  flex: 1;
+}
+.dispatch-setting {
+  padding: var(--space-4);
+  border: 1px solid var(--surface-raised);
+  background: var(--surface-raised);
+  border-radius: var(--radius-md);
+  margin: var(--space-4) 0;
+}
+.dispatch-setting label {
+  line-height: 1.5;
+}
+/* Below 900px the sidebar is a drawer and the content area is the whole
+   window, so this threshold still means what it meant as a window rule. It now
+   measures the content area, which is what a side-by-side column narrows. */
+@container workspace (max-width: 600px) {
+  .notification-link {
+    min-height: 54px;
+  }
+}
+.photo-add:focus-within {
+  outline: 2px solid var(--accent-text);
+}
+.photo-add input {
+  display: block;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+  position: absolute;
+  overflow: hidden;
+}
+.route-map svg {
+  max-height: 350px;
+}
+
+/* Contain content through layout sizing, never by clipping the page. */
+.shell,
+main,
+main > *,
+.panel,
+.modal,
+.row > *,
+.heading > *,
+.panel-title > *,
+.account-row > *,
+.provider-card > *,
+.confirm-task > *,
+.offer-pay > *,
+.event > *,
+.stats > *,
+.dashboard-grid > *,
+.bottom-grid > *,
+.roster > * {
+  min-width: 0;
+}
+main,
+.modal,
+.toast {
+  overflow-wrap: break-word;
+}
+main button,
+.modal button,
+.badge,
+.portal-tabs button,
+.scenario-strip button,
+.heading > .primary,
+.panel-title .text-button {
+  white-space: normal;
+  max-width: 100%;
+  overflow-wrap: break-word;
+}
+.panel-title,
+.heading,
+.account-row,
+.offer-pay,
+.route-caption {
+  flex-wrap: wrap;
+}
+.row:not(label) {
+  flex-wrap: wrap;
+}
+.provider-card > div:not(.avatar),
+.notification-link > span {
+  flex: 1;
+}
+.slot-grid {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+.slot-grid.vertical {
+  grid-template-columns: minmax(0, 1fr);
+}
+.intake > .row:has(.field) {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+.mini-field select,
+.mini-field input,
+.field input,
+.field select {
+  min-width: 0;
+}
+.queue {
+  overflow-x: visible;
+}
+.modal > .row.between {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+}
+/* 1150px of window minus the 272px the sidebar occupies. */
+@container workspace (max-width: 878px) {
+  .slot-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+/* Touch targets and the frame answer to the window: a 420px column on a
+   desktop is not a phone, and does not want 44px hit areas. */
+@media (max-width: 600px) {
+  button,
+  .heading > .primary,
+  .photo-add,
+  .role-switch button,
+  .map-expand,
+  .primary,
+  .secondary,
+  .icon-button,
+  .text-button {
+    min-height: 44px;
+  }
+  .icon-button,
+  .map-expand {
+    min-width: 44px;
+  }
+  .photo-add {
+    position: relative;
+  }
+  .demo-bar {
+    height: auto;
+    min-height: 52px;
+    flex-wrap: wrap;
+    gap: var(--space-1) var(--space-2);
+    padding: var(--space-1) var(--space-2);
+  }
+  .role-switch {
+    flex: 1;
+  }
+  .role-switch button {
+    flex: 0 0 auto;
+  }
+  .topbar {
+    height: auto;
+    min-height: 64px;
+    gap: var(--space-2);
+  }
+  .topbar > .row {
+    flex-wrap: nowrap;
+    gap: var(--space-2);
+  }
+  .topbar > .row:first-child {
+    flex: 1;
+  }
+  .topbar .row > strong {
+    overflow-wrap: break-word;
+  }
+  .topbar .row > .avatar {
+    display: none;
+  }
+  .topbar .icon-button {
+    padding: var(--space-2);
+  }
+  .modal .provider-card {
+    flex-wrap: wrap;
+  }
+  .modal {
+    min-width: 0;
+  }
+  .modal .row.actions > button {
+    flex: 1 1 110px;
+  }
+}
+/* Below 900px the sidebar is a drawer and the content area is the whole
+   window, so this threshold still means what it meant as a window rule. It now
+   measures the content area, which is what a side-by-side column narrows. */
+@container workspace (max-width: 600px) {
+  .badge {
+    white-space: normal;
+  }
+  .offer > .row > button {
+    flex: 1 1 110px;
+  }
+  .route-toolbar,
+  .intake > .row:has(.field) {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .scenario-strip {
+    margin-right: 0;
+    padding-right: 0;
+    gap: var(--space-2);
+  }
+  .scenario-strip button {
+    flex: 1 1 120px;
+  }
+  .panel-title {
+    align-items: flex-start;
+  }
+  .task-review .row > .mini-field {
+    flex: 1 1 100%;
+  }
+  .task-review .mini-field select {
+    max-width: 100%;
+    width: 100%;
+  }
+  .payment-method {
+    flex-wrap: wrap;
+  }
+}
+/* Contractor job cards list every task. A count is not enough to decide on an
+   offer — the contractor needs to see what the work actually is. */
+.contractor-task-list {
+  margin: var(--space-2) 0;
+  padding-left: var(--space-5);
+  color: var(--muted);
+}
+.contractor-task-list li {
+  margin: var(--space-1) 0;
+}
+/* Compare mode: Customer, Operator and Contractor render as three full,
+   independently-navigable Workspace instances side by side. One problem only
+   exists here: .sidebar/.modal-backdrop/.drawer-backdrop/.toast are all
+   `position: fixed`, i.e. relative to the whole browser viewport — fine when
+   one Workspace owns the page, wrong once three share it. Giving each column
+   its own transformed, height-bound box makes it the containing block for its
+   own fixed descendants, so each one pins to its own column instead of the
+   shared viewport, with no change to any of those rules.
+   Content layout used to be the second problem, forced here class by class
+   because every responsive rule keyed off the real viewport, which stays
+   desktop-wide even when a column is phone-narrow. Those overrides are gone:
+   .shell is a size container, so a 420px column now reads as 420px of content
+   and picks up the narrow rules on its own. What remains below is only what
+   is genuinely about a column being its own window — the drawer, the fixed
+   positioning and the frame the chrome hangs on. */
+.compare-row {
+  display: flex;
+  gap: var(--space-4);
+  overflow-x: auto;
+  height: 100vh;
+  box-sizing: border-box;
+  padding: var(--space-4);
+}
+.compare-column {
+  position: relative;
+  transform: translateZ(0);
+  height: 100%;
+  min-height: 0;
+  overflow-y: auto;
+  overflow-x: hidden;
+  flex: 1 0 420px;
+  max-width: 520px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+}
+.compare-column .sidebar {
+  transform: translateX(-100%);
+  transition: transform var(--motion-fast);
+  overflow-y: auto;
+}
+.compare-column .sidebar:not(.open) {
+  visibility: hidden;
+  pointer-events: none;
+}
+.compare-column .sidebar.open {
+  visibility: visible;
+  transform: translateX(0);
+}
+.compare-column .shell {
+  margin-left: 0;
+}
+.compare-column .mobile-menu {
+  display: block;
+}
+.compare-column .toast {
+  left: 50%;
+}
