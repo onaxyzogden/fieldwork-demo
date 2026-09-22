@@ -52,6 +52,10 @@ Brand is a refined amber in both themes. Two consequences are deliberate:
   --danger-fill: #e2695b;
   --danger-soft: #33201d;
   --info: #f0cd96;
+  /* Links only. Amber is the brand (ADR 006) and stays the brand; a pressable
+     title needs to read as pressable without competing with it. */
+  --link: #8fb8f0;
+  --link-hover: #b3d0f7;
   --overlay: #00000099;
   --shadow-ink: #00000040;
   --focus: #edbb7a;
@@ -122,6 +126,8 @@ Brand is a refined amber in both themes. Two consequences are deliberate:
   --danger-fill: #e2695b;
   --danger-soft: #fbe6e2;
   --info: #8a5a12;
+  --link: #1d4ed8;
+  --link-hover: #1740ad;
   --overlay: #00000066;
   --shadow-ink: #1c1f2426;
   --focus: #8a5a12;
