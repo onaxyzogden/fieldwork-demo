@@ -74,7 +74,10 @@ export default function CustomerIntake({
   const [removed, setRemoved] = useState<{ task: Task; index: number } | null>(
       null,
     ),
-    [more, setMore] = useState(false);
+    [more, setMore] = useState(false),
+    /* The booking button refuses when no time is chosen. The reason belongs
+       beside the times, not in a toast that leaves before it is read. */
+    [noTime, setNoTime] = useState(false);
   /* Per-field validation state for the address step. Two independently
      triggerable errors, each with its own message and its own focus target —
      not one "form is invalid" flag. */
@@ -315,7 +318,10 @@ export default function CustomerIntake({
         (selectionValid && selected?.start === o.start ? "selected" : "")
       }
       aria-pressed={selectionValid && selected?.start === o.start}
-      onClick={() => choose(o)}
+      onClick={() => {
+        setNoTime(false);
+        choose(o);
+      }}
     >
       {i === 0 && <span className="time-recommendation">Recommended</span>}
       <strong>
@@ -880,10 +886,7 @@ export default function CustomerIntake({
                 <button
                   className="primary full"
                   onClick={() => {
-                    if (!selectionValid)
-                      return notify(
-                        "Choose an appointment time before booking.",
-                      );
+                    if (!selectionValid) return setNoTime(true);
                     if (!validAddress(r)) return goto("address");
                     pay(selected!.start);
                   }}
@@ -916,6 +919,11 @@ export default function CustomerIntake({
           {instant ? "Available appointments" : "Preferred times—not confirmed"}
         </p>
         <div className="intake-times">{options.map(slotButton)}</div>
+        {noTime && (
+          <span className="field-message" role="alert">
+            Choose an appointment time before booking.
+          </span>
+        )}
       </dialog>
     </div>
   );

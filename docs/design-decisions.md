@@ -289,3 +289,15 @@ The Demo settings dialog follows, for a different reason. It read fourteen piece
 **On performance: this changed nothing, and it was not supposed to.** Side-by-side typing cost 25.2 ms median per keystroke before and 29.1 ms after — noise. The 27 ms lives in the role bodies re-rendering three times over shared state, not in the chrome. Moving the chrome out does not touch it, and saying otherwise would be inventing a result. Workspace went from 3,149 lines to 2,911.
 
 Nothing rendered changed: the same 98-screen, 17,897-element computed-style snapshot, identical. The Demo settings dialog's four callbacks are exercised end to end — the toggle writes to state, the clock advances exactly three hours, a scenario selects and closes, and Reset restores the seed and says so.
+
+## ADR 032: Validation that names a field says so on the field
+
+Accepted. The customer intake already did this — "Enter a Canadian postal code, for example L6J 4S7." sits under the postal code box, appears on the attempt, and clears as it is fixed. Everywhere else the same job was done by a toast: a sentence that slides in over the corner of the screen, names a field the user then has to go and find, and leaves after three and a half seconds whether or not it was read. Seventeen of them had accumulated, mostly on the operator's scheduling path — the densest form in the app.
+
+The reason the toast kept winning is worth naming, because it is not laziness: `notify("…")` is one line and the inline version was six, repeated per field. `fields.tsx` is those six lines, once — `useFieldErrors()` returns `fail`, `clear`, `fieldClass`, `invalid` and a `Message` component, so a guard reads `return fail("provider", "…")` and the field gets three short additions.
+
+Sixteen of the seventeen moved. The messages were also rewritten where the toast had been vague about which control it meant: "Choose a provider with the required skills" became "This provider lacks the required skills or restricted-work eligibility for the selected tasks", because by then the message is sitting under the provider you picked.
+
+**One stays a toast, on purpose.** `beginReassign` refuses to open the reassignment panel at all when Yousef cannot cover the visit — there is no field on screen for the message to sit beside, because the screen it would sit on is the one being refused. A toast is the right shape for that, and forcing it inline would have meant inventing a field to hang it on.
+
+Buttons stay enabled and validate on click, which is the existing house rule: a control that looks inert but is not would be worse than one that explains itself when pressed.

@@ -79,6 +79,7 @@ import {
 } from "./model";
 import { storablePhoto, unreadableMessage } from "./photos";
 import { Sidebar, DemoBar, Topbar, DemoSettings } from "./Shell";
+import { useFieldErrors } from "./fields";
 import "@fontsource/dm-sans/400.css";
 import "@fontsource/dm-sans/500.css";
 import "@fontsource/dm-sans/600.css";
@@ -410,6 +411,18 @@ function Workspace({
   const [fail, setFail] = useState(false);
   const [sidebar, setSidebar] = useState(false);
   const menuTrigger = React.useRef<HTMLButtonElement>(null);
+  /* Validation that names a field says so on the field. See fields.tsx for
+     why this stopped being seventeen toasts. */
+  /* `fail` is renamed here: the payment simulation above already owns that
+     word for "make this charge decline". */
+  const {
+    fail: invalidate,
+    clear,
+    clearAll,
+    fieldClass,
+    invalid,
+    Message,
+  } = useFieldErrors();
   React.useEffect(() => {
     if (!sidebar) return;
     const drawer = workspaceRef.current?.querySelector<HTMLElement>(".sidebar");
@@ -667,10 +680,14 @@ function Workspace({
     }
     const chosen = tasks.filter((t) => ids.includes(t.id));
     if (chosen.some((t) => !t.reviewed))
-      return notify("Review all selected tasks before scheduling.");
+      return invalidate(
+        "tasks",
+        "Review all selected tasks before scheduling.",
+      );
     if (!eligible(provider, chosen))
-      return notify(
-        "Choose a provider with the required skills and restricted-work eligibility.",
+      return invalidate(
+        "provider",
+        "This provider lacks the required skills or restricted-work eligibility for the selected tasks.",
       );
     if (
       s.visits.some(
@@ -678,14 +695,17 @@ function Workspace({
           v.status !== "Cancelled" && v.taskIds.some((id) => ids.includes(id)),
       )
     )
-      return notify(
+      return invalidate(
+        "tasks",
         "These tasks already belong to a visit. Remove that visit before regrouping.",
       );
     const sl = opts.find((o) => o.start === slot) || opts[0];
     if (!sl)
-      return notify(
+      return invalidate(
+        "slot",
         "No appointment fits. Try a shorter visit or another provider.",
       );
+    clearAll();
     update(
       (d) => {
         const id = uid();
@@ -721,6 +741,8 @@ function Workspace({
     const choice = options.find((o) =>
       self ? o.provider.id === "yousef" : o.provider.id !== "yousef",
     );
+    /* Stays a toast on purpose: this refuses to open the reassignment panel at
+       all, so there is no field on screen for the message to sit beside. */
     if (self && !choice)
       return notify(
         "Yousef cannot currently cover this visit's scope and availability. Review the tasks or choose another eligible provider.",
@@ -750,7 +772,8 @@ function Workspace({
   const photo = async (t: Task, file?: File) => {
     if (!file) return;
     const stored = await storablePhoto(file);
-    if (!stored) return notify(unreadableMessage);
+    if (!stored) return invalidate("photo-" + t.id, unreadableMessage);
+    clear("photo-" + t.id);
     patchTask(t.id, { photos: [...t.photos, stored] });
   };
   const newRequest = () => {
@@ -833,6 +856,7 @@ function Workspace({
           onChange={(e) => photo(t, e.target.files?.[0])}
         />
       </label>
+      <Message field={"photo-" + t.id} />
     </div>
   );
   const visitCard = (v: Visit) => (
@@ -1370,16 +1394,21 @@ function Workspace({
               >
                 Decline request
               </button>
-              <label className="mini-field">
+              <label className={fieldClass("mode", "mini-field")}>
                 Booking mode
                 <select
                   value={r.mode}
+                  {...invalid("mode")}
                   onChange={(e) => {
                     if (
                       e.target.value === "Instant Book" &&
                       !instantEligible(tasks)
                     )
-                      return notify("This scope requires Request to Book.");
+                      return invalidate(
+                        "mode",
+                        "This scope requires Request to Book — it contains work that cannot be booked instantly.",
+                      );
+                    clear("mode");
                     update((d) => {
                       d.requests.find((q) => q.id === r.id)!.mode =
                         e.target.value;
@@ -1390,6 +1419,7 @@ function Workspace({
                   <option>Request to Book</option>
                   <option>Instant Book</option>
                 </select>
+                <Message field="mode" />
               </label>
             </details>
           </div>
@@ -1816,13 +1846,19 @@ function Workspace({
                                   ))}
                               </select>
                             </label>
-                            <label className="mini-field">
+                            <label
+                              className={fieldClass(
+                                "duration-" + t.id,
+                                "mini-field",
+                              )}
+                            >
                               Duration (min)
                               <input
                                 type="number"
                                 min="15"
                                 max="480"
                                 value={t.duration}
+                                {...invalid("duration-" + t.id)}
                                 onChange={(e) => {
                                   if (
                                     visits.some(
@@ -1831,9 +1867,11 @@ function Workspace({
                                         v.taskIds.includes(t.id),
                                     )
                                   )
-                                    return notify(
-                                      "Remove the visit before changing task duration so we can recalculate availability.",
+                                    return invalidate(
+                                      "duration-" + t.id,
+                                      "Remove the visit before changing this duration, so availability can be recalculated.",
                                     );
+                                  clear("duration-" + t.id);
                                   patchTask(t.id, {
                                     duration: Math.max(
                                       15,
@@ -1842,6 +1880,7 @@ function Workspace({
                                   });
                                 }}
                               />
+                              <Message field={"duration-" + t.id} />
                             </label>
                             <button
                               className="text-button"
@@ -1901,6 +1940,8 @@ function Workspace({
                           <p>{scopeTasks.map((t) => t.summary).join(" · ")}</p>
                           <p>{r.timing}</p>
                         </div>
+                        <Message field="tasks" />
+                        <Message field="provider" />
                         <div className="provider-options">
                           {candidates.map((c) => (
                             <button
@@ -1911,6 +1952,7 @@ function Workspace({
                                 (provider === c.provider.id ? "selected" : "")
                               }
                               onClick={() => {
+                                clear("provider");
                                 setProvider(c.provider.id);
                                 setSlot("");
                                 setOverride("");
@@ -1999,6 +2041,7 @@ function Workspace({
                           Recommended appointments{" "}
                           <span className="muted">· simulated routing</span>
                         </h4>
+                        <Message field="slot" />
                         <div className="slot-grid">
                           {opts.map((o, i) => (
                             <button
@@ -2009,7 +2052,10 @@ function Workspace({
                                   ? "selected"
                                   : "")
                               }
-                              onClick={() => setSlot(o.start)}
+                              onClick={() => {
+                                clear("slot");
+                                setSlot(o.start);
+                              }}
                             >
                               {i === 0 && (
                                 <span className="eyebrow">BEST ROUTE FIT</span>
@@ -2115,11 +2161,13 @@ function Workspace({
                           className="primary actions"
                           onClick={() => {
                             if (!match.eligible)
-                              return notify(
+                              return invalidate(
+                                "provider",
                                 "This provider is not eligible for every selected task.",
                               );
                             if (!opts.length)
-                              return notify(
+                              return invalidate(
+                                "slot",
                                 "No appointment fits this scope. Adjust the tasks or choose another provider.",
                               );
                             createVisit();
@@ -2733,7 +2781,10 @@ function Workspace({
                   <Check size={16} />
                 </div>
                 {modal === "Instant payment" && (
-                  <p>Selected appointment: {dateLabel(slot)}</p>
+                  <>
+                    <p>Selected appointment: {dateLabel(slot)}</p>
+                    <Message field="instant-slot" />
+                  </>
                 )}
                 <h1>
                   {money(
@@ -2773,8 +2824,9 @@ function Workspace({
                           12,
                         ).some((o) => o.start === slot);
                       if (!available)
-                        return notify(
-                          "That slot is no longer available. Choose another time.",
+                        return invalidate(
+                          "instant-slot",
+                          "That slot is no longer available. Close this and choose another time.",
                         );
                       update((d) => {
                         const req = d.requests.find((q) => q.id === r.id)!;
@@ -3142,6 +3194,7 @@ function Workspace({
                   records remain linked for audit history. Assigned tasks must
                   first be removed from their visit.
                 </p>
+                <Message field="merge" />
                 <button
                   className="primary"
                   onClick={() => {
@@ -3152,8 +3205,9 @@ function Workspace({
                           v.taskIds.some((id) => selected.includes(id)),
                       )
                     )
-                      return notify(
-                        "Remove the existing visit before merging.",
+                      return invalidate(
+                        "merge",
+                        "These tasks are already on a visit. Remove it before merging them.",
                       );
                     update((d) => {
                       const list = d.tasks.filter((t) =>
@@ -3196,8 +3250,9 @@ function Workspace({
                         v.status !== "Cancelled" && v.taskIds.includes(t.id),
                     )
                   )
-                    return notify(
-                      "Remove the existing visit before splitting.",
+                    return invalidate(
+                      "split",
+                      "This task is already on a visit. Remove it before splitting.",
                     );
                   const f = new FormData(e.currentTarget);
                   update((d) => {
@@ -3242,6 +3297,7 @@ function Workspace({
                     placeholder="Describe the separate piece of work"
                   />
                 </label>
+                <Message field="split" />
                 <button className="primary">Split into two tasks</button>
               </form>
             )}
