@@ -181,3 +181,31 @@ Alongside this, `--link` joins the palette in both themes for pressable card tit
 ## Boundaries
 
 The role header is untouched, as asked: the sidebar, demo bar and topbar keep their structure and pick up the default theme like everything else. Only the operator's Home was restyled — the customer, contractor, walkthrough and assessment screens were re-audited for contrast in both themes but not redesigned. "Compare" is renamed "Side by side" after the reference's own label; the `.compare-*` class names keep their spelling.
+
+# Design decisions — layout that measures the content area
+
+## ADR 024: The window was never the right measurement
+
+Accepted. Every responsive rule in the app keyed off the browser window. That reading was only ever right by coincidence — a Workspace happened to own the whole page — and side by side broke the coincidence: three 420px columns inside a 1440px window are each told they have 1440px. A two-column grid stayed two columns inside a 420px box and handed a card 61px for its text, in a card 249px tall. The gaps measured correctly the whole time; what read as missing spacing was padding sitting around crushed content.
+
+`.shell` is now a size container, and rules for content inside `main` ask it rather than the window. `.shell` and not `main`, for two reasons: an element cannot query its own container, and the toast and modal backdrop are siblings of `.shell`, so the containment `container-type: inline-size` implies does not capture their `position: fixed` — the same trap the `transform` on `.compare-column` already had to navigate.
+
+**Frame and content are now separate concerns.** The sidebar, topbar, demo bar, role switch, drawer and the fixed overlays stay `@media`: they answer to the window, and in side by side each column supplies its own frame. Content inside `main` answers to `@container workspace (…)`.
+
+**Thresholds were re-derived, not copied**, which is the part that would have quietly regressed the desktop. Above 900px the sidebar occupies a flat 272px, so a rule written as `@media (max-width: 1150px)` was really a statement about 878px of content, and `@media (min-width: 1500px)` about 1228px. At and below 900px the sidebar is a drawer and the two measurements agree, so those thresholds carry over unchanged. The check was a before/after matrix at 390/600/800/1024/1280/1500 across four screens, not an after-only look.
+
+**Touch targets stay behind `@media`.** A 420px column on a desktop is not a phone and does not want 44px hit areas; that rule is about the device, not the column.
+
+One deliberate change in normal mode follows from measuring the right thing. Between 901 and 1172px the content area is under 900px while the window is not, so the operator's compact request browser now replaces the stacked queue there. The tall queue above the detail at those widths was the symptom, not the baseline.
+
+The `.compare-column` overrides that forced narrow styling class by class are deleted — the limitation recorded when side by side was built, removed rather than worked around again. What remains under that selector is only what is genuinely about a column being its own window.
+
+## ADR 025: `overflow-wrap: anywhere` tells a grid a word is one character wide
+
+Accepted. `anywhere` counts mid-word break points when computing min-content width, so an element claims it can be one character wide and a grid believes it. That is why 61px looked acceptable to the layout and why titles broke as "Contract/or" and "Lakesh/ore". `break-word` breaks a word only when it genuinely cannot fit and leaves min-content intact, so the floor survives. Every occurrence outside `blueprint.css` is now `break-word`.
+
+The customer accordion header needed the matching fix on the flex side: it wraps, and its text block asks for 200px before anything else gets a share, so a long status badge drops to its own line instead of starving the address. At 390px that header went from 183px tall to 118px.
+
+## Boundaries
+
+No `.tsx` changed. `blueprint.css` keeps its own `@media` rules and its two `anywhere` declarations: the blueprint renders as a top-level view outside `.shell`, so it has no container to ask. The sidebar-width ladder in `style.css` (205px at 1150, 185px at 800) is dead code — `typography.css` sets a flat 17rem later in the cascade — and is left alone here rather than folded into a layout change.

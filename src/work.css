@@ -52,13 +52,15 @@
 .work-task,
 .contractor-wrap {
   min-width: 0;
-  overflow-wrap: anywhere;
+  overflow-wrap: break-word;
 }
 .work-detail .actions,
 .contractor-wrap .actions {
   flex-wrap: wrap;
 }
-@media (max-width: 600px) {
+/* Below 900px the sidebar is a drawer and the content area is the whole
+   window, so this threshold still means what it meant as a window rule. */
+@container workspace (max-width: 600px) {
   .work-toolbar {
     display: grid;
     grid-template-columns: minmax(0, 1fr);
@@ -82,7 +84,7 @@
   width: min(560px, calc(100% - 24px));
   max-height: 85dvh;
   overflow-y: auto;
-  overflow-wrap: anywhere;
+  overflow-wrap: break-word;
 }
 .work-sheet::backdrop {
   background: var(--overlay);
@@ -93,7 +95,9 @@
 .work-sheet .field {
   margin: var(--space-4) 0;
 }
-@media (max-width: 900px) {
+/* 900px is where the sidebar becomes a drawer, so window and content area
+   agree here; the rule now also fires for a narrow side-by-side column. */
+@container workspace (max-width: 900px) {
   .work-mobile-nav {
     display: flex;
     position: sticky;

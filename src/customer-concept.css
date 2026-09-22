@@ -90,7 +90,7 @@
   background: var(--map-label);
   padding: var(--space-3);
   border-radius: var(--radius-md);
-  overflow-wrap: anywhere;
+  overflow-wrap: break-word;
 }
 .customer-location-preview small {
   flex-basis: 100%;
@@ -121,7 +121,9 @@
   padding: var(--space-1) var(--space-2);
   font-size: var(--text-label);
 }
-@media (max-width: 600px) {
+/* Below 900px the sidebar is a drawer and the content area is the whole
+   window, so this threshold still means what it meant as a window rule. */
+@container workspace (max-width: 600px) {
   .customer-intake .intake-times {
     grid-template-columns: minmax(0, 1fr);
   }
@@ -143,16 +145,18 @@
 .customer-wrap .portal-task {
   margin: var(--space-4) 0;
   min-width: 0;
-  overflow-wrap: anywhere;
+  overflow-wrap: break-word;
 }
 .customer-wrap .portal-task .photos {
   flex-wrap: wrap;
 }
 .customer-wrap .portal-tabs button {
   white-space: normal;
-  overflow-wrap: anywhere;
+  overflow-wrap: break-word;
 }
-@media (max-width: 900px) {
+/* 900px is where the sidebar becomes a drawer, so window and content area
+   agree here; the rule now also fires for a narrow side-by-side column. */
+@container workspace (max-width: 900px) {
   .customer-wrap .customer-portal-heading {
     flex-direction: column;
     align-items: stretch;

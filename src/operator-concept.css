@@ -55,7 +55,9 @@
 .mobile-request-browser {
   display: none;
 }
-@media (max-width: 900px) {
+/* 900px is where the sidebar becomes a drawer, so window and content area
+   agree here; the rule now also fires for a narrow side-by-side column. */
+@container workspace (max-width: 900px) {
   .mobile-request-browser {
     display: block;
     margin-bottom: var(--space-4);
@@ -164,7 +166,9 @@
 .operator-day-totals span {
   font-size: var(--text-label);
 }
-@media (max-width: 600px) {
+/* Below 900px the sidebar is a drawer and the content area is the whole
+   window, so this threshold still means what it meant as a window rule. */
+@container workspace (max-width: 600px) {
   .operator-detail-header {
     flex-wrap: wrap;
   }

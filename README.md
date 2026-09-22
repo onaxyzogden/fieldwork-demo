@@ -363,18 +363,16 @@ existing body-scroll lock is now reference-counted rather than a plain
 boolean, so two columns' drawers opening and closing independently can't
 hand scrolling back to the page while one is still open.
 
-**Accepted limitation, stated rather than hidden:** every other responsive
-rule in this app (typography scale steps, card padding, the dozen smaller
-breakpoints across the role stylesheets) still keys off the real browser
-viewport, which stays desktop-wide in compare mode even though a column is
-phone-narrow. Retrofitting all of them to respond to a column's own width
-would be a second project the size of this one; the one collapse that
-would otherwise be functionally broken rather than merely denser — the
-Operator's two-pane request queue, which would leave a real detail pane
-under 200px wide — reuses its own existing narrow-screen rules by class.
-Everything else is accepted as a deliberately denser view, the same way a
-compare column scrolls horizontally into view rather than trying to
-compress three independent apps into a phone screen.
+**The limitation this used to carry is gone.** Every responsive rule in the
+app once keyed off the real browser viewport, which stays desktop-wide in
+side-by-side mode even though a column is phone-narrow, and the columns
+papered over it by forcing a handful of narrow-screen rules on by class.
+Content layout now asks the content area instead of the window — see
+[Layout responds to the content area](#layout-responds-to-the-content-area)
+— so a 420px column reads as 420px and picks up the narrow rules on its own.
+The class-by-class overrides are deleted; what remains under
+`.compare-column` is only what is genuinely about a column being its own
+window.
 
 Files: `src/main.tsx` only (`App` renamed to `Workspace` and parameterized;
 a new, small `App` composes one or three instances) and `src/style.css`
@@ -529,3 +527,65 @@ across operator Home, the customer portal, the contractor view and walkthroughs
 at 390/768/1280px in **both** themes, plus first-visit theme, the light
 preference surviving a reload, side-by-side mode, and the assessment page still
 rendering and printing as a light document. Zero console errors.
+
+## Layout responds to the content area
+
+Every responsive rule in this app used to key off the browser window. That was
+only right by coincidence — one copy of the app owned the whole page — and side
+by side broke the coincidence: three 420px columns inside a 1440px window are
+each told they have 1440px. Measured at a 1024px window, the operator's
+attention list still computed `177px 177px`, a two-column grid inside a 420px
+column, leaving **61px** for a card's text in a card 249px tall, and titles
+broke mid-word as "Contract/or". The gaps were correct the whole time; what
+read as missing spacing was padding around crushed content.
+
+`.shell` is now a **size container** (`container: workspace / inline-size`) and
+content layout asks it instead of the window. `.shell` rather than `main`,
+because an element cannot query its own container, and because the toast and
+modal backdrop are siblings of `.shell` — the containment `container-type`
+implies therefore does not capture their `position: fixed`.
+
+Each mixed `@media` block was split in two:
+
+|                                              | measures         | examples                                                                                                                          |
+| -------------------------------------------- | ---------------- | --------------------------------------------------------------------------------------------------------------------------------- |
+| **Frame** — stays `@media`                   | the window       | `.sidebar`, `.topbar`, `.demo-bar`, `.role-switch`, `.mobile-menu`, the drawer, the fixed toast and modal, and 44px touch targets |
+| **Content** — now `@container workspace (…)` | the content area | grids, card padding, the request layout, the queue, typography steps                                                              |
+
+**Thresholds were re-derived, not copied.** Above 900px the sidebar occupies a
+flat 272px, so a rule written as `@media (max-width: 1150px)` was really a
+statement about 878px of content, and `@media (min-width: 1500px)` about
+1228px. At and below 900px the sidebar is a drawer and the two measurements
+agree, so those thresholds carry over unchanged.
+
+Two related fixes came with it. `overflow-wrap: anywhere` counts mid-word break
+points when computing min-content width, so an element claims it can be one
+character wide and a grid believes it — every occurrence outside `blueprint.css`
+is now `break-word`. And the customer accordion header wraps, with its text
+block asking for 200px before anything else gets a share, so a long status badge
+("Matching you with a provider") drops to its own line instead of leaving the
+address to stack one word per line.
+
+Container queries are supported in every current browser (Chrome 105+, Safari
+16+, Firefox 110+); this is a prototype, so no fallback is written.
+`blueprint.css` keeps its `@media` rules, because the blueprint renders as a
+top-level view outside `.shell`.
+
+**One deliberate change in normal mode.** Between 901 and 1172px the content
+area is under 900px while the window is not, so the operator's compact request
+browser now replaces the stacked queue there. The tall queue sitting above the
+detail at those widths was the symptom of measuring the wrong thing.
+
+Validation: 247 tests, `npm run design:check` and the production build pass
+unmodified. The check here was a **before/after matrix**, not an after-only
+look: computed grid templates and element widths recorded at 390/600/800/1024/
+1280/1500px across operator Home, operator Requests, the customer portal and
+the contractor view, in normal mode and side by side, then diffed. Normal mode
+is byte-identical except where intended. In side by side at 1024px the
+attention list is one column, a card's text box went from 61px to 270px, and
+titles that took three lines take one. 16 further browser checks confirm the
+queue's `position: sticky` still sticks under the new containment, that fixed
+overlays still measure the viewport in normal mode and the column in side by
+side, that each column's drawer still opens inside its own column, and that no
+card text box is under 200px; the 39-check contrast and overflow audit at
+390/768/1280 in both themes passes with zero console errors.
