@@ -277,3 +277,15 @@ The lesson worth keeping: a stylesheet whose rendering depends on source order c
 ## Boundaries
 
 No `.tsx` changed except the import list and three comments naming the old file. `work.css`, `cards.css`, the three `-concept` files, `assessment.css` and `blueprint.css` are untouched apart from dead-rule removal.
+
+## ADR 031: The chrome comes out cleanly; the modals do not
+
+Accepted. `Workspace` held the frame and three roles' worth of screens in one 3,149-line function. The navigation drawer, the prototype banner and the topbar are the honest first thing to lift out: they are identical for every role, they are what side by side renders three of, and they depend on about ten named values rather than on Workspace's internal state. They move to `Shell.tsx` along with `identity()`, which replaces the role-to-initials ternary that appeared three times.
+
+The Demo settings dialog follows, for a different reason. It read fourteen pieces of internal state inline — `setS`, `save`, `seed`, `migrateDispatch`, `setActive`, `setCustomer`, `setStep`, `setPage` and the rest — which is what "reset the demo" genuinely needs, but not what a dialog should know. Workspace keeps the resetting and hands the component four callbacks.
+
+**The other ten modals stay.** Between them they read about twenty-five pieces of Workspace's internal state: `choose`, `reoffer`, `replacementOptions`, `notify`, `update`, and a dozen setters for the selection, the wizard step, the payment result and the contractor's current visit. Extracting them would replace inline code with a props bag of the same size — the coupling made explicit but not reduced. What would make them separable is consolidating that state behind a reducer or a context first, which is the full decomposition this round deliberately did not take on.
+
+**On performance: this changed nothing, and it was not supposed to.** Side-by-side typing cost 25.2 ms median per keystroke before and 29.1 ms after — noise. The 27 ms lives in the role bodies re-rendering three times over shared state, not in the chrome. Moving the chrome out does not touch it, and saying otherwise would be inventing a result. Workspace went from 3,149 lines to 2,911.
+
+Nothing rendered changed: the same 98-screen, 17,897-element computed-style snapshot, identical. The Demo settings dialog's four callbacks are exercised end to end — the toggle writes to state, the clock advances exactly three hours, a scenario selects and closes, and Reset restores the seed and says so.

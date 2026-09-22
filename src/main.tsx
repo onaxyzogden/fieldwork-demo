@@ -78,6 +78,7 @@ import {
   confirmed,
 } from "./model";
 import { storablePhoto, unreadableMessage } from "./photos";
+import { Sidebar, DemoBar, Topbar, DemoSettings } from "./Shell";
 import "@fontsource/dm-sans/400.css";
 import "@fontsource/dm-sans/500.css";
 import "@fontsource/dm-sans/600.css";
@@ -1402,217 +1403,41 @@ function Workspace({
       data-role={role}
       ref={workspaceRef}
     >
-      {sidebar && (
-        <button
-          className="drawer-backdrop"
-          aria-label="Close navigation"
-          onClick={() => setSidebar(false)}
-        />
-      )}
-      <aside
-        id={idPrefix + "workspace-navigation"}
-        role={sidebar ? "dialog" : undefined}
-        aria-modal={sidebar || undefined}
-        aria-label="Workspace navigation"
-        className={"sidebar " + (sidebar ? "open" : "")}
-      >
-        {sidebar && (
-          <button
-            className="text-button drawer-close"
-            onClick={() => setSidebar(false)}
-          >
-            Close navigation ×
-          </button>
-        )}
-        <a className="brand" href="#" onClick={(e) => e.preventDefault()}>
-          <span className="brand-icon">
-            <Wrench size={20} />
-          </span>
-          fieldwork<span className="brand-dot">.</span>
-        </a>
-        <div className="workspace">
-          <div className="avatar amber">YH</div>
-          <div>
-            <strong>Yousef’s workspace</strong>
-            <small>Halton & Greater Toronto</small>
-          </div>
-          <span className="online" />
-        </div>
-        <span className="nav-caption">WORKSPACE</span>
-        <nav>
-          {(role === "Operator"
-            ? [
-                [LayoutDashboard, "Home"],
-                [ListTodo, "Requests"],
-                [ClipboardCheck, "Walkthroughs"],
-                [Navigation, "Today"],
-                [MoreHorizontal, "More"],
-              ]
-            : role === "Customer"
-              ? [
-                  [Plus, "New request"],
-                  [CalendarDays, "My bookings"],
-                ]
-              : [[Briefcase, "Your Work"]]
-          ).map(([Icon, label]: any) => (
-            <button
-              key={label}
-              className={page === label ? "active" : ""}
-              onClick={() => {
-                if (label === "New request") startOrResumeRequest();
-                else setPage(label);
-                setSidebar(false);
-              }}
-            >
-              <Icon size={24} />
-              {label}
-              {label === "Requests" && (
-                <span className="nav-count">
-                  {s.requests.filter((r) => r.status !== "Draft").length}
-                </span>
-              )}
-            </button>
-          ))}
-        </nav>
-        <div className="sidebar-bottom">
-          <div className="service-zone">
-            <span className="online" /> Service area active
-            <small>Oakville · Burlington · Milton</small>
-          </div>
-          <button
-            className="text-button"
-            onClick={() => {
-              setSidebar(false);
-              setModal("Demo settings");
-            }}
-          >
-            <Settings size={16} /> Demo settings
-          </button>
-          <div className="profile">
-            <div className="avatar">
-              {role === "Operator"
-                ? "YH"
-                : role === "Customer"
-                  ? "SM"
-                  : providers.find((p) => p.id === contractor)?.initials}
-            </div>
-            <div>
-              <strong>
-                {role === "Operator"
-                  ? "Yousef Haddad"
-                  : role === "Customer"
-                    ? "Customer portal"
-                    : providers.find((p) => p.id === contractor)?.name}
-              </strong>
-              <small>{role} view</small>
-            </div>
-          </div>
-        </div>
-      </aside>
+      <Sidebar
+        s={s}
+        role={role}
+        page={page}
+        setPage={setPage}
+        open={sidebar}
+        setOpen={setSidebar}
+        idPrefix={idPrefix}
+        contractor={contractor}
+        setModal={setModal}
+        startOrResumeRequest={startOrResumeRequest}
+      />
       <div className="shell">
-        <div className="demo-bar">
-          <span>
-            <span className="demo-dot" /> INTERACTIVE PROTOTYPE{" "}
-            <span className="demo-extra">
-              · All data and transactions are simulated
-            </span>
-          </span>
-          <div className="role-switch">
-            {compareMode ? (
-              <>
-                <span className="chosen">{role}</span>
-                <button className="text-button" onClick={onExitCompare}>
-                  <X size={16} /> Exit side by side
-                </button>
-              </>
-            ) : (
-              <>
-                {(["Customer", "Operator", "Contractor"] as const).map((x) => (
-                  <button
-                    key={x}
-                    className={role === x ? "chosen" : ""}
-                    onClick={() => {
-                      setRole(x);
-                      setPage(
-                        x === "Operator"
-                          ? "Home"
-                          : x === "Customer"
-                            ? "My bookings"
-                            : "Your Work",
-                      );
-                    }}
-                  >
-                    {x}
-                  </button>
-                ))}
-                <button className="text-button" onClick={onEnterCompare}>
-                  <Layers size={16} /> Side by side
-                </button>
-              </>
-            )}
-          </div>
-        </div>
-        <header className="topbar">
-          <div className="row">
-            <button
-              className="mobile-menu icon-button"
-              ref={menuTrigger}
-              aria-label="Open navigation"
-              aria-expanded={sidebar}
-              aria-controls={idPrefix + "workspace-navigation"}
-              onClick={() => setSidebar(!sidebar)}
-            >
-              <Menu />
-            </button>
-            <span>{role}</span>
-            <ChevronRight size={16} />
-            <strong>{page}</strong>
-          </div>
-          <div className="row">
-            <span className="top-date">
-              {new Date(s.clock).toLocaleDateString("en-CA", {
-                weekday: "long",
-                month: "long",
-                day: "numeric",
-              })}
-            </span>
-            <button
-              className="icon-button"
-              aria-label={
-                theme === "light"
-                  ? "Switch to dark mode"
-                  : "Switch to light mode"
-              }
-              title={
-                theme === "light"
-                  ? "Switch to dark mode"
-                  : "Switch to light mode"
-              }
-              onClick={() => setTheme(theme === "light" ? "dark" : "light")}
-            >
-              {theme === "light" ? <Moon size={20} /> : <Sun size={20} />}
-            </button>
-            <button
-              className="icon-button"
-              aria-label={`View notifications (${notices.filter((n) => !n.read).length} unread)`}
-              onClick={() => setModal("Notifications")}
-            >
-              <Bell size={20} />
-              {!!notices.filter((n) => !n.read).length && (
-                <span className="notification-count">
-                  {notices.filter((n) => !n.read).length}
-                </span>
-              )}
-            </button>
-            <div className="avatar small">
-              {role === "Operator"
-                ? "YH"
-                : role === "Customer"
-                  ? "SM"
-                  : providers.find((p) => p.id === contractor)?.initials}
-            </div>
-          </div>
-        </header>
+        <DemoBar
+          role={role}
+          setRole={setRole}
+          setPage={setPage}
+          compareMode={compareMode}
+          onEnterCompare={onEnterCompare}
+          onExitCompare={onExitCompare}
+        />
+        <Topbar
+          s={s}
+          role={role}
+          page={page}
+          open={sidebar}
+          setOpen={setSidebar}
+          idPrefix={idPrefix}
+          contractor={contractor}
+          theme={theme}
+          setTheme={setTheme}
+          setModal={setModal}
+          unread={notices.filter((n) => !n.read).length}
+          menuTrigger={menuTrigger}
+        />
         {notices.find((n) => !n.read) && (
           <div className="incoming-notice" role="status">
             <Bell size={16} />
@@ -2825,111 +2650,49 @@ function Workspace({
               </button>
             </div>
             {modal === "Demo settings" && (
-              <>
-                <details className="sample-scenarios">
-                  <summary>Sample scenarios</summary>
-                  <div className="scenario-strip">
-                    <p>
-                      Open a fictional sample request. Existing demo changes are
-                      preserved.
-                    </p>
-                    {[
-                      "01 Door adjustment",
-                      "02 Four-task visit",
-                      "03 Delegate a job",
-                      "04 Needs review",
-                      "05 Decline & reassign",
-                    ].map((x, i) => (
-                      <button
-                        className={active === "r" + (i + 1) ? "selected" : ""}
-                        key={x}
-                        onClick={() => {
-                          choose("r" + (i + 1));
-                          setModal("");
-                        }}
-                      >
-                        {x}
-                      </button>
-                    ))}
-                  </div>
-                </details>
-
-                <a className="secondary" href="?view=blueprint">
-                  Developer blueprint →
-                </a>
-                {role === "Operator" && (
-                  <div className="dispatch-setting">
-                    <label className="row">
-                      <input
-                        type="checkbox"
-                        checked={s.settings?.autoReofferDeclined || false}
-                        onChange={(e) =>
-                          update((d) => {
-                            d.settings = {
-                              autoReofferDeclined: e.target.checked,
-                            };
-                            log(
-                              d,
-                              e.target.checked
-                                ? "Automatic reoffers enabled"
-                                : "Automatic reoffers disabled",
-                            );
-                          })
-                        }
-                      />{" "}
-                      Automatically reoffer declined jobs
-                    </label>
-                    <p>
-                      Offer to the next eligible contractor at the same time and
-                      pay. You’ll be notified of the outcome. If no match fits,
-                      you choose the next step. Existing declines and expired
-                      offers remain manual.
-                    </p>
-                  </div>
-                )}
-                <p>
-                  Mock data is stored in this browser. No real payments or
-                  notifications are sent.
-                </p>
-                <p>
-                  Demo policies: 24-hour change cutoff, sequential two-hour
-                  offers, weekday 9–5 availability, 15-minute setup/overrun
-                  buffer.
-                </p>
-                <button
-                  className="secondary full"
-                  onClick={() =>
-                    update((d) => {
-                      d.clock += 3 * 3600000;
-                      log(d, "Demo clock advanced 3 hours");
-                    }, "Clock advanced; offers checked for expiry")
-                  }
-                >
-                  Advance clock 3 hours
-                </button>
-                <button
-                  className="secondary full actions"
-                  onClick={() => {
-                    const d = migrateDispatch(seed());
-                    setS(d);
-                    save(d);
-                    setActive("r2");
-                    setCustomer("c2");
-                    setStep(0);
-                    setPage(
-                      role === "Operator"
-                        ? "Home"
-                        : role === "Customer"
-                          ? "My bookings"
-                          : "Your Work",
+              <DemoSettings
+                role={role}
+                autoReoffer={s.settings?.autoReofferDeclined || false}
+                activeScenario={active}
+                onChooseScenario={(id) => {
+                  choose(id);
+                  setModal("");
+                }}
+                onToggleAutoReoffer={(on) =>
+                  update((d) => {
+                    d.settings = { autoReofferDeclined: on };
+                    log(
+                      d,
+                      on
+                        ? "Automatic reoffers enabled"
+                        : "Automatic reoffers disabled",
                     );
-                    setModal("");
-                    notify("All five scenarios reset");
-                  }}
-                >
-                  <RotateCcw size={16} /> Reset all demo data
-                </button>
-              </>
+                  })
+                }
+                onAdvanceClock={() =>
+                  update((d) => {
+                    d.clock += 3 * 3600000;
+                    log(d, "Demo clock advanced 3 hours");
+                  }, "Clock advanced; offers checked for expiry")
+                }
+                onReset={() => {
+                  const d = migrateDispatch(seed());
+                  setS(d);
+                  save(d);
+                  setActive("r2");
+                  setCustomer("c2");
+                  setStep(0);
+                  setPage(
+                    role === "Operator"
+                      ? "Home"
+                      : role === "Customer"
+                        ? "My bookings"
+                        : "Your Work",
+                  );
+                  setModal("");
+                  notify("All five scenarios reset");
+                }}
+              />
             )}
             {modal === "Notifications" && (
               <NotificationInbox
