@@ -25,6 +25,8 @@ import { storablePhoto, unreadableMessage } from "./photos";
 import {
   type SendBlocker,
   addFinding,
+  carryCandidates,
+  carryForward,
   assessmentTotals,
   convertApproved,
   createWalkthrough,
@@ -264,6 +266,10 @@ function WalkthroughDetail({
   const totals = assessmentTotals(s, w.id);
   const findings = findingsFor(s, w.id);
   const draft = w.status === "Draft";
+  /* What earlier visits to this property left unresolved. Only while this one
+     is still a draft: carrying into a sent assessment would change what the
+     customer is already looking at. */
+  const carryable = carryCandidates(s, w.id);
   /* What is standing between this assessment and the customer, and whether the
      operator has asked to send yet. Incomplete is the normal state of a card
      being filled in, so the messages appear on the first attempt, not before. */
@@ -362,6 +368,44 @@ function WalkthroughDetail({
         >
           <Plus size={16} /> Add finding
         </button>
+      )}
+      {draft && !!carryable.length && (
+        <section className="card panel">
+          <div className="panel-title">
+            <h3>Still open from earlier visits</h3>
+            <span className="count">{carryable.length}</span>
+          </div>
+          <p className="note">
+            Items the customer deferred, and items that needed a closer look.
+            Carrying one restates it here, with its own price and its own
+            decision, and marks the original as superseded.
+          </p>
+          {carryable.map((f) => (
+            <div className="row between carry-forward" key={f.id}>
+              <div>
+                <strong>{f.title || "Untitled finding"}</strong>
+                <small>
+                  {f.area ? f.area + " · " : ""}
+                  {findingState(s, f)} ·{" "}
+                  {dateLabel(
+                    s.walkthroughs.find((x) => x.id === f.walkthroughId)
+                      ?.date || w.date,
+                  )}
+                </small>
+              </div>
+              <button
+                className="secondary"
+                onClick={() =>
+                  update((d) => {
+                    carryForward(d, f.id, w.id);
+                  }, "Carried into this walkthrough")
+                }
+              >
+                Carry forward <ArrowRight size={16} />
+              </button>
+            </div>
+          ))}
+        </section>
       )}
 
       <details className="card panel">

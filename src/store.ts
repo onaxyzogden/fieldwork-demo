@@ -1,8 +1,23 @@
 import { type State, seed, reconcile } from "./model";
 import { migrateDispatch } from "./dispatch";
+import { seedWalkthroughs } from "./pmw";
 import { deliverUpdates } from "./notifications";
 
 export const KEY = "fieldwork-demo-v1";
+
+/**
+ * A first visit, or a reset: the sample data plus the two seeded walkthroughs.
+ *
+ * It lives here rather than in `seed()` because pmw.ts imports model.ts, so
+ * model.ts cannot call back into it. That turns out to be the right seam
+ * anyway — `seed()` stays the plain record set the logic tests build on, and
+ * the demo content is added at the one place the demo actually starts.
+ */
+export function freshDemo(): State {
+  const s = seed();
+  seedWalkthroughs(s);
+  return migrateDispatch(s);
+}
 
 /**
  * Collections every screen reads without checking. The migrations backfill the
@@ -52,14 +67,14 @@ function checkShape(s: unknown): State {
  */
 export function load(): State {
   const raw = localStorage.getItem(KEY);
-  if (raw === null) return migrateDispatch(seed());
+  if (raw === null) return freshDemo();
   let parsed: unknown;
   try {
     parsed = JSON.parse(raw);
   } catch {
     throw new UnusableState("Saved state is not valid JSON.");
   }
-  if (parsed === null) return migrateDispatch(seed());
+  if (parsed === null) return freshDemo();
   const checked = checkShape(parsed);
   try {
     return migrateDispatch(checked);

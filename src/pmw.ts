@@ -400,3 +400,84 @@ export function propertyRecord(s: State, propertyId: string) {
     payments: s.payments.filter((p) => quoteIds.has(p.quoteId)),
   };
 }
+
+/* ── Demo content ────────────────────────────────────────────────────────── */
+
+/**
+ * Two walkthroughs in the seed, because the feature opened on an empty state.
+ *
+ * "No walkthroughs yet" is the correct message and the wrong first impression:
+ * a reviewer clicking Walkthroughs had to do a property's worth of data entry
+ * before seeing anything the feature does. One sent assessment makes the guest
+ * link, the totals, the tax line and the three finding states real on arrival;
+ * one draft makes the capture surface real without pre-deciding it.
+ *
+ * Built with the same functions the UI calls, so seeded content cannot drift
+ * into a shape the app would never produce.
+ */
+export function seedWalkthroughs(s: State) {
+  const sent = createWalkthrough(s, "p1");
+  addFinding(s, sent.id, {
+    area: "Main floor hallway",
+    title: "Door rubbing against the frame",
+    observed:
+      "The hallway door catches on the frame at the latch side and has worn a line into the paint.",
+    proposed: "Adjust the door and reset the hinges.",
+    price: 180,
+    customerNotes: "About an hour on site. No parts needed.",
+  });
+  addFinding(s, sent.id, {
+    area: "Office",
+    title: "Shelving pulling away from the wall",
+    observed:
+      "Two shelf brackets are lifting; the fixings are into drywall rather than studs.",
+    proposed: "Refit both shelves into studs with appropriate fixings.",
+    price: 220,
+    internalNotes: "Check stud spacing before quoting a third shelf.",
+  });
+  addFinding(s, sent.id, {
+    area: "Living room",
+    title: "Damp patch below the window",
+    observed:
+      "Staining on the wall below the sill. The source is not visible from inside.",
+    proposed:
+      "Investigate the source before any repair is scoped. Likely an exterior seal.",
+    pricing: "Further Assessment Required",
+    customerNotes:
+      "We would rather look properly than guess at a price for this one.",
+  });
+  sendWalkthrough(s, sent.id);
+
+  const draft = createWalkthrough(s, "p3");
+  addFinding(s, draft.id, {
+    area: "Garage",
+    title: "Side door will not latch",
+    observed: "The latch no longer engages; the door swings open in wind.",
+    proposed: "Realign the strike plate and replace the latch if worn.",
+    price: 140,
+  });
+  return { sent, draft };
+}
+
+/**
+ * What an in-progress walkthrough could usefully restate from earlier visits
+ * to the same property: items the customer deferred, and items nobody could
+ * price without a closer look. Both are the reason to walk a property twice.
+ *
+ * Anything already carried into this walkthrough drops out, so the list is
+ * what is left to do rather than a growing pile.
+ */
+export function carryCandidates(s: State, walkthroughId: string) {
+  const w = s.walkthroughs.find((x) => x.id === walkthroughId);
+  if (!w || w.status !== "Draft") return [];
+  const record = propertyRecord(s, w.propertyId);
+  const already = new Set(
+    findingsFor(s, walkthroughId)
+      .map((f) => f.carriedFrom)
+      .filter(Boolean),
+  );
+  return [...record.deferred, ...record.furtherAssessment].filter(
+    (f) =>
+      f.walkthroughId !== walkthroughId && !already.has(f.id) && !f.resolvedBy,
+  );
+}

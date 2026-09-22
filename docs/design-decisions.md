@@ -301,3 +301,21 @@ Sixteen of the seventeen moved. The messages were also rewritten where the toast
 **One stays a toast, on purpose.** `beginReassign` refuses to open the reassignment panel at all when Yousef cannot cover the visit — there is no field on screen for the message to sit beside, because the screen it would sit on is the one being refused. A toast is the right shape for that, and forcing it inline would have meant inventing a field to hang it on.
 
 Buttons stay enabled and validate on click, which is the existing house rule: a control that looks inert but is not would be worse than one that explains itself when pressed.
+
+## ADR 033: The demo opens with a walkthrough already in it
+
+Accepted. `seed()` contained no walkthroughs and no findings, so the feature the last round built opened on "No walkthroughs yet" — the correct message and the wrong first impression. A reviewer clicking Walkthroughs had to do a property's worth of data entry before seeing anything it does.
+
+Two are seeded. One **sent** assessment with three findings — two priced, one needing a closer look — so the guest link, the totals, the tax line and all three finding states are real on arrival. One **draft** with a single finding, so the capture surface is real without pre-deciding what the reviewer records next.
+
+They are built by calling `createWalkthrough`, `addFinding` and `sendWalkthrough` rather than by writing record literals, so seeded content cannot drift into a shape the app would never produce. A test asserts the sent one has no `sendBlockers` — the same gate a human has to pass.
+
+`seedWalkthroughs` lives in `pmw.ts` and is called from `store.ts`, not from `seed()`, because `pmw.ts` imports `model.ts` and the reverse would be a cycle. That turns out to be the better seam: `seed()` stays the plain record set the logic tests build on, and the demo content is added at `freshDemo()` — the one place the demo actually starts, which both a first visit and "Reset all demo data" now go through.
+
+## ADR 034: carryForward gets the entry point it never had
+
+Accepted. `carryForward()` was implemented, tested, and called from nothing. Its `"Superseded"` state in `findingState()` was therefore unreachable in the running app, and `carriedFrom`/`resolvedBy` were written by no one — a documented behaviour that could not be demonstrated.
+
+A draft walkthrough now shows **Still open from earlier visits**: the findings this property's earlier visits left deferred or unpriced, each with one button. `carryCandidates()` computes the list from `propertyRecord()`, drops anything already carried into this walkthrough, and returns nothing at all for a walkthrough that has been sent — carrying into a sent assessment would change what the customer is already looking at.
+
+This is the pairing the feature was designed around: a deferred item and an item nobody could price are precisely the reasons to walk a property twice. Carrying one restates it with its own price and its own decision, and supersedes the original, so the maintenance record shows one live item rather than two copies of the same problem.

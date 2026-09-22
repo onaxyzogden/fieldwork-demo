@@ -109,7 +109,7 @@ import {
   reassignmentForScope,
   reoffer,
 } from "./dispatch";
-import { KEY, load, save, commit } from "./store";
+import { KEY, load, save, commit, freshDemo } from "./store";
 import { Boundary } from "./Recovery";
 import { SaveWarning } from "./NotificationUI";
 /**
@@ -2724,7 +2724,7 @@ function Workspace({
                   }, "Clock advanced; offers checked for expiry")
                 }
                 onReset={() => {
-                  const d = migrateDispatch(seed());
+                  const d = freshDemo();
                   setS(d);
                   save(d);
                   setActive("r2");

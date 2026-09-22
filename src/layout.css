@@ -1104,3 +1104,19 @@ footer {
 /* Below 900px the sidebar is a drawer and the content area is the whole
    window, so this threshold still means what it meant as a window rule. It now
    measures the content area, which is what a side-by-side column narrows. */
+/* A row in "Still open from earlier visits": the item on the left, the one
+   action on the right, wrapping to two lines before either gets squeezed. */
+.carry-forward {
+  flex-wrap: wrap;
+  gap: var(--space-3);
+  padding: var(--space-4) 0;
+  border-top: 1px solid var(--line);
+}
+.carry-forward > div {
+  flex: 1 1 14rem;
+  min-width: 0;
+}
+.carry-forward small {
+  display: block;
+  color: var(--muted);
+}
