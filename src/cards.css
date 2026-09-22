@@ -60,10 +60,12 @@
   color: var(--on-accent);
 }
 .warning,
-.badge.warning,
-.op-tone-issue {
+.badge.warning {
   color: var(--warning);
 }
+/* --tone still drives the decision card's stripe on the request detail
+   (operator-concept.css), so it stays defined here — it just no longer sets
+   text colour. */
 .op-tone-issue {
   --tone: var(--warning);
 }
@@ -74,9 +76,20 @@
 .op-tone-complete {
   --tone: var(--success);
 }
+/* Tone lives on the icon tile and nowhere else. It used to colour the row's
+   text too, which made a declined job's heading read as a warning label
+   rather than a heading. */
 .op-status-icon {
   background: var(--accent-soft);
-  color: var(--tone, var(--accent-text));
+  color: var(--accent-text);
+}
+.op-tone-issue .op-status-icon {
+  background: var(--danger-soft);
+  color: var(--danger);
+}
+.op-tone-complete .op-status-icon {
+  background: var(--success-soft);
+  color: var(--success);
 }
 :focus-visible {
   outline: 2px solid var(--focus);

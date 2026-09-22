@@ -670,13 +670,19 @@
 .op-greeting {
   margin: var(--space-2) 0 var(--space-6);
 }
+/* The reference sets the greeting at 26px with tight tracking — a heading that
+   frames the screen rather than dominating it. */
+.op-greeting h1 {
+  font-size: var(--text-h3);
+  letter-spacing: -0.5px;
+}
 .op-greeting p {
   font-size: var(--text-body);
   color: var(--muted);
   margin-top: var(--space-1);
 }
 .op-glance {
-  padding: var(--space-4);
+  padding: var(--space-5);
   border: 1px solid var(--line);
   border-radius: var(--radius-lg);
   background: var(--panel);
@@ -690,7 +696,8 @@
   flex-wrap: wrap;
 }
 .op-glance-heading h2 {
-  font-size: var(--text-h2);
+  font-size: var(--text-label);
+  font-weight: 650;
 }
 .op-date {
   display: flex;
@@ -704,28 +711,39 @@
 .op-metrics {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: var(--space-2);
+  gap: var(--space-3);
   margin-top: var(--space-4);
 }
+/* The card is the only surface here. Giving each statistic its own filled,
+   bordered tile turned one glance into four boxes; the numbers sit directly
+   on the card instead. They stay buttons because all three navigate, so the
+   affordance the tile used to carry moves to hover and the focus ring. */
 .op-metrics button {
   display: flex;
   flex-direction: column;
   align-items: flex-start;
   gap: var(--space-1);
-  padding: var(--space-4);
+  padding: 0;
   text-align: left;
-  border: 1px solid var(--line);
-  background: var(--accent-soft);
+  border: 0;
+  background: none;
   color: inherit;
+}
+.op-metrics button:hover strong {
+  color: var(--accent-text);
+}
+.op-metrics button:hover span {
+  color: var(--text);
 }
 .op-metrics strong {
   font:
-    700 1.75rem Manrope,
+    700 1.5rem Manrope,
     sans-serif;
 }
 .op-metrics span {
-  font-size: var(--text-label);
-  line-height: 1.5;
+  font-size: var(--text-caption);
+  line-height: 1.3;
+  color: var(--muted);
 }
 .op-metrics .op-pending strong {
   color: var(--danger);
@@ -772,55 +790,37 @@
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: var(--space-4);
 }
+/* One flat card per row: no tone stripe down the side, no drop shadow. What
+   distinguishes a row is its icon tile, the way the reference does it. */
 .op-request-bento {
-  --tone: var(--accent-text);
   position: relative;
   display: flex;
   align-items: center;
-  gap: var(--space-4);
+  gap: var(--space-3);
   width: 100%;
   border: 1px solid var(--line);
-  border-left: 3px solid var(--tone);
+  border-radius: var(--radius-lg);
   background: var(--panel);
-  padding: var(--space-5);
+  padding: var(--space-4);
   text-align: left;
-  box-shadow: var(--shadow-sm);
   min-width: 0;
 }
-.app[data-role="Operator"] .op-request-bento {
-  border-radius: var(--radius-lg);
-}
 .op-request-bento:hover {
-  background: var(--accent-soft);
-  border-color: var(--tone);
-}
-.op-tone-new {
-  --tone: var(--danger);
-}
-.op-tone-issue {
-  --tone: var(--accent-text);
-}
-.op-tone-quote {
-  --tone: var(--accent-text);
-}
-.op-tone-complete {
-  --tone: var(--success);
+  background: var(--surface-raised);
+  border-color: var(--border-strong);
 }
 .op-status-icon {
   display: flex;
   align-items: center;
   justify-content: center;
-  flex: 0 0 44px;
-  height: 44px;
-  background: var(--tone);
-  color: var(--text);
+  flex: 0 0 38px;
+  height: 38px;
   border-radius: var(--radius-md);
-  box-shadow: var(--shadow-inset);
 }
 .op-card-copy {
   display: flex;
   flex-direction: column;
-  gap: var(--space-2);
+  gap: var(--space-1);
   min-width: 0;
   flex: 1;
 }
@@ -832,25 +832,28 @@
   justify-content: space-between;
 }
 .op-card-top strong {
-  font-size: var(--text-body);
+  font-size: var(--text-label);
+  font-weight: 650;
   line-height: 1.5;
+  color: var(--link);
 }
 .op-card-top small {
   font-size: var(--text-caption);
-  color: var(--muted);
+  color: var(--ink-muted);
   white-space: nowrap;
 }
 .op-card-copy > span:not(.op-card-top) {
-  font-size: var(--text-label);
-  line-height: 1.6;
+  font-size: var(--text-caption);
+  line-height: 1.4;
+  color: var(--muted);
   overflow-wrap: anywhere;
 }
 .op-card-detail {
-  color: var(--muted);
+  color: var(--ink-muted);
 }
 .op-card-chevron {
-  flex: 0 0 16px;
-  color: var(--muted);
+  flex: 0 0 20px;
+  color: var(--ink-muted);
 }
 .op-waiting,
 .op-empty {
@@ -873,38 +876,12 @@
   .op-attention-list {
     grid-template-columns: minmax(0, 1fr);
   }
-  .op-glance {
-    padding: var(--space-4);
-  }
-  .op-glance-heading h2 {
-    font-size: var(--text-h2);
-  }
+  /* Home is now sized to the reference at every width, and the reference is a
+     phone layout, so the old mobile shrink-downs are gone: they fought the
+     card padding, re-inflated the glance heading and re-boxed the metrics. */
   .op-date {
     font-size: var(--text-caption);
     padding: var(--space-2);
-  }
-  .op-metrics {
-    gap: var(--space-2);
-  }
-  .op-metrics button {
-    padding: var(--space-3) var(--space-2);
-  }
-  .op-metrics strong {
-    font-size: var(--text-h3);
-  }
-  .op-request-bento {
-    padding: var(--space-4) var(--space-3);
-    gap: var(--space-2);
-  }
-  .op-status-icon {
-    flex-basis: 40px;
-    height: 44px;
-  }
-  .op-card-chevron {
-    width: 14px;
-  }
-  .op-card-top small {
-    width: 100%;
   }
   .op-greeting {
     margin-top: 0;
