@@ -689,3 +689,56 @@ every rendered element's 39 layout, type and paint properties, captured across
 screens, 17,897 elements), before and after. Identical. Plus 264 tests,
 `design:check`, the build, the 16 container-query layout checks and the
 56-check contrast and overflow audit, all unchanged.
+
+## Shell, validation and the PMW gaps
+
+Three more findings from the pre-testing audit, with one result that is a
+negative and is reported as one.
+
+**The shared chrome moves to `Shell.tsx`.** The navigation drawer, the
+prototype banner and the topbar were inline in `Workspace`, which is how that
+component reached 3,149 lines — the frame and three roles' worth of screens in
+one function. They are identical for every role, they are what side-by-side
+renders three of, and they need about ten named values rather than Workspace's
+internals. The Demo settings dialog follows: it read fourteen pieces of
+internal state inline, and now takes four callbacks. Workspace is 2,911 lines.
+
+**The other ten modals stay, and that is the finding.** Between them they read
+about twenty-five pieces of Workspace's internal state, so extracting them
+would replace inline code with a props bag of the same size — the coupling made
+explicit, not reduced. What would make them separable is consolidating that
+state behind a reducer first.
+
+**This did not make side-by-side faster, and was not meant to.** Typing cost
+25.2 ms median per keystroke before and 29.1 ms after — noise. The 27 ms is the
+role bodies re-rendering three times over shared state, not the chrome.
+
+**Sixteen of seventeen validation toasts now sit on the field at fault.** The
+customer intake already worked this way; everywhere else a toast named a field
+the user then had to find, and left after 3.5 seconds whether or not it was
+read. The reason the toast kept winning is not laziness — `notify("…")` is one
+line and the inline version was six, per field. `fields.tsx` is those six lines
+once, so a guard reads `return fail("provider", "…")`. Messages were rewritten
+where the toast had been vague about which control it meant. One stays a toast
+on purpose: `beginReassign` refuses to open a panel, so there is no field on
+screen for the message to sit beside.
+
+**PMW opens with a walkthrough in it.** One sent assessment — three findings,
+two priced, one needing a closer look — so the guest link, totals, tax line and
+all three finding states are real on arrival; plus one draft. They are built by
+calling the same functions the UI calls, and a test asserts the sent one passes
+`sendBlockers`, the gate a human has to.
+
+**`carryForward()` has an entry point.** It was implemented, tested and called
+from nothing, which made its `"Superseded"` state unreachable. A draft
+walkthrough now shows **Still open from earlier visits** — what this property's
+earlier visits left deferred or unpriced, each with one button. Carrying one
+restates it with its own price and decision and supersedes the original.
+
+Validation: 271 tests (7 new), `design:check` and the build. The computed-style
+snapshot (98 screens, 17,897 elements) is identical through the shell
+extraction and the validation work; after the PMW seeding, 86 of 98 screens are
+byte-identical and the 12 that changed are the walkthrough screens. Plus 21
+browser checks across the Demo settings callbacks, the converted validation
+paths and the PMW journeys, the 56-check contrast and overflow audit, the 16
+container-query layout checks, and a screen crawl reporting no console errors.
