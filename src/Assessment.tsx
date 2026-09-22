@@ -26,6 +26,7 @@ import {
   requestAssessment,
 } from "./pmw";
 import { KEY, load, commit } from "./store";
+import { SaveWarning } from "./NotificationUI";
 import AssessmentPrint from "./AssessmentPrint";
 import PropertyRecord from "./PropertyRecord";
 import "./tokens.css";
@@ -54,7 +55,14 @@ export default function Assessment({ assessmentId }: { assessmentId: string }) {
   const [method, setMethod] = useState(false);
   useEffect(() => {
     const sync = (e: StorageEvent) => {
-      if (e.key === KEY && e.newValue) setS(load());
+      if (e.key !== KEY || !e.newValue) return;
+      /* Outside render, so a throw here would escape the boundary. An
+         unreadable write from the operator's tab leaves this page as it was. */
+      try {
+        setS(load());
+      } catch (err) {
+        console.error("fieldwork: ignoring an unreadable update", err);
+      }
     };
     window.addEventListener("storage", sync);
     return () => window.removeEventListener("storage", sync);
@@ -93,15 +101,7 @@ export default function Assessment({ assessmentId }: { assessmentId: string }) {
       .every((t) => t.status === "Completed");
   /* The first step not yet reached: everything before it is done, it is the
      one in progress. Reviewing the findings counts as reached on arrival. */
-  const step = !request
-    ? 1
-    : !paid
-      ? 2
-      : !visit
-        ? 3
-        : !done
-          ? 4
-          : TRACK.length;
+  const step = !request ? 1 : !paid ? 2 : !visit ? 3 : !done ? 4 : TRACK.length;
 
   const submit = () => {
     if (!totals.approved.length)
@@ -133,6 +133,7 @@ export default function Assessment({ assessmentId }: { assessmentId: string }) {
 
   return (
     <>
+      <SaveWarning />
       <main className="assessment">
         <header className="assessment-head">
           <div className="row between">
@@ -284,8 +285,7 @@ export default function Assessment({ assessmentId }: { assessmentId: string }) {
             )}
             <button className="primary full" onClick={submit}>
               Approve {totals.approved.length} item
-              {totals.approved.length === 1 ? "" : "s"} ·{" "}
-              {money2(totals.total)}
+              {totals.approved.length === 1 ? "" : "s"} · {money2(totals.total)}
             </button>
           </section>
         )}

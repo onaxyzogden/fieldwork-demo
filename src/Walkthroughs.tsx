@@ -20,7 +20,9 @@ import {
   uid,
 } from "./model";
 import { cities } from "./intake";
+import { storablePhoto, unreadableMessage } from "./photos";
 import {
+  type SendBlocker,
   addFinding,
   assessmentTotals,
   convertApproved,
@@ -28,7 +30,7 @@ import {
   findingState,
   findingsFor,
   money2,
-  quotable,
+  sendBlockers,
   sendWalkthrough,
 } from "./pmw";
 import { assessmentLink } from "./store";
@@ -158,7 +160,10 @@ function WalkthroughList({
               <div className="row">
                 <label className="mini-field">
                   City
-                  <select value={city} onChange={(e) => setCity(e.target.value)}>
+                  <select
+                    value={city}
+                    onChange={(e) => setCity(e.target.value)}
+                  >
                     {cities.map((c) => (
                       <option key={c}>{c}</option>
                     ))}
@@ -252,6 +257,19 @@ function WalkthroughDetail({
   const totals = assessmentTotals(s, w.id);
   const findings = findingsFor(s, w.id);
   const draft = w.status === "Draft";
+  /* What is standing between this assessment and the customer, and whether the
+     operator has asked to send yet. Incomplete is the normal state of a card
+     being filled in, so the messages appear on the first attempt, not before. */
+  const blockers = sendBlockers(s, w.id);
+  const [revealed, setRevealed] = useState(false);
+  const send = () => {
+    if (!totals.findings.length)
+      return notify("Add at least one finding before sending.");
+    if (blockers.length) return setRevealed(true);
+    update((d) => {
+      sendWalkthrough(d, w.id);
+    }, "Assessment sent to the customer");
+  };
   const converted = s.requests.find((r) => r.walkthroughId === w.id);
   const link = assessmentLink(w.assessmentId);
 
@@ -261,14 +279,11 @@ function WalkthroughDetail({
       if (f) Object.assign(f, values);
     }, msg);
 
-  const attach = (f: Finding, file?: File) => {
+  const attach = async (f: Finding, file?: File) => {
     if (!file) return;
-    if (file.size > 1500000)
-      return notify("Choose an image smaller than 1.5 MB for this local demo.");
-    const reader = new FileReader();
-    reader.onload = () =>
-      patch(f.id, { photos: [...f.photos, String(reader.result)] });
-    reader.readAsDataURL(file);
+    const stored = await storablePhoto(file);
+    if (!stored) return notify(unreadableMessage);
+    patch(f.id, { photos: [...f.photos, stored] });
   };
 
   return (
@@ -299,6 +314,8 @@ function WalkthroughDetail({
         update={update}
         openRequest={openRequest}
         converted={converted?.id}
+        blockers={blockers}
+        send={send}
       />
 
       {findings.map((f) => (
@@ -309,6 +326,13 @@ function WalkthroughDetail({
           editable={draft}
           patch={patch}
           attach={attach}
+          blockers={
+            revealed
+              ? blockers
+                  .filter((b) => b.finding.id === f.id)
+                  .map((b) => b.reason)
+              : []
+          }
           remove={() =>
             update((d) => {
               d.findings = d.findings.filter((x) => x.id !== f.id);
@@ -350,6 +374,8 @@ function NextStep({
   update,
   openRequest,
   converted,
+  blockers,
+  send,
 }: {
   s: State;
   walkthrough: Walkthrough;
@@ -359,10 +385,10 @@ function NextStep({
   update: Props["update"];
   openRequest: Props["openRequest"];
   converted?: string;
+  blockers: SendBlocker[];
+  send: () => void;
 }) {
-  const unpriced = totals.findings.filter(
-    (f) => f.pricing === "Quoted" && !quotable(f),
-  );
+  const incomplete = new Set(blockers.map((b) => b.finding.id)).size;
   const copy = () =>
     navigator.clipboard
       ?.writeText(link)
@@ -434,33 +460,20 @@ function NextStep({
         <h3>
           {!totals.findings.length
             ? "Record what you saw"
-            : unpriced.length
-              ? `${unpriced.length} finding${unpriced.length === 1 ? "" : "s"} still need a price`
+            : incomplete
+              ? `${incomplete} finding${incomplete === 1 ? "" : "s"} not ready to send`
               : "Ready to send"}
         </h3>
         <p>
           {!totals.findings.length
             ? "Add one finding per issue. Each is approved or deferred on its own."
-            : unpriced.length
-              ? "Price it, or mark it as needing further assessment if you cannot scope it responsibly from a walkthrough."
+            : incomplete
+              ? "Each needs a title the customer can recognise, and either a price or a note that it needs further assessment."
               : `${totals.findings.length} finding${totals.findings.length === 1 ? "" : "s"} ready for the customer to review.`}
         </p>
       </div>
       <div className="op-decision-actions">
-        <button
-          className="primary"
-          onClick={() => {
-            if (!totals.findings.length)
-              return notify("Add at least one finding before sending.");
-            if (unpriced.length)
-              return notify(
-                "Give every finding a price, or mark it as further assessment required.",
-              );
-            update((d) => {
-              sendWalkthrough(d, w.id);
-            }, "Assessment sent to the customer");
-          }}
-        >
+        <button className="primary" onClick={send}>
           <Send size={16} /> Send to customer
         </button>
       </div>
@@ -475,6 +488,7 @@ function FindingCard({
   patch,
   attach,
   remove,
+  blockers,
 }: {
   s: State;
   finding: Finding;
@@ -482,8 +496,14 @@ function FindingCard({
   patch: (id: string, values: Partial<Finding>, msg?: string) => void;
   attach: (f: Finding, file?: File) => void;
   remove: () => void;
+  /* Only after the operator has tried to send: a card being incomplete while
+     it is still being filled in is not an error, it is a card being filled
+     in. */
+  blockers?: SendBlocker["reason"][];
 }) {
   const state = findingState(s, f);
+  const blocked = (reason: SendBlocker["reason"]) =>
+    (blockers || []).includes(reason);
   const number = String(f.number).padStart(2, "0");
   return (
     <details className="card panel work-task" open={editable}>
@@ -504,13 +524,24 @@ function FindingCard({
                 onChange={(e) => patch(f.id, { area: e.target.value })}
               />
             </label>
-            <label className="mini-field">
+            <label
+              className={
+                "mini-field" + (blocked("title") ? " field-error" : "")
+              }
+            >
               Short title
               <input
                 value={f.title}
                 placeholder="Door rubbing against frame"
+                aria-invalid={blocked("title") || undefined}
                 onChange={(e) => patch(f.id, { title: e.target.value })}
               />
+              {blocked("title") && (
+                <span className="field-message" role="alert">
+                  The customer sees this as the name of the work. Give it one
+                  before sending.
+                </span>
+              )}
             </label>
           </div>
           <label className="field">
@@ -561,18 +592,30 @@ function FindingCard({
               </select>
             </label>
             {f.pricing === "Quoted" && (
-              <label className="mini-field">
+              <label
+                className={
+                  "mini-field" + (blocked("price") ? " field-error" : "")
+                }
+              >
                 Estimated price (CAD)
                 <input
                   type="number"
                   min="1"
                   value={f.price ?? ""}
+                  aria-invalid={blocked("price") || undefined}
                   onChange={(e) =>
                     patch(f.id, {
-                      price: e.target.value ? Number(e.target.value) : undefined,
+                      price: e.target.value
+                        ? Number(e.target.value)
+                        : undefined,
                     })
                   }
                 />
+                {blocked("price") && (
+                  <span className="field-message" role="alert">
+                    Price it, or mark it as further assessment required.
+                  </span>
+                )}
               </label>
             )}
           </div>
@@ -626,8 +669,9 @@ function FindingCard({
           {f.customerNotes && <p className="note">{f.customerNotes}</p>}
           {f.followUpRequestedAt && (
             <p className="note">
-              The customer asked for an assessment on {dateLabel(f.followUpRequestedAt)}.
-              Scope and price it here, or carry it into a new walkthrough.
+              The customer asked for an assessment on{" "}
+              {dateLabel(f.followUpRequestedAt)}. Scope and price it here, or
+              carry it into a new walkthrough.
             </p>
           )}
         </>

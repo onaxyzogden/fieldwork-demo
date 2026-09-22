@@ -138,10 +138,37 @@ export function addFinding(
 export const quotable = (f: Finding) =>
   f.pricing === "Quoted" && typeof f.price === "number" && f.price > 0;
 
+/** A finding the customer can tell apart from the others. */
+export const named = (f: Finding) => f.title.trim().length > 0;
+
+export type SendBlocker = { finding: Finding; reason: "title" | "price" };
+
+/**
+ * Why this assessment cannot go to the customer yet, finding by finding.
+ *
+ * The rule lives here rather than in the screen that sends. It used to be a
+ * check inside the button's onClick, which meant it only bound the one caller
+ * that happened to run it: an assessment could be sent carrying a $450 line
+ * with no title at all, and the customer was asked to approve and pay for
+ * "Untitled finding". ADR 019 already made "you cannot approve unscoped work"
+ * a property of the data instead of a property of the UI; this is the same
+ * argument applied to sending.
+ */
+export function sendBlockers(s: State, walkthroughId: string): SendBlocker[] {
+  return findingsFor(s, walkthroughId).flatMap((f) => {
+    const out: SendBlocker[] = [];
+    if (!named(f)) out.push({ finding: f, reason: "title" });
+    if (f.pricing === "Quoted" && !quotable(f))
+      out.push({ finding: f, reason: "price" });
+    return out;
+  });
+}
+
 export function sendWalkthrough(s: State, walkthroughId: string) {
   const w = s.walkthroughs.find((w) => w.id === walkthroughId);
   if (!w || w.status !== "Draft") return false;
   if (!findingsFor(s, walkthroughId).length) return false;
+  if (sendBlockers(s, walkthroughId).length) return false;
   w.status = "Sent";
   w.sentAt = new Date(s.clock).toISOString();
   log(s, `Assessment ${w.assessmentId} sent to the customer`);
@@ -176,7 +203,11 @@ export function requestAssessment(s: State, findingId: string) {
 }
 
 /** Carry an undecided or deferred finding into a later walkthrough, intact. */
-export function carryForward(s: State, findingId: string, walkthroughId: string) {
+export function carryForward(
+  s: State,
+  findingId: string,
+  walkthroughId: string,
+) {
   const original = s.findings.find((f) => f.id === findingId);
   if (!original) return null;
   const copy = addFinding(s, walkthroughId, {
@@ -200,7 +231,9 @@ export function carryForward(s: State, findingId: string, walkthroughId: string)
 export function assessmentTotals(s: State, walkthroughId: string) {
   const w = s.walkthroughs.find((w) => w.id === walkthroughId);
   const findings = findingsFor(s, walkthroughId);
-  const approved = findings.filter((f) => f.decision === "Approved" && quotable(f));
+  const approved = findings.filter(
+    (f) => f.decision === "Approved" && quotable(f),
+  );
   const subtotal = approved.reduce((n, f) => n + (f.price || 0), 0);
   const tax = round2(subtotal * (w?.taxRate ?? HST));
   return {
@@ -348,7 +381,8 @@ export function propertyRecord(s: State, propertyId: string) {
       .filter((q) => requests.some((r) => r.id === q.requestId))
       .map((q) => q.id),
   );
-  const at = (state: string) => findings.filter((f) => findingState(s, f) === state);
+  const at = (state: string) =>
+    findings.filter((f) => findingState(s, f) === state);
   return {
     walkthroughs,
     findings,

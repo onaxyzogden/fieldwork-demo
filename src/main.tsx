@@ -77,6 +77,7 @@ import {
   quoted,
   confirmed,
 } from "./model";
+import { storablePhoto, unreadableMessage } from "./photos";
 import "@fontsource/dm-sans/400.css";
 import "@fontsource/dm-sans/500.css";
 import "@fontsource/dm-sans/600.css";
@@ -105,6 +106,8 @@ import {
   reoffer,
 } from "./dispatch";
 import { KEY, load, save, commit } from "./store";
+import { Boundary } from "./Recovery";
+import { SaveWarning } from "./NotificationUI";
 /**
  * Submit-type actions stay enabled and validate on click.
  *
@@ -406,9 +409,7 @@ function Workspace({
   const menuTrigger = React.useRef<HTMLButtonElement>(null);
   React.useEffect(() => {
     if (!sidebar) return;
-    const drawer = workspaceRef.current?.querySelector<HTMLElement>(
-      ".sidebar",
-    );
+    const drawer = workspaceRef.current?.querySelector<HTMLElement>(".sidebar");
     const items = () =>
       Array.from(
         drawer?.querySelectorAll<HTMLElement>("button,a[href]") || [],
@@ -743,14 +744,11 @@ function Workspace({
         .forEach((a) => (a.status = "Cancelled"));
       log(d, "Visit cancelled · tasks available for regrouping");
     }, "Visit removed; tasks available");
-  const photo = (t: Task, file?: File) => {
+  const photo = async (t: Task, file?: File) => {
     if (!file) return;
-    if (file.size > 1500000)
-      return notify("Choose an image smaller than 1.5 MB for this local demo.");
-    const reader = new FileReader();
-    reader.onload = () =>
-      patchTask(t.id, { photos: [...t.photos, String(reader.result)] });
-    reader.readAsDataURL(file);
+    const stored = await storablePhoto(file);
+    if (!stored) return notify(unreadableMessage);
+    patchTask(t.id, { photos: [...t.photos, stored] });
   };
   const newRequest = () => {
     const id = uid();
@@ -1527,26 +1525,24 @@ function Workspace({
               </>
             ) : (
               <>
-                {(["Customer", "Operator", "Contractor"] as const).map(
-                  (x) => (
-                    <button
-                      key={x}
-                      className={role === x ? "chosen" : ""}
-                      onClick={() => {
-                        setRole(x);
-                        setPage(
-                          x === "Operator"
-                            ? "Home"
-                            : x === "Customer"
-                              ? "My bookings"
-                              : "Your Work",
-                        );
-                      }}
-                    >
-                      {x}
-                    </button>
-                  ),
-                )}
+                {(["Customer", "Operator", "Contractor"] as const).map((x) => (
+                  <button
+                    key={x}
+                    className={role === x ? "chosen" : ""}
+                    onClick={() => {
+                      setRole(x);
+                      setPage(
+                        x === "Operator"
+                          ? "Home"
+                          : x === "Customer"
+                            ? "My bookings"
+                            : "Your Work",
+                      );
+                    }}
+                  >
+                    {x}
+                  </button>
+                ))}
                 <button className="text-button" onClick={onEnterCompare}>
                   <Layers size={16} /> Side by side
                 </button>
@@ -3514,7 +3510,15 @@ function App() {
      screen until they reloaded. */
   React.useEffect(() => {
     const sync = (e: StorageEvent) => {
-      if (e.key === KEY && e.newValue) setS(load());
+      if (e.key !== KEY || !e.newValue) return;
+      /* A throw here would escape the boundary — it happens in an event, not
+         in render — so a state another tab wrote badly is ignored rather than
+         taking this tab down with it. */
+      try {
+        setS(load());
+      } catch (err) {
+        console.error("fieldwork: ignoring an unreadable update", err);
+      }
     };
     window.addEventListener("storage", sync);
     return () => window.removeEventListener("storage", sync);
@@ -3522,29 +3526,35 @@ function App() {
   const [compare, setCompare] = useState(false);
   if (!compare)
     return (
-      <Workspace
-        s={s}
-        setS={setS}
-        theme={theme}
-        setTheme={setTheme}
-        onEnterCompare={() => setCompare(true)}
-      />
-    );
-  return (
-    <div className="compare-row">
-      {compareRoles.map((r) => (
+      <>
+        <SaveWarning />
         <Workspace
-          key={r}
           s={s}
           setS={setS}
           theme={theme}
           setTheme={setTheme}
-          initialRole={r}
-          compareMode
-          onExitCompare={() => setCompare(false)}
+          onEnterCompare={() => setCompare(true)}
         />
-      ))}
-    </div>
+      </>
+    );
+  return (
+    <>
+      <SaveWarning />
+      <div className="compare-row">
+        {compareRoles.map((r) => (
+          <Workspace
+            key={r}
+            s={s}
+            setS={setS}
+            theme={theme}
+            setTheme={setTheme}
+            initialRole={r}
+            compareMode
+            onExitCompare={() => setCompare(false)}
+          />
+        ))}
+      </div>
+    </>
   );
 }
 /**
@@ -3565,5 +3575,7 @@ function pickView() {
   return <App />;
 }
 createRoot(document.getElementById("root")!).render(
-  <React.StrictMode>{pickView()}</React.StrictMode>,
+  <React.StrictMode>
+    <Boundary>{pickView()}</Boundary>
+  </React.StrictMode>,
 );
