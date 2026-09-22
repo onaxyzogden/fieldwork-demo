@@ -159,7 +159,7 @@ footer,
 }
 .workspace > div:not(.avatar) {
   min-width: 0;
-  overflow-wrap: anywhere;
+  overflow-wrap: break-word;
 }
 .sidebar-bottom {
   padding-top: var(--space-4);
@@ -169,7 +169,7 @@ footer,
 }
 .profile > div:last-child {
   min-width: 0;
-  overflow-wrap: anywhere;
+  overflow-wrap: break-word;
 }
 .service-zone {
   line-height: 1.6;
@@ -465,7 +465,7 @@ footer,
   margin: var(--space-4) 0;
   display: grid;
   gap: var(--space-3);
-  overflow-wrap: anywhere;
+  overflow-wrap: break-word;
 }
 .task-answers div {
   min-width: 0;
@@ -490,7 +490,7 @@ footer,
 .inferred-answer summary {
   min-height: 2.75rem;
   cursor: pointer;
-  overflow-wrap: anywhere;
+  overflow-wrap: break-word;
 }
 .intake-main > .scenario-strip {
   display: none;
@@ -530,7 +530,7 @@ footer,
 .intake-times strong,
 .intake-times small {
   display: block;
-  overflow-wrap: anywhere;
+  overflow-wrap: break-word;
 }
 .address-pair {
   display: grid;

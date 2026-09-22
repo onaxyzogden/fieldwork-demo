@@ -636,7 +636,7 @@
   }
   .provider-card small {
     white-space: normal;
-    overflow-wrap: anywhere;
+    overflow-wrap: break-word;
   }
 }
 @media print {
@@ -846,7 +846,7 @@
   font-size: var(--text-caption);
   line-height: 1.4;
   color: var(--muted);
-  overflow-wrap: anywhere;
+  overflow-wrap: break-word;
 }
 .op-card-detail {
   color: var(--ink-muted);

@@ -273,8 +273,20 @@ textarea::placeholder {
   align-items: center;
   gap: var(--space-2);
 }
+/**
+ * The content area is a size container, so layouts inside it answer to the
+ * space they actually have rather than to the browser window. Side by side
+ * renders three of these at ~420px inside a wide window, where window-based
+ * rules never fire and a two-column grid squeezes text into ribbons.
+ *
+ * .shell rather than main: an element cannot query its own container, and this
+ * way main's own padding can respond too. The toast and modal backdrop are
+ * siblings of .shell, not descendants, so the containment this implies does
+ * not capture their position: fixed.
+ */
 .shell {
   margin-left: var(--space-59);
+  container: workspace / inline-size;
 }
 .demo-bar {
   height: 39px;
@@ -1378,7 +1390,7 @@ footer {
   min-width: 0;
 }
 .accordion-head-text strong {
-  overflow-wrap: anywhere;
+  overflow-wrap: break-word;
 }
 .accordion-head-text small {
   display: flex;
@@ -1962,7 +1974,7 @@ footer {
     max-width: 100%;
   }
   .panel h2 {
-    overflow-wrap: anywhere;
+    overflow-wrap: break-word;
   }
 }
 @media (prefers-reduced-motion: reduce) {
@@ -2075,7 +2087,7 @@ main > *,
 main,
 .modal,
 .toast {
-  overflow-wrap: anywhere;
+  overflow-wrap: break-word;
 }
 main button,
 .modal button,
@@ -2086,7 +2098,7 @@ main button,
 .panel-title .text-button {
   white-space: normal;
   max-width: 100%;
-  overflow-wrap: anywhere;
+  overflow-wrap: break-word;
 }
 .panel-title,
 .heading,
@@ -2229,7 +2241,7 @@ main button,
     flex: 1;
   }
   .topbar .row > strong {
-    overflow-wrap: anywhere;
+    overflow-wrap: break-word;
   }
   .topbar .row > .avatar {
     display: none;

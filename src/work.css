@@ -52,7 +52,7 @@
 .work-task,
 .contractor-wrap {
   min-width: 0;
-  overflow-wrap: anywhere;
+  overflow-wrap: break-word;
 }
 .work-detail .actions,
 .contractor-wrap .actions {
@@ -82,7 +82,7 @@
   width: min(560px, calc(100% - 24px));
   max-height: 85dvh;
   overflow-y: auto;
-  overflow-wrap: anywhere;
+  overflow-wrap: break-word;
 }
 .work-sheet::backdrop {
   background: var(--overlay);

@@ -90,7 +90,7 @@
   background: var(--map-label);
   padding: var(--space-3);
   border-radius: var(--radius-md);
-  overflow-wrap: anywhere;
+  overflow-wrap: break-word;
 }
 .customer-location-preview small {
   flex-basis: 100%;
@@ -143,14 +143,14 @@
 .customer-wrap .portal-task {
   margin: var(--space-4) 0;
   min-width: 0;
-  overflow-wrap: anywhere;
+  overflow-wrap: break-word;
 }
 .customer-wrap .portal-task .photos {
   flex-wrap: wrap;
 }
 .customer-wrap .portal-tabs button {
   white-space: normal;
-  overflow-wrap: anywhere;
+  overflow-wrap: break-word;
 }
 @media (max-width: 900px) {
   .customer-wrap .customer-portal-heading {

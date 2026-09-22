@@ -94,7 +94,7 @@
   border-radius: var(--radius-lg);
   margin: var(--space-3) 0;
   background: var(--panel);
-  overflow-wrap: anywhere;
+  overflow-wrap: break-word;
 }
 .message-bubble.sent {
   background: var(--accent-soft);
@@ -125,7 +125,7 @@
   border: 0;
   text-align: left;
   color: var(--text);
-  overflow-wrap: anywhere;
+  overflow-wrap: break-word;
   min-height: 44px;
 }
 .incoming-notice small {
