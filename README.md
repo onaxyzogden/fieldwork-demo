@@ -742,3 +742,54 @@ byte-identical and the 12 that changed are the walkthrough screens. Plus 21
 browser checks across the Demo settings callbacks, the converted validation
 paths and the PMW journeys, the 56-check contrast and overflow audit, the 16
 container-query layout checks, and a screen crawl reporting no console errors.
+
+## Answering two pre-implementation audits
+
+Two audits arrived before implementation began — one on the PMW walkthrough
+product, one a 40-section review of the core booking and dispatch platform.
+Both say in their own scope notes that they were written from screenshots and
+briefs, not from the repository. Checking their claims against the code changes
+the picture enough to be worth writing down: a substantial number are already
+resolved, several by a different mechanism than the one proposed, and a smaller
+number are genuinely open.
+
+The point of the reconciliation is to stop a developer re-litigating decisions
+that are already made and tested. Handing over ~100 unqualified items would
+produce exactly the failure the audits are trying to prevent.
+
+Six documents came out of it:
+
+- **`docs/audit-reconciliation.md`** — every item from both audits, merged into
+  one list, each marked *Resolved*, *Resolved differently*, *Partial*, *Open*,
+  *Declared gap* or *Business decision*, with the file or test it was checked
+  against. Also the section on what the audits got wrong about the build.
+- **`docs/status-dictionary.md`** — every status value, which object owns it,
+  and whether it is **stored, derived by `reconcile()`, or derived for display
+  only**. That column is the one both audits lack and the one a developer needs
+  first, because most statuses here are not fields you set.
+- **`docs/glossary.md`** — one term, one object. Both audits name terminology
+  collision as a high risk; request, task, visit, assignment, walkthrough and
+  finding each get a definition, a *this is not that*, and its fields.
+- **`docs/permissions.md`** — who may do what, and where the check lives. It
+  opens by stating that the prototype enforces nothing server-side because it
+  has no server, then names the functions — `canWork()`, `scopeMatch()`,
+  `sendBlockers()` — that are the seams a backend would enforce at.
+- **`docs/notifications.md`** — event, recipient, channel, message, failure
+  behaviour. One channel exists: in-app.
+- **`docs/open-decisions.md`** — the fifteen business calls neither the code nor
+  I can settle, each with what the code currently assumes, what depends on the
+  answer, and a recommendation. A recommendation is not a decision.
+
+**The status dictionary is machine-checked.** `npm run status:check` extracts
+every status value the source produces and compares it to the dictionary, and it
+runs inside `build` and `test`. A status in the code but not in the dictionary
+fails the build; so does one the dictionary claims and no code produces. It was
+shown to fail in both directions on purpose before being trusted — and it caught
+an error in the first draft of the dictionary itself, where a task status had
+been copied from an audit's suggested lifecycle rather than read from
+`model.ts`.
+
+No application behaviour changed in this round. The open items — the missing
+Organization and Contact objects, duplicate detection, slot holds, booking
+idempotency, the fuller payment lifecycle — are specified and left for a
+decision, not implemented.
