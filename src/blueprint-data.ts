@@ -340,11 +340,27 @@ export type Entity = {
 };
 export const entities: Entity[] = [
   {
+    id: "account",
+    name: "Account",
+    owns: "Who the work is billed to. A homeowner or a property management company, told apart by type rather than by two parallel tables.",
+    states: "No status. An account exists whether or not it currently has work.",
+    links: ["contact", "property", "request"],
+    note: "One record covers both cases, so a Property belongs to an Account either way and nothing downstream branches on which kind it is.",
+  },
+  {
+    id: "contact",
+    name: "Contact",
+    owns: "A person who acts for an account: who raised a request, who approved the work.",
+    states: "No status. inactiveAt retires a contact without deleting them.",
+    links: ["account", "request", "quote"],
+    note: "Individuals get exactly one contact too. Without that, 'who approved this' would be a contact sometimes and an account other times, and every reader would branch.",
+  },
+  {
     id: "property",
     name: "Property",
-    owns: "A location and its owner. Maintenance history belongs here, not to any one job.",
+    owns: "A location and the account it belongs to. Maintenance history belongs here, not to any one job.",
     states: "No status. A property persists whether or not work is open on it.",
-    links: ["request", "walkthrough"],
+    links: ["account", "request", "walkthrough"],
     note: "Requests link by propertyId, never by matching address text: addresses are editable, so text matching would silently re-home a request.",
   },
   {
@@ -367,7 +383,7 @@ export const entities: Entity[] = [
   {
     id: "request",
     name: "Service Request",
-    owns: "Customer, property, task grouping, booking mode and preferences.",
+    owns: "Account, contact, property, task grouping, booking mode and preferences.",
     states:
       "Stored: Draft, Submitted, Needs Review, Awaiting Quote Approval, Awaiting Provider Acceptance, Awaiting Payment, Confirmed, Completed, Cancelled, Declined.",
     links: ["task", "visit", "quote"],
@@ -376,7 +392,7 @@ export const entities: Entity[] = [
   {
     id: "task",
     name: "Task",
-    owns: "Independent description, clarification answers, reference photos, classification, duration and review flags.",
+    owns: "Independent description, clarification answers, reference photos, classification, duration, review flags, materials responsibility and rework lineage.",
     states:
       "Optional stored status: unassigned, assigned to visit, Completed. Entry stage: description, details, done. mergedInto retains the original record.",
     links: ["request", "visit", "execution"],
@@ -407,7 +423,7 @@ export const entities: Entity[] = [
     states:
       "Stored: Sent, Approved, Declined, Superseded. Pricing paths: Fixed price, Estimated range, Manual quote.",
     links: ["request", "payment"],
-    note: "Customer price is separate from assignment pay. An approved quote alone cannot confirm an unaccepted provider.",
+    note: "Customer price is separate from assignment pay. An approved quote alone cannot confirm an unaccepted provider. Quote.approval freezes the approver, their role, the amount and the scope at the instant of approval; a task added afterwards is outside what was agreed.",
   },
   {
     id: "payment",

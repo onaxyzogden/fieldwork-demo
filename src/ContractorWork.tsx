@@ -6,7 +6,7 @@ import {
   providers,
   money,
   dateLabel,
-  customerName,
+  accountName,
 } from "./model";
 import {
   canWork,
@@ -500,7 +500,7 @@ export default function ContractorWork({
             <section className="card panel">
               <h2>{s.tasks.find((t) => v.taskIds.includes(t.id))?.summary}</h2>
               <p>
-                {customerName(r.customerId)} · {r.city} · {dateLabel(v.start)}
+                {accountName(r.accountId)} · {r.city} · {dateLabel(v.start)}
               </p>
               <p>
                 {v.duration} minutes · {v.taskIds.length} tasks
@@ -652,7 +652,7 @@ export default function ContractorWork({
                     {s.tasks.find((t) => v.taskIds.includes(t.id))?.summary}
                   </h2>
                   <p>
-                    {customerName(r.customerId)} · {r.city} ·{" "}
+                    {accountName(r.accountId)} · {r.city} ·{" "}
                     {dateLabel(v.start)}
                   </p>
                   {/* Accepted-but-not-yet-startable visits (planning ahead,

@@ -18,7 +18,43 @@ export type Task = {
   status?: string;
   /** Set when this task was converted from an approved walkthrough finding. */
   findingId?: string;
+  /**
+   * Who brings the materials. Without it "Materials required" is an outcome
+   * that stalls a visit without saying whose problem it is. Defaults to
+   * "To be confirmed" rather than to a policy, because guessing here is how a
+   * contractor ends up buying a faucet nobody agreed to.
+   */
+  materials?: MaterialsResponsibility;
+  /**
+   * Rework lineage. The original task stays Completed: reopening it would
+   * destroy the record of what was finished and when, so rework is new work
+   * pointing back at old work.
+   */
+  originTaskId?: string;
+  reworkReason?: string;
+  /**
+   * Whether this rework is chargeable. Deliberately not a boolean set at
+   * creation — warranty is adjudicated, sometimes days later, and a default
+   * would be wrong on the day it was written. Absent means undecided.
+   */
+  warranty?: { billable: boolean; decidedBy: string; decidedAt: string };
 };
+/**
+ * Materials policy is per task, not per job: a customer-supplied TV and a
+ * provider-supplied box of anchors can sit in the same visit.
+ *
+ * "Provider standard supplies" means ordinary consumables the contractor
+ * carries — and because contractor pay is fixed on acceptance (decision 8),
+ * that pay is understood to include them. A job-specific purchase is
+ * "Operator supplied" and appears as its own line on the quote.
+ */
+export const materialsResponsibilities = [
+  "Customer supplied",
+  "Provider standard supplies",
+  "Operator supplied",
+  "To be confirmed",
+] as const;
+export type MaterialsResponsibility = (typeof materialsResponsibilities)[number];
 export type Request = {
   intakeScreen?: "address" | "tasks" | "booking";
   editingTaskId?: string | null;
@@ -46,7 +82,13 @@ export type Request = {
   operatorNote?: string | null;
   customerReply?: string | null;
   id: string;
-  customerId: string;
+  /** The account the work is billed to. An individual or an organization. */
+  accountId: string;
+  /**
+   * The person who raised it. Always present: an individual account has exactly
+   * one contact, so this never has to branch on account type.
+   */
+  contactId?: string;
   name: string;
   address: string;
   city: string;
@@ -101,6 +143,26 @@ export type Quote = {
   status: string;
   notes: string;
   payOnCompletion: boolean;
+  /**
+   * What was agreed, frozen at the moment of agreement. Written once by
+   * `approveQuote()` and never rewritten.
+   *
+   * The amounts are copied rather than read back off the quote on purpose. A
+   * quote is `Superseded`, not edited, so today they would still agree — but
+   * "what did they approve" must not depend on that staying true, and it must
+   * survive the account's contact list changing underneath it. `taskIds` is the
+   * scope as it stood: a task added afterwards is outside what was approved.
+   */
+  approval?: {
+    contactId?: string;
+    /** Denormalised: the contact may leave the account, and the record has to keep reading true. */
+    name: string;
+    role?: string;
+    approvedAt: string;
+    amount: number;
+    high: number;
+    taskIds: string[];
+  };
 };
 export type Payment = {
   id: string;
@@ -116,7 +178,7 @@ export type Payment = {
  */
 export type Property = {
   id: string;
-  customerId: string;
+  accountId: string;
   address: string;
   city: string;
   unit?: string;
@@ -136,7 +198,14 @@ export type Walkthrough = {
   sentAt?: string;
   /** Snapshotted when sent: a live rate would make an old assessment stop matching its own total. */
   taxRate: number;
-  authorization?: { name: string; agreedAt: string };
+  /** Who agreed, and as what. The role is stored because a name alone does not
+   *  identify an approver once an account has several people on it. */
+  authorization?: {
+    name: string;
+    role?: string;
+    contactId?: string;
+    agreedAt: string;
+  };
 };
 /**
  * One observed maintenance issue.
@@ -199,19 +268,224 @@ export type State = {
   clock: number;
 };
 /**
- * The customer roster. An explicit list, not a set derived from existing
- * requests: identity is a real foreign key, so a customer exists whether or not
- * they currently have a request, and no request can belong to nobody.
+ * Who the work is billed to. One record for both a homeowner and a property
+ * management company, told apart by `type` rather than by two parallel tables:
+ * a Property belongs to an Account either way, so nothing downstream branches.
+ *
+ * The alternative considered was an Organization record with an invisible one
+ * manufactured for every homeowner. That stores a fiction. See ADR 035.
  */
-export const customers = [
-  { id: "c1", name: "Sarah Lin" },
-  { id: "c2", name: "Daniel Brooks" },
-  { id: "c3", name: "Priya Nair" },
-  { id: "c4", name: "James Carter" },
-  { id: "c5", name: "Amir Hassan" },
+export type Account = {
+  id: string;
+  type: "individual" | "organization";
+  name: string;
+};
+/**
+ * A person who acts for an account. An individual account has exactly one,
+ * which is that person; an organization has several with distinct roles.
+ *
+ * Contacts exist for individuals too, deliberately. If they did not, "who
+ * raised this request" and "who approved this work" would be a contact
+ * sometimes and an account other times, and every reader would branch.
+ */
+export type Contact = {
+  id: string;
+  accountId: string;
+  name: string;
+  /** Empty for an individual. "Property Manager", "Operations Manager" for an organization. */
+  role?: string;
+  /**
+   * Set when the person stops acting for the account. Never deleted: approvals
+   * and requests keep pointing at them, and the history has to stay true after
+   * someone leaves.
+   */
+  inactiveAt?: string;
+};
+/**
+ * The account roster. An explicit list, not a set derived from existing
+ * requests: identity is a real foreign key, so an account exists whether or not
+ * it currently has a request, and no request can belong to nobody.
+ */
+export const accounts: Account[] = [
+  { id: "c1", type: "individual", name: "Sarah Lin" },
+  { id: "c2", type: "individual", name: "Daniel Brooks" },
+  { id: "c3", type: "individual", name: "Priya Nair" },
+  { id: "c4", type: "individual", name: "James Carter" },
+  { id: "c5", type: "individual", name: "Amir Hassan" },
+  { id: "a1", type: "organization", name: "Northline Property Management" },
 ];
-export const customerName = (id: string) =>
-  customers.find((c) => c.id === id)?.name || "Unknown customer";
+export const contacts: Contact[] = [
+  { id: "ct1", accountId: "c1", name: "Sarah Lin" },
+  { id: "ct2", accountId: "c2", name: "Daniel Brooks" },
+  { id: "ct3", accountId: "c3", name: "Priya Nair" },
+  { id: "ct4", accountId: "c4", name: "James Carter" },
+  { id: "ct5", accountId: "c5", name: "Amir Hassan" },
+  { id: "ct6", accountId: "a1", name: "Maya Okonkwo", role: "Property Manager" },
+  { id: "ct7", accountId: "a1", name: "Tomas Reyes", role: "Operations Manager" },
+];
+export const accountName = (id: string) =>
+  accounts.find((a) => a.id === id)?.name || "Unknown account";
+export const contactsFor = (accountId: string) =>
+  contacts.filter((c) => c.accountId === accountId);
+/** The contact to attribute a new request to when nobody picked one. */
+export const primaryContact = (accountId: string) =>
+  contactsFor(accountId).find((c) => !c.inactiveAt);
+export const contactName = (id?: string) =>
+  contacts.find((c) => c.id === id)?.name || "";
+/**
+ * How a contact signs an approval: "Maya Okonkwo, Property Manager" for an
+ * organization, the bare name for an individual. The role is part of the record
+ * because "who agreed to this" is not answerable by a name alone once the
+ * account has more than one person in it.
+ */
+/**
+ * Saved states predate accounts: they carry `customerId` on requests and
+ * properties, and no contact at all.
+ *
+ * The rename is done here rather than by leaving a `customerId` alias on the
+ * type, so there is exactly one name for the field in the source and the old
+ * one cannot quietly survive in new code. Runs before `migratePmw()`, which
+ * builds properties out of requests and so needs their accounts already
+ * rewritten.
+ */
+/**
+ * Approve a quote, and freeze what was approved in the same write.
+ *
+ * A quote has no task list of its own — it is priced against its request, and
+ * that request's tasks can change afterwards. So "what did they agree to" is
+ * only unambiguous at this instant, and it is captured here rather than left
+ * to each screen. Putting it in the one function that sets the status is what
+ * stops `Approved` and `what was approved` from becoming two facts that can
+ * disagree; the same reasoning that moved `sendBlockers()` out of the UI.
+ *
+ * Returns false rather than throwing when the quote is not approvable, so a
+ * double-submit is a no-op instead of a second, later snapshot.
+ */
+export function approveQuote(s: State, quoteId: string, contactId?: string) {
+  const q = s.quotes.find((x) => x.id === quoteId);
+  if (!q || q.status !== "Sent") return false;
+  const r = s.requests.find((x) => x.id === q.requestId);
+  const who = contacts.find((c) => c.id === (contactId ?? r?.contactId));
+  q.status = "Approved";
+  q.approval = {
+    ...(who ? { contactId: who.id } : {}),
+    name: who?.name || accountName(r?.accountId || ""),
+    ...(who?.role ? { role: who.role } : {}),
+    approvedAt: new Date(s.clock).toISOString(),
+    amount: q.amount,
+    high: q.high,
+    // The scope as it stood. A task added after this point is outside what was
+    // approved, which is the question the PMW audit actually asked.
+    taskIds: s.tasks
+      .filter((t) => t.requestId === q.requestId && !t.mergedInto)
+      .map((t) => t.id),
+  };
+  return true;
+}
+/**
+ * Raise rework against a completed task.
+ *
+ * The original task is not touched. It stays `Completed`, because it was: on
+ * the day it finished, the work was done. Reopening it would rewrite that into
+ * a lie and lose the date the customer actually got their door fixed.
+ *
+ * The rework goes on a **new request**, not the original one. Adding a task to
+ * a finished request would make `reconcile()` derive it back out of
+ * `Completed` — the same destruction by a different route, since request status
+ * is computed from its tasks rather than stored.
+ *
+ * `warranty` is deliberately left unset. Whether rework is chargeable is a
+ * judgement someone makes, sometimes days later and sometimes after looking at
+ * the property; a default written now would be wrong for half the cases.
+ */
+export function createRework(s: State, originTaskId: string, reason: string) {
+  const origin = s.tasks.find((t) => t.id === originTaskId);
+  if (!origin || origin.status !== "Completed") return null;
+  const from = s.requests.find((r) => r.id === origin.requestId);
+  if (!from) return null;
+  const request: Request = {
+    id: uid(),
+    accountId: from.accountId,
+    ...(from.contactId ? { contactId: from.contactId } : {}),
+    name: from.name,
+    address: from.address,
+    city: from.city,
+    ...(from.unit ? { unit: from.unit } : {}),
+    ...(from.postalCode ? { postalCode: from.postalCode } : {}),
+    ...(from.propertyId ? { propertyId: from.propertyId } : {}),
+    status: "Needs Review",
+    mode: "Request to Book",
+    timing: from.timing,
+    notes: "",
+    preferredSlots: [],
+    timingConstraints: "",
+    operatorNote: null,
+    customerReply: null,
+  };
+  const task: Task = {
+    id: uid(),
+    requestId: request.id,
+    description: origin.description,
+    summary: origin.summary,
+    category: origin.category,
+    duration: origin.duration,
+    confidence: origin.confidence,
+    reason: origin.reason,
+    restricted: origin.restricted,
+    // Not carried over. The same description does not mean the same scope the
+    // second time, and the operator deciding warranty is the same person who
+    // should be re-reading it.
+    reviewed: false,
+    photos: [],
+    answers: {},
+    status: "unassigned",
+    materials: "To be confirmed",
+    originTaskId: origin.id,
+    reworkReason: reason,
+  };
+  s.requests.push(request);
+  s.tasks.push(task);
+  return { request, task };
+}
+/** Record whether rework is chargeable, and who said so. */
+export function adjudicateWarranty(
+  s: State,
+  taskId: string,
+  billable: boolean,
+  decidedBy: string,
+) {
+  const t = s.tasks.find((x) => x.id === taskId);
+  if (!t?.originTaskId) return false;
+  t.warranty = {
+    billable,
+    decidedBy,
+    decidedAt: new Date(s.clock).toISOString(),
+  };
+  return true;
+}
+export function migrateAccounts(s: State) {
+  type Legacy = { customerId?: string; accountId?: string };
+  const rename = (row: Legacy) => {
+    row.accountId ??= row.customerId;
+    delete row.customerId;
+  };
+  for (const r of s.requests) {
+    rename(r as Legacy);
+    // An individual account has exactly one contact, so this is unambiguous for
+    // every pre-existing request. Organizations only exist from here forward.
+    r.contactId ??= primaryContact(r.accountId)?.id;
+  }
+  for (const p of s.properties ?? []) rename(p as Legacy);
+  // Absent is a real answer — "nobody has said" — but only on a task created
+  // before the field existed did it mean nothing at all. Both read the same.
+  for (const t of s.tasks) t.materials ??= "To be confirmed";
+  return s;
+}
+export const contactLabel = (id?: string) => {
+  const c = contacts.find((x) => x.id === id);
+  if (!c) return "";
+  return c.role ? `${c.name}, ${c.role}` : c.name;
+};
 export const providers = [
   {
     id: "yousef",
@@ -423,6 +697,7 @@ export function seed(): State {
       "Oakville",
       "Draft",
       "Instant Book",
+      "ct1",
     ],
     [
       "r2",
@@ -432,6 +707,7 @@ export function seed(): State {
       "Oakville",
       "Submitted",
       "Request to Book",
+      "ct2",
     ],
     [
       "r3",
@@ -441,6 +717,7 @@ export function seed(): State {
       "Burlington",
       "Submitted",
       "Request to Book",
+      "ct3",
     ],
     [
       "r4",
@@ -450,6 +727,7 @@ export function seed(): State {
       "Milton",
       "Needs Review",
       "Request to Book",
+      "ct4",
     ],
     [
       "r5",
@@ -459,10 +737,25 @@ export function seed(): State {
       "Oakville",
       "Awaiting Provider Acceptance",
       "Request to Book",
+      "ct5",
+    ],
+    // The commercial case. Raised by one contact at an organization; a second
+    // contact can approve it. Without a seeded organization, Account.type has a
+    // branch nothing ever takes.
+    [
+      "r6",
+      "a1",
+      "Northline Property Management",
+      "14 Iroquois Shore Road",
+      "Oakville",
+      "Submitted",
+      "Request to Book",
+      "ct6",
     ],
   ].map((a) => ({
     id: a[0],
-    customerId: a[1],
+    accountId: a[1],
+    contactId: a[7],
     name: a[2],
     address: a[3],
     city: a[4],
@@ -479,7 +772,7 @@ export function seed(): State {
   // the demo starts with a maintenance record already attached to each job.
   const properties: Property[] = requests.map((r, i) => ({
     id: "p" + (i + 1),
-    customerId: r.customerId,
+    accountId: r.accountId,
     address: r.address,
     city: r.city,
   }));
@@ -509,7 +802,12 @@ export function seed(): State {
     ["r2", "Fix a loose towel bar"],
     ["r3", "Assemble an IKEA wardrobe and chest of drawers"],
     ["r4", "Replace electrical wiring and check a breaker that keeps tripping"],
-    ["r5", "Mount a 55-inch TV on the living room wall"],
+    ["r5", "Mount a 55-inch TV on the living room wall", "Customer supplied"],
+    [
+      "r6",
+      "Replace four damaged ceiling tiles in the second-floor corridor",
+      "Customer supplied",
+    ],
   ];
   const tasks = ds.map((a, i) => ({
     id: "t" + i,
@@ -518,6 +816,10 @@ export function seed(): State {
     ...classify(a[1]),
     photos: [],
     answers: {},
+    // Absent means nobody has said yet, which is a real state and the default.
+    // The two seeded exceptions are jobs where the customer already owns the
+    // item — the TV and the replacement tiles.
+    materials: (a[2] as MaterialsResponsibility) ?? "To be confirmed",
   }));
   const start = new Date(clock + 3 * 86400000);
   start.setHours(10, 0, 0, 0);

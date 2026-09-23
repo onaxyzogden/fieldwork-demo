@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { seed, reconcile, uid, type State } from "./model";
+import { seed, reconcile, uid, accounts, type State } from "./model";
 import { execute, saveOutcome } from "./work";
 import {
   HST,
@@ -322,17 +322,34 @@ describe("what has to be true before an assessment can be sent", () => {
 });
 
 describe("the walkthroughs the demo opens with", () => {
-  it("ships one sent assessment and one draft", () => {
+  it("ships at least one sent assessment and at least one draft", () => {
     const s = seed();
     seedWalkthroughs(s);
-    expect(s.walkthroughs.map((w) => w.status).sort()).toEqual([
-      "Draft",
-      "Sent",
-    ]);
-    expect(s.walkthroughs.map((w) => w.assessmentId)).toEqual([
-      "PMW-0001",
-      "PMW-0002",
-    ]);
+    const statuses = s.walkthroughs.map((w) => w.status);
+    expect(statuses).toContain("Sent");
+    expect(statuses).toContain("Draft");
+  });
+  it("numbers every assessment uniquely and in sequence", () => {
+    const s = seed();
+    seedWalkthroughs(s);
+    const ids = s.walkthroughs.map((w) => w.assessmentId);
+    expect(new Set(ids).size).toBe(ids.length);
+    expect(ids).toEqual(
+      ids.map((_, i) => "PMW-" + String(i + 1).padStart(4, "0")),
+    );
+  });
+  /* The role on an approval only renders when the account is an organization.
+     Without a sent assessment on an organization's property that branch is
+     unreachable in the running app — the defect ADR 034 was written about. */
+  it("puts one sent assessment on an organization's property", () => {
+    const s = seed();
+    const { commercial } = seedWalkthroughs(s);
+    const property = s.properties.find((p) => p.id === commercial.propertyId)!;
+    expect(accounts.find((a) => a.id === property.accountId)?.type).toBe(
+      "organization",
+    );
+    expect(commercial.status).toBe("Sent");
+    expect(sendBlockers(s, commercial.id)).toEqual([]);
   });
 
   /* The sent one is what a reviewer opens first, so it has to be a complete

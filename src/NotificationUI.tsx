@@ -131,7 +131,7 @@ export function MessageThread({
         (sender === "Operator" ||
           sender ===
             "Customer:" +
-              s.requests.find((r) => r.id === visit.requestId)?.customerId ||
+              s.requests.find((r) => r.id === visit.requestId)?.accountId ||
           s.assignments.some(
             (a) =>
               a.visitId === visit.id &&

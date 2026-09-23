@@ -16,7 +16,7 @@ import {
   type Walkthrough,
   money,
   dateLabel,
-  customerName,
+  accountName,
   uid,
 } from "./model";
 import { cities } from "./intake";
@@ -87,7 +87,7 @@ function WalkthroughList({
   const [propertyId, setPropertyId] = useState(s.properties[0]?.id || "");
   const [address, setAddress] = useState("");
   const [city, setCity] = useState(cities[0]);
-  const [customerId, setCustomerId] = useState("c2");
+  const [accountId, setAccountId] = useState("c2");
   const groups = [
     ["Draft", "In progress"],
     ["Sent", "With the customer"],
@@ -104,7 +104,7 @@ function WalkthroughList({
         target = uid();
         d.properties.push({
           id: target,
-          customerId,
+          accountId,
           address: address.trim(),
           city,
         });
@@ -145,7 +145,7 @@ function WalkthroughList({
             >
               {s.properties.map((p) => (
                 <option key={p.id} value={p.id}>
-                  {p.address}, {p.city} · {customerName(p.customerId)}
+                  {p.address}, {p.city} · {accountName(p.accountId)}
                 </option>
               ))}
               <option value="new">Add a new property…</option>
@@ -181,12 +181,12 @@ function WalkthroughList({
                 <label className="mini-field">
                   Owner / manager
                   <select
-                    value={customerId}
-                    onChange={(e) => setCustomerId(e.target.value)}
+                    value={accountId}
+                    onChange={(e) => setAccountId(e.target.value)}
                   >
                     {["c1", "c2", "c3", "c4", "c5"].map((id) => (
                       <option key={id} value={id}>
-                        {customerName(id)}
+                        {accountName(id)}
                       </option>
                     ))}
                   </select>
@@ -313,7 +313,7 @@ function WalkthroughDetail({
             {property?.address}, {property?.city}
           </h1>
           <p>
-            {customerName(property?.customerId || "")} ·{" "}
+            {accountName(property?.accountId || "")} ·{" "}
             {dateLabel(w.sentAt || w.date)}
           </p>
         </div>

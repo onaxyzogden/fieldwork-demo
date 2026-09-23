@@ -8,7 +8,7 @@ import {
   uid,
   log,
   classify,
-  customerName,
+  accountName,
 } from "./model";
 import { workStatus } from "./work";
 
@@ -35,8 +35,8 @@ const norm = (v: string) => v.trim().toLowerCase().replace(/\s+/g, " ");
 export const propertyKey = (p: {
   address: string;
   city: string;
-  customerId: string;
-}) => [norm(p.address), norm(p.city), p.customerId].join("|");
+  accountId: string;
+}) => [norm(p.address), norm(p.city), p.accountId].join("|");
 
 /**
  * Backfills the PMW record arrays and gives every pre-existing request a
@@ -55,7 +55,7 @@ export function migratePmw(s: State) {
     if (!property) {
       property = {
         id: uid(),
-        customerId: r.customerId,
+        accountId: r.accountId,
         address: r.address,
         city: r.city,
         ...(r.unit ? { unit: r.unit } : {}),
@@ -266,8 +266,8 @@ export function convertApproved(s: State, walkthroughId: string) {
   if (!approved.length) return null;
   const request: Request = {
     id: uid(),
-    customerId: property.customerId,
-    name: customerName(property.customerId),
+    accountId: property.accountId,
+    name: accountName(property.accountId),
     address: property.address,
     city: property.city,
     ...(property.unit ? { unit: property.unit } : {}),
@@ -448,6 +448,29 @@ export function seedWalkthroughs(s: State) {
   });
   sendWalkthrough(s, sent.id);
 
+  // The commercial case. Northline's property, so the assessment is approved by
+  // a named contact in a named role — the branch decision 2 exists for, and one
+  // that no individual-account walkthrough ever reaches.
+  const commercial = createWalkthrough(s, "p6");
+  addFinding(s, commercial.id, {
+    area: "Second-floor corridor",
+    title: "Damaged ceiling tiles",
+    observed:
+      "Four tiles are stained and sagging near the riser. Replacements are already on site.",
+    proposed: "Replace the four affected tiles and check the riser for ongoing ingress.",
+    price: 260,
+    customerNotes: "Tiles supplied by Northline; labour only.",
+  });
+  addFinding(s, commercial.id, {
+    area: "Rear stairwell",
+    title: "Handrail bracket loose at the mid-landing",
+    observed: "The lower bracket moves under load and the fixings are pulling out.",
+    proposed: "Refit the bracket into solid backing and check the full run.",
+    price: 175,
+    internalNotes: "Ask whether this run was part of the 2024 retrofit.",
+  });
+  sendWalkthrough(s, commercial.id);
+
   const draft = createWalkthrough(s, "p3");
   addFinding(s, draft.id, {
     area: "Garage",
@@ -456,7 +479,7 @@ export function seedWalkthroughs(s: State) {
     proposed: "Realign the strike plate and replace the latch if worn.",
     price: 140,
   });
-  return { sent, draft };
+  return { sent, commercial, draft };
 }
 
 /**

@@ -42,7 +42,7 @@ how; where the audits are wrong about the current build, this says that too.
 | **Partial** | Real but incomplete |
 | **Open** | Genuinely missing. Both audits right |
 | **Declared gap** | Deliberately out of scope for a prototype, already labelled in `blueprint-data.ts` |
-| **Business decision** | Not a code question. See `docs/open-decisions.md` |
+| **Business decision** | Not a code question. See `docs/decisions.md` |
 
 ---
 
@@ -57,7 +57,7 @@ how; where the audits are wrong about the current build, this says that too.
 | HF 14, PMW A | "No explicit Unable to Complete outcome" | **Resolved** | `work.ts:10` already lists exactly what both audits ask for: `Completed`, `Needs return visit`, `Unable to complete`, `Customer declined`, `Materials required` |
 | PMW A | `Partially Completed` visit label | **Open** | Derivable from per-task outcomes but has no label, so no screen shows it and no query filters on it. Recorded as a gap in the status dictionary |
 | PMW I | Visit outcome `Access Unavailable` | **Open** | Must be recorded as a per-task outcome today, which mislabels a visit-level fact |
-| HF 12 | "On My Way / Arrived / Start Job are separate events" | **Resolved**, minus `Arrived` | Three timestamps — `onWayAt`, `startedAt`, `finishedAt` (`work.ts`); `workStatus()` derives the label. `Arrived` is deliberately absent — `docs/open-decisions.md` #10 |
+| HF 12 | "On My Way / Arrived / Start Job are separate events" | **Resolved**, minus `Arrived` | Three timestamps — `onWayAt`, `startedAt`, `finishedAt` (`work.ts`); `workStatus()` derives the label. `Arrived` is deliberately absent — `docs/decisions.md` #10 |
 | HF 15, PMW A | Return visits | **Partial** | `Needs return visit` outcome exists and keeps the task live. No flow creates the follow-up visit |
 | HF 16, PMW A | Reschedule and cancellation | **Partial** | Both exist with a 24-hour policy note and operator override. Reason codes, deposit consequences and post-departure rules are not defined |
 | PMW A | "No 'no issue found' resolution" | **Open** | A follow-up walkthrough cannot record that the original concern no longer exists |
@@ -69,13 +69,13 @@ how; where the audits are wrong about the current build, this says that too.
 |---|---|---|---|
 | HF 4 | "Preserve the correct data model — entities must not collapse" | **Resolved** | Customer → Property → Request → Task → Visit → Assignment → Quote → Payment, each its own record (`model.ts`). One request, three tasks, two visits, two providers is representable |
 | PMW B | Finding-to-task traceability | **Resolved** | `Finding.taskId` and `Task` carry the link; `convertApproved()` sets it. `carriedFrom` / `resolvedBy` record lineage across walkthroughs |
-| PMW (HIGH), HF "customer unit" | Business vs property under-modelled | **Open** | `customers` is a flat `{ id, name }` list. No Organization, Contact or approval authority. **The largest genuinely-open item** — `docs/open-decisions.md` #1 |
+| PMW (HIGH), HF "customer unit" | Business vs property under-modelled | **Resolved** | Was the largest genuinely-open item. `Account` (`type: individual \| organization`) and `Contact` now exist in `model.ts`, with `migrateAccounts()` renaming `customerId` on saved states. Authority to approve is still unenforced — `docs/decisions.md` #1, #2 |
 | PMW B | Duplicate properties and contacts | **Open** | `propertyKey()` normalizes address for the one-time migration, and ADR 018 explains why it deliberately never re-derives. No detection, no merge |
 | PMW B | Photo object ownership | **Partial** | Photos hang off the task or the finding that owns them. No uploader, timestamp, visibility or before/after category |
 | PMW B | "History should be append-oriented" | **Partial** | `events` is append-only; quotes supersede rather than mutate. Scope and price edits overwrite |
 | PMW B | Archive / deletion policy | **Open** | Nothing is soft-deleted |
 | PMW B | Timezone handling | **Resolved** | ISO timestamps throughout; `torontoParts()` / `localTime()` render in the property's zone (`model.ts`) |
-| PMW (HIGH) | Approval needs a version | **Partial** | A `Quote` carries `taskIds` — the scope it was priced against — and `Superseded` excludes it from every live-quote lookup. So the snapshot exists. It does not capture approver identity or terms version |
+| PMW (HIGH) | Approval needs a version | **Resolved** (was wrongly marked Partial — see the correction below) | `Quote.approval` is written by `approveQuote()` (`model.ts`) and freezes the approver, their role, the amount and the task ids as they stood. A task added afterwards is outside what was approved, and a second approval is refused rather than re-stamping the first |
 
 ## C. Booking, scheduling and dispatch
 
@@ -104,20 +104,20 @@ how; where the audits are wrong about the current build, this says that too.
 
 | # | Item | Status | Evidence |
 |---|---|---|---|
-| PMW F (CRITICAL) | "Card on file is not sufficient payment logic" | **Open** | `Payment.status` is `Paid`, `Failed`, `Refunded`. No authorization, capture, deposit or outstanding balance. `docs/open-decisions.md` #3 |
+| PMW F (CRITICAL) | "Card on file is not sufficient payment logic" | **Open, model decided** | `Payment.status` is `Paid`, `Failed`, `Refunded`. No authorization, capture, deposit or outstanding balance. The sequence and the authorization-timing rule are decided — `docs/decisions.md` #3 — and unbuilt |
 | PMW F (CRITICAL) | Failed charge path | **Partial** | `Failed` exists and the entry is preserved for retry (`blueprint-data.ts`). No `Outstanding` state, no alternate-payment request, no operator alert |
 | PMW F, HF 10 | Price increases and change orders | **Partial** | A new quote supersedes the old; the customer must approve the new one. Nothing prevents an operator editing a price in place, and nothing produces a change-order record |
 | PMW F | Refunds and partial refunds | **Partial** | `Refunded` exists; partial refunds do not |
 | PMW F, HF 10 | Tax | **Resolved for PMW, open elsewhere** | Walkthroughs snapshot `taxRate` at send time, deliberately, so an old assessment keeps matching its own total (`pmw.ts`, ADR 021). Reactive quotes have no tax breakdown |
-| HF 11 | Is contractor pay fixed or estimated? | **Business decision** | The UI says "Your pay", which reads as a commitment, and nothing defines when it locks. `docs/open-decisions.md` #8 |
-| HF 34 | Merchant of record, payouts | **Business decision** | Customer payment and contractor payout are already separate objects, which is the property worth keeping. `docs/open-decisions.md` #12 |
+| HF 11 | Is contractor pay fixed or estimated? | **Decided** | Fixed on acceptance, and inclusive of ordinary consumables per decision 7. The UI already says "Your pay" and now means it. `docs/decisions.md` #8 |
+| HF 34 | Merchant of record, payouts | **Decided** | The ledger separation is kept and already true in the data; the legal designation is deliberately not encoded until the structure is confirmed. `docs/decisions.md` #12 |
 
 ## F. Permissions, privacy, security
 
 | # | Item | Status | Evidence |
 |---|---|---|---|
 | PMW G (CRITICAL), HF 33 | Backend-enforced permissions | **Declared gap** | No server, so nothing is enforced. The rules that exist — `canWork()`, `scopeMatch()`, `sendBlockers()`, `decide()` — are the seams a backend should enforce at. `docs/permissions.md` |
-| PMW G (CRITICAL) | Guest-link security | **Declared gap, policy open** | A URL parameter with no entropy, expiry or revocation. The page says so on itself. Policy in `docs/open-decisions.md` #5 |
+| PMW G (CRITICAL) | Guest-link security | **Declared gap, policy decided** | A URL parameter with no entropy, expiry or revocation. The page says so on itself. Policy decided — token, 30-day configurable expiry, revocation, access log — and unbuilt. `docs/decisions.md` #5 |
 | HF 8 (BLOCKER) | "Contractor visibility must begin only when relevant" | **Partial** | A contractor only sees offers and assigned work — there is no browse. But `canWork()` gates *actions*, not *reads*: an assigned contractor sees the whole request record |
 | PMW G | Internal vs customer-visible notes | **Resolved** | `internalNotes` and `customerNotes` are separate fields and `internalNotes` is rendered on neither the assessment nor the print document. `assessment.test.ts` asserts the printed and on-screen documents carry the same data |
 | PMW G | Photo privacy and consent | **Open** | No capture guidance, no redaction |
@@ -173,12 +173,33 @@ act on them:
 - HF #25 asks for a hard restricted-work gate. It exists in two places.
 - HF #23 asks for "AI" to be removed from workflow descriptions. It is not in
   the source.
-- PMW says approval has no version. Quotes snapshot `taskIds` and supersede.
 - HF #30 asks for empty and error states to be designed. Most are, including two
   that were built specifically because an earlier audit found them missing.
+
+## A correction to this document
+
+The first version of this page claimed, in this section, that the PMW audit was
+wrong about approval having no version — on the grounds that *"a `Quote` carries
+`taskIds`"*.
+
+It does not. `taskIds` is a field on **Visit**, not Quote. A quote was priced
+against its whole request and carried no scope of its own, no approver and no
+frozen amount. The audit was right and this document was wrong, in the one
+section reserved for saying the audit was wrong.
+
+The claim was repeated in `glossary.md`, `status-dictionary.md` and the pull
+request description before anyone caught it. What caught it was not re-reading
+the document — it was opening `model.ts` to add a field next to the one I had
+described, and finding the description did not match. Every row here cites a
+file; this one cited a file that says something else.
+
+`Quote.approval` now exists and the row above is Resolved. The rest of the
+reconciliation has been re-checked against the source for the same failure mode,
+which is how the `Superseded` half of the original claim survived: quotes really
+are superseded rather than edited.
 
 ## Read this with
 
 `docs/glossary.md` · `docs/status-dictionary.md` · `docs/permissions.md` ·
-`docs/notifications.md` · `docs/open-decisions.md` · `docs/design-decisions.md`
+`docs/notifications.md` · `docs/decisions.md` · `docs/design-decisions.md`
 (34 ADRs) · the in-app blueprint at `?view=blueprint`

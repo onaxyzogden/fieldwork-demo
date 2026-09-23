@@ -319,3 +319,45 @@ Accepted. `carryForward()` was implemented, tested, and called from nothing. Its
 A draft walkthrough now shows **Still open from earlier visits**: the findings this property's earlier visits left deferred or unpriced, each with one button. `carryCandidates()` computes the list from `propertyRecord()`, drops anything already carried into this walkthrough, and returns nothing at all for a walkthrough that has been sent — carrying into a sent assessment would change what the customer is already looking at.
 
 This is the pairing the feature was designed around: a deferred item and an item nobody could price are precisely the reasons to walk a property twice. Carrying one restates it with its own price and its own decision, and supersedes the original, so the maintenance record shows one live item rather than two copies of the same problem.
+
+## ADR 035: Account carries a type; individuals get a contact too
+
+Accepted. `customers` was a flat `{ id, name }` list, which both pre-implementation audits named as the largest modelling gap: a property management company with several properties and several people, and the question of who may approve, had nowhere to live.
+
+Three shapes were considered. An `Organization` record with an invisible one manufactured for every homeowner stores a fiction. Giving individuals no `Contact` row at all is fewer rows, but makes "who raised this" and "who approved this" a Contact sometimes and an Account other times, so every reader branches on account type — a branch that would appear in dozens of places and be wrong in one.
+
+`Account` carries `type: "individual" | "organization"`, and **every** account has at least one `Contact`; an individual has exactly one, which is that person. One extra row per homeowner buys a uniform answer to the only question that matters downstream: which human. `inactiveAt` retires a contact without deleting them, because approvals keep pointing at people after they leave.
+
+`migrateAccounts()` renames `customerId` to `accountId` on saved states and deletes the old key rather than leaving an alias on the type, so there is exactly one name for the field in the source. It runs before `migratePmw()`, which builds properties out of requests and so needs their accounts already rewritten.
+
+The seed carries one organization with two contacts in different roles. Without it, `Account.type` would have a branch nothing ever takes — the same defect ADR 034 was written about.
+
+## ADR 036: Approval is a snapshot, written by the function that sets the status
+
+Accepted. A quote had no record of what was approved. `audit-reconciliation.md` claimed otherwise — that a quote carried `taskIds` — and that was wrong: `taskIds` is a field on `Visit`. The audit that said approval has no version was right, and the reconciliation had filed it under "what the audits got wrong".
+
+A quote is priced against its **request**, and that request's tasks can change afterwards, so "what did they agree to" is unambiguous only at the instant of approval. `Quote.approval` freezes the contact, their role, the timestamp, the amount, the high figure and the task ids as they stood.
+
+It is written inside `approveQuote()` rather than by each screen. The same reasoning moved `sendBlockers()` into the data layer in ADR 028: if the status can be set from one place and the snapshot from another, `Approved` and `what was approved` become two facts that can disagree. A second approval is refused rather than re-stamping the first, so a double-submit cannot move the agreed date.
+
+The amounts are copied rather than read back off the quote. Today they would agree, because a quote is superseded rather than edited — but the record must not depend on that staying true.
+
+## ADR 037: Materials responsibility is a field, not a policy
+
+Accepted. `"Materials required"` has been one of the five task outcomes since the beginning, and it was a stall: it recorded that work stopped without recording whose materials were missing.
+
+The tempting fix was a company policy — "the operator supplies everything" — which is clean in a schema and wrong in the world, because it makes the operator the delivery driver for every box of screws for every contractor in the region.
+
+`Task.materials` instead holds one of four values: `Customer supplied`, `Provider standard supplies`, `Operator supplied`, `To be confirmed`. Per task rather than per job, because a customer-supplied TV and a provider-supplied box of anchors routinely sit in the same visit. The default is the explicit "nobody has said yet" rather than a guess.
+
+This interacts with fixed contractor pay, and the interaction is stated rather than left implicit: `Provider standard supplies` means ordinary consumables, and because pay is fixed on acceptance, that pay includes them. Otherwise the fixed-pay promise erodes on exactly the jobs needing the most patch material.
+
+## ADR 038: Rework is new work on a new request
+
+Accepted. `Completed` was terminal with no path back, which is correct — but it left rework with nowhere to go.
+
+Reopening the original task would rewrite history: on the day it finished, the work *was* done, and destroying that date to represent a later complaint makes the maintenance record lie. So rework is a new task carrying `originTaskId` and `reworkReason`.
+
+It goes on a **new request**, not the original one. This is the part that is easy to get wrong: request status is derived by `reconcile()` from its tasks, not stored, so adding an unfinished task to a finished request would derive that request back out of `Completed` — the same destruction by a different route. A test asserts the original request still holds exactly one task after rework is raised.
+
+`warranty` is `{ billable, decidedBy, decidedAt }` and starts **absent**. Whether rework is chargeable is a judgement someone makes, sometimes days later and sometimes after visiting the property; a boolean defaulted at creation is wrong for half the cases and silently so. "Raised, nobody has decided who pays" is a true state and is better visible than guessed.
