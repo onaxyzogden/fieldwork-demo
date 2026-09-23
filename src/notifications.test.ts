@@ -20,12 +20,12 @@ describe("Account notifications", () => {
       v = s.visits[0],
       r = s.requests.find((r) => r.id === v.requestId)!;
     const before = structuredClone(s);
-    expect(sendMessage(s, v.id, "Customer:" + r.customerId, "Hello")).toBe(
+    expect(sendMessage(s, v.id, "Customer:" + r.accountId, "Hello")).toBe(
       true,
     );
     deliverUpdates(before, s);
     expect(
-      inbox(s, "Customer:" + r.customerId).some((n) => n.kind === "message"),
+      inbox(s, "Customer:" + r.accountId).some((n) => n.kind === "message"),
     ).toBe(true);
     expect(
       inbox(s, "Contractor:" + v.providerId).some((n) => n.kind === "message"),

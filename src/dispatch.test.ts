@@ -361,9 +361,9 @@ describe("saved-state migration", () => {
     expect(s.requests.find((r) => r.id === "r2")!.name).toBe("Daniel Brooks");
     expect(s.requests.find((r) => r.id === "r5")!.name).toBe("Amir Hassan");
   });
-  it("leaves an unknown customerId's stored name alone", () => {
+  it("leaves an unknown accountId's stored name alone", () => {
     const s = seed();
-    s.requests[0].customerId = "c999";
+    s.requests[0].accountId = "c999";
     s.requests[0].name = "Someone Else";
     migrateDispatch(s);
     expect(s.requests[0].name).toBe("Someone Else");

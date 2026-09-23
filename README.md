@@ -776,9 +776,9 @@ Six documents came out of it:
   `sendBlockers()` — that are the seams a backend would enforce at.
 - **`docs/notifications.md`** — event, recipient, channel, message, failure
   behaviour. One channel exists: in-app.
-- **`docs/open-decisions.md`** — the fifteen business calls neither the code nor
-  I can settle, each with what the code currently assumes, what depends on the
-  answer, and a recommendation. A recommendation is not a decision.
+- **`docs/decisions.md`** — the fifteen business calls neither the code nor I
+  can settle. Started as recommendations; now a decision record (see the next
+  section).
 
 **The status dictionary is machine-checked.** `npm run status:check` extracts
 every status value the source produces and compares it to the dictionary, and it
@@ -789,7 +789,81 @@ an error in the first draft of the dictionary itself, where a task status had
 been copied from an audit's suggested lifecycle rather than read from
 `model.ts`.
 
-No application behaviour changed in this round. The open items — the missing
-Organization and Contact objects, duplicate detection, slot holds, booking
-idempotency, the fuller payment lifecycle — are specified and left for a
-decision, not implemented.
+No application behaviour changed in that round. The open items were specified
+and left for a decision; the next section is what came back.
+
+
+## The decisions, and the schema they imply
+
+The recommendations went to review. Five came back modified, and one of them
+found a defect I had put in writing twice.
+
+**The payment recommendation contradicted itself.** Decision 3 said "authorize
+at approval"; decision 4 said no card is collected until scheduling, which comes
+after approval. There was nothing to authorize with at the moment authorization
+was supposed to happen. The two sections were written against different mental
+timelines and never read side by side. The sequence is now tokenize at
+confirmation, authorize on a threshold rule near service, capture at completion —
+which also handles the case the original missed, a job booked further out than a
+card authorization survives.
+
+**The reconciliation asserted something false about the code.** It said a
+`Quote` carries `taskIds`, and filed the PMW audit's "approval has no version"
+under *what the audits got wrong*. `taskIds` is a field on `Visit`. A quote had
+no scope of its own, no approver and no frozen amount — the audit was right, in
+the one section reserved for saying it was wrong. What caught it was not
+re-reading the document but opening `model.ts` to add a field beside the one I
+had described. Every backticked identifier in that file has since been checked
+against the source; the three that are absent are the three documented as
+absent. The correction is recorded in the document rather than quietly patched.
+
+`docs/decisions.md` is now a decision record — Decision, Rationale,
+Consequences, Implementation impact, Status for each of the fifteen — because a
+question document has done its job once the questions are answered, and what
+needs to survive is what we decided and why.
+
+### What the decisions changed in the code
+
+**`Account` and `Contact`.** `customers` was a flat `{ id, name }` list, the
+largest gap both audits named. An Account carries `type: "individual" |
+"organization"`, and every account has at least one Contact — individuals
+included. That last part is the whole design: without it, "who raised this" and
+"who approved this" would be a Contact sometimes and an Account other times, and
+every reader would branch. `migrateAccounts()` renames `customerId` on saved
+states and deletes the old key, so one name for the field exists in the source.
+The seed gained one organization with two contacts, because a type with no
+instance is a branch nothing takes.
+
+**`Quote.approval`.** Written inside `approveQuote()`, freezing the contact,
+their role, the amount and the task ids as they stood. A task added afterwards
+is outside what was approved; a second approval is refused rather than
+re-stamping the first. The assessment page now requires the approver's role when
+the account is an organization, where a name alone no longer identifies anyone.
+
+**`Task.materials`.** Four values — customer supplied, provider standard
+supplies, operator supplied, to be confirmed — set by the operator during task
+review. The review was right that a blanket "the operator supplies everything"
+rule is clean in a schema and makes you the delivery driver in real life. This
+is what turns the long-standing "Materials required" outcome from a stall into
+something actionable.
+
+**Rework lineage.** `createRework()` puts rework on a **new request**, never the
+original. Request status is derived by `reconcile()` from its tasks rather than
+stored, so adding an unfinished task to a finished request would derive it back
+out of `Completed` — destroying the record by a different route than reopening
+it. `warranty` starts absent rather than defaulting to a boolean, because whether
+rework is chargeable is adjudicated later and a default would be silently wrong
+half the time.
+
+Validation: 288 tests (17 new), `status:check`, `design:check` and the build.
+The two load-bearing new tests were each confirmed to fail against a deliberately
+broken implementation before being trusted — rework placed on the original
+request, and a second approval allowed to re-stamp the first. Four migration
+tests that broke on the sixth seeded request were rewritten to derive the count
+from the seed rather than pin it, since none of them was about how many requests
+the demo has.
+
+Still open, in priority order: slot holds and booking idempotency (raised to the
+top by the review, and correctly), the payment lifecycle, notification channels
+and delivery state, guest-link security, approval *enforcement* as distinct from
+the recording now in place, duplicate detection, and an audit log.

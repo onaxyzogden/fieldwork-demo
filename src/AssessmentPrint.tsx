@@ -1,4 +1,4 @@
-import { type State, money, dateLabel, customerName } from "./model";
+import { type State, money, dateLabel, accountName } from "./model";
 import { assessmentTotals, findingState, money2, quotable } from "./pmw";
 
 const STEPS = [
@@ -41,7 +41,7 @@ export default function AssessmentPrint({
       <dl className="pmw-print-meta">
         <div>
           <dt>Prepared for</dt>
-          <dd>{customerName(property?.customerId || "")}</dd>
+          <dd>{accountName(property?.accountId || "")}</dd>
         </div>
         <div>
           <dt>Property</dt>
@@ -152,7 +152,13 @@ export default function AssessmentPrint({
         </div>
         <div>
           <dt>Authorized by</dt>
-          <dd>{w.authorization?.name || "—"}</dd>
+          <dd>
+            {w.authorization
+              ? w.authorization.role
+                ? `${w.authorization.name}, ${w.authorization.role}`
+                : w.authorization.name
+              : "—"}
+          </dd>
         </div>
         <div>
           <dt>Date</dt>

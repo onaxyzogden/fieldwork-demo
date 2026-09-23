@@ -12,7 +12,8 @@ import {
   type Finding,
   money,
   dateLabel,
-  customerName,
+  accountName,
+  accounts,
   uid,
 } from "./model";
 import {
@@ -53,6 +54,7 @@ export default function Assessment({ assessmentId }: { assessmentId: string }) {
   const [s, setS] = useState<State>(load);
   const [error, setError] = useState("");
   const [name, setName] = useState("");
+  const [role, setRole] = useState("");
   const [authority, setAuthority] = useState(false);
   const [method, setMethod] = useState(false);
   useEffect(() => {
@@ -87,6 +89,11 @@ export default function Assessment({ assessmentId }: { assessmentId: string }) {
     );
 
   const property = s.properties.find((p) => p.id === w.propertyId);
+  /* An individual signs their own name and that identifies them. An
+     organization has several people who could approve, so the role is part of
+     the record rather than a nicety. */
+  const org =
+    accounts.find((a) => a.id === property?.accountId)?.type === "organization";
   const totals = assessmentTotals(s, w.id);
   const request = s.requests.find((r) => r.walkthroughId === w.id);
   const quote = s.quotes.find((q) => q.requestId === request?.id);
@@ -109,6 +116,10 @@ export default function Assessment({ assessmentId }: { assessmentId: string }) {
     if (!totals.approved.length)
       return setError("Approve at least one item before continuing.");
     if (!name.trim()) return setError("Enter the name authorizing this work.");
+    if (org && !role.trim())
+      return setError(
+        "Enter your role. An organization has more than one person who could approve this.",
+      );
     if (!authority)
       return setError("Confirm you are authorized to approve this work.");
     if (!method)
@@ -118,6 +129,7 @@ export default function Assessment({ assessmentId }: { assessmentId: string }) {
       const target = d.walkthroughs.find((x) => x.id === w.id)!;
       target.authorization = {
         name: name.trim(),
+        ...(role.trim() ? { role: role.trim() } : {}),
         agreedAt: new Date(d.clock).toISOString(),
       };
       const created = convertApproved(d, w.id);
@@ -152,7 +164,7 @@ export default function Assessment({ assessmentId }: { assessmentId: string }) {
             {property?.address}, {property?.city}
           </h1>
           <p>
-            Prepared for {customerName(property?.customerId || "")} ·{" "}
+            Prepared for {accountName(property?.accountId || "")} ·{" "}
             {dateLabel(w.sentAt || w.date)} · {totals.findings.length} finding
             {totals.findings.length === 1 ? "" : "s"}
           </p>
@@ -255,6 +267,17 @@ export default function Assessment({ assessmentId }: { assessmentId: string }) {
                 onChange={(e) => setName(e.target.value)}
               />
             </label>
+            {org && (
+              <label className="field">
+                Your role
+                <input
+                  value={role}
+                  placeholder="Property Manager"
+                  aria-invalid={!!error && !role.trim() ? true : undefined}
+                  onChange={(e) => setRole(e.target.value)}
+                />
+              </label>
+            )}
             <label className="assessment-check">
               <input
                 type="checkbox"

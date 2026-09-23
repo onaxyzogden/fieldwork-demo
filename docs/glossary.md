@@ -23,13 +23,15 @@ everything downstream is shared. That convergence is the point — ADR 020.
 
 | Term | Is | Is not | Key fields |
 |---|---|---|---|
-| **Customer** | A person who can raise requests and approve work | An organization. There is no account or company object — see the gap below | `id`, `name` |
+| **Account** | Who the work is billed to. A homeowner or a property management company, told apart by `type` | Two tables. One record covers both, so a Property belongs to an Account either way and nothing downstream branches | `id`, `type`, `name` |
+| **Contact** | A person who acts for an account. An individual account has exactly one; an organization has several with roles | An account, or a login. `inactiveAt` retires one without deleting the approvals that point at them | `id`, `accountId`, `name`, `role?`, `inactiveAt?` |
+| **Customer** | The *role*, not a record. The person using the customer workspace | An object. What used to be `customers` is now Account plus Contact | — |
 | **Property** | A location, persisting across jobs. The thing a maintenance history belongs to | An address string on a request. Linked by foreign key, never matched by address text (ADR 018) | `id`, `customerId`, `address`, `city`, `unit?`, `postalCode?` |
 | **Request** | One customer asking for work at one property, on one occasion | A job, a booking, or a unit of work. It is the container | `id`, `customerId`, `propertyId`, `status`, `mode`, `timing` |
 | **Task** | One discrete piece of work: adjust the door, patch the drywall | A visit. Three tasks can be one visit, or three | `id`, `requestId`, `description`, `category`, `duration`, `reviewed`, `restricted`, `status` |
 | **Visit** | One provider at one property at one time, carrying one or more tasks | A task, or a request. It is the scheduling object | `id`, `requestId`, `taskIds[]`, `providerId`, `start`, `duration`, `status`, `execution?` |
 | **Assignment** | An offer of a visit to a provider, and their answer | The visit. A visit can have several assignments over its life | `id`, `visitId`, `providerId`, `status`, `pay`, `expiresAt` |
-| **Quote** | A price for a named set of tasks, shown to the customer | An invoice or a payment | `id`, `requestId`, `taskIds[]`, `amount`, `high`, `status` |
+| **Quote** | A price for a request, shown to the customer | An invoice, a payment, or a list of tasks — a quote is priced against its request, and the scope is frozen only on approval | `id`, `requestId`, `amount`, `high`, `status`, `approval?` |
 | **Payment** | A simulated transaction against one quote | A payout to a contractor. Contractor pay lives on the assignment | `id`, `quoteId`, `status`, `amount`, `reference` |
 | **Walkthrough** | One dated assessment of one property, by an operator | A request or a visit. Nothing is scheduled by it | `id`, `assessmentId`, `propertyId`, `date`, `status`, `taxRate` |
 | **Finding** | One observed issue, recorded during a walkthrough | A task. A finding becomes a task only if the customer approves it (ADR 019) | `id`, `walkthroughId`, `number`, `title`, `observed`, `proposed`, `pricing`, `price?`, `decision`, `taskId?` |
@@ -88,14 +90,14 @@ Two records in this glossary have no blueprint entity at all: **Customer** and
 absence there is part of why the missing Organization object below went
 unnoticed for so long.
 
-## Known modelling gap
+## The gap this closed
 
-**There is no Organization, Account or Contact.** `customers` is a flat list of
-`{ id, name }` (`model.ts`). A company that manages several properties, a
-property with several contacts, and the question of who is *authorized* to
-approve work all have nowhere to live.
+Both audits raised the same thing independently — PMW section B, *"Business vs
+property is under-modeled"*, and the HandyFlow open decision *"What exactly is
+the unit of a 'customer': person, organization, or both?"* It was the largest
+genuinely-open item, and `customers` really was a flat `{ id, name }` list.
 
-Both audits raise this independently — PMW section B, *"Business vs property is
-under-modeled"*, and the HandyFlow open decision *"What exactly is the unit of a
-'customer': person, organization, or both?"* They are right, and it is the
-largest genuinely-open item. See `docs/open-decisions.md`.
+Account and Contact now exist (decision 1 in `docs/decisions.md`). What is still
+open is **enforcement**: nothing checks that the contact who approved was
+entitled to. The approval records who, and that is a different thing from
+deciding whether they were allowed. See `docs/permissions.md`.

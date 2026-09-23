@@ -30,7 +30,7 @@ export function deliverUpdates(before: State, after: State) {
     /* Keyed off the field the operator actually writes. The old key was
        r.notes, which nothing has written since the Q&A slot was introduced. */
     if (old && old.operatorNote !== r.operatorNote && r.operatorNote) {
-      for (const recipient of ["Operator", "Customer:" + r.customerId])
+      for (const recipient of ["Operator", "Customer:" + r.accountId])
         emit(
           recipient,
           r.id,
@@ -60,7 +60,7 @@ export function deliverUpdates(before: State, after: State) {
         `${r.name}: request ${r.status.toLowerCase()}`,
       );
       emit(
-        "Customer:" + r.customerId,
+        "Customer:" + r.accountId,
         r.id,
         "",
         "",
@@ -85,7 +85,7 @@ export function deliverUpdates(before: State, after: State) {
     if (!r) continue;
     const targets = [
       "Operator",
-      "Customer:" + r.customerId,
+      "Customer:" + r.accountId,
       ...(v.providerId === "yousef" ? [] : ["Contractor:" + v.providerId]),
     ];
     const changes: string[] = [];
@@ -130,7 +130,7 @@ export function deliverUpdates(before: State, after: State) {
       continue;
     const r = after.requests.find((r) => r.id === q.requestId);
     if (!r) continue;
-    for (const recipient of ["Operator", "Customer:" + r.customerId])
+    for (const recipient of ["Operator", "Customer:" + r.accountId])
       emit(
         recipient,
         r.id,
@@ -146,7 +146,7 @@ export function deliverUpdates(before: State, after: State) {
     const q = after.quotes.find((q) => q.id === p.quoteId),
       r = after.requests.find((r) => r.id === q?.requestId);
     if (!r) continue;
-    for (const recipient of ["Operator", "Customer:" + r.customerId])
+    for (const recipient of ["Operator", "Customer:" + r.accountId])
       emit(
         recipient,
         r.id,
@@ -168,7 +168,7 @@ export function sendMessage(
   if (!v || !r || v.status === "Cancelled" || !text.trim()) return false;
   if (
     sender !== "Operator" &&
-    sender !== "Customer:" + r.customerId &&
+    sender !== "Customer:" + r.accountId &&
     !(
       sender === v.providerId &&
       s.assignments.some(

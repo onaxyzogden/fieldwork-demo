@@ -71,8 +71,11 @@ import {
   scopeMatch,
   torontoParts,
   instantEligible,
-  customers,
-  customerName,
+  accounts,
+  approveQuote,
+  materialsResponsibilities,
+  type MaterialsResponsibility,
+  accountName,
   coordinated,
   quoted,
   confirmed,
@@ -531,12 +534,12 @@ function Workspace({
      worth a collapsed panel telling the customer there is nothing in it. */
   const customerProperties = s.properties.filter(
     (p) =>
-      p.customerId === customer &&
+      p.accountId === customer &&
       s.walkthroughs.some((w) => w.propertyId === p.id),
   );
   const ownRequests = s.requests.filter(
     (x) =>
-      x.customerId === customer &&
+      x.accountId === customer &&
       (x.status !== "Draft" ||
         !!x.address.trim() ||
         s.tasks.some(
@@ -650,7 +653,7 @@ function Workspace({
     setQuoteTouched(false);
     const req = s.requests.find((x) => x.id === id)!;
     setActive(id);
-    setCustomer(req.customerId);
+    setCustomer(req.accountId);
     setSelected([]);
     setFulfillment(false);
     setSlot("");
@@ -781,8 +784,8 @@ function Workspace({
     update((d) => {
       d.requests.push({
         id,
-        customerId: customer,
-        name: customerName(customer),
+        accountId: customer,
+        name: accountName(customer),
         address: "",
         city: "Oakville",
         status: "Draft",
@@ -1061,7 +1064,7 @@ function Workspace({
               className="primary"
               onClick={() =>
                 update((d) => {
-                  d.quotes.find((q) => q.id === quote.id)!.status = "Approved";
+                  approveQuote(d, quote.id);
                   log(d, "Customer approved quote");
                 }, "Quote approved")
               }
@@ -1770,6 +1773,27 @@ function Workspace({
                             operator review and eligible specialist required
                           </p>
                         )}
+                        {/* Set where the scope is decided. "Materials
+                            required" as a visit outcome is a stall until
+                            somebody has said whose materials they are. */}
+                        <label className="field">
+                          Materials
+                          <select
+                            value={t.materials || "To be confirmed"}
+                            onChange={(e) =>
+                              update((d) => {
+                                d.tasks.find((x) => x.id === t.id)!.materials = e
+                                  .target.value as MaterialsResponsibility;
+                              }, "Materials responsibility set")
+                            }
+                          >
+                            {materialsResponsibilities.map((m) => (
+                              <option key={m} value={m}>
+                                {m}
+                              </option>
+                            ))}
+                          </select>
+                        </label>
                         {taskPhotos(t)}
                         {!t.reviewed && (
                           <button
@@ -2341,7 +2365,7 @@ function Workspace({
                 aria-label="Viewing as"
               >
                 <span className="eyebrow">VIEWING AS</span>
-                {customers.map((c) => (
+                {accounts.map((c) => (
                   <button
                     key={c.id}
                     className={
@@ -2351,7 +2375,7 @@ function Workspace({
                     aria-pressed={customer === c.id}
                     onClick={() => {
                       setCustomer(c.id);
-                      const own = s.requests.find((x) => x.customerId === c.id);
+                      const own = s.requests.find((x) => x.accountId === c.id);
                       if (own) setActive(own.id);
                       setStep(0);
                       setPage("Home");

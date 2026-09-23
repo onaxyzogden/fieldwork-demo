@@ -41,7 +41,7 @@ client-side today.
 | Record a task outcome | — | — | — | Yes, if assigned | `canWork()` |
 | Change customer price | — | — | Yes | — | quote creation is operator-only |
 | Change contractor pay | — | — | Yes | — | offer creation is operator-only |
-| Approve a quote | — | Yes | — | — | customer action |
+| Approve a quote | — | Yes | — | — | `approveQuote()` — records the contact, role, amount and scope, and refuses a second approval |
 | Cancel or reschedule | — | Yes, request | Yes | — | 24-hour policy note; operator override |
 | See internal notes | — | — | Yes | — | `internalNotes` is never rendered on the assessment or print |
 
@@ -68,7 +68,7 @@ identify. ADR 028 records why it was moved there.
 | No authentication | Every row above is advisory | PMW G, HandyFlow #19 |
 | Server-side enforcement | The UI is the only check | PMW G (CRITICAL), HandyFlow #33 |
 | Guest-link security | No expiry, revocation, entropy or access log; it is a plain URL parameter | PMW G (CRITICAL) |
-| No approval authority | Anyone with the link can approve. There is no notion of an authorized approver for an account | PMW C, "Open Product Decisions" |
+| No approval authority | Anyone with the link can approve. The approval now records **who** (`Quote.approval`, `Walkthrough.authorization`), but nothing checks they were entitled to — recording and enforcing are different problems, and `docs/decisions.md` #2 takes them in that order deliberately | PMW C, decision 2 |
 | No audit log | `events` records activity, but not who changed a price, scope or assignment | PMW B, HandyFlow #33 |
 | Contractor sees the whole request | `canWork()` gates *actions*, not *reads* — an assigned contractor can see the full request record | HandyFlow #8 |
 
@@ -80,4 +80,4 @@ now and expensive after a backend exists.
 
 - `docs/status-dictionary.md` — the states these actions move between
 - `docs/audit-reconciliation.md` — the full item-by-item status
-- `docs/open-decisions.md` — guest-link policy is an open decision
+- `docs/decisions.md` — #5 decides guest-link policy, #2 approval authority

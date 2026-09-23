@@ -9,14 +9,16 @@ import {
   uid,
   log,
   dateLabel,
-  customers,
-  customerName,
+  accounts,
+  migrateAccounts,
+  accountName,
 } from "./model";
 import { migratePmw } from "./pmw";
 
 export function migrateDispatch(s: State): State {
   s.settings ??= { autoReofferDeclined: false };
   s.notifications ??= [];
+  migrateAccounts(s);
   migratePmw(s);
   // Saved states predate the redesign fields and the current customer roster.
   // The stored name is a denormalized copy, so refresh it from the roster the
@@ -27,8 +29,8 @@ export function migrateDispatch(s: State): State {
     r.timingConstraints ??= "";
     r.operatorNote ??= null;
     r.customerReply ??= null;
-    if (customers.some((c) => c.id === r.customerId))
-      r.name = customerName(r.customerId);
+    if (accounts.some((c) => c.id === r.accountId))
+      r.name = accountName(r.accountId);
   }
   // Existing declined offers get an actionable alert, without triggering a retroactive reoffer.
   for (const a of s.assignments)

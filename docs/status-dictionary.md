@@ -128,8 +128,10 @@ stored state machine, because it records what a *person* did and when.
 
 ## Quote
 
-Stored on `Quote.status`. A quote carries `taskIds` — the scope it was priced
-against — which is the "approval snapshot" the PMW audit asks for.
+Stored on `Quote.status`. A quote is priced against its **request**, not against
+a list of tasks — an earlier version of this page said otherwise, and was wrong.
+The approval snapshot lives on `Quote.approval`, written by `approveQuote()` at
+the moment of approval and never rewritten.
 
 | Status | Notes |
 |---|---|
@@ -159,7 +161,7 @@ one without updating this table.
 | ~~Outstanding~~ | Work completed and the final charge failed — today `Failed` carries both meanings |
 | ~~Partially Refunded~~ | Disputes over one task in a multi-task visit |
 
-See `docs/open-decisions.md`.
+See `docs/decisions.md`.
 
 ## Walkthrough (PMW)
 
@@ -190,7 +192,7 @@ Falls through to `visit.status` when none of the execution facts apply.
 
 `On the Way`, `In Progress` and `Completed` are three distinct timestamps, not
 one field — which is the HandyFlow audit's item 12. `Arrived` is deliberately
-absent; see `docs/open-decisions.md`.
+absent; see `docs/decisions.md`.
 
 ### `dispatchStatus(state, visit)` — `dispatch.ts`
 
@@ -244,4 +246,4 @@ appears in the source without its row being updated.
 |---|---|---|
 | ~~Access Unavailable~~ | Visit | The contractor arrived and could not get in. Today this has to be recorded as a per-task outcome, which mislabels a visit-level fact |
 | ~~Partially Completed~~ | Visit | Derivable from per-task outcomes, but has no label, so no screen can show it and no query can filter on it |
-| ~~Arrived~~ | Visit execution | `On the Way`, `In Progress` and `Completed` are three timestamps; arrival is not separately recorded. The HandyFlow audit asks whether V1 needs it — see `docs/open-decisions.md` |
+| ~~Arrived~~ | Visit execution | `On the Way`, `In Progress` and `Completed` are three timestamps; arrival is not separately recorded. The HandyFlow audit asks whether V1 needs it — see `docs/decisions.md` |

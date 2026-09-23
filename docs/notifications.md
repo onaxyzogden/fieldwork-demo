@@ -49,6 +49,22 @@ audits ask for, at the one place it currently matters.
 
 ## What is missing
 
+## The decided target
+
+Channel follows **urgency**, not role — `docs/decisions.md` #11. An earlier
+version of this page implied role, because the taxonomy was read off `emit()`'s
+recipient strings, which are roles. A cancellation two hours out is urgent
+whoever receives it.
+
+| Class | Channels | Events above |
+|---|---|---|
+| Time-sensitive | SMS + in-app | `offer`, offer expiry, `visit` changes and cancellations, On My Way, a `message` or `information` reply someone is waiting on |
+| Durable / documentary | Email + in-app | `quote`, `payment`, the assessment, the approval record, the completion summary |
+
+Every event must land in one of the two, including future ones.
+
+## What is missing
+
 | Gap | Why it matters | Both audits |
 |---|---|---|
 | No channel but in-app | A contractor who is not looking at the app never learns an offer arrived, and offers expire | HandyFlow #29, PMW section H |
@@ -65,4 +81,4 @@ whether it was ever opened.
 
 - `docs/status-dictionary.md` — the states these events announce
 - `docs/permissions.md` — who may see each notification
-- `docs/open-decisions.md` — channel choice is an open commercial decision
+- `docs/decisions.md` — #11 decides the channel split; none of it is built
