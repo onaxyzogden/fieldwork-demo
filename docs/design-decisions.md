@@ -467,3 +467,40 @@ The effect was that every notification raised between that change and this one e
 The browser hid it. The tab that raises a notification is the tab that displays it, so the defect is invisible unless you reload, or read the stored state directly — which is what caught it: a delivery panel rendering with rows while `localStorage` held none.
 
 Notifications are state. They are computed before serialization, full stop, and a regression test in `store.test.ts` asserts a raised notification is on disk. A second test asserts a re-applied write does not double them, and it also records that one-per-recipient is correct: a clarification goes to the operator *and* the customer, so the property worth asserting is that no recipient gets two, not that only one row exists.
+
+## ADR 047: The guest link gets a token, and the page keeps saying it is not a secret
+
+Accepted. Decision 5 settled the policy — high-entropy token, expiry, revocation, access log, fresh-link path — and this builds all of it.
+
+**It is not security, and the honest statement has to come first.** Every token lives in the same `localStorage` as the rest of the state, so anyone who can open the app can read all of them. Nothing client-side could be otherwise. Two things the model does buy, and they are the entire justification:
+
+- `PMW-0001` is no longer what the URL carries, so an assessment cannot be found by counting upwards from one. Small, but real.
+- A backend inherits the fields rather than having them invented later from screens.
+
+The page's existing notice got sharper rather than being removed, and the operator's panel says the same thing beside the link it is offering to copy.
+
+`accessToken()` uses `crypto.getRandomValues` where it exists and falls back to a value prefixed `insecure-`. The fallback exists so tests and non-browser contexts do not throw, and it announces itself, because `Math.random()` behind the word "token" is the shape somebody copies into a backend without re-reading it.
+
+**A refusal says why.** Expired, revoked and unknown are three different things to the person holding the link — "ask for a fresh one", "this was withdrawn", "check the link" — and a blank page is none of them.
+
+**Re-issuing rotates the token**, which is what makes revoking mean anything: an old link stops resolving. Opens survive a re-issue, because how often an assessment was looked at is a fact about the assessment rather than about the current link.
+
+**The access log is the part with immediate value.** *Did they ever open it?* is a question the operator could not ask at all before, and it is one sentence on the panel now.
+
+One existing test had to change rather than the behaviour. It asserted the assessment page "never writes to the customer's browser just by being opened", which stopped being true the moment opening recorded the open — and it kept passing only because `renderToString` does not run effects, so it was asserting nothing. It is now two tests: rendering writes nothing, and opening writes exactly the one row and leaves the rest of the state byte-identical.
+
+## ADR 048: Approval authority is a rule the operator can set, not a flag that ships
+
+Accepted. Decision 2 deferred enforcement until Account existed. It does, so this enforces it.
+
+`mayApprove()` gates **both** approval paths — `decide()` for a finding and `approveQuote()` for a quote — inside the data layer rather than in the screens, for the reason in ADR 036: an approval that can be recorded from one place and authorised from another gives two facts that can disagree.
+
+An individual account's sole contact may approve without being granted anything. There is nobody else it could be, and making a homeowner grant themselves authority would be theatre. An organization's contacts may only where an operator has said so, which is the "Sarah raises, Ahmed approves" case the review raised.
+
+**Deferring is not gated.** Saying "not now" commits the account to nothing, and requiring proof of authority to shrug would turn a non-decision into a permissions problem.
+
+The grant lives in `State.approvers`, keyed by contact, **not** on the contact record. `contacts` is a static roster with no creation path, so the flag it ships with cannot be changed at runtime — building only the seeded flag would have left the decision half-built: the rule enforced, and nobody able to set it. That was caught by asking where the operator's grant button would write to. When contacts become records the overlay folds into them.
+
+The assessment asks an organization *which contact* is approving, because a rule can be checked against a contact and cannot be checked against a typed name. An individual keeps the typed name.
+
+This enforces a **rule, not an identity**. Nothing authenticates the person choosing from the list, `docs/permissions.md` says so, and no client-side app could do better.

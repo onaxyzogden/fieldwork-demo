@@ -78,8 +78,19 @@ describe("the event log now records changes", () => {
 describe("what gets recorded", () => {
   it("records who approved a quote, and the move that approval made", () => {
     const s = seed();
-    const r = quoted(s);
-    approveQuote(s, "q1", "ct6");
+    // Northline's request, approved by the contact granted authority for it.
+    s.quotes.push({
+      id: "q1",
+      requestId: "r6",
+      type: "Manual quote",
+      amount: 260,
+      high: 260,
+      status: "Sent",
+      notes: "",
+      payOnCompletion: false,
+    });
+    const r = s.requests.find((x) => x.id === "r6")!;
+    expect(approveQuote(s, "q1", "ct6")).toBe(true);
     const entry = auditFor(s, r.id).find((e) => e.entity === "quote")!;
     expect(entry.actor).toBe("Maya Okonkwo, Property Manager");
     expect([entry.field, entry.from, entry.to]).toEqual([

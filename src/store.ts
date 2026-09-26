@@ -86,12 +86,15 @@ export function load(): State {
 }
 
 /**
- * The customer's assessment link. A URL parameter, not a secret — the
- * assessment page says so, the way the demo bar labels the rest of the
- * prototype.
+ * The customer's assessment link.
+ *
+ * Carries a token rather than `PMW-0001`, so an assessment is no longer
+ * reachable by counting upwards from one. That is the whole of what it buys:
+ * the token sits in the same `localStorage` as everything else, so it is not a
+ * secret and the page says so.
  */
-export const assessmentLink = (assessmentId: string) =>
-  `${location.origin}${location.pathname}?view=assessment&id=${encodeURIComponent(assessmentId)}`;
+export const assessmentLink = (token: string) =>
+  `${location.origin}${location.pathname}?view=assessment&t=${encodeURIComponent(token)}`;
 
 /**
  * Whether the last write reached the browser.

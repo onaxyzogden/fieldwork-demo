@@ -27,8 +27,8 @@ client-side today.
 
 | Action | Guest (assessment link) | Customer | Operator | Contractor | Enforced by |
 |---|---|---|---|---|---|
-| View an assessment | Yes, with the id | Yes | Yes | — | `assessmentId` lookup; `Draft` is refused |
-| Approve / defer a finding | Yes | Yes | — | — | `decide()` — refuses anything not `quotable()` |
+| View an assessment | Yes, with a live token | Yes | Yes | — | `byToken()` — `Draft`, expired, revoked and unknown are each refused with their own reason |
+| Approve / defer a finding | Yes | Yes | — | — | `decide()` — refuses anything not `quotable()`, and refuses an approval from a contact without authority. Deferring is not gated: it commits the account to nothing |
 | Edit a finding's scope or price | — | — | Yes | — | Walkthrough must be `Draft` |
 | Send an assessment | — | — | Yes | — | `sendWalkthrough()` → `sendBlockers()` |
 | Convert approved findings to work | — | — | Yes | — | `convertApproved()` |
@@ -67,8 +67,8 @@ identify. ADR 028 records why it was moved there.
 |---|---|---|
 | No authentication | Every row above is advisory | PMW G, HandyFlow #19 |
 | Server-side enforcement | The UI is the only check | PMW G (CRITICAL), HandyFlow #33 |
-| Guest-link security | No expiry, revocation, entropy or access log; it is a plain URL parameter | PMW G (CRITICAL) |
-| No approval authority | Anyone with the link can approve. The approval now records **who** (`Quote.approval`, `Walkthrough.authorization`), but nothing checks they were entitled to — recording and enforcing are different problems, and `docs/decisions.md` #2 takes them in that order deliberately | PMW C, decision 2 |
+| Guest-link security | **Modelled, not enforced.** The link now carries a high-entropy token with an expiry, operator revocation and an access log (ADR 047). None of it keeps anyone out: every token lives in the same `localStorage` as the state, so anyone who can open the app can read them all | PMW G (CRITICAL) |
+| Approval authority is a rule, not an identity | `mayApprove()` now gates both approval paths: an individual's sole contact may, an organization's contacts only where an operator has granted it. What is still missing is **authentication** — nothing stops someone picking a different contact from the list, and no rule in a client-side app could | PMW C, decision 2, ADR 048 |
 | Audit log is partial by coverage | `events` now records actor, field and before/after for price, booking mode, materials, review, assignment, approval and merges. Writes outside that list still log only their narrative line | PMW B, HandyFlow #33 |
 | Contractor sees the whole request | `canWork()` gates *actions*, not *reads* — an assigned contractor can see the full request record | HandyFlow #8 |
 

@@ -8,6 +8,9 @@ import {
   uid,
   log,
   classify,
+  ASSESSMENT_LINK_DAYS,
+  accessToken,
+  mayApprove,
   accountName,
   norm,
 } from "./model";
@@ -171,7 +174,91 @@ export function sendWalkthrough(s: State, walkthroughId: string) {
   if (sendBlockers(s, walkthroughId).length) return false;
   w.status = "Sent";
   w.sentAt = new Date(s.clock).toISOString();
+  // Issued here because this is the moment the assessment becomes something
+  // somebody outside the business can open.
+  issueAccess(s, walkthroughId);
   log(s, `Assessment ${w.assessmentId} sent to the customer`);
+  return true;
+}
+
+/* ── The guest link ───────────────────────────────────────────────────────
+ *
+ * NOT SECURITY. Every token below sits in the same `localStorage` as the rest
+ * of the state, so anyone who can open the app can read all of them. Two
+ * things the model does buy, and they are the reason it exists:
+ *
+ *   - `PMW-0001` stops being the thing in the URL, so an assessment is no
+ *     longer reachable by counting upwards from one.
+ *   - A backend inherits the fields it will need — token, expiry, revocation,
+ *     access log — rather than having them invented later from screens.
+ *
+ * Nothing here keeps anyone out, and nothing client-side could.
+ */
+
+/** Mint a link. Re-issuing rotates the token, which is what makes revoking mean something. */
+export function issueAccess(s: State, walkthroughId: string) {
+  const w = s.walkthroughs.find((x) => x.id === walkthroughId);
+  if (!w) return null;
+  w.access = {
+    token: accessToken(),
+    expiresAt: s.clock + ASSESSMENT_LINK_DAYS * 86400000,
+    // Opens survive a re-issue: how often it was looked at is a record about
+    // the assessment, not about the current link.
+    opens: w.access?.opens ?? [],
+  };
+  return w.access;
+}
+
+export function revokeAccess(s: State, walkthroughId: string) {
+  const w = s.walkthroughs.find((x) => x.id === walkthroughId);
+  if (!w?.access || w.access.revokedAt) return false;
+  w.access.revokedAt = new Date(s.clock).toISOString();
+  log(s, `Assessment ${w.assessmentId} link revoked`, {
+    actor: "Operator",
+    entity: "walkthrough",
+    entityId: w.id,
+    field: "access",
+    from: "live",
+    to: "revoked",
+  });
+  return true;
+}
+
+export type LinkState = "live" | "expired" | "revoked" | "none";
+export const linkState = (s: State, w: Walkthrough): LinkState =>
+  !w.access
+    ? "none"
+    : w.access.revokedAt
+      ? "revoked"
+      : w.access.expiresAt <= s.clock
+        ? "expired"
+        : "live";
+
+export type LinkLookup =
+  | { ok: true; walkthrough: Walkthrough }
+  | { ok: false; reason: Exclude<LinkState, "live"> | "unknown" };
+
+/**
+ * Resolve a token to its assessment.
+ *
+ * A refusal says *why* — expired, revoked, or not a token we issued — because
+ * "ask for a fresh link" and "this was withdrawn" are different messages to
+ * the person holding it, and a blank page is neither.
+ */
+export function byToken(s: State, token: string): LinkLookup {
+  const w = s.walkthroughs.find((x) => x.access?.token === token);
+  if (!w) return { ok: false, reason: "unknown" };
+  const state = linkState(s, w);
+  return state === "live"
+    ? { ok: true, walkthrough: w }
+    : { ok: false, reason: state as Exclude<LinkState, "live"> };
+}
+
+/** One row per open. The question the operator could not ask before. */
+export function recordOpen(s: State, walkthroughId: string) {
+  const w = s.walkthroughs.find((x) => x.id === walkthroughId);
+  if (!w?.access) return false;
+  w.access.opens.push(new Date(s.clock).toISOString());
   return true;
 }
 
@@ -186,10 +273,19 @@ export function decide(
   s: State,
   findingId: string,
   decision: "Approved" | "Not Now",
+  contactId?: string,
 ) {
   const f = s.findings.find((f) => f.id === findingId);
   if (!f || f.taskId) return false;
   if (decision === "Approved" && !quotable(f)) return false;
+  /* Only approving is gated. Deferring commits the account to nothing, and
+     making someone prove authority to say "not now" would turn a shrug into a
+     permissions problem. Checked here rather than in the screen, per ADR 036. */
+  if (decision === "Approved") {
+    const w = s.walkthroughs.find((x) => x.id === f.walkthroughId);
+    const property = s.properties.find((p) => p.id === w?.propertyId);
+    if (!property || !mayApprove(s, property.accountId, contactId)) return false;
+  }
   f.decision = decision;
   f.decidedAt = new Date(s.clock).toISOString();
   return true;

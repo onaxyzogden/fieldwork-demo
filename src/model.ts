@@ -230,6 +230,14 @@ export type PaymentMethod = {
  */
 export const AUTHORIZE_WITHIN_DAYS = 7;
 /**
+ * How long a guest assessment link stays openable.
+ *
+ * Config rather than a constant, for the same reason as the authorization
+ * window: thirty days covers a commercial approval cycle, and the right number
+ * is a policy question rather than something to bake in here.
+ */
+export const ASSESSMENT_LINK_DAYS = 30;
+/**
  * A location, not a job. Requests come and go; the property persists, which is
  * the only thing a maintenance history can hang off. Linked by foreign key and
  * never by address string — addresses are editable free text.
@@ -256,6 +264,22 @@ export type Walkthrough = {
   sentAt?: string;
   /** Snapshotted when sent: a live rate would make an old assessment stop matching its own total. */
   taxRate: number;
+  /**
+   * The guest link's credentials.
+   *
+   * **This is not security.** Every token lives in the same `localStorage` as
+   * everything else, so anyone who can open the app can read all of them. What
+   * the model buys is narrower and real: `PMW-0001` stops being guessable by
+   * counting, and a backend inherits the fields — token, expiry, revocation,
+   * access log — rather than having them invented later from screens.
+   */
+  access?: {
+    token: string;
+    expiresAt: number;
+    revokedAt?: string;
+    /** Every time the link was opened. Answers "did they ever look at it?" */
+    opens: string[];
+  };
   /** Who agreed, and as what. The role is stored because a name alone does not
    *  identify an approver once an account has several people on it. */
   authorization?: {
@@ -342,6 +366,16 @@ export type State = {
   /** Tokenized payment methods. Backfilled by `migrateDispatch()`. */
   paymentMethods?: PaymentMethod[];
   /**
+   * Approval authority the operator has granted or withdrawn, by contact id.
+   *
+   * It lives here rather than on the contact because `contacts` is a static
+   * roster with no creation path, so the flag it ships with cannot be changed
+   * at runtime. Without this the decision would be half-built: the rule
+   * enforced, but nobody able to set it. When contacts become records this
+   * overlay folds into them.
+   */
+  approvers?: Record<string, boolean>;
+  /**
    * Where a merged-away record went: old id → surviving id. Consulted only
    * where an id arrives from outside the app, so no list has to filter.
    */
@@ -391,6 +425,14 @@ export type Contact = {
   email?: string;
   phone?: string;
   /**
+   * Whether this person may approve work for the account.
+   *
+   * On for an individual's sole contact — there is nobody else it could be.
+   * Off for additional organization contacts until an operator grants it,
+   * because "Sarah raises, Ahmed approves" is the case this exists for.
+   */
+  canApprove?: boolean;
+  /**
    * Set when the person stops acting for the account. Never deleted: approvals
    * and requests keep pointing at them, and the history has to stay true after
    * someone leaves.
@@ -415,6 +457,7 @@ export const contacts: Contact[] = [
     id: "ct1",
     accountId: "c1",
     name: "Sarah Lin",
+    canApprove: true,
     email: "sarah.lin@example.com",
     phone: "+1-905-555-0141",
   },
@@ -422,6 +465,7 @@ export const contacts: Contact[] = [
     id: "ct2",
     accountId: "c2",
     name: "Daniel Brooks",
+    canApprove: true,
     email: "d.brooks@example.com",
     phone: "+1-905-555-0162",
   },
@@ -429,6 +473,7 @@ export const contacts: Contact[] = [
     id: "ct3",
     accountId: "c3",
     name: "Priya Nair",
+    canApprove: true,
     email: "priya.nair@example.com",
     phone: "+1-905-555-0173",
   },
@@ -436,6 +481,7 @@ export const contacts: Contact[] = [
     id: "ct4",
     accountId: "c4",
     name: "James Carter",
+    canApprove: true,
     // No mobile on file. The SMS channel bounces for this account, which is
     // what makes "bounced" a state the demo can actually reach.
     email: "j.carter@example.com",
@@ -444,6 +490,7 @@ export const contacts: Contact[] = [
     id: "ct5",
     accountId: "c5",
     name: "Amir Hassan",
+    canApprove: true,
     email: "amir.hassan@example.com",
     phone: "+1-905-555-0195",
   },
@@ -452,6 +499,7 @@ export const contacts: Contact[] = [
     accountId: "a1",
     name: "Maya Okonkwo",
     role: "Property Manager",
+    canApprove: true,
     email: "m.okonkwo@northline.example.com",
     phone: "+1-416-555-0108",
   },
@@ -507,6 +555,10 @@ export function approveQuote(s: State, quoteId: string, contactId?: string) {
   if (!q || q.status !== "Sent") return false;
   const r = s.requests.find((x) => x.id === q.requestId);
   const who = contacts.find((c) => c.id === (contactId ?? r?.contactId));
+  // Checked here rather than in the screen, for the reason in ADR 036: an
+  // approval that can be recorded from one place and authorised from another
+  // gives two facts that can disagree.
+  if (!r || !mayApprove(s, r.accountId, who?.id)) return false;
   q.status = "Approved";
   q.approval = {
     ...(who ? { contactId: who.id } : {}),
@@ -730,6 +782,44 @@ export function resolveProperty(s: State, id: string): string {
   }
   return at;
 }
+/**
+ * Whether a contact may approve work for an account.
+ *
+ * An individual account's sole contact may: there is nobody else it could be,
+ * and making a homeowner grant themselves authority would be theatre. An
+ * organization's contacts may only where an operator has said so, which is the
+ * "Sarah raises, Ahmed approves" case this exists for.
+ *
+ * This enforces a **rule**, not an identity. Nothing authenticates the person
+ * choosing a contact from a list, and `docs/permissions.md` says so.
+ */
+export function mayApprove(s: State, accountId: string, contactId?: string) {
+  const account = accounts.find((a) => a.id === accountId);
+  if (!account) return false;
+  const own = contactsFor(accountId).filter((c) => !c.inactiveAt);
+  if (account.type === "individual")
+    return own.length === 1 && (contactId ?? own[0]?.id) === own[0]?.id;
+  const who = own.find((c) => c.id === contactId);
+  if (!who) return false;
+  return s.approvers?.[who.id] ?? !!who.canApprove;
+}
+/** Grant or withdraw a contact's authority to approve. */
+export function setApprover(s: State, contactId: string, may: boolean) {
+  const who = contacts.find((c) => c.id === contactId);
+  if (!who) return false;
+  const was = s.approvers?.[contactId] ?? !!who.canApprove;
+  s.approvers = { ...(s.approvers ?? {}), [contactId]: may };
+  if (was !== may)
+    log(s, `${who.name} ${may ? "granted" : "no longer has"} approval authority`, {
+      actor: "Operator",
+      entity: "contact",
+      entityId: contactId,
+      field: "canApprove",
+      from: was ? "yes" : "no",
+      to: may ? "yes" : "no",
+    });
+  return true;
+}
 export function migrateAccounts(s: State) {
   type Legacy = { customerId?: string; accountId?: string };
   const rename = (row: Legacy) => {
@@ -804,6 +894,23 @@ export const providers = [
   },
 ];
 export const uid = () => Math.random().toString(36).slice(2, 10);
+/**
+ * A guest-link token.
+ *
+ * `crypto.getRandomValues` where it exists, because `Math.random()` is not a
+ * source anyone should reach for when the word "token" is involved, even in a
+ * simulation — someone will copy this shape into the backend. The fallback
+ * exists only so tests and non-browser contexts do not throw, and it is
+ * deliberately marked as unfit rather than quietly substituted.
+ */
+export function accessToken() {
+  const c = globalThis.crypto;
+  if (c?.getRandomValues) {
+    const bytes = c.getRandomValues(new Uint8Array(24));
+    return [...bytes].map((b) => b.toString(16).padStart(2, "0")).join("");
+  }
+  return "insecure-" + uid() + uid() + uid() + uid() + uid() + uid();
+}
 export const money = (n: number) =>
   new Intl.NumberFormat("en-CA", {
     style: "currency",

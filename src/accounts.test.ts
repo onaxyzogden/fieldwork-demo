@@ -134,12 +134,45 @@ describe("what was approved", () => {
     expect(agreed).not.toContain("late");
   });
   it("records the approver, with their role when the account has several", () => {
-    const { s } = quoted();
-    approveQuote(s, "q1", "ct6");
-    const a = s.quotes.find((x) => x.id === "q1")!.approval!;
+    // r6 belongs to Northline, so its contacts are the ones who could approve.
+    const s = seed();
+    s.quotes.push({
+      id: "q6",
+      requestId: "r6",
+      type: "Manual quote",
+      amount: 260,
+      high: 260,
+      status: "Sent",
+      notes: "",
+      payOnCompletion: false,
+    });
+    expect(approveQuote(s, "q6", "ct6")).toBe(true);
+    const a = s.quotes.find((x) => x.id === "q6")!.approval!;
     expect(a.contactId).toBe("ct6");
     expect(a.name).toBe("Maya Okonkwo");
     expect(a.role).toBe("Property Manager");
+  });
+  it("refuses a contact who acts for a different account", () => {
+    const { s } = quoted();
+    // ct6 is Northline's; the quote is Daniel Brooks's.
+    expect(approveQuote(s, "q1", "ct6")).toBe(false);
+    expect(s.quotes.find((x) => x.id === "q1")!.status).toBe("Sent");
+  });
+  it("refuses an organization contact who has not been granted authority", () => {
+    const s = seed();
+    s.quotes.push({
+      id: "q6",
+      requestId: "r6",
+      type: "Manual quote",
+      amount: 260,
+      high: 260,
+      status: "Sent",
+      notes: "",
+      payOnCompletion: false,
+    });
+    // Tomas raises work; only Maya has been granted approval.
+    expect(approveQuote(s, "q6", "ct7")).toBe(false);
+    expect(approveQuote(s, "q6", "ct6")).toBe(true);
   });
   it("refuses a second approval rather than re-stamping the first", () => {
     const { s } = quoted();
