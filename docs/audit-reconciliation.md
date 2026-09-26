@@ -85,8 +85,8 @@ how; where the audits are wrong about the current build, this says that too.
 | HF 2 | "Never tell the customer something is confirmed while acceptance is pending" | **Resolved** | `customerStatusText()` (`main.tsx`) translates internal statuses; the customer sees `Matching you with a provider`, never `Awaiting Provider Acceptance`, and `Confirmed` only when `reconcile()` computes it |
 | HF 6 (BLOCKER) | "Who first or when first?" — evaluate provider + slot together | **Resolved** | `suitableProviders()` (`suitability.ts`) returns `{ provider, match, appointments }` per candidate, sorted by whether they have appointments, then travel. The operator picks a combination, exactly as the audit proposes |
 | HF 26 (BLOCKER) | Route-optimization contract | **Partial** | `slots()` accounts for provider city, travel allowance, 15-minute buffer, existing visits, working hours and customer timing preference, and returns scored options with reasons. No traffic model, no end-of-day destination, no written contract document |
-| HF 7 (BLOCKER) | Slot holding and double-booking | **Open** | No hold. Availability is rechecked at simulated checkout, which narrows the window but does not close it |
-| HF 31 | Idempotent booking actions | **Open** | No idempotency keys. Double-submit is possible in principle |
+| HF 7 (BLOCKER) | Slot holding and double-booking | **Resolved** | `Hold` records take a slot while someone books it, `available()` honours other requests' live holds, and `bookVisit()` re-checks availability **inside** the write rather than before it. The audit called this a blocker and was right |
+| HF 31 | Idempotent booking actions | **Resolved** | Each booking press carries an `opKey`, stored on the visit it creates. A repeat returns the same visit instead of a second one |
 | HF 27 | Overrun logic | **Open** | No "schedule at risk" flag |
 | HF 28 | External calendar sync | **Declared gap** | Availability is managed inside the app. `blueprint-data.ts` |
 | HF 9 | Operator-as-provider | **Resolved** | Yousef is a `Provider` roster entry (`model.ts`); "Do it myself" creates an ordinary assignment to that profile. Scheduling is not special-cased on a user id — though `dispatch.ts` does exclude `"yousef"` from automatic reoffers by id, which is the one place the audit's warning still bites |
@@ -156,7 +156,7 @@ how; where the audits are wrong about the current build, this says that too.
 3. **Notification channels** — contractor offers expire unseen today. The one place the current design breaks in the field rather than in theory.
 4. **Guest-link policy** — expiry, revocation, access logging.
 5. **Duplicate detection and merge** — cheap now, painful after real data.
-6. **Slot holds and idempotency** — matters at volume, not at demo scale.
+6. ~~**Slot holds and idempotency** — matters at volume, not at demo scale.~~ **Wrong on both counts, and now fixed.** It mattered at demo scale: two tabs could double-book, and worse, the second tab's write erased the first tab's booking outright. See the correction below.
 7. **Audit log of material changes** — who changed a price, and when.
 
 ## What the audits got wrong about the current build
@@ -175,6 +175,28 @@ act on them:
   the source.
 - HF #30 asks for empty and error states to be designed. Most are, including two
   that were built specifically because an earlier audit found them missing.
+
+## A second correction to this document
+
+This page listed slot holds and idempotency as something that "matters at
+volume, not at demo scale", and `decisions.md` repeated it. Both were wrong, and
+a five-minute check of `store.ts` before planning the work is what showed it.
+
+`save()` did a blind `localStorage.setItem` and `commit()` cloned the state the
+calling tab had *rendered from* rather than what was on disk. So two tabs did
+not merely risk a double-booking at volume — the second tab's save silently
+erased the first tab's, today, with two tabs and no load at all. The reproduction
+is in `src/concurrency.test.ts` and failed on the build before the fix:
+
+```
+× does not let the second tab's write erase the first tab's
+    → expected '' to be 'written by tab A'
+```
+
+The customer-visible symptom was not a clash an operator would notice. It was a
+confirmed appointment disappearing. Writing "not at demo scale" about code I had
+not opened is the same failure mode as the `taskIds` claim below: an assertion
+about the source that the source did not support.
 
 ## A correction to this document
 

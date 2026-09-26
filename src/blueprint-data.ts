@@ -401,11 +401,11 @@ export const entities: Entity[] = [
   {
     id: "visit",
     name: "Visit / Booking",
-    owns: "Task IDs, provider, appointment, duration and simulated travel allowance.",
+    owns: "Task IDs, provider, appointment, duration, simulated travel allowance and the booking key that created it.",
     states:
       "Stored: Proposed, Confirmed, In Progress, Completed, Cancelled. Display may instead show On the Way or Issue.",
     links: ["request", "task", "assignment", "execution"],
-    note: "One request can have several visits. Proposed and confirmed appointments are distinct.",
+    note: "One request can have several visits. Proposed and confirmed appointments are distinct. Availability is checked inside the write, not before it, so a slot taken in the meantime refuses the booking rather than clashing with it.",
   },
   {
     id: "assignment",

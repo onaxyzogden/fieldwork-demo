@@ -119,6 +119,57 @@ export function isSaveFailing() {
   return failing;
 }
 
+/**
+ * What is on disk right now, or `fallback` when there is nothing readable
+ * there. Unlike `load()` this never reseeds and never throws: a write in
+ * progress is the wrong moment to decide someone's saved state is unusable,
+ * and the recovery screen already owns that decision.
+ */
+function current(fallback: State): State {
+  try {
+    const raw = localStorage.getItem(KEY);
+    if (raw === null) return fallback;
+    const parsed = JSON.parse(raw);
+    if (parsed === null) return fallback;
+    return migrateDispatch(checkShape(parsed));
+  } catch {
+    return fallback;
+  }
+}
+
+type WriteOutcome = "written" | "stale" | "failed";
+
+/**
+ * Write, but only if nobody has written since `expectedRev`.
+ *
+ * The read and the write sit in one synchronous block, and JavaScript cannot
+ * be preempted mid-block, so no other code *in this tab* can interleave. Two
+ * tabs are genuinely concurrent, though, which is what the version check is
+ * for: the loser sees a `rev` it did not expect and is told to start again
+ * rather than saving over work it never saw.
+ *
+ * This is not a substitute for a server-side transaction. A backend has real
+ * parallelism and needs a conditional write the database enforces; this is the
+ * browser-shaped equivalent, and it is only sound because localStorage is
+ * synchronous.
+ */
+function writeIfCurrent(draft: State, expectedRev: number): WriteOutcome {
+  let onDisk: unknown = null;
+  try {
+    const raw = localStorage.getItem(KEY);
+    onDisk = raw === null ? null : JSON.parse(raw);
+  } catch {
+    // Unreadable is not stale. Let the write proceed and replace it.
+    onDisk = null;
+  }
+  const storedRev =
+    onDisk && typeof onDisk === "object"
+      ? ((onDisk as { rev?: number }).rev ?? 0)
+      : null;
+  if (storedRev !== null && storedRev !== expectedRev) return "stale";
+  return save(draft) ? "written" : "failed";
+}
+
 export function save(s: State) {
   let ok = true;
   try {
@@ -135,16 +186,42 @@ export function save(s: State) {
   return ok;
 }
 
+/** How many times a losing write re-applies itself before giving up. */
+const RETRIES = 3;
+
 /**
- * Every write goes through one pipeline — clone, migrate, mutate, reconcile,
+ * Every write goes through one pipeline — read, migrate, mutate, reconcile,
  * deliver notifications, persist — so the guest assessment link and the
  * workspace cannot drift into two different ideas of what a write means.
+ *
+ * The read is the part that matters. `previous` is the state the calling tab
+ * *rendered from*, which is not necessarily what is on disk: another tab may
+ * have written since. Applying to `previous` and saving is how one customer's
+ * confirmed appointment used to vanish — the second tab's clone never
+ * contained the first tab's booking, and saved over it.
+ *
+ * So the change is applied to the newest state instead, and re-applied if
+ * someone wins the race in between. Re-applying is safe because every mutation
+ * in this codebase addresses records by id rather than by array position, so
+ * the same `fn` against a newer state means the same thing. What it does *not*
+ * mean is that the change is still valid — a booking whose slot was just taken
+ * has to notice that itself, inside `fn`, which is why `bookVisit()` checks
+ * availability at the point of writing rather than before the commit.
  */
 export function commit(previous: State, fn: (draft: State) => void): State {
-  const draft = migrateDispatch(structuredClone(previous));
-  fn(draft);
-  reconcile(draft);
-  deliverUpdates(previous, draft);
-  save(draft);
-  return draft;
+  let draft = previous;
+  for (let attempt = 0; ; attempt++) {
+    const base = current(previous);
+    draft = migrateDispatch(structuredClone(base));
+    fn(draft);
+    reconcile(draft);
+    draft.rev = (base.rev ?? 0) + 1;
+    const outcome = writeIfCurrent(draft, base.rev ?? 0);
+    if (outcome === "stale" && attempt < RETRIES) continue;
+    // A failed write is still shown to this tab — the save-health banner is
+    // what tells the user it did not land. A stale one that has run out of
+    // retries is not persisted and not announced.
+    if (outcome !== "stale") deliverUpdates(base, draft);
+    return draft;
+  }
 }

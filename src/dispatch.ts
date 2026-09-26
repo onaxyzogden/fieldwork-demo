@@ -17,6 +17,8 @@ import { migratePmw } from "./pmw";
 
 export function migrateDispatch(s: State): State {
   s.settings ??= { autoReofferDeclined: false };
+  s.rev ??= 0;
+  s.holds ??= [];
   s.notifications ??= [];
   migrateAccounts(s);
   migratePmw(s);
