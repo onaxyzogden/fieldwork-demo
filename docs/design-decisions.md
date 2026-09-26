@@ -445,3 +445,25 @@ Accepted. Decision 3 settled the sequence — approve, store a method, confirm, 
 Labelling is per surface rather than per state, which is a deliberate middle setting. An `Authorized` badge reads like a hold on a real card, so each payment surface carries one notice saying nothing is stored, held or moved. A marker beside every state would be noise; the blueprint entry alone would not reach anyone using the demo.
 
 What this does **not** model: a provider is asynchronous and can fail after returning, retries are not idempotent for free, and a scheduled authorization needs something to run it. Those are named in `blueprint-data.ts` as the production gap.
+
+## ADR 045: Notification channels are chosen by urgency, and the classification is exhaustive
+
+Accepted. Decision 11 settled that channel follows urgency rather than role, and the earlier version of `docs/notifications.md` had it the other way round for a reason worth remembering: the taxonomy was read off `emit()`'s recipient strings, which are roles, so the answer came out role-shaped. A cancellation two hours before an appointment is urgent whoever receives it.
+
+`urgency` is a `Record<NotificationKind, Urgency>` over a union of every kind the app emits. Adding a kind without classifying it is a **build error**, not a silent default. That is the whole reason for the union: a notification taxonomy with a fallback branch is one that quietly stops being true.
+
+**In-app is `delivered`; an external channel stops at `sent`.** In-app genuinely is delivered — it is sitting in the inbox. SMS and email never move past `sent` because without a provider nothing reports back, and freezing them there is the honest shape of the gap rather than a placeholder. A real integration turns that into delivered, bounced or a hard failure, and until one exists nobody can say which.
+
+**A bounce is reachable, not theoretical.** A channel with no address on file bounces immediately with the reason. One seeded contact deliberately has an email and no mobile, so the state can be seen in the running app — the same rule as the seeded organization in ADR 035: a branch nothing reaches is a branch nobody maintains.
+
+`unseen()` answers the question the audits actually asked — "has the contractor seen the offer?" — which the operator could not ask before, because an offer expiring unseen looked identical to one being ignored. It filters on time-sensitive kinds only: a document nobody opened is not something to chase.
+
+## ADR 046: Notifications are part of the state, so they are computed before the write
+
+Accepted, as a regression fix. ADR 039 reordered `commit()` to read-apply-write, and in doing so moved `deliverUpdates()` to *after* `writeIfCurrent()`. The reasoning at the time — "a stale write that ran out of retries is not persisted and not announced" — was wrong on its own terms: `deliverUpdates()` does not announce anything, it writes rows into the state.
+
+The effect was that every notification raised between that change and this one existed only in the writing tab's memory. It rendered, and it was gone on the next reload.
+
+The browser hid it. The tab that raises a notification is the tab that displays it, so the defect is invisible unless you reload, or read the stored state directly — which is what caught it: a delivery panel rendering with rows while `localStorage` held none.
+
+Notifications are state. They are computed before serialization, full stop, and a regression test in `store.test.ts` asserts a raised notification is on disk. A second test asserts a re-applied write does not double them, and it also records that one-per-recipient is correct: a clarification goes to the operator *and* the customer, so the property worth asserting is that no recipient gets two, not that only one row exists.
