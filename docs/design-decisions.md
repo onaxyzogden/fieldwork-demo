@@ -361,3 +361,29 @@ Reopening the original task would rewrite history: on the day it finished, the w
 It goes on a **new request**, not the original one. This is the part that is easy to get wrong: request status is derived by `reconcile()` from its tasks, not stored, so adding an unfinished task to a finished request would derive that request back out of `Completed` — the same destruction by a different route. A test asserts the original request still holds exactly one task after rework is raised.
 
 `warranty` is `{ billable, decidedBy, decidedAt }` and starts **absent**. Whether rework is chargeable is a judgement someone makes, sometimes days later and sometimes after visiting the property; a boolean defaulted at creation is wrong for half the cases and silently so. "Raised, nobody has decided who pays" is a true state and is better visible than guessed.
+
+## ADR 039: The write boundary reads before it writes
+
+Accepted. Two open tabs could lose each other's work. `save()` did a blind `localStorage.setItem`, and `commit(previous, fn)` cloned `previous` — the state the calling tab had **rendered from** — rather than what was on disk. The second tab's clone never contained the first tab's change, so saving it erased that change.
+
+The symptom is worse than the double-booking it was filed under. Two visits at one time is a clash an operator would see. What actually happened is that one customer's confirmed appointment vanished, with nothing anywhere recording that it had existed.
+
+`commit()` now reads the newest state off disk, applies the change to that, bumps a `rev`, and writes only if `rev` on disk is still the one it read. A losing write re-applies itself against the newer state, up to three times. Re-applying is safe because every mutation in this codebase addresses records by id rather than by array position, so the same function against a newer state means the same thing.
+
+What re-applying does **not** mean is that the change is still valid. A booking whose slot was taken in between has to notice that itself, which is why `bookVisit()` checks availability *inside* the write. Validating before the commit checks a state that no longer exists by the time it matters — that was the original bug in a different costume.
+
+`rev` is optional on the type and backfilled by `migrateDispatch()`. Requiring it in `checkShape()`, as first planned, would have sent every state saved before this existed to the recovery screen.
+
+The atomicity claim is deliberately narrow. Read-check-write in one synchronous block cannot be interleaved *within* a tab, because JavaScript is not preempted mid-block and localStorage is synchronous. Two tabs are genuinely concurrent, which is what the version check is for. Neither is a substitute for a server-side transaction, and the comment in `store.ts` says so.
+
+`update()` stopped calling `commit()` inside a React state updater at the same time. StrictMode double-invokes updaters in development, so every write ran twice — two saves, two rounds of notifications. Production builds do not double-invoke, so the shipped app was unaffected, but a state updater must be pure.
+
+## ADR 040: A held slot is a record, not a UI state
+
+Accepted. Rechecking availability at checkout narrows the race window; it does not close it, and it produces the worst version of the experience: the customer picks a time, fills in their details, and is refused at the end.
+
+`Hold` is a record with an expiry. `available()` refuses a slot covered by another request's live hold — the same overlap arithmetic it already ran against booked visits, so it is written once and asked twice. A request never blocks itself, or a customer could not book the slot they are holding.
+
+Holds expire rather than being released by whoever abandoned the checkout, because the usual way to abandon a checkout is to close the tab. `reconcile()` drops the expired ones beside where it already expires contractor offers — the same kind of fact, a promise with a clock on it that nobody is coming back to clear by hand.
+
+Idempotency rides on the same write. Each booking press carries an `opKey`, stored on the visit it creates; a repeat with that key returns the existing visit. A double tap, a retried press and a re-applied `commit()` therefore all produce one appointment, which matters more now that a losing write re-applies itself automatically.

@@ -104,6 +104,24 @@ export type Request = {
   /** Set when the request was created by approving walkthrough findings. */
   walkthroughId?: string;
 };
+/**
+ * A slot a customer is in the middle of taking. Without it, two people at the
+ * same checkout both see the slot free right up to the moment they book, and
+ * the second one's booking is refused after they have already agreed to it.
+ *
+ * Holds expire rather than being cleaned up by whoever abandoned the checkout,
+ * because the common way to abandon a checkout is to close the tab.
+ */
+export type Hold = {
+  id: string;
+  requestId: string;
+  providerId: string;
+  start: string;
+  duration: number;
+  expiresAt: number;
+};
+/** How long a slot is held while someone finishes booking it. */
+export const HOLD_MS = 10 * 60 * 1000;
 export type Visit = {
   execution?: {
     onWayAt?: string;
@@ -124,6 +142,12 @@ export type Visit = {
   duration: number;
   status: string;
   travel: number;
+  /**
+   * The booking action that created this visit. A second submit carrying the
+   * same key returns this visit instead of creating another, so a double tap,
+   * a retry and a re-applied `commit()` all produce one appointment.
+   */
+  opKey?: string;
 };
 export type Assignment = {
   declineReason?: string;
@@ -266,6 +290,17 @@ export type State = {
   findings: Finding[];
   events: { id: string; text: string; at: string }[];
   clock: number;
+  /** Slots being taken right now. Backfilled by `migrateDispatch()`. */
+  holds?: Hold[];
+  /**
+   * Bumped by every `commit()`. Two tabs that both write from the same `rev`
+   * would lose one another's work, so the second one is made to start again.
+   *
+   * Optional on the type and backfilled by `migrateDispatch()`: requiring it
+   * in `checkShape()` would send every state saved before this existed to the
+   * recovery screen.
+   */
+  rev?: number;
 };
 /**
  * Who the work is billed to. One record for both a homeowner and a property
@@ -917,6 +952,10 @@ export function log(s: State, text: string) {
   s.events.unshift({ id: uid(), text, at: new Date(s.clock).toISOString() });
 }
 export function reconcile(s: State) {
+  // Beside offer expiry, because they are the same kind of fact: a promise
+  // with a clock on it that nobody is coming back to release by hand.
+  if (s.holds?.length)
+    s.holds = s.holds.filter((h) => h.expiresAt > s.clock);
   for (const a of s.assignments)
     if (a.status === "Offered" && a.expiresAt <= s.clock) {
       a.status = "Expired";
@@ -1029,6 +1068,8 @@ export function available(
   start: string,
   exclude?: string,
   timing = "",
+  /** Whose hold to ignore: a request never blocks itself. */
+  forRequest?: string,
 ) {
   const d = new Date(start),
     p = torontoParts(d);
@@ -1047,14 +1088,104 @@ export function available(
     return false;
   if (timing.includes("9 AM–12 PM") && mins + duration > 12 * 60) return false;
   if (timing.includes("1–5 PM") && mins < 13 * 60) return false;
-  return !s.visits.some(
-    (v) =>
-      v.id !== exclude &&
-      v.providerId === providerId &&
-      v.status !== "Cancelled" &&
-      +d - travel * 60000 < +new Date(v.start) + (v.duration + 15) * 60000 &&
-      +d + (duration + 15 + travel) * 60000 > +new Date(v.start),
+  /* The same overlap arithmetic answers both questions, so it is written once
+     and asked of booked visits and of live holds in turn. */
+  const clashes = (other: { start: string; duration: number }) =>
+    +d - travel * 60000 < +new Date(other.start) + (other.duration + 15) * 60000 &&
+    +d + (duration + 15 + travel) * 60000 > +new Date(other.start);
+  if (
+    s.visits.some(
+      (v) =>
+        v.id !== exclude &&
+        v.providerId === providerId &&
+        v.status !== "Cancelled" &&
+        clashes(v),
+    )
+  )
+    return false;
+  /* Someone else's live hold blocks the slot; this request's own does not, or
+     a customer could not book the slot they are holding. */
+  return !(s.holds ?? []).some(
+    (h) =>
+      h.providerId === providerId &&
+      h.requestId !== forRequest &&
+      h.expiresAt > s.clock &&
+      clashes(h),
   );
+}
+/**
+ * Take a slot while a customer finishes booking it. One hold per request: a
+ * customer changing their mind about the time replaces their own hold rather
+ * than accumulating them.
+ */
+export function holdSlot(
+  s: State,
+  o: { requestId: string; providerId: string; start: string; duration: number },
+) {
+  s.holds = (s.holds ?? []).filter((h) => h.requestId !== o.requestId);
+  const hold: Hold = { id: uid(), ...o, expiresAt: s.clock + HOLD_MS };
+  s.holds.push(hold);
+  return hold;
+}
+/** Give the slot back — on cancel, on going back, and once a visit exists. */
+export function releaseHold(s: State, requestId: string) {
+  s.holds = (s.holds ?? []).filter((h) => h.requestId !== requestId);
+}
+/**
+ * Create a visit, checking the slot is still free **at the moment of writing**.
+ *
+ * The check has to live here rather than in the screen. `commit()` re-applies
+ * this function against whatever is newest on disk, so a slot that was free
+ * when the customer saw it may not be free when the write lands; validating
+ * before the commit would be checking a state that no longer exists by the
+ * time it matters.
+ *
+ * Returns null when the slot has gone, so the caller can say so rather than
+ * silently creating a clash.
+ */
+export function bookVisit(
+  s: State,
+  o: {
+    requestId: string;
+    taskIds: string[];
+    providerId: string;
+    start: string;
+    duration: number;
+    travel: number;
+    city: string;
+    timing?: string;
+    opKey: string;
+  },
+): Visit | null {
+  const already = s.visits.find((v) => v.opKey && v.opKey === o.opKey);
+  if (already) return already;
+  if (
+    !available(
+      s,
+      o.providerId,
+      o.duration,
+      o.city,
+      o.start,
+      undefined,
+      o.timing ?? "",
+      o.requestId,
+    )
+  )
+    return null;
+  const visit: Visit = {
+    id: uid(),
+    requestId: o.requestId,
+    taskIds: o.taskIds,
+    providerId: o.providerId,
+    start: o.start,
+    duration: o.duration,
+    status: "Proposed",
+    travel: o.travel,
+    opKey: o.opKey,
+  };
+  s.visits.push(visit);
+  releaseHold(s, o.requestId);
+  return visit;
 }
 export function slots(
   s: State,

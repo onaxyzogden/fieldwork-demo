@@ -73,6 +73,7 @@ import {
   instantEligible,
   accounts,
   approveQuote,
+  bookVisit,
   materialsResponsibilities,
   type MaterialsResponsibility,
   accountName,
@@ -480,7 +481,13 @@ function Workspace({
   }, [sidebar]);
   const [override, setOverride] = useState("");
   const update = (fn: (d: State) => void, msg?: string) => {
-    setS((prev) => commit(prev, fn));
+    /* commit() writes to localStorage and emits notifications, so it must not
+       run inside a React state updater: StrictMode double-invokes those in
+       development, which ran every write — and every notification — twice.
+       Passing `s` rather than the updater's `prev` is safe now that commit()
+       reads the newest state off disk itself and only falls back to what it
+       is given. */
+    setS(commit(s, fn));
     if (msg) {
       setToast(msg);
       setTimeout(() => setToast(""), 3500);
@@ -597,7 +604,7 @@ function Workspace({
       setOverride("");
     } else if (
       slot &&
-      !available(s, provider, duration, r.city, slot, undefined, r.timing)
+      !available(s, provider, duration, r.city, slot, undefined, r.timing, r.id)
     ) {
       setSlot("");
       setOverride("");
@@ -631,7 +638,7 @@ function Workspace({
       provider,
       tasks.filter((t) => !selected.length || selected.includes(t.id)),
     ) &&
-    available(s, provider, duration, r.city, override, undefined, r.timing)
+    available(s, provider, duration, r.city, override, undefined, r.timing, r.id)
       ? [
           {
             start: override,
@@ -709,22 +716,26 @@ function Workspace({
         "No appointment fits. Try a shorter visit or another provider.",
       );
     clearAll();
-    update(
-      (d) => {
-        const id = uid();
-        d.visits.push({
-          id,
+    /* One key per press, so a double tap or a re-applied commit produces one
+       visit rather than two. */
+    const opKey = uid();
+    let booked: Visit | null = null;
+    update((d) => {
+        booked = bookVisit(d, {
           requestId: r.id,
           taskIds: ids,
           providerId: provider,
           start: sl.start,
           duration,
-          status: "Proposed",
           travel: sl.travel,
+          city: r.city,
+          timing: r.timing,
+          opKey,
         });
+        if (!booked) return;
         d.assignments.push({
           id: uid(),
-          visitId: id,
+          visitId: booked.id,
           providerId: provider,
           status: provider === "yousef" ? "Accepted" : "Offered",
           pay: provider === "yousef" ? 0 : pay,
@@ -734,9 +745,17 @@ function Workspace({
           d,
           `${r.name} · visit created for ${providers.find((p) => p.id === provider)?.name}${provider === "yousef" ? "" : " · offer sent"}`,
         );
-      },
-      provider === "yousef" ? "Visit created" : "Offer sent to contractor",
-    );
+    });
+    /* The slot can go between the customer seeing it and the write landing,
+       which is exactly what bookVisit refuses. The success message is sent
+       after the fact rather than passed to update(), so a refused booking does
+       not get a "Visit created" toast over the top of its own error. */
+    if (!booked)
+      return invalidate(
+        "slot",
+        "That time was taken while you were choosing. Pick another appointment.",
+      );
+    notify(provider === "yousef" ? "Visit created" : "Offer sent to contractor");
     setSelected([]);
   };
   const beginReassign = (v: Visit, self = false) => {

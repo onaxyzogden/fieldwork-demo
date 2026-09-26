@@ -9,6 +9,8 @@ import {
   instantEligible,
   dateLabel,
   log,
+  holdSlot,
+  releaseHold,
 } from "./model";
 import { getIssue, answerKey } from "./clarification";
 import {
@@ -115,7 +117,13 @@ export default function CustomerIntake({
     );
   useEffect(() => {
     if (selected && !selectionValid && r.status === "Draft")
-      patchRequest({ preferredSlot: undefined, timing: "Weekdays · flexible" });
+      update((d) => {
+        Object.assign(d.requests.find((x) => x.id === r.id)!, {
+          preferredSlot: undefined,
+          timing: "Weekdays · flexible",
+        });
+        releaseHold(d, r.id);
+      });
   }, [signature, selectionValid, r.status]);
   useEffect(() => {
     if (more) dialog.current?.showModal();
@@ -127,14 +135,25 @@ export default function CustomerIntake({
       editor.current?.focus();
   }, [r.editingTaskId, screen]);
   const choose = (o: (typeof options)[number]) => {
-    patchRequest({
-      preferredSlot: {
-        start: o.start,
+    update((d) => {
+      Object.assign(d.requests.find((x) => x.id === r.id)!, {
+        preferredSlot: {
+          start: o.start,
+          providerId: o.providerId,
+          duration: o.duration,
+          signature,
+        },
+        timing: dateLabel(o.start),
+      });
+      /* Take the slot while this customer finishes. Without it another
+         customer is shown the same time as free right up to the moment their
+         booking is refused, which is a worse experience than not offering it. */
+      holdSlot(d, {
+        requestId: r.id,
         providerId: o.providerId,
+        start: o.start,
         duration: o.duration,
-        signature,
-      },
-      timing: dateLabel(o.start),
+      });
     });
     setMore(false);
   };

@@ -867,3 +867,64 @@ Still open, in priority order: slot holds and booking idempotency (raised to the
 top by the review, and correctly), the payment lifecycle, notification channels
 and delivery state, guest-link security, approval *enforcement* as distinct from
 the recording now in place, duplicate detection, and an audit log.
+
+## Two tabs could erase each other's bookings
+
+The remaining open items were triaged by whether a prototype with no server can
+actually build them. Three can: slot holds and booking idempotency, duplicate
+detection and merge, and an audit log. This is the first.
+
+It had been written up — by me, in two documents — as a scale concern:
+*"invisible at demo scale; in production it is the difference between two people
+clicking the same Tuesday slot being a harmless retry and being two bookings."*
+Opening `store.ts` before planning the work showed that was wrong twice over.
+
+`save()` did a blind `localStorage.setItem`, and `commit(previous, fn)` cloned
+`previous` — the state the calling tab had **rendered from** — not what was on
+disk. So the failure was not a clash at volume. With two tabs and no load at
+all, the second tab's save erased the first tab's booking, and the
+customer-visible symptom was a confirmed appointment silently disappearing.
+
+The reproduction was written first and failed on the unfixed build:
+
+```
+× does not let the second tab's write erase the first tab's
+    → expected '' to be 'written by tab A'
+× does not let two tabs book the same provider at the same time
+    → expected [] to not have a length of +0
+```
+
+Fixing the lost update made the second failure *worse-looking* and more honest:
+two visits at one time, where before the clash had been hidden by one of them
+being destroyed.
+
+**`commit()` reads before it writes.** It applies the change to the newest state
+on disk, bumps a `rev`, and writes only if `rev` on disk is still what it read;
+a losing write re-applies itself. That is safe because every mutation addresses
+records by id, not by array position. The atomicity claim is kept narrow on
+purpose — read-check-write cannot interleave *within* a tab, two tabs are
+genuinely concurrent and that is what the version check is for, and neither is a
+substitute for a server-side transaction.
+
+**The availability check moved inside the write.** `bookVisit()` re-checks the
+slot at the moment of writing and returns null if it has gone. Checking before
+the commit validates a state that no longer exists by the time it matters —
+the original bug wearing a different hat.
+
+**A held slot is a record.** Choosing a time takes it, with an expiry, so another
+customer is not shown a slot they will be refused at the end of checkout. Holds
+expire rather than being released by hand, because the usual way to abandon a
+checkout is to close the tab.
+
+**Each booking press carries a key.** Stored on the visit it creates, so a
+double tap, a retry, and a re-applied commit all produce one appointment. Also
+fixed: `update()` was calling `commit()` inside a React state updater, which
+StrictMode double-invokes in development — every write ran twice in dev.
+
+Validation: 296 tests (5 new), build, `status:check`, `design:check`. Each of the
+three new guards was removed in turn and the suite confirmed to catch it. In a
+real browser: the booking flow still works end to end and the new visit carries
+its key with no leaked holds; two tabs racing the same slot produce one booking
+and no duplicate; and with the slot taken underneath it, the UI refuses and says
+*"That time was taken while you were choosing."* 30 overflow checks across five
+widths and both themes are clean.

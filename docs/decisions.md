@@ -443,10 +443,12 @@ material, not in the source.
 
 Not decisions — work the decisions imply, in priority order:
 
-1. **Slot holds and booking idempotency.** Invisible at demo scale; in
-   production it is the difference between two people clicking the same Tuesday
-   slot being a harmless retry and being two legitimate-looking bookings. Raised
-   to this position by the review, and correctly.
+1. ~~**Slot holds and booking idempotency.**~~ **Done, and it was not what this
+   entry said it was.** "Invisible at demo scale" was wrong: `commit()` applied
+   changes to the state the calling tab had rendered from, so the second of two
+   tabs erased the first one's booking rather than clashing with it. Fixed by a
+   version check at the write boundary, holds, and an `opKey` per booking —
+   ADR 039, and the correction in `audit-reconciliation.md`.
 2. **The payment lifecycle** (decision 3), including the failed-authorization
    path.
 3. **Notification channels and delivery state** (decision 11).
