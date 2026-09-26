@@ -1127,7 +1127,7 @@ write does not double them — and my first version of that test was wrong too,
 asserting one row where one *per recipient* is correct, since a clarification
 goes to the operator and the customer both.
 
-Validation: 351 tests (17 new), build, `status:check`, `design:check`. Four
+Validation: 353 tests (17 new), build, `status:check`, `design:check`. Four
 guarantees removed in turn and each caught: urgency-driven channels, the bounce
 on a missing address, an external channel claiming delivery it cannot observe,
 and `unseen()` filtering by urgency. In the browser: asking the no-mobile
