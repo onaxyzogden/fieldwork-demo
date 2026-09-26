@@ -1028,3 +1028,59 @@ notification channels and delivery state, guest-link security, and approval
 *enforcement* as distinct from the recording that now exists. `docs/decisions.md`
 keeps them with the agreed approach, and keeps the struck-through reasoning for
 the three that are done — including where that reasoning turned out to be wrong.
+
+## The payment lifecycle, modelled
+
+First of the four items that need a server. The agreed approach: build the
+states and transitions so the shape is right and testable, contact nothing, and
+label every simulated boundary.
+
+Decision 3 settled the sequence and left it unbuilt — approve, store a method,
+confirm, authorize near service, capture at completion. All six states now
+exist: `Authorized`, `Paid`, `Failed`, `Outstanding`, `Refunded` and
+`Partially Refunded`.
+
+**Confirmation waits on a method, not on money.** That is the substantive
+change, and it is the point of asking for a card before scheduling rather than
+before approval: a job three weeks out cannot hold an authorization that long,
+and the customer should still get a confirmed appointment. `secured()` replaced
+two separate inline `status === "Paid"` checks that could have drifted apart. It
+still accepts `Paid`, because the simulated checkout takes that shortcut and the
+five demo scenarios depend on it.
+
+**A failed capture is `Outstanding`, not `Failed`.** Different situations:
+`Failed` is a charge that never started, `Outstanding` is work that was done and
+not paid for, which is the one somebody has to chase. Collapsing them was the
+defect the audit named.
+
+**A partial refund is its own status,** not `Paid` with a number beside it,
+because an operator filters on it.
+
+**The authorization window is config.** `AUTHORIZE_WITHIN_DAYS` decides whether
+the hold goes on at confirmation or is scheduled for that many days before
+service. Real expiry varies by network and has to be checked against the
+provider's rules at integration — asserting a number from memory is what
+decision 3 was rewritten to avoid in the first place.
+
+**`status:check` caught this before I did.** Adding `Authorized` to the source
+failed the build immediately, because the status dictionary still carried it as
+a struck-through gap. That is the mechanism doing exactly what it was built for,
+and it is the first time it has fired on a real change rather than a test.
+
+Labelling is one notice per payment surface — a middle setting between a marker
+beside every state, which is noise, and the blueprint entry alone, which never
+reaches anyone using the demo. An `Authorized` badge reads like a hold on a real
+card; each surface says plainly that nothing is stored, held or moved.
+
+What is **not** modelled, and is named as the production gap: a provider is
+asynchronous and can fail after returning, retries are not idempotent for free,
+and a scheduled authorization needs something to run it.
+
+Validation: 336 tests (19 new), build, `status:check` (47 values), `design:check`.
+Four guarantees removed in turn and each confirmed caught: the Outstanding
+distinction, the authorization window, one-hold-per-key, and confirmation
+waiting on a method. In the browser the full sequence runs —
+Authorized → Paid → Partially Refunded with $200 of $400 returned, and
+separately Authorized → Outstanding with the chase warning — the notice appears
+exactly once per surface, and 10 overflow checks across five widths and both
+themes are clean.

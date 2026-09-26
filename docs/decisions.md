@@ -26,8 +26,8 @@ Each entry carries the same five fields:
 |---|---|---|---|
 | 1 | Account is a person *or* an organization | Decided with modification | Yes |
 | 2 | Capture the approver, defer enforcement | Decided | Yes |
-| 3 | Tokenize early, authorize near service, capture at completion | Decided with modification | No |
-| 4 | Card before scheduling, never before approval | Decided | Partly |
+| 3 | Tokenize early, authorize near service, capture at completion | Decided with modification | Modelled |
+| 4 | Card before scheduling, never before approval | Decided | Modelled |
 | 5 | Guest links expire, revocable, logged | Decided | No |
 | 6 | No deposits in v1 | Decided | n/a |
 | 7 | Materials responsibility is a per-task field | Decided with modification | Yes |
@@ -161,7 +161,10 @@ written into `docs/status-dictionary.md` as struck-through recorded gaps, so
 `npm run status:check` fails the build the day one is implemented without being
 documented. Nothing else is built: payment is simulated.
 
-**Status.** Decided with modification. Not built.
+**Status.** Decided with modification. **Modelled** — ADR 044. Every state and
+transition exists and is tested; no money moves, no provider is contacted, and
+`payments.ts` says so in its first paragraph. What a real integration adds is
+asynchrony and failure after the call returns, which nothing here reproduces.
 
 ---
 
@@ -182,7 +185,9 @@ the contradiction.
 authorized, not charged, before work is scheduled", which is the correct
 sequence. The simulated checkout still collects at approval time and would move.
 
-**Status.** Decided. Copy is right; the simulated flow is not yet.
+**Status.** Decided. **Modelled** alongside #3: `secured()` now confirms a visit
+on a stored method rather than on money having moved, which is the whole point
+of asking for the card before scheduling instead of before approval.
 
 ---
 
@@ -457,8 +462,11 @@ named in `blueprint-data.ts` as a production gap the way payments already are.
    tabs erased the first one's booking rather than clashing with it. Fixed by a
    version check at the write boundary, holds, and an `opKey` per booking —
    ADR 039, and the correction in `audit-reconciliation.md`.
-2. **The payment lifecycle** (decision 3), including the failed-authorization
-   path.
+2. ~~**The payment lifecycle** (decision 3), including the failed-authorization
+   path.~~ **Modelled** (ADR 044). The failed *capture* path exists as
+   `Outstanding`. A failed *authorization* days after booking — the case where
+   someone thinks they have an appointment and does not — is still open, because
+   it needs a scheduler this prototype has no way to run.
 3. **Notification channels and delivery state** (decision 11).
 4. **Guest-link security** (decision 5).
 5. **Authorization enforcement** — decision 2 records who approved; nothing

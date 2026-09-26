@@ -194,7 +194,41 @@ export type Payment = {
   status: string;
   amount: number;
   reference: string;
+  /** The stored method this was taken against. */
+  methodId?: string;
+  authorizedAt?: string;
+  capturedAt?: string;
+  /** How much has gone back, for the partial case. */
+  refunded?: number;
 };
+/**
+ * A stored payment method.
+ *
+ * `token` is all a real integration would ever hold — the card itself never
+ * reaches this application, and the simulated token is shaped to make that
+ * obvious rather than to look like a card number.
+ */
+export type PaymentMethod = {
+  id: string;
+  accountId: string;
+  token: string;
+  brand: string;
+  last4: string;
+  addedAt: string;
+};
+/**
+ * How close to service an authorization is placed.
+ *
+ * A hold expires on a timescale of days, so a job booked three weeks out
+ * cannot be covered by one placed at approval. Within this window the
+ * authorization goes on at confirmation; beyond it the method is stored and
+ * the authorization is scheduled for later.
+ *
+ * Config rather than a constant, because the real expiry varies by network and
+ * merchant category and has to be checked against the provider's own rules at
+ * integration rather than asserted from here.
+ */
+export const AUTHORIZE_WITHIN_DAYS = 7;
 /**
  * A location, not a job. Requests come and go; the property persists, which is
  * the only thing a maintenance history can hang off. Linked by foreign key and
@@ -292,6 +326,8 @@ export type State = {
   clock: number;
   /** Slots being taken right now. Backfilled by `migrateDispatch()`. */
   holds?: Hold[];
+  /** Tokenized payment methods. Backfilled by `migrateDispatch()`. */
+  paymentMethods?: PaymentMethod[];
   /**
    * Where a merged-away record went: old id → surviving id. Consulted only
    * where an id arrives from outside the app, so no list has to filter.
@@ -1120,6 +1156,31 @@ export const auditFor = (s: State, requestId: string) =>
   s.events.filter((e) => e.requestId === requestId);
 /** True when an entry records a change rather than narrating one. */
 export const isChange = (e: AuditEntry) => !!e.field;
+/** The stored method for whoever is paying for this quote, if there is one. */
+export function methodFor(s: State, quote: Quote) {
+  const r = s.requests.find((x) => x.id === quote.requestId);
+  if (!r) return undefined;
+  return (s.paymentMethods ?? []).find((m) => m.accountId === r.accountId);
+}
+/**
+ * Whether the money side of a quote is far enough along to confirm a visit.
+ *
+ * The decided sequence is approve → method on file → confirm → authorize near
+ * service → capture at completion, so confirmation waits on a **method**, not
+ * on money having moved. That is the point of the sequence: a job three weeks
+ * out cannot hold an authorization that long, and the customer should still get
+ * a confirmed appointment.
+ *
+ * `Paid` and `Authorized` also count. The simulated checkout still writes
+ * `Paid` directly, and the five demo scenarios depend on it, so this predicate
+ * has to accept the shortcut as well as the full sequence.
+ */
+export const secured = (s: State, q: Quote) =>
+  q.payOnCompletion ||
+  s.payments.some(
+    (p) => p.quoteId === q.id && ["Authorized", "Paid"].includes(p.status),
+  ) ||
+  !!methodFor(s, q);
 export function reconcile(s: State) {
   // Beside offer expiry, because they are the same kind of fact: a promise
   // with a clock on it that nobody is coming back to release by hand.
@@ -1170,17 +1231,14 @@ export function reconcile(s: State) {
           ),
       ) &&
       q?.status === "Approved" &&
-      (q.payOnCompletion ||
-        s.payments.some((p) => p.quoteId === q.id && p.status === "Paid"));
+      secured(s, q);
     r.status = ready
       ? "Confirmed"
       : q && q.status !== "Approved"
         ? "Awaiting Quote Approval"
         : vs.length && !vs.every(accepted)
           ? "Awaiting Provider Acceptance"
-          : q?.status === "Approved" &&
-              !q.payOnCompletion &&
-              !s.payments.some((p) => p.quoteId === q.id && p.status === "Paid")
+          : q?.status === "Approved" && !secured(s, q)
             ? "Awaiting Payment"
             : asked
               ? "Information requested"

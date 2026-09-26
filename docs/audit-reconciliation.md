@@ -104,10 +104,10 @@ how; where the audits are wrong about the current build, this says that too.
 
 | # | Item | Status | Evidence |
 |---|---|---|---|
-| PMW F (CRITICAL) | "Card on file is not sufficient payment logic" | **Open, model decided** | `Payment.status` is `Paid`, `Failed`, `Refunded`. No authorization, capture, deposit or outstanding balance. The sequence and the authorization-timing rule are decided — `docs/decisions.md` #3 — and unbuilt |
+| PMW F (CRITICAL) | "Card on file is not sufficient payment logic" | **Modelled** | All six states exist and are tested: `Authorized`, `Paid`, `Failed`, `Outstanding`, `Refunded`, `Partially Refunded`, plus a tokenized `PaymentMethod` and a config authorization window. Simulated throughout and labelled as such in `blueprint-data.ts` and on every payment surface. ADR 044 |
 | PMW F (CRITICAL) | Failed charge path | **Partial** | `Failed` exists and the entry is preserved for retry (`blueprint-data.ts`). No `Outstanding` state, no alternate-payment request, no operator alert |
 | PMW F, HF 10 | Price increases and change orders | **Partial** | A new quote supersedes the old; the customer must approve the new one. Nothing prevents an operator editing a price in place, and nothing produces a change-order record |
-| PMW F | Refunds and partial refunds | **Partial** | `Refunded` exists; partial refunds do not |
+| PMW F | Refunds and partial refunds | **Modelled** | `Partially Refunded` is its own status rather than `Paid` with a number beside it, because an operator filters on it. `refundPayment()` refuses to send back more than was taken |
 | PMW F, HF 10 | Tax | **Resolved for PMW, open elsewhere** | Walkthroughs snapshot `taxRate` at send time, deliberately, so an old assessment keeps matching its own total (`pmw.ts`, ADR 021). Reactive quotes have no tax breakdown |
 | HF 11 | Is contractor pay fixed or estimated? | **Decided** | Fixed on acceptance, and inclusive of ordinary consumables per decision 7. The UI already says "Your pay" and now means it. `docs/decisions.md` #8 |
 | HF 34 | Merchant of record, payouts | **Decided** | The ledger separation is kept and already true in the data; the legal designation is deliberately not encoded until the structure is confirmed. `docs/decisions.md` #12 |

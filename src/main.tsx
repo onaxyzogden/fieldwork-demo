@@ -75,6 +75,8 @@ import {
   approveQuote,
   auditFor,
   bookVisit,
+  secured,
+  methodFor,
   isChange,
   materialsResponsibilities,
   type MaterialsResponsibility,
@@ -83,6 +85,14 @@ import {
   quoted,
   confirmed,
 } from "./model";
+import {
+  authorizationDue,
+  authorizePayment,
+  capturePayment,
+  outstandingFor,
+  refundPayment,
+  storePaymentMethod,
+} from "./payments";
 import { storablePhoto, unreadableMessage } from "./photos";
 import { Sidebar, DemoBar, Topbar, DemoSettings } from "./Shell";
 import { useFieldErrors } from "./fields";
@@ -538,6 +548,16 @@ function Workspace({
   const r = s.requests.find((r) => r.id === active) || s.requests[0];
   const tasks = s.tasks.filter((t) => t.requestId === r.id && !t.mergedInto);
   const trail = auditFor(s, r.id);
+  const payMethod = (s.paymentMethods ?? []).find(
+    (m) => m.accountId === r.accountId,
+  );
+  const payments = s.payments.filter((p) =>
+    s.quotes.some((q) => q.id === p.quoteId && q.requestId === r.id),
+  );
+  const owed = outstandingFor(s, r.id);
+  const visitAt = s.visits.find(
+    (v) => v.requestId === r.id && v.status !== "Cancelled",
+  )?.start;
   /* The signed-in customer's own requests. A draft only counts once it carries
      something — an address, a description or a photo. */
   /* Only properties that have actually been walked: an empty history is not
@@ -1086,7 +1106,9 @@ function Workspace({
             : quote.payOnCompletion
               ? "Payment due on completion"
               : "Demo payment due after approval"}{" "}
-          · No real charge
+          · No real charge. Nothing is stored, held or moved — the payment
+          states this demo shows model a real provider's sequence without
+          contacting one.
         </small>
         {role === "Customer" && quote.status === "Sent" && (
           <div className="row actions">
@@ -1477,6 +1499,125 @@ function Workspace({
                 <Message field="mode" />
               </label>
             </details>
+            {/* The money side, where the operator can actually act on it.
+                One notice for the whole panel rather than a marker beside each
+                state: an "Authorized" badge reads like a hold on a real card,
+                and saying so once is enough to stop that. */}
+            {quote && quote.status === "Approved" && (
+              <section className="card panel">
+                <div className="panel-title">
+                  <h3>Payment</h3>
+                </div>
+                <p className="note">
+                  Simulated throughout. No card is stored, no hold is placed and
+                  no money moves — these states model the sequence a real
+                  provider would produce.
+                </p>
+                <p>
+                  {payMethod
+                    ? `Method on file · ${payMethod.brand} ···· ${payMethod.last4}`
+                    : "No method on file. The visit cannot be confirmed until there is one."}
+                </p>
+                {payments.length === 0 ? (
+                  <p>
+                    Nothing authorized yet.{" "}
+                    {visitAt
+                      ? authorizationDue(s, visitAt)
+                        ? "The hold is due now."
+                        : "The hold is placed closer to the appointment."
+                      : ""}
+                  </p>
+                ) : (
+                  <ul className="audit">
+                    {payments.map((p) => (
+                      <li key={p.id}>
+                        <strong>{p.status}</strong> · {money(p.amount)}
+                        {p.refunded ? ` · ${money(p.refunded)} returned` : ""}
+                      </li>
+                    ))}
+                  </ul>
+                )}
+                <div className="row actions">
+                  {payMethod && !payments.length && (
+                    <button
+                      className="secondary"
+                      onClick={() => {
+                        const key = uid();
+                        update((d) => {
+                          authorizePayment(d, quote.id, key);
+                        }, "Hold placed (simulated)");
+                      }}
+                    >
+                      Authorize
+                    </button>
+                  )}
+                  {payments.some((p) => p.status === "Authorized") && (
+                    <>
+                      <button
+                        className="secondary"
+                        onClick={() =>
+                          update((d) => {
+                            const held = d.payments.find(
+                              (p) =>
+                                p.quoteId === quote.id &&
+                                p.status === "Authorized",
+                            );
+                            if (held) capturePayment(d, held.id);
+                          }, "Captured (simulated)")
+                        }
+                      >
+                        Capture
+                      </button>
+                      <button
+                        className="text-button"
+                        onClick={() =>
+                          update((d) => {
+                            const held = d.payments.find(
+                              (p) =>
+                                p.quoteId === quote.id &&
+                                p.status === "Authorized",
+                            );
+                            if (held) capturePayment(d, held.id, true);
+                          }, "Capture failed (simulated)")
+                        }
+                      >
+                        Simulate a failed capture
+                      </button>
+                    </>
+                  )}
+                  {payments.some((p) =>
+                    ["Paid", "Partially Refunded"].includes(p.status),
+                  ) && (
+                    <button
+                      className="text-button"
+                      onClick={() =>
+                        update((d) => {
+                          const taken = d.payments.find(
+                            (p) =>
+                              p.quoteId === quote.id &&
+                              ["Paid", "Partially Refunded"].includes(p.status),
+                          );
+                          if (taken)
+                            refundPayment(
+                              d,
+                              taken.id,
+                              Math.round(taken.amount / 2),
+                            );
+                        }, "Refunded half (simulated)")
+                      }
+                    >
+                      Refund half
+                    </button>
+                  )}
+                </div>
+                {owed > 0 && (
+                  <p className="warning">
+                    <AlertCircle size={16} /> {money(owed)} outstanding — the
+                    work was done and the capture did not go through.
+                  </p>
+                )}
+              </section>
+            )}
             {/* A log nothing renders is ADR 034 again. Changes first, because
                 "who changed this price" is the question the narrative could
                 not answer; the narrative stays underneath it. */}
@@ -3004,6 +3145,16 @@ function Workspace({
                     } else if (quote) {
                       update(
                         (d) => {
+                          /* Store the method as well as taking the payment.
+                             The decided sequence turns on a method being on
+                             file — it is what lets a visit be confirmed before
+                             money moves — and the shortcut below would leave
+                             that half of the model unreachable. */
+                          if (!fail)
+                            storePaymentMethod(d, r.accountId, {
+                              brand: "Visa",
+                              last4: "4242",
+                            });
                           d.payments.push({
                             id: uid(),
                             quoteId: quote.id,
