@@ -928,3 +928,51 @@ its key with no leaked holds; two tabs racing the same slot produce one booking
 and no duplicate; and with the slot taken underneath it, the UI refuses and says
 *"That time was taken while you were choosing."* 30 overflow checks across five
 widths and both themes are clean.
+
+## Two records for one building
+
+Second of the three. Duplicate properties are real here: `migratePmw()` builds
+one property per distinct request address, and an operator can type an address
+in Walkthroughs that already exists. Either way the maintenance history — the
+thing the whole property record exists for — ends up split across two records.
+
+**The obvious detector was the wrong one.** `propertyKey()` already normalises
+an address, so reusing it looked free. It is `address | city | accountId`, and
+it includes the account deliberately: re-homing one account's request under
+another because two addresses read alike is the bug ADR 018 exists to prevent,
+and a test asserts it "never merges across customers". A detector built on it
+could never surface the duplicate that matters most.
+
+Detection gets its own looser key over address and city. The two disagree on
+purpose: `propertyKey()` is strict because it acts automatically, `addressKey()`
+is loose because a person reads its output. Nothing merges on its own, and a
+match spanning two accounts is **flagged rather than offered** — no rule can
+say which account a shared history belongs to.
+
+**A merge repoints and removes; it does not leave a tombstone.**
+`Task.mergedInto` set the other precedent and it is filtered with
+`!t.mergedInto` at eleven read sites. Properties are read in about seven files,
+so copying that means a filter in each, and a forgotten one renders a
+merged-away record as live. Repointing meant no read site changed at all. What
+replaces the tombstone is `mergedFrom` — old id to surviving id — consulted only
+where an id arrives from outside, which today is one place: a property id held
+in component state across a merge in another tab.
+
+**There is no account merge, and that is the finding rather than an omission.**
+`accounts` is a module-level roster with no creation path, so a duplicate
+account cannot exist and a merge for one would be code nothing could reach —
+the `carryForward` defect again. The gap is recorded with the trap waiting in
+it: account ids are stored *inside strings*, since `notification.recipient` is
+`"Customer:<accountId>"`. A merge rewriting only the typed fields would not
+error; it would silently orphan the account's notification history. Property ids
+are not embedded in strings anywhere, which was checked rather than assumed.
+
+Validation: 309 tests (13 new), build, `status:check`, `design:check`. Four
+guards removed in turn and each confirmed caught: the cross-account refusal, the
+conflicting-notes refusal, the merge-chain resolution, and repointing
+walkthroughs. In the browser: the panel appears with a duplicate present and
+shows how many requests and walkthroughs each side carries, merging removes the
+loser and carries over the notes the survivor lacked, `mergedFrom` is recorded,
+the panel clears; a cross-account duplicate shows the warning and offers no
+merge button. 10 overflow checks with the panel rendered, across five widths and
+both themes, all clean.

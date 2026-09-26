@@ -293,6 +293,11 @@ export type State = {
   /** Slots being taken right now. Backfilled by `migrateDispatch()`. */
   holds?: Hold[];
   /**
+   * Where a merged-away record went: old id → surviving id. Consulted only
+   * where an id arrives from outside the app, so no list has to filter.
+   */
+  mergedFrom?: Record<string, string>;
+  /**
    * Bumped by every `commit()`. Two tabs that both write from the same `rev`
    * would lose one another's work, so the second one is made to start again.
    *
@@ -497,6 +502,116 @@ export function adjudicateWarranty(
     decidedAt: new Date(s.clock).toISOString(),
   };
   return true;
+}
+/** Case- and whitespace-insensitive comparison key for free text. */
+export const norm = (v: string) => v.trim().toLowerCase().replace(/\s+/g, " ");
+/**
+ * What makes two records look like the same place.
+ *
+ * Deliberately **not** `propertyKey()` (`pmw.ts`), which includes the account.
+ * That one is strict on purpose: re-homing a request across accounts because
+ * two addresses read alike would be a serious bug, and ADR 018 exists to stop
+ * it. This key leaves the account out, because one address reached by two
+ * accounts is exactly the thing worth putting in front of a person.
+ */
+export const addressKey = (p: { address: string; city: string }) =>
+  [norm(p.address), norm(p.city)].join("|");
+export type DuplicateGroup = {
+  key: string;
+  properties: Property[];
+  /** True when the match spans accounts, which is a flag rather than a merge. */
+  crossAccount: boolean;
+};
+/**
+ * Properties that look like one place.
+ *
+ * Duplicates are real here: `migratePmw()` builds a property per distinct
+ * request address, and an operator can type a fresh address in Walkthroughs
+ * that already exists. Both produce two records for one building.
+ *
+ * Nothing is merged automatically. Address text alone cannot tell "two records
+ * for one house" from "two genuinely different units", and a wrong merge joins
+ * two maintenance histories that then cannot be separated again.
+ */
+export function duplicateProperties(s: State): DuplicateGroup[] {
+  const groups = new Map<string, Property[]>();
+  for (const p of s.properties ?? []) {
+    const key = addressKey(p);
+    groups.set(key, [...(groups.get(key) ?? []), p]);
+  }
+  return [...groups]
+    .filter(([, list]) => list.length > 1)
+    .map(([key, properties]) => ({
+      key,
+      properties,
+      crossAccount: new Set(properties.map((p) => p.accountId)).size > 1,
+    }));
+}
+export type MergeResult = { ok: true } | { ok: false; reason: string };
+/**
+ * Fold one property into another: move what points at it, then remove it.
+ *
+ * A tombstone was the other option, following `Task.mergedInto`. That field is
+ * filtered at eleven separate read sites, and properties are read in about
+ * seven files — copying the pattern means a filter in each, every one of which
+ * can be forgotten, and a forgotten one renders a merged-away record as live.
+ * Repointing leaves nothing to filter, so no read site changes at all.
+ *
+ * What is kept instead is `mergedFrom`, consulted only where an id arrives from
+ * outside the app, so an old link still lands somewhere true.
+ */
+export function mergeProperties(
+  s: State,
+  keepId: string,
+  loseId: string,
+): MergeResult {
+  if (keepId === loseId) return { ok: false, reason: "Same property." };
+  const keep = s.properties.find((p) => p.id === keepId);
+  const lose = s.properties.find((p) => p.id === loseId);
+  if (!keep || !lose) return { ok: false, reason: "Property not found." };
+  /* Refused rather than resolved. Moving one account's maintenance history
+     under another account is not a tidy-up, and no rule here can know which
+     account is the right one. Fixing the account comes first. */
+  if (keep.accountId !== lose.accountId)
+    return {
+      ok: false,
+      reason:
+        "These belong to different accounts. Correct the account before merging, or they are two different places.",
+    };
+  /* Both carrying different notes means a merge picks a winner and silently
+     drops the other. Better to say so than to choose. */
+  const notes = [keep.notes, lose.notes].map((n) => (n ?? "").trim());
+  if (notes[0] && notes[1] && notes[0] !== notes[1])
+    return {
+      ok: false,
+      reason: "Both carry notes, and merging would discard one. Reconcile them first.",
+    };
+  for (const r of s.requests) if (r.propertyId === loseId) r.propertyId = keepId;
+  for (const w of s.walkthroughs ?? [])
+    if (w.propertyId === loseId) w.propertyId = keepId;
+  // Detail the survivor was missing is worth keeping; detail it already has wins.
+  if (!notes[0] && notes[1]) keep.notes = lose.notes;
+  keep.nextWalkthrough ??= lose.nextWalkthrough;
+  keep.unit ??= lose.unit;
+  keep.postalCode ??= lose.postalCode;
+  s.properties = s.properties.filter((p) => p.id !== loseId);
+  s.mergedFrom = { ...(s.mergedFrom ?? {}), [loseId]: keepId };
+  log(s, `Operator merged duplicate property records for ${keep.address}`);
+  return { ok: true };
+}
+/**
+ * Follow a merge to where the record went. Used only where an id arrives from
+ * outside — a bookmarked link, an id held in component state across a merge —
+ * so that nothing inside the app has to remember to check.
+ */
+export function resolveProperty(s: State, id: string): string {
+  const seen = new Set<string>();
+  let at = id;
+  while (s.mergedFrom?.[at] && !seen.has(at)) {
+    seen.add(at);
+    at = s.mergedFrom[at];
+  }
+  return at;
 }
 export function migrateAccounts(s: State) {
   type Legacy = { customerId?: string; accountId?: string };

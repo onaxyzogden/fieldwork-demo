@@ -9,6 +9,7 @@ import {
   log,
   classify,
   accountName,
+  norm,
 } from "./model";
 import { workStatus } from "./work";
 
@@ -25,7 +26,6 @@ export const money2 = (n: number) =>
   }).format(n);
 const round2 = (n: number) => Math.round(n * 100) / 100;
 
-const norm = (v: string) => v.trim().toLowerCase().replace(/\s+/g, " ");
 /**
  * Two requests belong to the same property when the same customer gave the same
  * address. Used only to rebuild links for states saved before properties

@@ -70,7 +70,7 @@ how; where the audits are wrong about the current build, this says that too.
 | HF 4 | "Preserve the correct data model — entities must not collapse" | **Resolved** | Customer → Property → Request → Task → Visit → Assignment → Quote → Payment, each its own record (`model.ts`). One request, three tasks, two visits, two providers is representable |
 | PMW B | Finding-to-task traceability | **Resolved** | `Finding.taskId` and `Task` carry the link; `convertApproved()` sets it. `carriedFrom` / `resolvedBy` record lineage across walkthroughs |
 | PMW (HIGH), HF "customer unit" | Business vs property under-modelled | **Resolved** | Was the largest genuinely-open item. `Account` (`type: individual \| organization`) and `Contact` now exist in `model.ts`, with `migrateAccounts()` renaming `customerId` on saved states. Authority to approve is still unenforced — `docs/decisions.md` #1, #2 |
-| PMW B | Duplicate properties and contacts | **Open** | `propertyKey()` normalizes address for the one-time migration, and ADR 018 explains why it deliberately never re-derives. No detection, no merge |
+| PMW B | Duplicate properties and contacts | **Resolved for properties** | `duplicateProperties()` groups on `addressKey()` — address and city, deliberately *not* `propertyKey()`, which includes the account — and the operator merges from the Walkthroughs screen. `mergeProperties()` repoints dependants and removes the loser, recording `mergedFrom` so old ids still resolve. Duplicate **accounts** cannot arise: `accounts` is a static roster with no creation path, so a merge for them would be unreachable code. ADR 041 |
 | PMW B | Photo object ownership | **Partial** | Photos hang off the task or the finding that owns them. No uploader, timestamp, visibility or before/after category |
 | PMW B | "History should be append-oriented" | **Partial** | `events` is append-only; quotes supersede rather than mutate. Scope and price edits overwrite |
 | PMW B | Archive / deletion policy | **Open** | Nothing is soft-deleted |
@@ -155,7 +155,7 @@ how; where the audits are wrong about the current build, this says that too.
 2. **Payment authorization model** — `Authorized`, `Outstanding`, change orders. The area where the least is decided and the most is at stake.
 3. **Notification channels** — contractor offers expire unseen today. The one place the current design breaks in the field rather than in theory.
 4. **Guest-link policy** — expiry, revocation, access logging.
-5. **Duplicate detection and merge** — cheap now, painful after real data.
+5. ~~**Duplicate detection and merge** — cheap now, painful after real data.~~ Done for properties, which are the records that can actually duplicate. Accounts cannot, and the reason is recorded rather than papered over with a function nothing can call.
 6. ~~**Slot holds and idempotency** — matters at volume, not at demo scale.~~ **Wrong on both counts, and now fixed.** It mattered at demo scale: two tabs could double-book, and worse, the second tab's write erased the first tab's booking outright. See the correction below.
 7. **Audit log of material changes** — who changed a price, and when.
 

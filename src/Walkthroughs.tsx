@@ -3,6 +3,7 @@ import {
   ArrowLeft,
   ArrowRight,
   Camera,
+  AlertCircle,
   ClipboardCheck,
   Copy,
   ExternalLink,
@@ -17,6 +18,10 @@ import {
   money,
   dateLabel,
   accountName,
+  duplicateProperties,
+  mergeProperties,
+  resolveProperty,
+  type MergeResult,
   uid,
 } from "./model";
 import { cities } from "./intake";
@@ -85,6 +90,15 @@ function WalkthroughList({
   const { fail, clear, fieldClass, invalid, Message } = useFieldErrors();
   const [creating, setCreating] = useState(false);
   const [propertyId, setPropertyId] = useState(s.properties[0]?.id || "");
+  const [mergeNote, setMergeNote] = useState("");
+  const duplicates = duplicateProperties(s);
+  /* What a merge would join, so the decision is made on evidence rather than
+     on two addresses that happen to read alike. */
+  const countFor = (id: string) => {
+    const requests = s.requests.filter((r) => r.propertyId === id).length;
+    const walkthroughs = s.walkthroughs.filter((w) => w.propertyId === id).length;
+    return `${requests} request${requests === 1 ? "" : "s"}, ${walkthroughs} walkthrough${walkthroughs === 1 ? "" : "s"}`;
+  };
   const [address, setAddress] = useState("");
   const [city, setCity] = useState(cities[0]);
   const [accountId, setAccountId] = useState("c2");
@@ -99,7 +113,11 @@ function WalkthroughList({
       return fail("address", "Enter the property address to start here.");
     const id = uid();
     update((d) => {
-      let target = propertyId;
+      /* The id has been sitting in component state, and another tab may have
+         merged that property away in the meantime. Following the merge is the
+         only place an outside id needs checking — everything the merge itself
+         repointed is already correct. */
+      let target = resolveProperty(d, propertyId);
       if (target === "new") {
         target = uid();
         d.properties.push({
@@ -132,6 +150,78 @@ function WalkthroughList({
           <Plus size={16} /> New walkthrough
         </button>
       </div>
+      {/* A detector nothing renders is ADR 034's defect. This is where
+          duplicates are made — an operator typing an address that already
+          exists — so it is where they are shown. */}
+      {duplicates.length > 0 && (
+        <section className="card panel">
+          <div className="panel-title">
+            <h3>Possible duplicate properties</h3>
+          </div>
+          <p>
+            These records read as the same place. Nothing is merged
+            automatically: two addresses that look alike can be two different
+            units, and a wrong merge joins two maintenance histories that cannot
+            be separated again.
+          </p>
+          {duplicates.map((g) => (
+            <div key={g.key} className="card">
+              <ul>
+                {g.properties.map((p) => (
+                  <li key={p.id}>
+                    <strong>
+                      {p.address}
+                      {p.unit ? ` · ${p.unit}` : ""}, {p.city}
+                    </strong>{" "}
+                    · {accountName(p.accountId)} ·{" "}
+                    {countFor(p.id)}
+                  </li>
+                ))}
+              </ul>
+              {g.crossAccount ? (
+                <p className="warning">
+                  <AlertCircle size={16} /> These are held by different
+                  accounts. Correct the account before merging, or they are two
+                  different places.
+                </p>
+              ) : (
+                <>
+                  <div className="row actions">
+                    {g.properties.slice(1).map((p) => (
+                      <button
+                        key={p.id}
+                        className="secondary"
+                        onClick={() => {
+                          let outcome = { ok: true } as MergeResult;
+                          update((d) => {
+                            outcome = mergeProperties(
+                              d,
+                              g.properties[0].id,
+                              p.id,
+                            );
+                          });
+                          setMergeNote(
+                            outcome.ok
+                              ? ""
+                              : outcome.reason,
+                          );
+                        }}
+                      >
+                        Merge into the first record
+                      </button>
+                    ))}
+                  </div>
+                  {mergeNote && (
+                    <span className="field-message" role="alert">
+                      {mergeNote}
+                    </span>
+                  )}
+                </>
+              )}
+            </div>
+          ))}
+        </section>
+      )}
       {creating && (
         <section className="card panel">
           <div className="panel-title">

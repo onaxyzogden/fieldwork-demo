@@ -361,7 +361,7 @@ export const entities: Entity[] = [
     owns: "A location and the account it belongs to. Maintenance history belongs here, not to any one job.",
     states: "No status. A property persists whether or not work is open on it.",
     links: ["account", "request", "walkthrough"],
-    note: "Requests link by propertyId, never by matching address text: addresses are editable, so text matching would silently re-home a request.",
+    note: "Requests link by propertyId, never by matching address text: addresses are editable, so text matching would silently re-home a request. Duplicates are detected on a separate, looser key and merged only by an operator; a merge repoints dependants and records where the old id went.",
   },
   {
     id: "walkthrough",
