@@ -215,13 +215,17 @@ export function commit(previous: State, fn: (draft: State) => void): State {
     draft = migrateDispatch(structuredClone(base));
     fn(draft);
     reconcile(draft);
+    /* Before the write, not after. Notifications are part of the state, so
+       computing them after serialization put them in this tab's memory and
+       nowhere else — they showed until the next reload and then vanished.
+       That is exactly what happened between the concurrency change and this
+       one, and the regression test for it lives in `store.test.ts`.
+       Each attempt rebuilds `draft` from a fresh clone, so a retry re-derives
+       these rather than doubling them. */
+    deliverUpdates(base, draft);
     draft.rev = (base.rev ?? 0) + 1;
     const outcome = writeIfCurrent(draft, base.rev ?? 0);
     if (outcome === "stale" && attempt < RETRIES) continue;
-    // A failed write is still shown to this tab — the save-health banner is
-    // what tells the user it did not land. A stale one that has run out of
-    // retries is not persisted and not announced.
-    if (outcome !== "stale") deliverUpdates(base, draft);
     return draft;
   }
 }

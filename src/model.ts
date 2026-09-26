@@ -310,6 +310,19 @@ export type State = {
     text: string;
     at: string;
     read: boolean;
+    /**
+     * One row per channel this went out on. In-app is genuinely delivered —
+     * it is in the inbox. SMS and email stop at `sent`, because nothing
+     * reports back without a provider, and that is the gap rather than an
+     * oversight.
+     */
+    deliveries?: {
+      channel: Channel;
+      state: "sent" | "delivered" | "read" | "bounced";
+      at: string;
+      /** Why it bounced. Today only ever a missing address. */
+      reason?: string;
+    }[];
   }[];
   requests: Request[];
   tasks: Task[];
@@ -371,6 +384,13 @@ export type Contact = {
   /** Empty for an individual. "Property Manager", "Operations Manager" for an organization. */
   role?: string;
   /**
+   * Where a channel would reach them. Absent is a real state, not a gap in the
+   * seed: a contact with no mobile cannot be sent an SMS, and the delivery
+   * bounces rather than silently going nowhere.
+   */
+  email?: string;
+  phone?: string;
+  /**
    * Set when the person stops acting for the account. Never deleted: approvals
    * and requests keep pointing at them, and the history has to stay true after
    * someone leaves.
@@ -391,13 +411,58 @@ export const accounts: Account[] = [
   { id: "a1", type: "organization", name: "Northline Property Management" },
 ];
 export const contacts: Contact[] = [
-  { id: "ct1", accountId: "c1", name: "Sarah Lin" },
-  { id: "ct2", accountId: "c2", name: "Daniel Brooks" },
-  { id: "ct3", accountId: "c3", name: "Priya Nair" },
-  { id: "ct4", accountId: "c4", name: "James Carter" },
-  { id: "ct5", accountId: "c5", name: "Amir Hassan" },
-  { id: "ct6", accountId: "a1", name: "Maya Okonkwo", role: "Property Manager" },
-  { id: "ct7", accountId: "a1", name: "Tomas Reyes", role: "Operations Manager" },
+  {
+    id: "ct1",
+    accountId: "c1",
+    name: "Sarah Lin",
+    email: "sarah.lin@example.com",
+    phone: "+1-905-555-0141",
+  },
+  {
+    id: "ct2",
+    accountId: "c2",
+    name: "Daniel Brooks",
+    email: "d.brooks@example.com",
+    phone: "+1-905-555-0162",
+  },
+  {
+    id: "ct3",
+    accountId: "c3",
+    name: "Priya Nair",
+    email: "priya.nair@example.com",
+    phone: "+1-905-555-0173",
+  },
+  {
+    id: "ct4",
+    accountId: "c4",
+    name: "James Carter",
+    // No mobile on file. The SMS channel bounces for this account, which is
+    // what makes "bounced" a state the demo can actually reach.
+    email: "j.carter@example.com",
+  },
+  {
+    id: "ct5",
+    accountId: "c5",
+    name: "Amir Hassan",
+    email: "amir.hassan@example.com",
+    phone: "+1-905-555-0195",
+  },
+  {
+    id: "ct6",
+    accountId: "a1",
+    name: "Maya Okonkwo",
+    role: "Property Manager",
+    email: "m.okonkwo@northline.example.com",
+    phone: "+1-416-555-0108",
+  },
+  {
+    id: "ct7",
+    accountId: "a1",
+    name: "Tomas Reyes",
+    role: "Operations Manager",
+    email: "t.reyes@northline.example.com",
+    phone: "+1-416-555-0119",
+  },
 ];
 export const accountName = (id: string) =>
   accounts.find((a) => a.id === id)?.name || "Unknown account";
@@ -698,6 +763,8 @@ export const providers = [
     rate: 65,
     skills: "Doors, walls, installation, assembly",
     eligible: false,
+    phone: "+1-905-555-0100",
+    email: "yousef@fieldwork.example.com",
   },
   {
     id: "marcus",
@@ -708,6 +775,8 @@ export const providers = [
     rate: 55,
     skills: "Assembly, installation, doors",
     eligible: false,
+    phone: "+1-905-555-0122",
+    email: "marcus@fieldwork.example.com",
   },
   {
     id: "nina",
@@ -718,6 +787,8 @@ export const providers = [
     rate: 60,
     skills: "Assembly, walls, installation, doors",
     eligible: false,
+    phone: "+1-905-555-0133",
+    email: "nina@fieldwork.example.com",
   },
   {
     id: "eli",
@@ -728,6 +799,8 @@ export const providers = [
     rate: 95,
     skills: "Electrical, restricted work",
     eligible: true,
+    phone: "+1-905-555-0144",
+    email: "eli@fieldwork.example.com",
   },
 ];
 export const uid = () => Math.random().toString(36).slice(2, 10);
@@ -1181,6 +1254,51 @@ export const secured = (s: State, q: Quote) =>
     (p) => p.quoteId === q.id && ["Authorized", "Paid"].includes(p.status),
   ) ||
   !!methodFor(s, q);
+/**
+ * Every kind of notification this app emits.
+ *
+ * A union rather than a loose string so `urgency` below must cover all of
+ * them: adding a kind without deciding how urgent it is fails the build
+ * instead of quietly taking a default.
+ */
+export const notificationKinds = [
+  "request",
+  "information",
+  "offer",
+  "accepted",
+  "declined",
+  "visit",
+  "message",
+  "quote",
+  "payment",
+] as const;
+export type NotificationKind = (typeof notificationKinds)[number];
+export type Urgency = "time-sensitive" | "documentary";
+export type Channel = "sms" | "email" | "in-app";
+/**
+ * Channel follows **urgency, not role** — `docs/decisions.md` #11.
+ *
+ * An earlier version of `docs/notifications.md` implied role, because the
+ * taxonomy had been read off `emit()`'s recipient strings, which are roles. A
+ * cancellation two hours before an appointment is urgent whoever receives it,
+ * and a receipt is a document whoever receives it.
+ */
+export const urgency: Record<NotificationKind, Urgency> = {
+  // Someone has to act, and soon, or something expires or goes wrong.
+  offer: "time-sensitive",
+  declined: "time-sensitive",
+  accepted: "time-sensitive",
+  visit: "time-sensitive",
+  message: "time-sensitive",
+  information: "time-sensitive",
+  // A record someone will want to find again, rather than act on this hour.
+  request: "documentary",
+  quote: "documentary",
+  payment: "documentary",
+};
+/** In-app always, plus the one that matches the urgency. */
+export const channelsFor = (kind: NotificationKind): Channel[] =>
+  urgency[kind] === "time-sensitive" ? ["sms", "in-app"] : ["email", "in-app"];
 export function reconcile(s: State) {
   // Beside offer expiry, because they are the same kind of fact: a promise
   // with a clock on it that nobody is coming back to release by hand.

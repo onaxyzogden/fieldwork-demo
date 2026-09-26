@@ -1,6 +1,6 @@
 import { useState, useRef, useSyncExternalStore } from "react";
 import { type State, type Visit, dateLabel, providers } from "./model";
-import { inbox, sendMessage } from "./notifications";
+import { deliveryLabel, inbox, markRead, sendMessage } from "./notifications";
 import { subscribeSaveHealth, isSaveFailing } from "./store";
 type Update = (fn: (s: State) => void, msg?: string) => void;
 
@@ -47,12 +47,16 @@ export function NotificationInbox({
   return (
     <div className="notification-list">
       <h3>Notifications & messages</h3>
-      <p>In-app simulations · updates for this account only.</p>
+      <p>
+        Updates for this account only. The channel beside each one is the one a
+        real integration would use — no SMS is sent and no email is composed,
+        and an external channel therefore never gets past “sent”.
+      </p>
       <button
         className="secondary"
         onClick={() =>
           update((d) => {
-            inbox(d, recipient).forEach((n) => (n.read = true));
+            inbox(d, recipient).forEach((n) => markRead(d, n.id));
           })
         }
       >
@@ -64,10 +68,7 @@ export function NotificationInbox({
           className={"event notification-link " + (!n.read ? "unread" : "")}
           key={n.id}
           onClick={() => {
-            update((d) => {
-              const item = d.notifications?.find((x) => x.id === n.id);
-              if (item) item.read = true;
-            });
+            update((d) => markRead(d, n.id));
             open(n.requestId, n.visitId);
           }}
         >
@@ -76,6 +77,10 @@ export function NotificationInbox({
             <small>
               {dateLabel(n.at)} · {n.read ? "Read" : "Unread"} · Open{" "}
               {n.kind === "message" ? "conversation" : "details"}
+            </small>
+            <small>
+              {(n.deliveries ?? []).map(deliveryLabel).join(" · ") ||
+                "In-app · delivered"}
             </small>
           </span>
         </button>

@@ -19,8 +19,15 @@ notify twice or differently.
 `"Operator"`, `"Customer:<customerId>"` or `"Contractor:<providerId>"`. The
 in-app bell reads them back through `inbox(state, recipient)`.
 
-**There is one channel: in-app.** No email, no SMS, no push. That is a declared
-production gap, already recorded in `blueprint-data.ts`.
+**No SMS is sent and no email is composed.** What exists is the *model*: every
+notification carries the channels its urgency calls for, with a delivery row per
+channel. In-app is genuinely `delivered` — it is in the inbox. An external
+channel stops at `sent` and never moves, because without a provider nothing
+reports back, and that frozen `sent` is the honest shape of the gap.
+
+A channel with no address on file `bounces` immediately, with the reason. That
+is a real state here rather than a theoretical one: one seeded contact has an
+email and no mobile.
 
 ## The matrix
 
@@ -49,12 +56,16 @@ audits ask for, at the one place it currently matters.
 
 ## What is missing
 
-## The decided target
+## Channel follows urgency, not role
 
-Channel follows **urgency**, not role — `docs/decisions.md` #11. An earlier
-version of this page implied role, because the taxonomy was read off `emit()`'s
-recipient strings, which are roles. A cancellation two hours out is urgent
-whoever receives it.
+`docs/decisions.md` #11, and now built — ADR 045. An earlier version of this
+page implied role, because the taxonomy had been read off `emit()`'s recipient
+strings, which are roles. A cancellation two hours out is urgent whoever
+receives it.
+
+`urgency` is a `Record<NotificationKind, Urgency>` over a union of every kind
+the app emits, so adding a kind without classifying it **fails the build**
+rather than taking a silent default.
 
 | Class | Channels | Events above |
 |---|---|---|
@@ -81,4 +92,4 @@ whether it was ever opened.
 
 - `docs/status-dictionary.md` — the states these events announce
 - `docs/permissions.md` — who may see each notification
-- `docs/decisions.md` — #11 decides the channel split; none of it is built
+- `docs/decisions.md` — #11 decides the channel split; ADR 045 models it

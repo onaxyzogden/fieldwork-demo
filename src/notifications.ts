@@ -1,4 +1,72 @@
-import { type State, uid, dateLabel, providers } from "./model";
+import {
+  type Channel,
+  type NotificationKind,
+  type State,
+  channelsFor,
+  contacts,
+  dateLabel,
+  primaryContact,
+  providers,
+  uid,
+  urgency,
+} from "./model";
+
+/**
+ * Where a channel would actually reach someone.
+ *
+ * **Nothing is sent.** No SMS leaves this application and no email is
+ * composed; this resolves the address a real integration would hand to a
+ * provider, and returns nothing when there is none — which is what makes a
+ * bounce a real state rather than one nobody can reach.
+ */
+export function addressFor(
+  s: State,
+  recipient: string,
+  channel: Channel,
+): string | undefined {
+  if (channel === "in-app") return recipient;
+  const [role, id] = recipient.split(":");
+  const who =
+    role === "Customer"
+      ? primaryContact(id)
+      : role === "Contractor"
+        ? providers.find((p) => p.id === id)
+        : // The operator is the business. Its owner's details stand in.
+          providers.find((p) => p.id === "yousef");
+  return channel === "sms" ? who?.phone : who?.email;
+}
+
+/**
+ * The delivery rows for one notification, at the moment it is raised.
+ *
+ * In-app is `delivered` because it genuinely is — it is sitting in the inbox.
+ * SMS and email stop at `sent` and never move, because without a provider
+ * nothing reports back. That frozen `sent` is the honest shape of the gap: a
+ * real integration turns it into delivered, bounced or a hard failure, and
+ * until one exists nobody can say which.
+ */
+export function deliveriesFor(
+  s: State,
+  recipient: string,
+  kind: NotificationKind,
+  at: string,
+) {
+  return channelsFor(kind).map((channel) => {
+    const address = addressFor(s, recipient, channel);
+    return address
+      ? {
+          channel,
+          state: channel === "in-app" ? ("delivered" as const) : ("sent" as const),
+          at,
+        }
+      : {
+          channel,
+          state: "bounced" as const,
+          at,
+          reason: `No ${channel === "sms" ? "mobile number" : "email address"} on file`,
+        };
+  });
+}
 export const inbox = (s: State, recipient: string) =>
   (s.notifications || []).filter(
     (n) => (n.recipient || "Operator") === recipient,
@@ -13,6 +81,7 @@ export function deliverUpdates(before: State, after: State) {
     text: string,
     read = false,
   ) => {
+    const at = new Date(after.clock).toISOString();
     (after.notifications ??= []).unshift({
       id: uid(),
       recipient,
@@ -21,8 +90,9 @@ export function deliverUpdates(before: State, after: State) {
       assignmentId,
       kind,
       text,
-      at: new Date(after.clock).toISOString(),
+      at,
       read,
+      deliveries: deliveriesFor(after, recipient, kind as NotificationKind, at),
     });
   };
   for (const r of after.requests) {
@@ -188,3 +258,45 @@ export function sendMessage(
   });
   return true;
 }
+
+/**
+ * Time-sensitive notifications nobody has opened.
+ *
+ * This is the question the audits actually asked — "has the contractor seen
+ * the offer?" — and the one the operator could not ask before, because an
+ * offer expiring unseen looked identical to one being ignored.
+ */
+export const unseen = (s: State) =>
+  (s.notifications ?? []).filter(
+    (n) =>
+      !n.read && urgency[n.kind as NotificationKind] === "time-sensitive",
+  );
+
+/** Notifications with a channel that could not even be attempted. */
+export const bounced = (s: State) =>
+  (s.notifications ?? []).filter((n) =>
+    (n.deliveries ?? []).some((d) => d.state === "bounced"),
+  );
+
+/** Opening a notification is the one delivery transition this app can observe. */
+export function markRead(s: State, id: string) {
+  const n = (s.notifications ?? []).find((x) => x.id === id);
+  if (!n || n.read) return false;
+  n.read = true;
+  const inApp = (n.deliveries ?? []).find((d) => d.channel === "in-app");
+  if (inApp) {
+    inApp.state = "read";
+    inApp.at = new Date(s.clock).toISOString();
+  }
+  return true;
+}
+
+/** How a delivery row reads to a person. */
+export const deliveryLabel = (d: {
+  channel: Channel;
+  state: string;
+  reason?: string;
+}) =>
+  d.state === "bounced"
+    ? `${d.channel.toUpperCase()} · ${d.reason}`
+    : `${d.channel === "in-app" ? "In-app" : d.channel.toUpperCase()} · ${d.state}`;

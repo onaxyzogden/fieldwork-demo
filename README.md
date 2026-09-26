@@ -1084,3 +1084,54 @@ Authorized → Paid → Partially Refunded with $200 of $400 returned, and
 separately Authorized → Outstanding with the chase warning — the notice appears
 exactly once per surface, and 10 overflow checks across five widths and both
 themes are clean.
+
+## Notification channels, and a regression I caused
+
+Second of the modelled four. Decision 11 settled that channel follows
+**urgency, not role**; this builds it, along with delivery state per channel.
+
+`urgency` is a `Record<NotificationKind, Urgency>` over a union of every kind
+the app emits, so adding a kind without classifying it is a **build error**
+rather than a silent default. A notification taxonomy with a fallback branch is
+one that quietly stops being true.
+
+In-app is `delivered` — it is genuinely in the inbox. SMS and email stop at
+`sent` and never move, because without a provider nothing reports back, and
+freezing them there is the honest shape of the gap. A channel with no address on
+file `bounces` immediately with the reason, and one seeded contact deliberately
+has an email and no mobile so that state can be seen rather than merely
+described.
+
+`unseen()` answers what the audits actually asked — *has the contractor seen the
+offer?* — which could not be asked before, because an offer expiring unseen
+looked identical to one being ignored.
+
+### The regression
+
+Verifying the above found a bug I introduced two PRs ago and merged.
+
+ADR 039 reordered `commit()` to read-apply-write and moved `deliverUpdates()` to
+**after** the write. Every notification raised since then existed only in the
+writing tab's memory: it rendered, and it was gone on the next reload.
+
+The browser hid it, because the tab that raises a notification is the tab that
+shows it. What caught it was reading the stored state directly rather than
+trusting the screen — a delivery panel rendering rows while `localStorage` held
+none. The justification I wrote at the time ("a stale write is not persisted and
+not announced") was wrong on its own terms: `deliverUpdates()` does not announce
+anything, it writes rows into the state.
+
+Notifications are state, so they are computed before serialization. A regression
+test asserts a raised notification is on disk. A second asserts a re-applied
+write does not double them — and my first version of that test was wrong too,
+asserting one row where one *per recipient* is correct, since a clarification
+goes to the operator and the customer both.
+
+Validation: 351 tests (17 new), build, `status:check`, `design:check`. Four
+guarantees removed in turn and each caught: urgency-driven channels, the bounce
+on a missing address, an external channel claiming delivery it cannot observe,
+and `unseen()` filtering by urgency. In the browser: asking the no-mobile
+account a question produces `information → Customer:c4 :: sms/bounced,
+in-app/delivered`, the operator's Delivery panel shows it with the bounce
+warning, and six notifications now survive a reload where none did before.
+10 overflow checks with every panel expanded are clean.

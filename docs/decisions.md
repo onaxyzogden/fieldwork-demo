@@ -34,7 +34,7 @@ Each entry carries the same five fields:
 | 8 | Contractor pay is fixed on acceptance | Decided | Wording only |
 | 9 | ETA only, no live tracking | Decided | Yes |
 | 10 | No separate `Arrived` event | Decided | Yes |
-| 11 | Channel follows urgency, not role | Decided with modification | No |
+| 11 | Channel follows urgency, not role | Decided with modification | Modelled |
 | 12 | Customer payment and contractor payout stay separate | Decided with modification | Structurally |
 | 13 | Multi-property dashboards not in v1 | Decided | n/a |
 | 14 | Rework is new linked work | Decided | Yes |
@@ -346,7 +346,7 @@ offer expiry safe.
 `notification()` in `dispatch.ts` already suppresses duplicates per assignment
 and kind, which is the one place it currently matters.
 
-**Status.** Decided with modification. Not built.
+**Status.** Decided with modification. **Modelled** — ADR 045. Classification, channels, delivery state and bounces all exist; nothing is sent.
 
 ---
 
@@ -467,7 +467,9 @@ named in `blueprint-data.ts` as a production gap the way payments already are.
    `Outstanding`. A failed *authorization* days after booking — the case where
    someone thinks they have an appointment and does not — is still open, because
    it needs a scheduler this prototype has no way to run.
-3. **Notification channels and delivery state** (decision 11).
+3. ~~**Notification channels and delivery state** (decision 11).~~ **Modelled**
+   (ADR 045). What a provider would add: actual sending, and the delivery
+   confirmations that would move an external channel off `sent`.
 4. **Guest-link security** (decision 5).
 5. **Authorization enforcement** — decision 2 records who approved; nothing
    checks that they were entitled to.

@@ -6,6 +6,8 @@ import {
   subscribeSaveHealth,
   UnusableState,
   KEY,
+  commit,
+  freshDemo,
 } from "./store";
 import { seed, type State } from "./model";
 
@@ -131,5 +133,44 @@ describe("a write that cannot be persisted", () => {
     save(seed());
     stop();
     expect(seen).toEqual([true, false]);
+  });
+});
+
+describe("notifications are part of the state, not a view of it", () => {
+  /**
+   * A regression. `commit()` once serialized the draft and only then ran
+   * `deliverUpdates()`, so every notification lived in the writing tab's
+   * memory and nowhere else: visible until reload, gone afterwards. The
+   * browser hid it, because the tab that raised one could always see it.
+   */
+  it("persists a notification raised by the same write", () => {
+    const store = storage();
+    use(store);
+    const before = commit(freshDemo(), () => {});
+    commit(before, (d) => {
+      d.requests.find((r) => r.id === "r2")!.operatorNote = "Solid core?";
+    });
+    const onDisk = JSON.parse(store.read()!) as State;
+    expect(
+      (onDisk.notifications ?? []).some((n) => n.kind === "information"),
+    ).toBe(true);
+  });
+  it("does not double them when a write has to be re-applied", () => {
+    const store = storage();
+    use(store);
+    const before = commit(freshDemo(), () => {});
+    const after = commit(before, (d) => {
+      d.requests.find((r) => r.id === "r2")!.operatorNote = "Solid core?";
+    });
+    // One per recipient is correct — this kind goes to the operator and the
+    // customer — so the property worth asserting is no recipient getting two.
+    const raised = (after.notifications ?? []).filter(
+      (n) => n.kind === "information",
+    );
+    expect(new Set(raised.map((n) => n.recipient)).size).toBe(raised.length);
+    expect(raised.map((n) => n.recipient).sort()).toEqual([
+      "Customer:c2",
+      "Operator",
+    ]);
   });
 });
