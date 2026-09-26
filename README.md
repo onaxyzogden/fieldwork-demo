@@ -976,3 +976,55 @@ loser and carries over the notes the survivor lacked, `mergedFrom` is recorded,
 the panel clears; a cross-account duplicate shows the warning and offers no
 merge button. 10 overflow checks with the panel rendered, across five widths and
 both themes, all clean.
+
+## Who changed this price
+
+Last of the three. `events` was `{ id, text, at }` — a narrative. It could say
+*"Quote sent to Daniel Brooks · $420"* and could not answer *"who changed this
+price, and from what"*, which is the question `docs/permissions.md` had recorded
+as missing and both audits asked for.
+
+Entries now carry optional `actor`, `requestId`, `entity`, `field`, `from` and
+`to`. **Optional is the design.** `log(s, text)` keeps its one-argument form, so
+the twenty-odd existing narrative lines were untouched and no call site had to
+change to keep working. A log where some entries carry detail is more useful
+than one that was never finished because every site had to convert at once.
+
+Two details worth naming. `from` and `to` hold **rendered** values — "$420",
+"Sent", "Customer supplied" — because a person reads them, and storing `420`
+would mean re-deriving the currency and rounding somewhere that could drift from
+the rest of the app. And the first quote on a request records **no** `from` at
+all rather than "none": there was no previous price, which is a different fact
+from a previous price of nothing.
+
+Recording happens at the change, not at the screen. `approveQuote()` and
+`respondToOffer()` log from inside the data layer — the same reasoning as ADR
+036, since a status set in one place and recorded in another gives you two facts
+that can disagree. A refused approval logs nothing, which a test asserts,
+because a rejected write is not a change.
+
+A request shows its own trail, on the request detail where the operator is
+already looking. That is the third time in this codebase that "we built it and
+rendered it nowhere" has come up, so it is now checked for deliberately.
+
+**Coverage is partial on purpose, and the docs say so.** Price, booking mode,
+materials, review, assignment, approval and property merges — the changes the
+audits asked about. Every other write still logs its narrative line and nothing
+more. Extending it is adding an argument at a call site, not changing a shape.
+
+Validation: 317 tests (8 new), build, `status:check`, `design:check`. Four
+guarantees removed in turn and each confirmed caught: the approver's identity,
+the per-request filter, the no-log-on-refusal rule, and recording offer
+responses. In the browser: the history reads `History (0)`, changing a task's
+materials takes it to `History (1)`, and the entry renders as *"Operator changed
+materials from To be confirmed to Customer supplied"*. 10 overflow checks with
+every panel expanded, across five widths and both themes, clean.
+
+### Where that leaves the seven
+
+Three are closed — slot holds and idempotency, duplicate detection and merge,
+and this. The four that remain all need a server: the payment lifecycle,
+notification channels and delivery state, guest-link security, and approval
+*enforcement* as distinct from the recording that now exists. `docs/decisions.md`
+keeps them with the agreed approach, and keeps the struck-through reasoning for
+the three that are done — including where that reasoning turned out to be wrong.

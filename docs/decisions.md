@@ -441,7 +441,15 @@ material, not in the source.
 
 ## What is still open
 
-Not decisions — work the decisions imply, in priority order:
+Not decisions — work the decisions imply, in the priority order they were
+listed in. Three are now done and struck through; the reasoning is left in
+place, including where it was wrong, because a list that quietly rewrites its
+own history is worth less than one that shows what changed.
+
+The four that remain all need a server. Nothing in a prototype with no backend
+can honestly close them, and the agreed approach is to model the states and
+transitions so the shape is right and testable, with every simulated boundary
+named in `blueprint-data.ts` as a production gap the way payments already are.
 
 1. ~~**Slot holds and booking idempotency.**~~ **Done, and it was not what this
    entry said it was.** "Invisible at demo scale" was wrong: `commit()` applied
@@ -464,8 +472,13 @@ Not decisions — work the decisions imply, in priority order:
    (`notification.recipient` is `"Customer:<accountId>"`), so a merge that
    rewrites only the typed fields would silently orphan the notification
    history rather than error.
-7. **An audit log** for price, scope and assignment changes. `events` records
-   activity but not who changed what.
+7. ~~**An audit log** for price, scope and assignment changes.~~ **Done**
+   (ADR 043). `events` entries carry actor, entity, field and before/after, and
+   a request shows its own trail. The original one-line entries were left
+   alone: a log where some entries carry detail is more useful than one nobody
+   finished filling in. What is still missing is coverage — the recorded
+   changes are the ones that answer the audits' question, not every write in
+   the app.
 
 ## Read this with
 

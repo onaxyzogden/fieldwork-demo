@@ -446,7 +446,7 @@ export const entities: Entity[] = [
     id: "notification",
     name: "Operator notification",
     owns: "Assignment, visit and request references; kind, text, timestamp and read flag.",
-    states: "Read / unread, independent of dispatch attention.",
+    states: "Read / unread, independent of dispatch attention. Separately, the event log records who changed a price, scope or assignment, and what it was before.",
     links: ["assignment", "visit", "request"],
     note: "Reading an alert does not resolve a decline or unfinished task. Attention comes from records, not notification read status.",
   },

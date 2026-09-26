@@ -288,7 +288,7 @@ export type State = {
   properties: Property[];
   walkthroughs: Walkthrough[];
   findings: Finding[];
-  events: { id: string; text: string; at: string }[];
+  events: AuditEntry[];
   clock: number;
   /** Slots being taken right now. Backfilled by `migrateDispatch()`. */
   holds?: Hold[];
@@ -420,6 +420,15 @@ export function approveQuote(s: State, quoteId: string, contactId?: string) {
       .filter((t) => t.requestId === q.requestId && !t.mergedInto)
       .map((t) => t.id),
   };
+  log(s, `${q.approval.name} approved the quote · ${money(q.amount)}`, {
+    actor: who ? contactLabel(who.id) : q.approval.name,
+    requestId: q.requestId,
+    entity: "quote",
+    entityId: q.id,
+    field: "status",
+    from: "Sent",
+    to: "Approved",
+  });
   return true;
 }
 /**
@@ -596,7 +605,14 @@ export function mergeProperties(
   keep.postalCode ??= lose.postalCode;
   s.properties = s.properties.filter((p) => p.id !== loseId);
   s.mergedFrom = { ...(s.mergedFrom ?? {}), [loseId]: keepId };
-  log(s, `Operator merged duplicate property records for ${keep.address}`);
+  log(s, `Operator merged duplicate property records for ${keep.address}`, {
+    actor: "Operator",
+    entity: "property",
+    entityId: keep.id,
+    field: "mergedFrom",
+    from: loseId,
+    to: keepId,
+  });
   return { ok: true };
 }
 /**
@@ -1063,9 +1079,47 @@ export function confirmed(s: State, requestId: string) {
     );
   return q?.status === "Approved" && accepted;
 }
-export function log(s: State, text: string) {
-  s.events.unshift({ id: uid(), text, at: new Date(s.clock).toISOString() });
+/**
+ * What changed, who changed it, and what it was before.
+ *
+ * `events` used to be `{ id, text, at }` — a narrative. It could say "Quote
+ * sent to Daniel Brooks · $420" but not answer "who changed this price, and
+ * from what", which is the question `docs/permissions.md` records as missing.
+ *
+ * Every field beyond the original three is optional, so the twenty-odd
+ * existing one-line entries stay exactly as they were. A log where only some
+ * entries carry detail is more useful than one nobody finished filling in.
+ */
+export type AuditDetail = {
+  /** Who did it: a role, a provider, or a named contact. */
+  actor?: string;
+  /** The request this belongs to, so a request can show its own history. */
+  requestId?: string;
+  entity?: string;
+  entityId?: string;
+  field?: string;
+  /** Rendered, not raw — a price reads as "$420", a status as its own name. */
+  from?: string;
+  to?: string;
+};
+export type AuditEntry = AuditDetail & {
+  id: string;
+  text: string;
+  at: string;
+};
+export function log(s: State, text: string, detail: AuditDetail = {}) {
+  s.events.unshift({
+    id: uid(),
+    text,
+    at: new Date(s.clock).toISOString(),
+    ...detail,
+  });
 }
+/** The trail for one request, newest first. */
+export const auditFor = (s: State, requestId: string) =>
+  s.events.filter((e) => e.requestId === requestId);
+/** True when an entry records a change rather than narrating one. */
+export const isChange = (e: AuditEntry) => !!e.field;
 export function reconcile(s: State) {
   // Beside offer expiry, because they are the same kind of fact: a promise
   // with a clock on it that nobody is coming back to release by hand.
