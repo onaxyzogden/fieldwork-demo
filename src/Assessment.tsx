@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   Check,
   CheckCircle2,
@@ -14,6 +14,8 @@ import {
   dateLabel,
   accountName,
   accounts,
+  contactsFor,
+  mayApprove,
   uid,
 } from "./model";
 import {
@@ -25,6 +27,8 @@ import {
   money2,
   quotable,
   requestAssessment,
+  byToken,
+  recordOpen,
 } from "./pmw";
 import { KEY, load, commit } from "./store";
 import { SaveWarning } from "./NotificationUI";
@@ -50,11 +54,19 @@ const TRACK = [
   "Completed",
 ];
 
-export default function Assessment({ assessmentId }: { assessmentId: string }) {
+export default function Assessment({
+  token,
+  legacyId,
+}: {
+  token: string;
+  /** An old `?id=PMW-0001` link. Recognised only so it can be refused clearly. */
+  legacyId?: string;
+}) {
   const [s, setS] = useState<State>(load);
   const [error, setError] = useState("");
   const [name, setName] = useState("");
   const [role, setRole] = useState("");
+  const [approverId, setApproverId] = useState("");
   const [authority, setAuthority] = useState(false);
   const [method, setMethod] = useState(false);
   useEffect(() => {
@@ -73,20 +85,54 @@ export default function Assessment({ assessmentId }: { assessmentId: string }) {
   }, []);
   const update = (fn: (d: State) => void) => setS((prev) => commit(prev, fn));
 
-  const w = s.walkthroughs.find((x) => x.assessmentId === assessmentId);
-  if (!w || w.status === "Draft")
+  const lookup = byToken(s, token);
+  const w = lookup.ok ? lookup.walkthrough : undefined;
+
+  /* Recorded once per mount, not per render. This is the only thing on this
+     page the operator genuinely could not learn before: whether the assessment
+     they sent was ever opened. */
+  const logged = useRef(false);
+  useEffect(() => {
+    if (!w || logged.current) return;
+    logged.current = true;
+    update((d) => {
+      recordOpen(d, w.id);
+    });
+  }, [w?.id]);
+
+  if (!w || w.status === "Draft") {
+    /* Why, not just no. "Ask for a fresh one" and "this was withdrawn" are
+       different things to say to whoever is holding the link, and a blank page
+       is neither. */
+    const [heading, detail] = legacyId
+      ? [
+          "This link is an old one",
+          "Assessment links now carry a one-off reference rather than the assessment number. Ask whoever sent it for a fresh link.",
+        ]
+      : !lookup.ok && lookup.reason === "expired"
+        ? [
+            "This link has expired",
+            "Assessment links stop working after a set period. Ask whoever sent it for a fresh one — the assessment itself is still there.",
+          ]
+        : !lookup.ok && lookup.reason === "revoked"
+          ? [
+              "This link has been withdrawn",
+              "Whoever sent this assessment has withdrawn the link. Get in touch with them if you still need to see it.",
+            ]
+          : [
+              "Assessment not found",
+              "This link does not match an assessment that has been sent. Check the link with whoever sent it.",
+            ];
     return (
       <main className="assessment">
         <header className="assessment-head">
           <strong className="brand-mini">PMW</strong>
-          <h1>Assessment not found</h1>
-          <p>
-            This link does not match an assessment that has been sent. Check the
-            link with whoever sent it.
-          </p>
+          <h1>{heading}</h1>
+          <p>{detail}</p>
         </header>
       </main>
     );
+  }
 
   const property = s.properties.find((p) => p.id === w.propertyId);
   /* An individual signs their own name and that identifies them. An
@@ -94,6 +140,13 @@ export default function Assessment({ assessmentId }: { assessmentId: string }) {
      the record rather than a nicety. */
   const org =
     accounts.find((a) => a.id === property?.accountId)?.type === "organization";
+  /* An organization has several people who could be approving, and the rule is
+     checked against a contact rather than a typed name — so the page has to
+     ask which one. An individual has exactly one, so there is nothing to ask. */
+  const people = contactsFor(property?.accountId || "").filter(
+    (c) => !c.inactiveAt,
+  );
+  const approver = org ? approverId : people[0]?.id;
   const totals = assessmentTotals(s, w.id);
   const request = s.requests.find((r) => r.walkthroughId === w.id);
   const quote = s.quotes.find((q) => q.requestId === request?.id);
@@ -115,6 +168,12 @@ export default function Assessment({ assessmentId }: { assessmentId: string }) {
   const submit = () => {
     if (!totals.approved.length)
       return setError("Approve at least one item before continuing.");
+    if (org && !approverId)
+      return setError("Choose who is approving this work.");
+    if (org && !mayApprove(s, property?.accountId || "", approverId))
+      return setError(
+        "That contact is not authorized to approve work for this account.",
+      );
     if (!name.trim()) return setError("Enter the name authorizing this work.");
     if (org && !role.trim())
       return setError(
@@ -130,6 +189,7 @@ export default function Assessment({ assessmentId }: { assessmentId: string }) {
       target.authorization = {
         name: name.trim(),
         ...(role.trim() ? { role: role.trim() } : {}),
+        ...(approver ? { contactId: approver } : {}),
         agreedAt: new Date(d.clock).toISOString(),
       };
       const created = convertApproved(d, w.id);
@@ -207,7 +267,12 @@ export default function Assessment({ assessmentId }: { assessmentId: string }) {
             locked={!!request || w.status === "Converted"}
             onDecide={(decision) =>
               update((d) => {
-                decide(d, f.id, decision);
+                if (!decide(d, f.id, decision, approver) && decision === "Approved")
+                  setError(
+                    org && !approverId
+                      ? "Choose who is approving, below."
+                      : "That contact is not authorized to approve work for this account. Ask whoever manages it to grant approval, or choose someone who has it.",
+                  );
               })
             }
             onAssessment={() =>
@@ -267,6 +332,32 @@ export default function Assessment({ assessmentId }: { assessmentId: string }) {
                 onChange={(e) => setName(e.target.value)}
               />
             </label>
+            {org && (
+              <label className="field">
+                Approving as
+                <select
+                  value={approverId}
+                  onChange={(e) => {
+                    setError("");
+                    setApproverId(e.target.value);
+                    const c = people.find((x) => x.id === e.target.value);
+                    if (c) {
+                      setName(c.name);
+                      setRole(c.role || "");
+                    }
+                  }}
+                >
+                  <option value="">Choose a contact…</option>
+                  {people.map((c) => (
+                    <option key={c.id} value={c.id}>
+                      {c.name}
+                      {c.role ? ` · ${c.role}` : ""}
+                      {c.canApprove ? "" : " · not authorized"}
+                    </option>
+                  ))}
+                </select>
+              </label>
+            )}
             {org && (
               <label className="field">
                 Your role

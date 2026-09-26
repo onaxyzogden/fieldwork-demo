@@ -18,6 +18,10 @@ import {
   money,
   dateLabel,
   accountName,
+  accounts,
+  contactsFor,
+  mayApprove,
+  setApprover,
   duplicateProperties,
   mergeProperties,
   resolveProperty,
@@ -40,6 +44,10 @@ import {
   money2,
   sendBlockers,
   sendWalkthrough,
+  issueAccess,
+  linkState,
+  revokeAccess,
+  type LinkState,
 } from "./pmw";
 import { assessmentLink } from "./store";
 import PropertyRecord from "./PropertyRecord";
@@ -373,7 +381,8 @@ function WalkthroughDetail({
     }, "Assessment sent to the customer");
   };
   const converted = s.requests.find((r) => r.walkthroughId === w.id);
-  const link = assessmentLink(w.assessmentId);
+  const state = linkState(s, w);
+  const link = w.access ? assessmentLink(w.access.token) : "";
 
   const patch = (id: string, values: Partial<Finding>, msg?: string) =>
     update((d) => {
@@ -415,6 +424,7 @@ function WalkthroughDetail({
         walkthrough={w}
         totals={totals}
         link={link}
+        state={state}
         notify={notify}
         update={update}
         openRequest={openRequest}
@@ -514,6 +524,7 @@ function NextStep({
   walkthrough: w,
   totals,
   link,
+  state,
   notify,
   update,
   openRequest,
@@ -526,6 +537,7 @@ function NextStep({
   walkthrough: Walkthrough;
   totals: ReturnType<typeof assessmentTotals>;
   link: string;
+  state: LinkState;
   notify: Props["notify"];
   update: Props["update"];
   openRequest: Props["openRequest"];
@@ -536,6 +548,10 @@ function NextStep({
   revealedEmpty: boolean;
 }) {
   const incomplete = new Set(blockers.map((b) => b.finding.id)).size;
+  const opens = w.access?.opens ?? [];
+  const property = s.properties.find((p) => p.id === w.propertyId);
+  const account = accounts.find((a) => a.id === property?.accountId);
+  const people = contactsFor(account?.id || "").filter((c) => !c.inactiveAt);
   const copy = () =>
     navigator.clipboard
       ?.writeText(link)
@@ -596,6 +612,77 @@ function NextStep({
           </button>
           <button className="text-button" onClick={() => window.open(link)}>
             <ExternalLink size={16} /> Open as the customer
+          </button>
+        </div>
+        {/* The one thing here the operator genuinely could not find out
+            before: whether the assessment was ever opened. */}
+        <p className="note">
+          {state === "revoked"
+            ? "This link has been withdrawn. Issue a fresh one if the customer still needs it."
+            : state === "expired"
+              ? "This link has expired. Issue a fresh one if the customer still needs it."
+              : opens.length
+                ? `Opened ${opens.length} time${opens.length === 1 ? "" : "s"} · last ${dateLabel(opens[opens.length - 1])}`
+                : "Not opened yet."}
+        </p>
+        <p className="note">
+          The link carries a one-off reference rather than the assessment
+          number, so it cannot be found by counting. It is <strong>not</strong> a
+          secret: everything this prototype knows, including every link, lives
+          in the browser it is opened in.
+        </p>
+        {/* Only an organization has a choice to make. An individual's sole
+            contact approves their own work and there is nobody else it could
+            be, so asking would be theatre. */}
+        {people.length > 1 && (
+          <>
+            <p className="note">
+              Who may approve for this account. Recording who approved is one
+              thing; deciding who is allowed to is this.
+            </p>
+            <ul className="audit">
+              {people.map((c) => (
+                <li key={c.id}>
+                  <label className="assessment-check">
+                    <input
+                      type="checkbox"
+                      checked={mayApprove(s, account?.id || "", c.id)}
+                      onChange={(e) =>
+                        update((d) => {
+                          setApprover(d, c.id, e.target.checked);
+                        }, "Approval authority updated")
+                      }
+                    />
+                    {c.name}
+                    {c.role ? ` · ${c.role}` : ""}
+                  </label>
+                </li>
+              ))}
+            </ul>
+          </>
+        )}
+        <div className="row actions">
+          {state === "live" && (
+            <button
+              className="text-button"
+              onClick={() =>
+                update((d) => {
+                  revokeAccess(d, w.id);
+                }, "Link withdrawn")
+              }
+            >
+              Withdraw this link
+            </button>
+          )}
+          <button
+            className="text-button"
+            onClick={() =>
+              update((d) => {
+                issueAccess(d, w.id);
+              }, "Fresh link issued")
+            }
+          >
+            Issue a fresh link
           </button>
         </div>
       </section>

@@ -3694,7 +3694,7 @@ function pickView() {
        and always reads light, and setting it after mount flashes the dark
        palette's text onto a light page. */
     document.documentElement.dataset.theme = "light";
-    return <Assessment assessmentId={params.get("id") || ""} />;
+    return <Assessment token={params.get("t") || ""} legacyId={params.get("id") || ""} />;
   }
   return <App />;
 }

@@ -1135,3 +1135,67 @@ account a question produces `information → Customer:c4 :: sms/bounced,
 in-app/delivered`, the operator's Delivery panel shows it with the bounce
 warning, and six notifications now survive a reload where none did before.
 10 overflow checks with every panel expanded are clean.
+
+## Access: a link that expires, and a rule about who may approve
+
+Last of the modelled four, and the one where building the model could mislead —
+so the honest statement comes first.
+
+**The guest link is not security.** Every token lives in the same
+`localStorage` as everything else, so anyone who can open the app can read all
+of them. Nothing client-side could be otherwise. Two things it does buy, and
+they are the entire justification: `PMW-0001` is no longer what the URL carries,
+so an assessment cannot be found by counting upwards from one; and a backend
+inherits the fields — token, expiry, revocation, access log — rather than having
+them invented later from screens. The page's existing notice got sharper rather
+than being dropped, and the operator's panel repeats it beside the link it
+offers to copy.
+
+`accessToken()` uses `crypto.getRandomValues` and falls back to a value prefixed
+`insecure-`. The fallback announces itself because `Math.random()` behind the
+word "token" is the shape somebody copies into a backend without re-reading it.
+
+**A refusal says why.** Expired, revoked and unknown are three different things
+to whoever is holding the link. Re-issuing rotates the token, which is what
+makes revoking mean anything, and opens survive a re-issue because how often an
+assessment was read is a fact about the assessment, not the current link. The
+access log is the part with immediate value: *did they ever open it?* could not
+be asked at all before.
+
+**Approval authority is a rule an operator can set.** `mayApprove()` gates both
+approval paths from inside the data layer. An individual's sole contact may
+approve — there is nobody else it could be. An organization's contacts may only
+where an operator has granted it. Deferring is not gated: saying "not now"
+commits the account to nothing.
+
+The grant lives in `State.approvers` rather than on the contact, and finding out
+why was the useful part: `contacts` is a static roster with no creation path, so
+the flag it ships with cannot be changed at runtime. Shipping only the seeded
+flag would have left the decision half-built — rule enforced, nobody able to set
+it. Asking where the operator's button would write is what caught it.
+
+This enforces a **rule, not an identity**. Nothing authenticates the person
+choosing a contact from the list, and `docs/permissions.md` says so.
+
+### A test that had stopped testing anything
+
+One existing test asserted the assessment page "never writes to the customer's
+browser just by being opened". That stopped being true the moment opening
+recorded the open — and it kept passing, because `renderToString` does not run
+effects. It was asserting nothing. It is now two tests: rendering writes
+nothing, and opening writes exactly the one row and leaves the rest of the state
+byte-identical.
+
+Validation: 381 tests (25 new), build, `status:check`, `design:check`. Four
+guarantees removed in turn and each caught: expiry, token rotation on re-issue,
+the organization grant, and deferring staying ungated. In the browser, every
+link state was opened and produced its own page — live, an old `?id=` link,
+unknown, expired, revoked, rotated, and the fresh token — with opens recorded on
+disk and no console errors. 30 overflow checks across three surfaces, five
+widths and both themes.
+
+### The four are done
+
+Payment (#18), notifications (#19), and this. With the three real items before
+them, `docs/decisions.md` has no open entries left: each is decided, and each is
+either built or modelled with its production gap named in `blueprint-data.ts`.

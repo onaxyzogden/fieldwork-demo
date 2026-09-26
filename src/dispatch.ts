@@ -21,6 +21,7 @@ export function migrateDispatch(s: State): State {
   s.holds ??= [];
   s.mergedFrom ??= {};
   s.paymentMethods ??= [];
+  s.approvers ??= {};
   s.notifications ??= [];
   migrateAccounts(s);
   migratePmw(s);

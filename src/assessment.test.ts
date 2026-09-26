@@ -9,6 +9,7 @@ import {
   createWalkthrough,
   decide,
   sendWalkthrough,
+  recordOpen,
 } from "./pmw";
 
 afterEach(() => vi.unstubAllGlobals());
@@ -44,14 +45,14 @@ function sent() {
     assertions can read the page the way a person does. */
 const readable = (html: string) => html.replace(/<!--\s*-->/g, "");
 
-function render(s: State, assessmentId: string) {
+function render(s: State, token: string) {
   vi.stubGlobal("localStorage", {
     getItem: (key: string) =>
       key === "fieldwork-demo-v1" ? JSON.stringify(s) : null,
     setItem: () => {},
     removeItem: () => {},
   });
-  return readable(renderToString(createElement(Assessment, { assessmentId })));
+  return readable(renderToString(createElement(Assessment, { token })));
 }
 /** Only what the customer sees on screen, without the print document below it. */
 const screenOnly = (html: string) => html.slice(0, html.indexOf("pmw-print"));
@@ -60,21 +61,21 @@ const printOnly = (html: string) => html.slice(html.indexOf("pmw-print"));
 describe("the customer's assessment", () => {
   it("opens from the link alone, with no sign-in and no account", () => {
     const { s, w } = sent();
-    const html = render(s, w.assessmentId);
+    const html = render(s, w.access!.token);
     expect(html).toContain(w.assessmentId);
     expect(html).toContain("38 Lakeshore Road West");
     expect(html).not.toMatch(/sign in|log in|create an account to view/i);
   });
   it("refuses a link that names no sent assessment", () => {
     const { s } = sent();
-    expect(render(s, "PMW-9999")).toContain("Assessment not found");
+    expect(render(s, "not-a-token")).toContain("Assessment not found");
     const draft = seed();
     createWalkthrough(draft, "p1");
     expect(render(draft, "PMW-0001")).toContain("Assessment not found");
   });
   it("offers no approval control and no price for a further-assessment finding", () => {
     const { s, w, damp } = sent();
-    const html = screenOnly(render(s, w.assessmentId));
+    const html = screenOnly(render(s, w.access!.token));
     const card = html.slice(html.indexOf(damp.title));
     const next = card.indexOf("Work summary");
     const section = card.slice(0, next > 0 ? next : undefined);
@@ -87,7 +88,7 @@ describe("the customer's assessment", () => {
     const { s, w, door, shelf } = sent();
     decide(s, door.id, "Approved");
     decide(s, shelf.id, "Not Now");
-    const html = render(s, w.assessmentId);
+    const html = render(s, w.access!.token);
     expect(html).toContain("$180");
     expect(html).toContain("$23.40");
     expect(html).toContain("$203.40");
@@ -98,7 +99,7 @@ describe("the customer's assessment", () => {
     decide(s, door.id, "Approved");
     convertApproved(s, w.id);
     reconcile(s);
-    const screen = screenOnly(render(s, w.assessmentId));
+    const screen = screenOnly(render(s, w.access!.token));
     expect(screen).toContain("Review findings");
     expect(screen).toContain("Scheduled");
     expect(screen).not.toContain("Approval &amp; payment");
@@ -111,7 +112,7 @@ describe("the printed assessment is the same record", () => {
     const { s, w, door, shelf, damp } = sent();
     decide(s, door.id, "Approved");
     decide(s, shelf.id, "Not Now");
-    const print = printOnly(render(s, w.assessmentId));
+    const print = printOnly(render(s, w.access!.token));
     /* Parity is what §11 asks for: one data path, so the document cannot be
        edited into disagreeing with the record it was generated from. */
     expect(print).toContain(w.assessmentId);
@@ -135,9 +136,13 @@ describe("the printed assessment is the same record", () => {
       agreedAt: new Date(s.clock).toISOString(),
     };
     convertApproved(s, w.id);
-    expect(printOnly(render(s, w.assessmentId))).toContain("Daniel Brooks");
+    expect(printOnly(render(s, w.access!.token))).toContain("Daniel Brooks");
   });
-  it("never writes to the customer's browser just by being opened", () => {
+  /* This used to assert the page never writes at all. That stopped being true
+     when opening began recording that it was opened, and the test kept passing
+     only because renderToString does not run effects — so it was asserting
+     nothing. Split into what is actually true. */
+  it("writes nothing while rendering", () => {
     const { s, w } = sent();
     const setItem = vi.fn();
     const removeItem = vi.fn();
@@ -147,11 +152,26 @@ describe("the printed assessment is the same record", () => {
       setItem,
       removeItem,
     });
-    renderToString(
-      createElement(Assessment, { assessmentId: w.assessmentId }),
-    );
+    renderToString(createElement(Assessment, { token: w.access!.token }));
     expect(setItem).not.toHaveBeenCalled();
     expect(removeItem).not.toHaveBeenCalled();
+  });
+  it("records only that it was opened, and nothing else about the state", () => {
+    const { s, w } = sent();
+    const before = JSON.parse(JSON.stringify(s)) as State;
+    recordOpen(s, w.id);
+    const after = s.walkthroughs.find((x) => x.id === w.id)!;
+    expect(after.access!.opens).toHaveLength(1);
+    // Everything but that one array is untouched.
+    const strip = (x: State) =>
+      JSON.stringify({
+        ...x,
+        walkthroughs: x.walkthroughs.map((y) => ({
+          ...y,
+          access: { ...y.access, opens: [] },
+        })),
+      });
+    expect(strip(s)).toBe(strip(before));
   });
 });
 

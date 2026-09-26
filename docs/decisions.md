@@ -25,10 +25,10 @@ Each entry carries the same five fields:
 | # | Decision | Status | Built |
 |---|---|---|---|
 | 1 | Account is a person *or* an organization | Decided with modification | Yes |
-| 2 | Capture the approver, defer enforcement | Decided | Yes |
+| 2 | Capture the approver, defer enforcement | Decided | Yes, and now enforced as a rule |
 | 3 | Tokenize early, authorize near service, capture at completion | Decided with modification | Modelled |
 | 4 | Card before scheduling, never before approval | Decided | Modelled |
-| 5 | Guest links expire, revocable, logged | Decided | No |
+| 5 | Guest links expire, revocable, logged | Decided | Modelled |
 | 6 | No deposits in v1 | Decided | n/a |
 | 7 | Materials responsibility is a per-task field | Decided with modification | Yes |
 | 8 | Contractor pay is fixed on acceptance | Decided | Wording only |
@@ -209,7 +209,7 @@ the fresh-link path is part of the decision and not an enhancement.
 revocation or entropy, and the page says so on itself. Honest, but not a policy.
 Needs a backend.
 
-**Status.** Decided. Not built.
+**Status.** Decided. **Modelled** — ADR 047. Token, expiry, revocation, access log and a fresh-link path all exist. None of it is security while the state is client-side, and the page says so.
 
 ---
 
@@ -470,9 +470,15 @@ named in `blueprint-data.ts` as a production gap the way payments already are.
 3. ~~**Notification channels and delivery state** (decision 11).~~ **Modelled**
    (ADR 045). What a provider would add: actual sending, and the delivery
    confirmations that would move an external channel off `sent`.
-4. **Guest-link security** (decision 5).
-5. **Authorization enforcement** — decision 2 records who approved; nothing
-   checks that they were entitled to.
+4. ~~**Guest-link security** (decision 5).~~ **Modelled** (ADR 047). It is not
+   security and cannot be: every token lives in the same browser storage as the
+   state. What a backend inherits is the shape.
+5. ~~**Authorization enforcement** — decision 2 records who approved; nothing
+   checks that they were entitled to.~~ **The rule is now enforced** (ADR 048):
+   `mayApprove()` gates both approval paths and an operator can grant or
+   withdraw authority. What remains is **authentication** — nothing stops
+   somebody choosing a different contact from the list, and nothing
+   client-side could.
 6. ~~**Duplicate account and property detection and merge.**~~ **Done for
    properties** (ADR 041). Not for accounts, and not as an oversight:
    `accounts` is a module-level roster with no creation path, so a duplicate

@@ -366,10 +366,10 @@ export const entities: Entity[] = [
   {
     id: "walkthrough",
     name: "Walkthrough",
-    owns: "One dated assessment of one property, its assessment id, tax rate and the customer's authorization.",
+    owns: "One dated assessment of one property, its assessment id, tax rate, the customer's authorization, and the guest link that reaches it.",
     states: "Stored: Draft, Sent, Converted.",
     links: ["property", "finding"],
-    note: "The tax rate is stored rather than read live, so an assessment keeps matching the total it was approved at.",
+    note: "The tax rate is stored rather than read live, so an assessment keeps matching the total it was approved at. PRODUCTION GAP: the guest link carries a token with an expiry, revocation and an access log, but none of it is security — every token sits in the same browser storage as the state. It stops the assessment number being guessable and gives a backend the fields; it keeps nobody out.",
   },
   {
     id: "finding",
