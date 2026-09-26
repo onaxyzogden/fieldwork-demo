@@ -427,3 +427,21 @@ Recording happens at the change, not at the screen. `approveQuote()` and `respon
 A request shows its own trail through `auditFor()`, rendered on the request detail where the operator is already looking. A log nothing renders is the `carryForward` defect ADR 034 was written about, and this is the third time that pattern has come up in this codebase.
 
 Coverage is deliberately partial and should be described that way: price, booking mode, materials, review, assignment, approval and property merges. Those are the changes the audits asked about. Every other write still logs its narrative line and nothing more, and extending it is adding an argument at the call site rather than changing the shape.
+
+## ADR 044: The payment lifecycle is modelled, and says so
+
+Accepted. Decision 3 settled the sequence — approve, store a method, confirm, authorize near service, capture at completion — and left it unbuilt. This builds every state and transition without contacting a provider, so a backend inherits a shape rather than a blank, and so the states a real integration produces have somewhere to live.
+
+**Confirmation waits on a method, not on money.** `secured()` replaced two separate inline checks for `status === "Paid"` that could have drifted apart. A visit is confirmable once a `PaymentMethod` is on file, because the whole reason for authorizing near service is that a job three weeks out cannot hold an authorization that long — and the customer should still get a confirmed appointment. `Paid` and `Authorized` also satisfy it, because the simulated checkout writes `Paid` directly and the five demo scenarios depend on that shortcut.
+
+**A failed capture is `Outstanding`, not `Failed`.** They are different situations. `Failed` is a charge that never started; `Outstanding` is work that was done and not paid for, which is the one an operator has to chase. Collapsing them was the original defect the audit named.
+
+**A partial refund is its own status.** Not `Paid` with an amount beside it, because "we refunded one task of four" is a state someone filters on and a full refund is not the same thing.
+
+**The authorization window is config, not a constant.** `AUTHORIZE_WITHIN_DAYS` decides whether the hold goes on at confirmation or is scheduled for that many days before service. Real expiry varies by network and merchant category and has to be checked against the provider's own rules at integration; asserting a number here from memory is exactly what decision 3 was rewritten to avoid.
+
+**The token is shaped to look like a token.** `sim_tok_…`, not digits. In a real integration the provider issues it and it is all this application would ever hold; a simulated value that looked like a card would invite someone to treat it as one.
+
+Labelling is per surface rather than per state, which is a deliberate middle setting. An `Authorized` badge reads like a hold on a real card, so each payment surface carries one notice saying nothing is stored, held or moved. A marker beside every state would be noise; the blueprint entry alone would not reach anyone using the demo.
+
+What this does **not** model: a provider is asynchronous and can fail after returning, retries are not idempotent for free, and a scheduled authorization needs something to run it. Those are named in `blueprint-data.ts` as the production gap.

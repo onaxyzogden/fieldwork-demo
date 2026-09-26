@@ -417,6 +417,14 @@ export const entities: Entity[] = [
     note: "Sequential offer history persists. An accepted replacement must still satisfy the customer confirmation gates.",
   },
   {
+    id: "paymentMethod",
+    name: "Payment method",
+    owns: "A token standing in for a stored card, with its brand and last four digits.",
+    states: "No status. One per account; forgetting it puts the request back to Awaiting Payment.",
+    links: ["account", "payment"],
+    note: "PRODUCTION GAP: the token is simulated and shaped to look like a token rather than a card. In a real integration the provider issues it and it is all this application would ever hold.",
+  },
+  {
     id: "quote",
     name: "Quote",
     owns: "Customer price, pricing path, notes and pay-on-completion flag.",
@@ -428,10 +436,10 @@ export const entities: Entity[] = [
   {
     id: "payment",
     name: "Payment",
-    owns: "Quote reference, amount and simulated transaction reference.",
-    states: "Stored: Paid, Failed, Refunded.",
-    links: ["quote"],
-    note: "No real charges. Retry creates another simulated payment record. Cancellation can mark paid records Refunded; finishing does not settle payment.",
+    owns: "Quote reference, amount, the stored method it was taken against, and simulated authorization and capture timestamps.",
+    states: "Stored: Authorized, Paid, Failed, Outstanding, Refunded, Partially Refunded.",
+    links: ["quote", "paymentMethod"],
+    note: "PRODUCTION GAP: the entire lifecycle is simulated. No card is stored, no hold is placed and no money moves. The sequence modelled is approve, store a method, confirm, authorize near service, capture at completion — a real provider is asynchronous and can fail after returning, which nothing here reproduces. Authorization timing is a config window because the real expiry varies by network and must be checked against the provider's own rules.",
   },
   {
     id: "execution",

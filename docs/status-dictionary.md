@@ -145,21 +145,27 @@ the moment of approval and never rewritten.
 
 Stored on `Payment.status`.
 
-| Status | Notes |
-|---|---|
-| `Paid` | Simulated capture succeeded |
-| `Failed` | Simulated capture failed; entry preserved for retry |
-| `Refunded` | Operator refunded |
+The sequence is approve → method stored → confirm → authorize near service →
+capture at completion (`docs/decisions.md` #3, ADR 044). **No money moves**: the
+whole lifecycle is simulated, and `payments.ts` says so at the top.
 
-Missing, and deliberately recorded as missing. A struck-through row is a claim
-that the status does **not** exist; `status:check` fails if someone implements
-one without updating this table.
+| Status | Set by | Notes |
+|---|---|---|
+| `Authorized` | `authorizePayment()` | A hold. Money has **not** moved. Placed at confirmation when service is within `AUTHORIZE_WITHIN_DAYS`, otherwise scheduled for that many days before |
+| `Paid` | `capturePayment()` | Captured at completion. The simulated checkout still writes this directly, which is the shortcut the demo scenarios take |
+| `Failed` | simulated checkout | A charge that never started |
+| `Outstanding` | `capturePayment(…, fail)` | The work was done and the capture failed. Deliberately not `Failed`: somebody owes for finished work, which is the operator's to chase |
+| `Refunded` | `refundPayment()` | The whole amount went back |
+| `Partially Refunded` | `refundPayment(…, amount)` | Some of it did. Its own status rather than `Paid` with a number beside it, because an operator filters on it |
+
+All six were recorded here as struck-through gaps before they existed, and
+`status:check` refused the build the moment `Authorized` appeared in the source
+with this table unchanged. That is the mechanism working: the rows below are
+what remain unimplemented.
 
 | Status | Why it should exist |
 |---|---|
-| ~~Authorized~~ | Both audits: a stored card is not a payment workflow. Authorize at approval, capture at completion |
-| ~~Outstanding~~ | Work completed and the final charge failed — today `Failed` carries both meanings |
-| ~~Partially Refunded~~ | Disputes over one task in a multi-task visit |
+| ~~Disputed~~ | A chargeback is neither a refund the operator chose nor an outstanding balance they can chase |
 
 See `docs/decisions.md`.
 
