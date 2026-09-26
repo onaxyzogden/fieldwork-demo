@@ -73,7 +73,9 @@ import {
   instantEligible,
   accounts,
   approveQuote,
+  auditFor,
   bookVisit,
+  isChange,
   materialsResponsibilities,
   type MaterialsResponsibility,
   accountName,
@@ -535,6 +537,7 @@ function Workspace({
   }, [modal]);
   const r = s.requests.find((r) => r.id === active) || s.requests[0];
   const tasks = s.tasks.filter((t) => t.requestId === r.id && !t.mergedInto);
+  const trail = auditFor(s, r.id);
   /* The signed-in customer's own requests. A draft only counts once it carries
      something — an address, a description or a photo. */
   /* Only properties that have actually been walked: an empty history is not
@@ -744,6 +747,14 @@ function Workspace({
         log(
           d,
           `${r.name} · visit created for ${providers.find((p) => p.id === provider)?.name}${provider === "yousef" ? "" : " · offer sent"}`,
+          {
+            actor: "Operator",
+            requestId: r.id,
+            entity: "visit",
+            entityId: booked.id,
+            field: "providerId",
+            to: providers.find((p) => p.id === provider)?.name || provider,
+          },
         );
     });
     /* The slot can go between the customer seeing it and the write landing,
@@ -1148,6 +1159,9 @@ function Workspace({
   const amount = quoteTouched ? quoteAmount : Math.max(95, suggestedQuote);
   const sendQuote = () =>
     update((d) => {
+      const previous = d.quotes.find(
+        (q) => q.requestId === r.id && q.status !== "Superseded",
+      );
       d.quotes
         .filter((q) => q.requestId === r.id)
         .forEach((q) => (q.status = "Superseded"));
@@ -1164,7 +1178,17 @@ function Workspace({
             : "Labour and standard materials included. Quote valid for 7 days.",
         payOnCompletion: completion,
       });
-      log(d, `Quote sent to ${r.name} · ${money(amount)}`);
+      log(d, `Quote sent to ${r.name} · ${money(amount)}`, {
+        actor: "Operator",
+        requestId: r.id,
+        entity: "quote",
+        entityId: r.id,
+        field: "amount",
+        // Absent rather than "none" when this is the first quote: there was no
+        // previous price, which is different from a previous price of nothing.
+        ...(previous ? { from: money(previous.amount) } : {}),
+        to: money(amount),
+      });
     }, "Quote ready in customer portal");
   const quoteFields = () => (
     <>
@@ -1432,9 +1456,18 @@ function Workspace({
                       );
                     clear("mode");
                     update((d) => {
-                      d.requests.find((q) => q.id === r.id)!.mode =
-                        e.target.value;
-                      log(d, "Operator changed booking mode");
+                      const req = d.requests.find((q) => q.id === r.id)!;
+                      const was = req.mode;
+                      req.mode = e.target.value;
+                      log(d, "Operator changed booking mode", {
+                        actor: "Operator",
+                        requestId: r.id,
+                        entity: "request",
+                        entityId: r.id,
+                        field: "mode",
+                        from: was,
+                        to: req.mode,
+                      });
                     });
                   }}
                 >
@@ -1443,6 +1476,31 @@ function Workspace({
                 </select>
                 <Message field="mode" />
               </label>
+            </details>
+            {/* A log nothing renders is ADR 034 again. Changes first, because
+                "who changed this price" is the question the narrative could
+                not answer; the narrative stays underneath it. */}
+            <details className="note">
+              <summary>History ({trail.length})</summary>
+              {trail.length === 0 ? (
+                <p>Nothing recorded against this request yet.</p>
+              ) : (
+                <ul className="audit">
+                  {trail.map((e) => (
+                    <li key={e.id}>
+                      <span>{dateLabel(e.at)}</span>{" "}
+                      {isChange(e) ? (
+                        <>
+                          <strong>{e.actor}</strong> changed {e.field}
+                          {e.from ? ` from ${e.from}` : ""} to {e.to}
+                        </>
+                      ) : (
+                        e.text
+                      )}
+                    </li>
+                  ))}
+                </ul>
+              )}
             </details>
           </div>
         )}
@@ -1801,8 +1859,19 @@ function Workspace({
                             value={t.materials || "To be confirmed"}
                             onChange={(e) =>
                               update((d) => {
-                                d.tasks.find((x) => x.id === t.id)!.materials = e
-                                  .target.value as MaterialsResponsibility;
+                                const task = d.tasks.find((x) => x.id === t.id)!;
+                                const was = task.materials;
+                                task.materials = e.target
+                                  .value as MaterialsResponsibility;
+                                log(d, `Materials set for ${t.summary}`, {
+                                  actor: "Operator",
+                                  requestId: r.id,
+                                  entity: "task",
+                                  entityId: t.id,
+                                  field: "materials",
+                                  ...(was ? { from: was } : {}),
+                                  to: task.materials,
+                                });
                               }, "Materials responsibility set")
                             }
                           >
@@ -1824,6 +1893,15 @@ function Workspace({
                                 log(
                                   d,
                                   "Operator reviewed task; compliance flag retained",
+                                  {
+                                    actor: "Operator",
+                                    requestId: r.id,
+                                    entity: "task",
+                                    entityId: t.id,
+                                    field: "reviewed",
+                                    from: "no",
+                                    to: "yes",
+                                  },
                                 );
                               }, "Review recorded")
                             }

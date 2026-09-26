@@ -113,3 +113,19 @@
     scroll-behavior: auto !important;
   }
 }
+
+/* The audit trail on a request. A plain list: the interesting part is the
+   words, and a timeline rail would compete with them for attention. */
+.audit {
+  list-style: none;
+  margin: var(--space-3) 0 0;
+  padding: 0;
+  display: grid;
+  gap: var(--space-2);
+}
+.audit li {
+  overflow-wrap: break-word;
+}
+.audit span {
+  color: var(--muted);
+}

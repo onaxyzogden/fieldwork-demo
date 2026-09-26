@@ -411,3 +411,19 @@ Accepted, and recorded so it is not mistaken for an omission. The review that pr
 It cannot happen here. `accounts` is a module-level `const` with no creation path; nothing in the app pushes to it. A `mergeAccounts()` would therefore be a function nothing could reach, which is precisely the defect ADR 034 was written about, and writing one to satisfy a plan would be worse than leaving the gap visible.
 
 The gap is recorded in `decisions.md` with the trap that is waiting in it: account ids are stored **inside strings**. `notification.recipient` is `"Customer:<accountId>"` and `visit.messages[].sender` uses the same shape. A merge that rewrote only the typed `accountId` fields would not error — it would silently orphan the merged account's whole notification and message history. Property ids are not embedded in strings anywhere, which was checked rather than assumed.
+
+## ADR 043: The event log gains detail without losing its narrative
+
+Accepted. `events` was `{ id, text, at }`. It could say "Quote sent to Daniel Brooks · $420" and could not answer "who changed this price, and from what" — the question `docs/permissions.md` recorded as missing and both audits asked for.
+
+Entries now carry optional `actor`, `requestId`, `entity`, `entityId`, `field`, `from` and `to`. Every one of them is optional on purpose. `log(s, text)` keeps its one-argument form, so the twenty-odd existing narrative entries are untouched and no call site had to change to keep working. A log where some entries carry detail is more useful than one that was never finished because every site had to be converted at once.
+
+`from` and `to` hold **rendered** values — "$420", "Sent", "Customer supplied" — not raw ones. The log is read by a person, and a price stored as `420` would have to be re-formatted by whatever renders it, which is where the currency and the rounding rules would drift apart from the rest of the app.
+
+The first quote on a request records no `from` at all, rather than "none" or "$0". There was no previous price, which is a different fact from a previous price of nothing.
+
+Recording happens at the change, not at the screen. `approveQuote()` and `respondToOffer()` log from inside the data layer, which is the same reasoning as ADR 036: a status that can be set from one place and recorded from another gives you two facts that can disagree. A refused approval logs nothing, which a test asserts, because a rejected write is not a change.
+
+A request shows its own trail through `auditFor()`, rendered on the request detail where the operator is already looking. A log nothing renders is the `carryForward` defect ADR 034 was written about, and this is the third time that pattern has come up in this codebase.
+
+Coverage is deliberately partial and should be described that way: price, booking mode, materials, review, assignment, approval and property merges. Those are the changes the audits asked about. Every other write still logs its narrative line and nothing more, and extending it is adding an argument at the call site rather than changing the shape.

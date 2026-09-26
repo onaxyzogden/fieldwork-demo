@@ -222,6 +222,8 @@ export function reoffer(
   );
   return true;
 }
+const providerName = (id: string) =>
+  providers.find((p) => p.id === id)?.name || id;
 export function respondToOffer(
   s: State,
   id: string,
@@ -244,6 +246,15 @@ export function respondToOffer(
     return false;
   a.status = status;
   if (status === "Declined") a.declineReason = reason;
+  log(s, `${providerName(a.providerId)} ${status.toLowerCase()} the offer`, {
+    actor: providerName(a.providerId),
+    requestId: req.id,
+    entity: "assignment",
+    entityId: a.id,
+    field: "status",
+    from: "Offered",
+    to: status,
+  });
   if (status === "Accepted") {
     notification(
       s,

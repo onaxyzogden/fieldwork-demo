@@ -69,7 +69,7 @@ identify. ADR 028 records why it was moved there.
 | Server-side enforcement | The UI is the only check | PMW G (CRITICAL), HandyFlow #33 |
 | Guest-link security | No expiry, revocation, entropy or access log; it is a plain URL parameter | PMW G (CRITICAL) |
 | No approval authority | Anyone with the link can approve. The approval now records **who** (`Quote.approval`, `Walkthrough.authorization`), but nothing checks they were entitled to — recording and enforcing are different problems, and `docs/decisions.md` #2 takes them in that order deliberately | PMW C, decision 2 |
-| No audit log | `events` records activity, but not who changed a price, scope or assignment | PMW B, HandyFlow #33 |
+| Audit log is partial by coverage | `events` now records actor, field and before/after for price, booking mode, materials, review, assignment, approval and merges. Writes outside that list still log only their narrative line | PMW B, HandyFlow #33 |
 | Contractor sees the whole request | `canWork()` gates *actions*, not *reads* — an assigned contractor can see the full request record | HandyFlow #8 |
 
 The last one is worth separating from the rest: it is not an authentication

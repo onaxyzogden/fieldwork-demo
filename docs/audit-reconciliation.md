@@ -122,7 +122,7 @@ how; where the audits are wrong about the current build, this says that too.
 | PMW G | Internal vs customer-visible notes | **Resolved** | `internalNotes` and `customerNotes` are separate fields and `internalNotes` is rendered on neither the assessment nor the print document. `assessment.test.ts` asserts the printed and on-screen documents carry the same data |
 | PMW G | Photo privacy and consent | **Open** | No capture guidance, no redaction |
 | HF 19 | Customer authentication | **Declared gap** | None. Guest-first is the intended v1 shape |
-| PMW B, HF 33 | Audit log | **Partial** | `events` records activity; it does not record who changed a price, scope or assignment |
+| PMW B, HF 33 | Audit log | **Resolved** | `events` entries now carry `actor`, `entity`, `field`, `from` and `to` alongside the text. Recorded where the question is asked: price, booking mode, materials, review, assignment, approval and property merges. `auditFor()` gives a request its own trail, rendered on the request. ADR 043 |
 
 ## G. Content, states and accessibility
 
@@ -157,7 +157,7 @@ how; where the audits are wrong about the current build, this says that too.
 4. **Guest-link policy** — expiry, revocation, access logging.
 5. ~~**Duplicate detection and merge** — cheap now, painful after real data.~~ Done for properties, which are the records that can actually duplicate. Accounts cannot, and the reason is recorded rather than papered over with a function nothing can call.
 6. ~~**Slot holds and idempotency** — matters at volume, not at demo scale.~~ **Wrong on both counts, and now fixed.** It mattered at demo scale: two tabs could double-book, and worse, the second tab's write erased the first tab's booking outright. See the correction below.
-7. **Audit log of material changes** — who changed a price, and when.
+7. ~~**Audit log of material changes** — who changed a price, and when.~~ Done. The narrative entries were kept; detail was added beside them rather than replacing them.
 
 ## What the audits got wrong about the current build
 
