@@ -387,3 +387,27 @@ Accepted. Rechecking availability at checkout narrows the race window; it does n
 Holds expire rather than being released by whoever abandoned the checkout, because the usual way to abandon a checkout is to close the tab. `reconcile()` drops the expired ones beside where it already expires contractor offers — the same kind of fact, a promise with a clock on it that nobody is coming back to clear by hand.
 
 Idempotency rides on the same write. Each booking press carries an `opKey`, stored on the visit it creates; a repeat with that key returns the existing visit. A double tap, a retried press and a re-applied `commit()` therefore all produce one appointment, which matters more now that a losing write re-applies itself automatically.
+
+## ADR 041: Duplicates are found with a different key than the one that prevents them
+
+Accepted. Two records for one building can arise two ways: `migratePmw()` builds a property per distinct request address, and an operator can type an address in Walkthroughs that already exists.
+
+The obvious move was to reuse `propertyKey()`. It is wrong for this, and the reason is worth keeping. `propertyKey()` is `norm(address) | norm(city) | accountId` — it includes the account **on purpose**, and a test asserts it "never merges across customers", because re-homing one account's request under another on matching text would be the serious bug ADR 018 exists to prevent. A detector that reused it could never surface the duplicate that matters most: one address reached by two accounts.
+
+So detection has its own key, `addressKey()`, over address and city alone. `propertyKey()` is untouched. The two keys disagree deliberately: one is strict because it acts automatically, the other is loose because a person reads its output.
+
+Nothing is merged automatically, and a cross-account match is **flagged rather than offered**. Address text cannot tell "two records for one house" from "two different units", and merging across accounts would move one account's maintenance history under another with no rule able to say which is right. The panel shows how many requests and walkthroughs each side carries, so the decision is made on evidence.
+
+A merge **repoints and removes** rather than leaving a tombstone. `Task.mergedInto` set the other precedent, and it is filtered with `!t.mergedInto` at eleven separate read sites; properties are read in about seven files, so copying the pattern means a filter in each, every one of which can be forgotten, and a forgotten one renders a merged-away record as live. Repointing leaves nothing to filter, so no read site changed at all.
+
+What replaces the tombstone is `mergedFrom`, old id → surviving id, consulted **only where an id arrives from outside**: today that is one place, a property id held in `useState` across a merge in another tab. Everything the merge itself repointed is already correct, which is the payoff.
+
+Merging refuses rather than resolving where it would lose something: across accounts, and where both records carry different notes. Detail the survivor lacks is carried over; detail it already has wins.
+
+## ADR 042: No account merge, because no account can duplicate
+
+Accepted, and recorded so it is not mistaken for an omission. The review that prompted this work was right that duplicate accounts matter — a property management company entered twice is a real problem once the product is real.
+
+It cannot happen here. `accounts` is a module-level `const` with no creation path; nothing in the app pushes to it. A `mergeAccounts()` would therefore be a function nothing could reach, which is precisely the defect ADR 034 was written about, and writing one to satisfy a plan would be worse than leaving the gap visible.
+
+The gap is recorded in `decisions.md` with the trap that is waiting in it: account ids are stored **inside strings**. `notification.recipient` is `"Customer:<accountId>"` and `visit.messages[].sender` uses the same shape. A merge that rewrote only the typed `accountId` fields would not error — it would silently orphan the merged account's whole notification and message history. Property ids are not embedded in strings anywhere, which was checked rather than assumed.

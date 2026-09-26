@@ -455,7 +455,15 @@ Not decisions — work the decisions imply, in priority order:
 4. **Guest-link security** (decision 5).
 5. **Authorization enforcement** — decision 2 records who approved; nothing
    checks that they were entitled to.
-6. **Duplicate account and property detection and merge.**
+6. ~~**Duplicate account and property detection and merge.**~~ **Done for
+   properties** (ADR 041). Not for accounts, and not as an oversight:
+   `accounts` is a module-level roster with no creation path, so a duplicate
+   account cannot exist and a merge for one would be code nothing could reach.
+   It becomes real the moment accounts are created — and the trap waiting there
+   is that account ids are stored *inside strings*
+   (`notification.recipient` is `"Customer:<accountId>"`), so a merge that
+   rewrites only the typed fields would silently orphan the notification
+   history rather than error.
 7. **An audit log** for price, scope and assignment changes. `events` records
    activity but not who changed what.
 
