@@ -601,16 +601,19 @@
   max-width: 1200px;
   margin-inline: auto;
 }
-.op-greeting {
+/* The header every role's home screen opens with. It was .op-greeting and the
+   operator's alone, which is why the customer's and contractor's h1 fell
+   through to the default and came out a size larger. The reference sets this
+   at 26px with tight tracking — a heading that frames the screen rather than
+   dominating it — and that is the size all three now use. */
+.role-greeting {
   margin: 0;
 }
-/* The reference sets the greeting at 26px with tight tracking — a heading that
-   frames the screen rather than dominating it. */
-.op-greeting h1 {
+.role-greeting h1 {
   font-size: var(--text-h3);
   letter-spacing: -0.5px;
 }
-.op-greeting p {
+.role-greeting p {
   font-size: var(--text-body);
   color: var(--muted);
   margin-top: var(--space-1);

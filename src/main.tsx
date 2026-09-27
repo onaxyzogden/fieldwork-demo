@@ -2679,7 +2679,7 @@ function Workspace({
                 />
               ) : (
                 <>
-                  <div className="heading customer-portal-heading">
+                  <div className="heading role-greeting customer-portal-heading">
                     <div>
                       <h1>Home, handled.</h1>
                       <p>Your requests and upcoming visits.</p>

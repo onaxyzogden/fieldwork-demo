@@ -469,7 +469,7 @@ export default function ContractorWork({
     );
   return (
     <div className="contractor-wrap">
-      <div className="heading">
+      <div className="heading role-greeting">
         <div>
           <h1>Your Work</h1>
           <p>What’s next, all in one place.</p>

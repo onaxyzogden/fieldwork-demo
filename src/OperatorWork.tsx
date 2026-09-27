@@ -153,7 +153,7 @@ export function OperatorHome({
     });
   return (
     <div className="op-home">
-      <header className="op-greeting">
+      <header className="role-greeting">
         <h1>{greeting}</h1>
         <p>Here’s what needs your attention.</p>
       </header>
