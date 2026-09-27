@@ -38,6 +38,7 @@ import {
   addFinding,
   carryCandidates,
   carryForward,
+  undecided,
   assessmentTotals,
   convertApproved,
   createWalkthrough,
@@ -529,9 +530,10 @@ function WalkthroughDetail({
             <span className="count">{carryable.length}</span>
           </div>
           <p className="note">
-            Items the customer deferred, and items that needed a closer look.
-            Carrying one restates it here, with its own price and its own
-            decision, and marks the original as superseded.
+            Items the customer deferred, items that needed a closer look, and
+            items left undecided when earlier work went ahead. Carrying one
+            restates it here, with its own price and its own decision, and marks
+            the original as superseded.
           </p>
           {carryable.map((f) => (
             <div className="row between carry-forward" key={f.id}>
@@ -601,6 +603,7 @@ function NextStep({
   revealedEmpty: boolean;
 }) {
   const incomplete = new Set(blockers.map((b) => b.finding.id)).size;
+  const leftover = undecided(s, w.id).length;
   const opens = w.access?.opens ?? [];
   const property = s.properties.find((p) => p.id === w.propertyId);
   const account = accounts.find((a) => a.id === property?.accountId);
@@ -621,6 +624,14 @@ function NextStep({
             {totals.approved.length === 1 ? "" : "s"} became tasks on one
             request. Schedule it like any other job.
           </p>
+          {leftover > 0 && (
+            <p>
+              {leftover} finding{leftover === 1 ? " was" : "s were"} left
+              undecided when this went ahead. Your next walkthrough for this
+              property offers {leftover === 1 ? "it" : "them"} under “Still open
+              from earlier visits”.
+            </p>
+          )}
         </div>
         <div className="op-decision-actions">
           {converted && (
@@ -667,6 +678,14 @@ function NextStep({
             <ExternalLink size={16} /> Open as the customer
           </button>
         </div>
+        {totals.approved.length > 0 && leftover > 0 && (
+          <p className="note">
+            Converting now locks the customer’s page with {leftover} finding
+            {leftover === 1 ? "" : "s"} still undecided. They are not lost: your
+            next walkthrough for this property can carry{" "}
+            {leftover === 1 ? "it" : "them"} forward.
+          </p>
+        )}
         {/* The one thing here the operator genuinely could not find out
             before: whether the assessment was ever opened. */}
         <p className="note">

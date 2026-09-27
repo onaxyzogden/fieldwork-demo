@@ -16,10 +16,12 @@ import {
   propertyRecord,
   quotable,
   carryCandidates,
+  closeOutUndecided,
   requestAssessment,
   seedWalkthroughs,
   sendBlockers,
   sendWalkthrough,
+  undecided,
 } from "./pmw";
 
 /** A sent walkthrough: two priced findings and one that cannot be priced yet. */
@@ -466,3 +468,73 @@ function scheduleVisit(s: State, requestId: string, taskIds: string[]) {
   });
   return visit;
 }
+
+describe("leftover findings once an assessment's work goes ahead", () => {
+  /** One sent assessment: two priced findings, nothing decided yet. */
+  function twoFindings() {
+    const s = seed();
+    s.walkthroughs = [];
+    s.findings = [];
+    const property = s.properties[0];
+    const w = createWalkthrough(s, property.id);
+    addFinding(s, w.id, { title: "Side door", price: 140 });
+    addFinding(s, w.id, { title: "Loose railing", price: 90 });
+    sendWalkthrough(s, w.id);
+    const [door, railing] = findingsFor(s, w.id);
+    return { s, w, door, railing, property };
+  }
+  const nextDraft = (s: State, propertyId: string) =>
+    createWalkthrough(s, propertyId);
+
+  it("closes the customer's round: undecided becomes Not now, decided is untouched", () => {
+    const { s, w, door, railing } = twoFindings();
+    decide(s, door.id, "Approved");
+    expect(closeOutUndecided(s, w.id)).toBe(1);
+    expect(findingState(s, railing)).toBe("Deferred");
+    expect(door.decision).toBe("Approved");
+    expect(undecided(s, w.id)).toEqual([]);
+  });
+
+  it("leaves nothing stranded after the customer submits", () => {
+    const { s, w, door, railing, property } = twoFindings();
+    decide(s, door.id, "Approved");
+    closeOutUndecided(s, w.id); // what the customer's submit now does
+    convertApproved(s, w.id);
+    const next = nextDraft(s, property.id);
+    expect(carryCandidates(s, next.id).map((f) => f.id)).toContain(railing.id);
+  });
+
+  it("never records a decision for the customer when the operator converts early", () => {
+    const { s, w, door, railing, property } = twoFindings();
+    decide(s, door.id, "Approved");
+    convertApproved(s, w.id); // the operator's button: no close-out
+    expect(w.status).toBe("Converted");
+    // Still undecided — the customer never said "Not now".
+    expect(findingState(s, railing)).toBe("Pending decision");
+    expect(railing.decision).toBe("Pending");
+    // ...but rescued: the next walkthrough offers it.
+    const next = nextDraft(s, property.id);
+    expect(carryCandidates(s, next.id).map((f) => f.id)).toContain(railing.id);
+  });
+
+  it("does not offer an undecided finding while it is still the customer's turn", () => {
+    const { s, railing, property } = twoFindings();
+    const next = nextDraft(s, property.id);
+    expect(carryCandidates(s, next.id).map((f) => f.id)).not.toContain(
+      railing.id,
+    );
+  });
+
+  it("stops offering a stranded finding once it has been carried", () => {
+    const { s, w, door, railing, property } = twoFindings();
+    decide(s, door.id, "Approved");
+    convertApproved(s, w.id);
+    const next = nextDraft(s, property.id);
+    carryForward(s, railing.id, next.id);
+    expect(railing.resolvedBy).toBeTruthy();
+    const later = nextDraft(s, property.id);
+    expect(carryCandidates(s, later.id).map((f) => f.id)).not.toContain(
+      railing.id,
+    );
+  });
+});
