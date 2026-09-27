@@ -587,15 +587,22 @@
   border: 1px solid var(--line);
   border-radius: var(--radius-lg);
   padding: var(--space-4);
-  margin: var(--space-3) 0;
   background: var(--panel);
 }
+/* .task-review sits inside a card and spaces itself; .work-task is a box in
+   the page stack, which spaces it. */
+.app[data-role="Operator"] .task-review {
+  margin: var(--space-3) 0;
+}
 .op-home {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-5);
   max-width: 1200px;
   margin-inline: auto;
 }
 .op-greeting {
-  margin: var(--space-2) 0 var(--space-6);
+  margin: 0;
 }
 /* The reference sets the greeting at 26px with tight tracking — a heading that
    frames the screen rather than dominating it. */
@@ -613,7 +620,6 @@
   border: 1px solid var(--line);
   border-radius: var(--radius-lg);
   background: var(--panel);
-  margin-bottom: var(--space-4);
 }
 .op-glance-heading {
   display: flex;
@@ -683,10 +689,12 @@
   grid-template-columns: 1fr 1fr;
   gap: var(--space-2);
   padding: var(--space-2);
-  margin-bottom: var(--space-4);
   border-radius: var(--radius-lg);
   border: 1px solid var(--line);
   background: var(--panel);
+}
+.operator-day .op-view-switch {
+  margin-bottom: var(--space-4);
 }
 .op-view-switch button {
   background: var(--bg);
@@ -788,7 +796,6 @@
   border-radius: var(--radius-lg);
   padding: var(--space-5);
   background: var(--panel);
-  margin-top: var(--space-4);
 }
 .op-waiting summary {
   min-height: 44px;
@@ -813,9 +820,6 @@
   .op-date {
     font-size: var(--text-caption);
     padding: var(--space-2);
-  }
-  .op-greeting {
-    margin-top: 0;
   }
 }
 

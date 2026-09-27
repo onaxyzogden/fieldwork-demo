@@ -504,3 +504,57 @@ The grant lives in `State.approvers`, keyed by contact, **not** on the contact r
 The assessment asks an organization *which contact* is approving, because a rule can be checked against a contact and cannot be checked against a typed name. An individual keeps the typed name.
 
 This enforces a **rule, not an identity**. Nothing authenticates the person choosing from the list, `docs/permissions.md` says so, and no client-side app could do better.
+
+## ADR 049: Spacing between boxes is owned by the stack, and "reads well" is now measured
+
+Accepted. Three layout defects were reported from a narrow viewport on the live
+site. Two of them had passed every responsive sweep run since Round 4, and the
+reason they passed is the first thing worth recording.
+
+**Every sweep measured overflow. None measured reading.** Nothing spilled,
+nothing clipped, no scrollbar appeared — and a heading was still wrapping one
+word per line inside a column 40% of the width it had. "No overflow" is not
+"reads well," and only the first was ever checked.
+
+The measurement that finds it is the **share of available width a block uses
+while wrapping**. Characters per line is the obvious metric and it is the wrong
+one: a 32px `h1` legitimately gets about eleven characters at 360px, so a
+chars-per-line threshold flags every heading in the app and hides the real
+finding in noise. Asking instead whether a block that wraps is using the room
+its container gave it isolates the defect exactly — it found the decision card
+at 360 and 480 in both themes, and nothing else anywhere.
+
+**The decision card's cause was a shared rule with two call shapes.**
+`.op-decision-head` is a row: a status icon beside a `<div>` wrapping the
+heading and paragraph. Three walkthrough cards have no icon and no wrapper, so
+their `<h3>` and `<p>` were direct flex children and became two columns. Fixed
+in CSS rather than by adding wrappers at the three call sites: a rule that only
+works when callers match one shape is a rule that will break again.
+
+**The badge defect was an unscoped override, not a missing alignment.** Below
+800px the *request* queue becomes a wrapping strip of shrink-to-fit chips, and
+the rules that do that were written as bare `.queue-item`. The walkthrough list
+uses the same class in a plain block parent, where `width: auto` made every row
+only as wide as its text — so two rows sat side by side, the chip landed after
+the text, and `.queue-item small { display: none }` silently removed the
+address and finding count from each row. Scoping three rules to `.queue` fixed
+the reported symptom and restored a line of information nobody had noticed was
+missing.
+
+**Vertical rhythm now has one owner.** `main` was a plain block; the gap between
+boxes came from whatever margins the components happened to carry, collapsing
+against each other — 20, 12, 28 and 0 pixels between consecutive boxes on one
+screen. `main`, `.op-home`, `.customer-wrap`, `.contractor-wrap` and `.detail`
+are flex columns with a single `--space-5` gap, and the margins that stood in
+for it were removed **from the components** rather than overridden on them. The
+first attempt did override them, with `main > * { margin-block: 0 }`, which
+loses to every class selector — and even had it won it would have left two
+owners arguing, which is the condition that produced the drift.
+
+Two margins were doing a second job and kept it, scoped to it: `.op-view-switch`
+spaces itself inside the Today card, `.task-review` inside a request panel.
+
+**Not everything that measures uneven is a defect.** Spacing *inside* a card is
+that card's own business and still varies; the report was about the boxes. The
+identity switcher keeps its left-flowing pills, because those are choices to
+read across rather than a status ending a row.

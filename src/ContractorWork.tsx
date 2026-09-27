@@ -469,8 +469,12 @@ export default function ContractorWork({
     );
   return (
     <div className="contractor-wrap">
-      <h1>Your Work</h1>
-      <p>What’s next, all in one place.</p>
+      <div className="heading">
+        <div>
+          <h1>Your Work</h1>
+          <p>What’s next, all in one place.</p>
+        </div>
+      </div>
       <div className="segmented">
         {["Offers", "Today", "Upcoming"].map((t) => (
           <button

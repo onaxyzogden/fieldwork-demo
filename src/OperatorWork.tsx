@@ -277,8 +277,12 @@ export function OperatorToday({
   const v = visits.find((v) => v.id === selected);
   return (
     <>
-      <h1>Today</h1>
-      <p>What’s happening, in appointment order.</p>
+      <div className="heading">
+        <div>
+          <h1>Today</h1>
+          <p>What’s happening, in appointment order.</p>
+        </div>
+      </div>
       <section className="card panel operator-day">
         <div className="work-toolbar">
           <label className="field">

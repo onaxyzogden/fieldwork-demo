@@ -4,7 +4,7 @@
 .operator-concept .detail {
   display: flex;
   flex-direction: column;
-  gap: var(--space-4);
+  gap: var(--space-5);
   min-width: 0;
 }
 .operator-detail-header {
@@ -28,10 +28,25 @@
   border-left: 3px solid var(--tone, var(--accent-text));
   scroll-margin-top: var(--space-5);
 }
+/* Two shapes use this head: an icon beside a wrapped heading/paragraph block
+   (the request decision card), and a bare heading/paragraph pair with no icon
+   (the walkthrough decision cards). Without the basis below the bare pair
+   became two columns, and the heading wrapped one word per line at 360px —
+   never an overflow, so every overflow sweep passed it. */
 .op-decision-head {
   display: flex;
+  flex-wrap: wrap;
   align-items: flex-start;
-  gap: var(--space-4);
+  column-gap: var(--space-4);
+}
+.op-decision-head > div {
+  flex: 1 1 0;
+  min-width: 0;
+}
+.op-decision-head > h3,
+.op-decision-head > p {
+  flex-basis: 100%;
+  min-width: 0;
 }
 .op-decision-head h3 {
   margin: 0;
