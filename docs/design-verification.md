@@ -160,3 +160,36 @@ this environment, so these results are from the local build.
 Standing caveat, true of every verification note above and never stated until
 now: **all of these measurements are Chromium.** Safari and Firefox are not
 covered by anything in this repository.
+
+# One height for the form controls — 2026-09-27
+
+Asked to even up the date input and the select in the Today toolbar. Measuring
+every control on every screen first showed the family disagreed four ways, not
+two:
+
+| | before | after |
+| --- | --- | --- |
+| `input[type="text"]` | 52px | 52px |
+| `input[type="date"]` | 54px | 52px |
+| `select` | 49px | 52px |
+| `input[type="number"]` (`.mini-field`) | 44px | 44px |
+| `textarea` | 110px | 110px |
+| `input[type="checkbox"]` | 16px | 16px |
+| `input[type="file"]` | 26px | 26px |
+
+Each took its line height from a different place: the date inherited the body's
+1.6, the select used the UA's `normal`, and the date's internal editor added two
+more on top. Four candidate rules were injected and measured; the one kept sets
+both the line height and a floor, so the height is decided by the stylesheet
+rather than by each control's internals — the same reasoning as the iOS
+appearance fix in ADR 052.
+
+`.mini-field` keeps its own smaller height. It is a deliberate second size, not
+one of the four accidental ones, and the first attempt flattened it to 52px
+before the general rule was carved to exclude it.
+
+- 396 tests, `design:check`, `catalogue:check`, `status:check` and the
+  production build pass; `prettier --check` passes on the touched file.
+- All four harness probes unchanged at 0 / 30 / 14 / 0. Console crawl at 1440:
+  no errors.
+- Still Chromium only, per the standing caveat in ADR 052.

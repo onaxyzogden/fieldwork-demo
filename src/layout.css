@@ -70,6 +70,24 @@ select {
   outline: none;
   max-width: 100%;
 }
+/* One height for the single-line controls. They used to be four: a text input
+   52px, a date 54px, a select 49px, because each took its line height from a
+   different place — the date inherited the body's 1.6, the select used the
+   UA's `normal`, and the date's internal editor added two more on top. Setting
+   both the line height and a floor here means the height is decided by this
+   stylesheet rather than by each control's internals, which is the same reason
+   the date input above drops its native appearance.
+
+   3.25rem is 52px, comfortably past the 44px touch target the buttons use.
+   Textareas are left out: they are prose, they keep the body's 1.6, and their
+   height comes from `rows`. */
+input:not([type="checkbox"]):not([type="radio"]):not([type="file"]):not(
+    .mini-field *
+  ),
+select:not(.mini-field *) {
+  line-height: 1.5;
+  min-height: 3.25rem;
+}
 /* iOS Safari gives input[type="date"] a native intrinsic width that
    `width: 100%` does not shrink, and centres its value inside it. That is why
    the Today toolbar's date box runs past its card on an iPhone while fitting
@@ -742,10 +760,14 @@ footer {
   color: var(--muted);
   min-width: 0;
 }
+/* The compact variant keeps its own, smaller height: it is a deliberate
+   second size, not one of the four accidental ones the rule above collapsed.
+   Its controls still agree with each other. */
 .mini-field input,
 .mini-field select {
   padding: var(--space-2);
   max-width: 280px;
+  min-height: 2.75rem;
 }
 .segmented {
   display: flex;
