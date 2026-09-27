@@ -331,7 +331,15 @@ textarea::placeholder {
 .mobile-menu {
   display: none;
 }
+/* One owner for the space between boxes. Nothing used to own it: main was a
+   plain block, so the gap came from whatever margins the individual components
+   happened to carry, collapsing against each other — 0px between two panels on
+   one screen, 28px between two on the next. The stack sets it; the boxes below
+   are told not to. */
 main {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-5);
   max-width: 1700px;
   margin: auto;
   padding: var(--space-6) var(--space-8) 0;
@@ -368,7 +376,6 @@ main {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin: var(--space-8) 0 var(--space-6);
   gap: var(--space-5);
 }
 .eyebrow {
@@ -437,8 +444,18 @@ main {
 .wrap {
   flex-wrap: wrap;
 }
+/* .actions is a row of buttons closing a card, so the margin is the card's
+   internal spacing. As a direct child of a page stack the stack's gap already
+   provides it, and both together read as a hole. */
 .actions {
   margin-top: var(--space-4);
+}
+main > .actions,
+.op-home > .actions,
+.customer-wrap > .actions,
+.contractor-wrap > .actions,
+.detail > .actions {
+  margin-top: 0;
 }
 .full {
   width: 100%;
@@ -515,7 +532,6 @@ button.badge {
   flex-wrap: wrap;
   align-items: center;
   gap: var(--space-2);
-  margin: var(--space-3) 0 var(--space-5);
 }
 /* Driven by aria-pressed, so the state a screen reader announces and the state
    you can see are the same thing. A tinted pill beside a grey one is too close
@@ -630,7 +646,10 @@ footer {
    On .row.between this is a no-op until the row wraps — and when it wraps, it
    is what keeps the chip on the right instead of dropping it to the left. */
 .queue-item p > .badge:last-child,
-.row.between > .badge:last-child {
+.row.between > .badge:last-child,
+.heading > .badge:last-child,
+.detail-meta > :last-child,
+.detail-meta span > .badge:last-child {
   margin-left: auto;
 }
 .detail {
@@ -727,7 +746,6 @@ footer {
   padding: var(--space-1);
   background: var(--bg);
   border-radius: var(--radius-md);
-  margin-bottom: var(--space-4);
 }
 .segmented button {
   flex: 1;
@@ -855,6 +873,9 @@ footer {
 }
 .customer-wrap,
 .contractor-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-5);
   max-width: 760px;
   margin: 0 auto;
 }

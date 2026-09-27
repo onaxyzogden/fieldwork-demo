@@ -243,7 +243,7 @@
   }
   .requests-layout {
     grid-template-columns: 215px 1fr;
-    gap: var(--space-4);
+    gap: var(--space-5);
   }
   .slot-grid {
     grid-template-columns: 1fr;
@@ -293,6 +293,7 @@
   }
   .requests-layout {
     grid-template-columns: 1fr;
+    gap: var(--space-5);
   }
   .queue {
     position: static;
@@ -394,7 +395,6 @@
     padding: var(--space-2) var(--space-2);
   }
   .heading {
-    margin: var(--space-6) 0 var(--space-5);
     gap: var(--space-3);
     flex-wrap: wrap;
   }
