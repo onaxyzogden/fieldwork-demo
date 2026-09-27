@@ -681,3 +681,49 @@ One remaining break changes nothing and is marked as such in the source rather
 than papered over: no status is in both `WAITING_ON_CUSTOMER` and `CLOSED`
 today, so filtering live there is belt and braces. Claiming a test covers it
 would be worse than saying it does not.
+
+## ADR 052: A defect in an engine this environment does not have
+
+Accepted, with a verification gap stated rather than papered over.
+
+The date picker on the operator's Today screen runs past its card on an iPhone.
+Reading the CSS suggested several causes and **measuring ruled out every one of
+them**:
+
+- Not `box-sizing` — `base.css:9` sets `* { box-sizing: border-box }`.
+- Not a missing width — `.field input` is `width: 100%`.
+- Not the container query failing — the toolbar does collapse to
+  `minmax(0, 1fr)` below 600px.
+- Not the input's intrinsic minimum — its min-content width measures 170px
+  against a 294px column.
+
+In Chromium at 320, 360 and 390px the input's right edge and the card's content
+edge are **the same pixel**, and page overflow is 0. It fits exactly.
+
+The screenshot is not Chromium. It renders `Sep 30, 2026` centred with no
+calendar affordance; Chromium renders `09/27/2026` left-aligned with one. That
+is iOS Safari, where `input[type="date"]` carries a native intrinsic width that
+`width: 100%` does not shrink. Dropping the native appearance is what lets the
+declared width win, and the rule is inert in Chromium — measured identical
+before and after, calendar indicator intact, because that indicator is a shadow
+pseudo-element rather than part of the appearance.
+
+**This fix is not verified against the engine that has the bug.** Playwright's
+WebKit cannot be downloaded in this environment, so there is no way to reproduce
+it here. The reasoning is sound and the change is safe, but "safe and reasoned"
+is not "seen to work", and the difference is worth writing down rather than
+letting a confident commit message imply otherwise.
+
+**The harness gained the probe that this round proved it was missing**, even
+though that probe would not have caught this defect either. Four rounds of
+responsive checks never asked whether an element is wider than the box
+containing it: the page-level overflow check exists but lives in the scenario
+walk, which only ever visits one screen. The sweep now compares every visible
+element's border box against its parent's content box, excluding parents that
+scroll or clip on purpose. It reports zero across six widths and every screen —
+which is the correct answer for Chromium, and says nothing about Safari.
+
+The honest summary of what the checks cover: **one engine.** Every measurement
+in every verification note in this repository is Chromium. That was never
+written down before, and it is the thing that let an iOS-only defect through
+four rounds that all reported clean.

@@ -130,3 +130,33 @@ this environment, so these results are from the local build.
 Not verified: 200% browser zoom, reduced-motion emulation and printed PDF
 pagination, unchanged from previous rounds. The live site is unreachable from
 this environment, so these results are from the local build.
+
+# The date input, and what the checks actually cover — 2026-09-27
+
+- 396 tests, `design:check`, `catalogue:check`, `status:check` and the
+  production build pass; `prettier --check` passes on the touched file.
+- **Measured before changing anything.** In Chromium at 320/360/390px the date
+  input's right edge equals the card's content edge exactly and page overflow is
+  0 — it does not overflow in this engine. Its min-content width is 170px
+  against a 294px column, so the intrinsic-width theory was wrong too.
+- **The reported screenshot is iOS Safari**, confirmed by rendering: it shows
+  `Sep 30, 2026` centred with no calendar affordance, where Chromium shows
+  `09/27/2026` left-aligned with one.
+- **Not verified on the engine that has the defect.** Playwright's WebKit cannot
+  be downloaded in this environment. The fix is the documented iOS remedy and is
+  measured inert in Chromium — same width, same height, calendar indicator
+  intact — but it has not been seen to work on iOS.
+- **New probe: an element wider than the box that contains it.** Every visible
+  element's border box against its parent's content box, excluding parents that
+  scroll or clip deliberately, across 320/360/480/600/878/1280 and every role
+  and screen. Zero findings before and after the change. It would not have
+  caught this defect, since the engine with the bug is not available here.
+- The other three probes unchanged at 0 / 30 / 14. Console crawl at 1440: no
+  errors.
+- Noticed and **not** changed: the date input renders 54px tall against the
+  select's 49px in the same toolbar. Pre-existing, unrelated to the overflow,
+  and outside what was reported.
+
+Standing caveat, true of every verification note above and never stated until
+now: **all of these measurements are Chromium.** Safari and Firefox are not
+covered by anything in this repository.
