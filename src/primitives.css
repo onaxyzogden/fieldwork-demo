@@ -639,6 +639,23 @@
   border: 1px solid var(--line);
   padding: var(--space-2) var(--space-3);
 }
+/* The next thing in the diary, above the counts. The counts say how much is
+   waiting; this says what is actually next, which is the question someone with
+   two jobs and one appointment is really asking. */
+.op-glance-lead {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  margin-top: var(--space-4);
+  padding-top: var(--space-4);
+  border-top: 1px solid var(--line);
+}
+.op-glance-lead strong {
+  font-size: var(--text-body);
+}
+.op-glance-lead small {
+  color: var(--muted);
+}
 .op-metrics {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -647,9 +664,12 @@
 }
 /* The card is the only surface here. Giving each statistic its own filled,
    bordered tile turned one glance into four boxes; the numbers sit directly
-   on the card instead. They stay buttons because all three navigate, so the
-   affordance the tile used to carry moves to hover and the focus ring. */
-.op-metrics button {
+   on the card instead. The operator's and the contractor's are buttons because
+   they navigate, so the affordance the tile used to carry moves to hover and
+   the focus ring; the customer's are plain, because on that screen there is
+   nowhere for them to go and a number that looks clickable and does nothing is
+   the defect ADR 034 exists to stop. */
+.op-metrics > * {
   display: flex;
   flex-direction: column;
   align-items: flex-start;

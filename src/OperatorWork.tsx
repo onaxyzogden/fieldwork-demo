@@ -10,6 +10,8 @@ import {
 import { useState, type ReactNode } from "react";
 import { type State, providers, dateLabel, money, torontoParts } from "./model";
 import { bucket, dayKey, workIssue, workStatus } from "./work";
+import { Glance } from "./Glance";
+import { glanceDate } from "./glance";
 import { requestDispatch } from "./dispatch";
 import { JobWork } from "./ContractorWork";
 type Props = {
@@ -157,60 +159,46 @@ export function OperatorHome({
         <h1>{greeting}</h1>
         <p>Here’s what needs your attention.</p>
       </header>
-      <section className="op-glance">
-        <div className="op-glance-heading">
-          <h2>Today at a glance</h2>
-          <button className="op-date" onClick={today}>
-            <CalendarDays size={16} />
-            {new Date(s.clock).toLocaleDateString("en-CA", {
-              timeZone: "America/Toronto",
-              weekday: "short",
-              month: "short",
-              day: "numeric",
-            })}
-            <ChevronRight size={16} />
-          </button>
-        </div>
-        <div className="op-metrics">
-          <button onClick={today}>
-            <strong>{visits.length}</strong>
-            <span>Scheduled visits</span>
-          </button>
-          <button onClick={today}>
-            <strong>
-              {
-                new Set(
-                  visits
-                    .filter(
-                      (v) =>
-                        v.providerId !== "yousef" &&
-                        s.assignments.some(
-                          (a) =>
-                            a.visitId === v.id &&
-                            a.providerId === v.providerId &&
-                            a.status === "Accepted",
-                        ),
-                    )
-                    .map((v) => v.providerId),
-                ).size
-              }
-            </strong>
-            <span>Active contractors</span>
-          </button>
-          <button
-            className="op-pending"
-            onClick={() => {
+      <Glance
+        date={glanceDate(s.clock)}
+        onDate={today}
+        metrics={[
+          {
+            label: "Scheduled visits",
+            value: visits.length,
+            onClick: today,
+          },
+          {
+            label: "Active contractors",
+            value: new Set(
+              visits
+                .filter(
+                  (v) =>
+                    v.providerId !== "yousef" &&
+                    s.assignments.some(
+                      (a) =>
+                        a.visitId === v.id &&
+                        a.providerId === v.providerId &&
+                        a.status === "Accepted",
+                    ),
+                )
+                .map((v) => v.providerId),
+            ).size,
+            onClick: today,
+          },
+          {
+            label: "Pending decisions",
+            value: needs.length,
+            urgent: true,
+            onClick: () => {
               setView("attention");
               document
                 .querySelector(".op-attention-list")
                 ?.scrollIntoView({ block: "start" });
-            }}
-          >
-            <strong>{needs.length}</strong>
-            <span>Pending decisions</span>
-          </button>
-        </div>
-      </section>
+            },
+          },
+        ]}
+      />
       <div className="op-view-switch" role="group" aria-label="Request view">
         <button
           aria-pressed={view === "attention"}
