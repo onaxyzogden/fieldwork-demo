@@ -16,13 +16,8 @@
   background: none;
 }
 .contractor-wrap .segmented button {
-  border: 1px solid var(--line);
   border-radius: var(--radius-md);
   min-height: 44px;
-}
-.contractor-wrap .segmented .chosen {
-  border-color: var(--accent-text);
-  background: var(--accent-soft);
 }
 .contractor-wrap button,
 .contractor-wrap a.secondary {

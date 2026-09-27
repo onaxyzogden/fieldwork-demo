@@ -189,10 +189,6 @@
   background: var(--panel);
   border-color: var(--muted);
 }
-:root[data-theme="light"] .segmented .chosen {
-  background: var(--panel);
-  color: var(--text);
-}
 :root[data-theme="light"] .provider-card {
   background: var(--panel);
   border-color: var(--muted);
@@ -404,7 +400,6 @@
 :root[data-theme] .sidebar nav button.active,
 :root[data-theme] .sidebar nav button:hover,
 :root[data-theme] .role-switch button.chosen,
-:root[data-theme] .segmented button.chosen,
 :root[data-theme] .portal-tabs button.selected,
 :root[data-theme] .queue-item.selected,
 :root[data-theme] .provider-card.selected,
@@ -700,9 +695,6 @@
   margin-bottom: var(--space-4);
 }
 .op-view-switch button {
-  background: var(--bg);
-  border: 1px solid var(--line);
-  color: var(--muted);
   padding: var(--space-3);
   font-size: var(--text-label);
   display: flex;
@@ -710,11 +702,33 @@
   justify-content: center;
   gap: var(--space-2);
 }
-.op-view-switch button[aria-pressed="true"] {
+/* ONE SELECTED STATE, for every control that offers a choice between a few
+   options: the operator's view switch, the contractor's tab strip, the base
+   segmented control and the identity pills. Each keeps its own layout — grid
+   or flex, 2-up or 3-up, square or pill — and only the colours are shared.
+   They had disagreed four ways. The operator's was the odd one twice over: an
+   accent border AND `--shadow-selected` as an inset edge beneath it, which is
+   the line that stood out. That token stays for .bp-stage-nav, where an
+   underline is what a tab wants and there is no border to double up on.
+   The pills were the worse case: `:root[data-theme] .badge` outranks
+   .badge-accent and .badge-neutral, so their selected and unselected states
+   computed byte-identical in both themes and only aria-pressed said which
+   identity you were viewing as. Reading that attribute directly both fixes it
+   and keeps the state in one place instead of a class and an attribute that
+   could disagree. */
+.op-view-switch button,
+.segmented button,
+.identity-switch .badge[aria-pressed="false"] {
+  background: var(--bg);
+  border: 1px solid var(--line);
+  color: var(--muted);
+}
+.op-view-switch button[aria-pressed="true"],
+.segmented button.chosen,
+.identity-switch .badge[aria-pressed="true"] {
   background: var(--accent-soft);
-  color: var(--accent-text);
   border-color: var(--accent);
-  box-shadow: var(--shadow-selected);
+  color: var(--accent-text);
 }
 .op-view-switch span {
   background: var(--danger-fill);

@@ -2639,10 +2639,7 @@ function Workspace({
                 {accounts.map((c) => (
                   <button
                     key={c.id}
-                    className={
-                      "badge " +
-                      (customer === c.id ? "badge-accent" : "badge-neutral")
-                    }
+                    className="badge"
                     aria-pressed={customer === c.id}
                     onClick={() => {
                       setCustomer(c.id);
@@ -2938,10 +2935,7 @@ function Workspace({
                 {providers.map((p) => (
                   <button
                     key={p.id}
-                    className={
-                      "badge " +
-                      (contractor === p.id ? "badge-accent" : "badge-neutral")
-                    }
+                    className="badge"
                     aria-pressed={contractor === p.id}
                     onClick={() => setContractor(p.id)}
                   >

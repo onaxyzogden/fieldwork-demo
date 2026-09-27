@@ -480,6 +480,7 @@ export default function ContractorWork({
           <button
             key={t}
             className={tab === t ? "chosen" : ""}
+            aria-pressed={tab === t}
             onClick={() => {
               setTab(t);
               setSelected("");
