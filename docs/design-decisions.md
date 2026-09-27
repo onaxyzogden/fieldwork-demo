@@ -727,3 +727,35 @@ The honest summary of what the checks cover: **one engine.** Every measurement
 in every verification note in this repository is Chromium. That was never
 written down before, and it is the thing that let an iOS-only defect through
 four rounds that all reported clean.
+
+## ADR 053: The walkthrough pipeline gets the same card, bucketed by whose move it is
+
+Accepted. The operator's Walkthroughs page gains the glance card the three role
+homes carry, on the same rules: every walkthrough counts in at most one bucket,
+every number opens what it counted, and a bucket with nothing in it offers no
+button.
+
+**Lead: the oldest assessment still undecided, and whether it was opened.** The
+open log from the guest-link work (ADR 047) was recorded and surfaced almost
+nowhere; "sent five days ago · not opened yet" is the sentence it exists for.
+
+**Three buckets, by next action:** Drafts (the operator's move), With customer
+(sent, something undecided, nothing approved waiting — theirs), Ready to
+convert (sent, approved findings not yet turned into work — the operator's
+again, and the one that holds money).
+
+**One precedence rule.** A sent assessment with some findings approved and some
+undecided counts as Ready to convert, not With customer. Conversion works per
+approval, so the approved half is actionable now without waiting for the rest.
+
+**Converted walkthroughs are history and count nowhere** — including one whose
+second finding is still pending, because the page the number would open offers
+"Open the request", not anything about that finding. This exposes a
+pre-existing gap rather than creating one: a customer can still approve a
+leftover finding on a converted walkthrough, and nothing then offers to convert
+it. Recorded here rather than widened into this change.
+
+"Ready" uses the same finding filter as `convertApproved()`, so it means exactly
+"the Convert button would do something". Its `!f.taskId` clause is unreachable
+while conversion always flips the walkthrough to Converted, and the source says
+so instead of claiming a test covers it.

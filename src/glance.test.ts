@@ -2,6 +2,7 @@ import { describe, it, expect } from "vitest";
 import { accounts, seed, type State, type Visit } from "./model";
 import {
   addFinding,
+  convertApproved,
   createWalkthrough,
   findingState,
   findingsFor,
@@ -9,7 +10,12 @@ import {
   sendWalkthrough,
 } from "./pmw";
 import { dayKey } from "./work";
-import { contractorGlance, customerGlance, tabWork } from "./glance";
+import {
+  contractorGlance,
+  customerGlance,
+  tabWork,
+  walkthroughGlance,
+} from "./glance";
 
 const DAY = 24 * 60 * 60 * 1000;
 
@@ -319,5 +325,101 @@ describe("the customer's glance", () => {
     const v = s.visits.find((v) => v.id === "v-edge")!;
     expect(dayKey(v.start)).toBe(dayKey(s.clock));
     expect(contractorGlance(s, "marcus", s.clock).today).toBe(1);
+  });
+});
+
+describe("the walkthrough pipeline's glance", () => {
+  /** A clean slate with one sent assessment of `n` priced findings. */
+  function sent(n = 2) {
+    const s = seed();
+    s.walkthroughs = [];
+    s.findings = [];
+    const w = createWalkthrough(s, s.properties[0].id);
+    for (let i = 0; i < n; i++)
+      addFinding(s, w.id, { title: `Finding ${i + 1}`, price: 100 });
+    sendWalkthrough(s, w.id);
+    return { s, w };
+  }
+  const bucketOf = (s: State, id: string) => {
+    const g = walkthroughGlance(s, s.clock);
+    return [
+      g.draftIds.includes(id) && "draft",
+      g.withCustomerIds.includes(id) && "with customer",
+      g.readyToConvertIds.includes(id) && "ready to convert",
+    ].filter(Boolean);
+  };
+
+  it("puts a draft under Drafts and nowhere else", () => {
+    const s = seed();
+    s.walkthroughs = [];
+    const w = createWalkthrough(s, s.properties[0].id);
+    expect(bucketOf(s, w.id)).toEqual(["draft"]);
+  });
+
+  it("puts an undecided sent assessment with the customer", () => {
+    const { s, w } = sent();
+    expect(bucketOf(s, w.id)).toEqual(["with customer"]);
+  });
+
+  it("puts a part-approved assessment under Ready to convert, not both", () => {
+    // Conversion works per approval, so the approved half is actionable now
+    // even while the other finding is still undecided.
+    const { s, w } = sent(2);
+    findingsFor(s, w.id)[0].decision = "Approved";
+    expect(bucketOf(s, w.id)).toEqual(["ready to convert"]);
+  });
+
+  it("drops an assessment out once converted", () => {
+    const { s, w } = sent(1);
+    findingsFor(s, w.id)[0].decision = "Approved";
+    convertApproved(s, w.id);
+    expect(w.status).toBe("Converted");
+    expect(bucketOf(s, w.id)).toEqual([]);
+  });
+
+  it("keeps a converted walkthrough out even with a finding still undecided", () => {
+    // Conversion flips the walkthrough to Converted while a second finding can
+    // still be pending. It is history to the pipeline: the page it would open
+    // offers "Open the request", not anything about the undecided finding.
+    const { s, w } = sent(2);
+    findingsFor(s, w.id)[0].decision = "Approved";
+    convertApproved(s, w.id);
+    expect(w.status).toBe("Converted");
+    expect(findingState(s, findingsFor(s, w.id)[1])).toBe("Pending decision");
+    expect(bucketOf(s, w.id)).toEqual([]);
+  });
+
+  it("counts nobody as owing anything when every finding was deferred", () => {
+    const { s, w } = sent(2);
+    findingsFor(s, w.id).forEach((f) => (f.decision = "Not Now"));
+    expect(bucketOf(s, w.id)).toEqual([]);
+  });
+
+  it("chases the oldest undecided assessment and reports whether it was opened", () => {
+    const { s, w: newer } = sent();
+    const older = createWalkthrough(s, s.properties[0].id);
+    addFinding(s, older.id, { title: "Old", price: 50 });
+    sendWalkthrough(s, older.id);
+    older.sentAt = new Date(s.clock - 5 * DAY).toISOString();
+    newer.sentAt = new Date(s.clock - 1 * DAY).toISOString();
+    let g = walkthroughGlance(s, s.clock);
+    expect(g.chase?.walkthrough.id).toBe(older.id);
+    expect(g.chase?.daysSent).toBe(5);
+    expect(g.chase?.opens).toBe(0);
+    older.access!.opens.push(new Date(s.clock).toISOString());
+    g = walkthroughGlance(s, s.clock);
+    expect(g.chase?.opens).toBe(1);
+  });
+
+  it("never puts one walkthrough in two buckets, whatever its findings say", () => {
+    const decisions = ["Pending", "Approved", "Not Now"] as const;
+    for (const a of decisions)
+      for (const b of decisions) {
+        const { s, w } = sent(2);
+        const [f1, f2] = findingsFor(s, w.id);
+        f1.decision = a;
+        f2.decision = b;
+        expect(bucketOf(s, w.id).length, `${a} + ${b}`).toBeLessThanOrEqual(1);
+      }
   });
 });

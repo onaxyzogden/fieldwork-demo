@@ -11,9 +11,9 @@
  * and the list it promises are the same code rather than two implementations
  * that happen to agree today.
  */
-import type { Assignment, State, Visit } from "./model";
+import type { Assignment, State, Visit, Walkthrough } from "./model";
 import { dayKey } from "./work";
-import { findingsFor, findingState } from "./pmw";
+import { findingsFor, findingState, quotable } from "./pmw";
 
 export type ContractorTab = "Offers" | "Today" | "Upcoming";
 
@@ -191,6 +191,72 @@ export function customerGlance(
           visit: first,
           address: own.find((r) => r.id === first.requestId)?.address ?? "",
           requestId: first.requestId,
+        }
+      : null,
+  };
+}
+
+/**
+ * The operator's walkthrough pipeline, bucketed by whose move it is. Each
+ * walkthrough lands in at most one bucket:
+ *
+ * - drafts — still being written; the operator's move.
+ * - readyToConvert — sent, with approved findings not yet turned into work.
+ *   This wins over "with customer" when a walkthrough has both, because
+ *   conversion works per approval: the approved half can be acted on now
+ *   without waiting for the undecided half.
+ * - withCustomer — sent, a finding still undecided, nothing approved waiting.
+ *
+ * Converted walkthroughs are history and belong to none. A sent walkthrough
+ * whose findings were all deferred also belongs to none: nobody owes anything.
+ * Keyed on `Sent` rather than "anything not a draft" because the detail page
+ * only offers conversion on a sent walkthrough, and a count must point at
+ * something the page it opens can act on.
+ */
+export type WalkthroughGlance = {
+  draftIds: string[];
+  withCustomerIds: string[];
+  readyToConvertIds: string[];
+  /** The oldest assessment still waiting on the customer — the one to chase. */
+  chase: { walkthrough: Walkthrough; daysSent: number; opens: number } | null;
+};
+
+const DAY_MS = 24 * 60 * 60 * 1000;
+
+export function walkthroughGlance(s: State, clock: number): WalkthroughGlance {
+  const sent = s.walkthroughs.filter((w) => w.status === "Sent");
+  /* The same filter convertApproved() uses to pick what it converts, so
+     "ready" means exactly "the Convert button would do something". `!f.taskId`
+     is unreachable while conversion always flips the walkthrough to Converted
+     — removing it changes no test — and stays so the two cannot drift. */
+  const hasApprovedWaiting = (w: Walkthrough) =>
+    findingsFor(s, w.id).some(
+      (f) => f.decision === "Approved" && quotable(f) && !f.taskId,
+    );
+  const hasUndecided = (w: Walkthrough) =>
+    findingsFor(s, w.id).some((f) => findingState(s, f) === "Pending decision");
+  const readyToConvert = sent.filter(hasApprovedWaiting);
+  const ready = new Set(readyToConvert.map((w) => w.id));
+  const withCustomer = sent
+    .filter((w) => !ready.has(w.id) && hasUndecided(w))
+    .sort((a, b) => (a.sentAt ?? a.date).localeCompare(b.sentAt ?? b.date));
+  const oldest = withCustomer[0];
+  return {
+    draftIds: s.walkthroughs
+      .filter((w) => w.status === "Draft")
+      .map((w) => w.id),
+    withCustomerIds: withCustomer.map((w) => w.id),
+    readyToConvertIds: readyToConvert.map((w) => w.id),
+    chase: oldest
+      ? {
+          walkthrough: oldest,
+          daysSent: Math.max(
+            0,
+            Math.floor(
+              (clock - +new Date(oldest.sentAt ?? oldest.date)) / DAY_MS,
+            ),
+          ),
+          opens: oldest.access?.opens.length ?? 0,
         }
       : null,
   };
