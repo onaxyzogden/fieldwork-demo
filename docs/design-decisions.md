@@ -626,3 +626,58 @@ its scheduled date*, which belongs to Today and must not also appear under
 Upcoming. That test exists now, and the break is caught. A guard that has never
 been seen to fail is not known to work, and this is the second round running
 where the exercise found the gap rather than confirming there wasn't one.
+
+## ADR 051: A count that cannot be clicked, and a count that counts twice
+
+Accepted. Two pieces of feedback on the glance card shipped in ADR 050, one of
+which was a real bug in the counting.
+
+**"Open requests" was a total wearing a bucket's label.** It counted every live
+request, which meant it contained both other numbers. A customer with one
+booked job read "1 Upcoming visits" and "1 open request" — the same job, twice
+— and anything waiting on them was counted under "Waiting on you" and again
+under "open". Reproduced against the seed before touching it: account `c5`, one
+request, `Awaiting Provider Acceptance`, read 0 / 1 / 1.
+
+The third number is **In progress**: live requests that are neither waiting on
+the customer nor already carrying a date. The three no longer overlap.
+
+One overlap is kept on purpose and is worth naming: a payment due on a job that
+already has a date counts under both "Waiting on you" and "Upcoming visits".
+Those are different nouns — a request and a visit — and collapsing them would
+mean dropping the visit count, which is the more useful of the two. Making
+every live request land in exactly one bucket was the alternative considered;
+it costs the ability to say "you have two visits this month" when both are on
+one request.
+
+**Counts carry their ids.** Each bucket returns the request ids behind it, not
+just a length. That buys two things:
+
+- A click opens something the number actually counted. The alternative — the
+  component re-deriving "the first waiting request" — is two filters that can
+  disagree, which is the same defect in a different place.
+- "These numbers do not double count" becomes an invariant a test can check.
+  The test walks every status `reconcile()` can produce, against a request that
+  does and does not carry a visit, and asserts the id sets do not intersect and
+  that each count is exactly the length of its own list. That is a property of
+  the pair of sets, which is stronger than one lucky example.
+
+**Every section is clickable**, which reverses the call made in ADR 050 that
+the customer's numbers should be plain text. That reasoning — everything they
+could reach is already on this screen — was true and still missed the point:
+the accordion row is on the screen but collapsed and possibly below the fold,
+so "open that one and bring it into view" is a real action. A bucket with
+nothing in it still gets no handler, so the card never offers a button that
+would do nothing.
+
+**The break test found a bug rather than a gap this time.** Removing each rule
+in turn, two changed nothing: nothing asserted that a `Completed` or
+`Cancelled` request stays out of the counts, and following that up showed a
+closed request's leftover visit *was* being counted as upcoming, because the
+visit filter keyed on non-Draft rather than live requests. The test was missing
+and so was the behaviour.
+
+One remaining break changes nothing and is marked as such in the source rather
+than papered over: no status is in both `WAITING_ON_CUSTOMER` and `CLOSED`
+today, so filtering live there is belt and braces. Claiming a test covers it
+would be worse than saying it does not.
