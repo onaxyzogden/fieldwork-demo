@@ -17,3 +17,47 @@ Reference documents and synced sources were not modified. Loading/offline guidan
 - Automated contrast audit over every rendered text node, both themes, all three roles plus all three intake steps and the field-error state: zero elements below WCAG AA (4.5:1, or 3:1 for large text).
 - Walked end to end: address validation blocking and focusing the offending field, task clarify with "Not sure" routing to Needs Review, timing capture, submission with no timing chosen, and the decline path — contractor declines, customer sees no trace and falls back to "we're matching your request", operator is told who declined.
 - Remaining manual verification is unchanged from the previous round: actual browser 200% zoom, reduced-motion emulation and printed PDF pagination. The blueprint's documented stage content was not re-authored and may now describe intake in its previous three-screen order.
+
+# Narrow-layout verification — 2026-09-27
+
+Three defects were reported from a narrow viewport on the live site: inconsistent
+vertical spacing between boxes, text stacking in columns too narrow to read, and
+status chips sitting at the end of the text instead of the right edge. The second
+was a repeat of Round 4 feedback, so this round's first job was to explain how it
+had been passing.
+
+**It passed because the sweeps measured the wrong thing.** Every responsive check
+since Round 4 measured horizontal overflow. All three defects pass that: nothing
+spills, nothing clips, no scrollbar appears. A new probe measures the share of
+available width a block uses while wrapping — see ADR 049 for why characters per
+line is the wrong metric — across 360, 480, 600, 878 and 1280 in both themes, on
+every role and screen plus one list row opened on each.
+
+Findings before and after, same sweep both times:
+
+| Probe | Before | After |
+| --- | --- | --- |
+| Text squeezed into a narrow column | 4 | 0 |
+| Trailing chip not at its row's right edge | 86 | 30 |
+| Stacks using more than one gap between boxes | 50 | 14 |
+
+What the remaining numbers are. The 30 chips are all the identity switcher's
+pills, which are choices to read across rather than a status ending a row. The 14
+stacks are two patterns, both *inside* a card — a list's rows against the panel
+title above them, and the request queue's search and filter — which is the card's
+own spacing and was not what was reported. Every page-level stack now measures a
+single 20px between boxes at all five widths in both themes.
+
+Also checked:
+
+- 381 tests, `design:check`, `catalogue:check`, `status:check` and the production
+  build pass; `prettier --check` passes on every file this round touched.
+- The full screen crawl at 1440 reports no console or page errors.
+- All five sample scenarios opened at 390px: no horizontal overflow, no errors.
+  Scenario 05 is what found the last defect — "Awaiting Provider Acceptance" is
+  long enough to wrap its panel title, where the chip dropped to the left. The
+  seeded data's shorter statuses never wrapped, so no sweep could have found it.
+
+Not verified: 200% browser zoom, reduced-motion emulation and printed PDF
+pagination remain unchecked, unchanged from previous rounds. The live site could
+not be reached from this environment, so these results are from the local build.

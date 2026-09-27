@@ -648,6 +648,7 @@ footer {
 .queue-item p > .badge:last-child,
 .row.between > .badge:last-child,
 .heading > .badge:last-child,
+.panel-title > .badge:last-child,
 .detail-meta > :last-child,
 .detail-meta span > .badge:last-child {
   margin-left: auto;
