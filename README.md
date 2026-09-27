@@ -1,6 +1,6 @@
 # Fieldwork — Interactive Handyman Platform Prototype
 
-[Open the demo](https://onaxyzogden.github.io/fieldwork-demo/)
+[Open the demo](https://j.ogden.ag)
 
 A responsive prototype for evaluating customer intake, operator scheduling and dispatch, and contractor job offers. All sample names, properties, prices, and transactions are fictional. This is a demonstration, not a live booking or payment service.
 
@@ -27,13 +27,20 @@ npm ci
 npm run dev
 ```
 
-Open the URL printed by Vite with `/fieldwork-demo/` as the path. Run `npm test` for the business-rule tests and `npm run build` to generate the static site in `dist/`.
+Open the URL Vite prints. Run `npm test` for the business-rule tests and `npm run build` to generate the static site in `dist/`.
 
 ## Deployment
 
 Push changes to `main`. GitHub Actions installs dependencies, runs tests, builds the site, and publishes to GitHub Pages. The workflow can also be started manually from Actions. Pages must use **GitHub Actions** as its build source.
 
-`vite.config.ts` sets the base path to `/fieldwork-demo/`. If the repository is renamed, update that value and the demo link.
+`vite.config.ts` sets `base: './'` — **relative**, not a repository subpath. That
+is what lets the same build serve from `https://j.ogden.ag` at the root and from
+a project page under `/fieldwork-demo/` without changing anything. Renaming the
+repository needs no config change; setting an absolute base would break the
+custom domain.
+
+The custom domain lives in `public/CNAME`, which Vite copies into `dist` on every
+build, so it survives a deploy rather than depending on the setting alone.
 
 ## Prototype boundaries
 
