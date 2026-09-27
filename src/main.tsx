@@ -117,6 +117,8 @@ import "./cards.css";
 import "./assessment.css";
 import { deliveryLabel, inbox } from "./notifications";
 import { NotificationInbox, MessageThread } from "./NotificationUI";
+import { Glance, GlanceLead } from "./Glance";
+import { customerGlance, glanceDate } from "./glance";
 import {
   migrateDispatch,
   dispatchStatus,
@@ -580,6 +582,8 @@ function Workspace({
             (!!t.description.trim() || t.photos.length > 0),
         )),
   );
+  const customerAtAGlance = customerGlance(s, customer, +s.clock);
+  const customerNext = customerAtAGlance.next;
   const hasReferral = tasks.some(
     (t) => getIssue(t.description).availability === "Referral only",
   );
@@ -2639,10 +2643,7 @@ function Workspace({
                 {accounts.map((c) => (
                   <button
                     key={c.id}
-                    className={
-                      "badge " +
-                      (customer === c.id ? "badge-accent" : "badge-neutral")
-                    }
+                    className="badge"
                     aria-pressed={customer === c.id}
                     onClick={() => {
                       setCustomer(c.id);
@@ -2679,12 +2680,52 @@ function Workspace({
                 />
               ) : (
                 <>
-                  <div className="heading customer-portal-heading">
+                  <div className="heading role-greeting customer-portal-heading">
                     <div>
                       <h1>Home, handled.</h1>
                       <p>Your requests and upcoming visits.</p>
                     </div>
                   </div>
+                  {/* The customer's numbers are not buttons. Everything they
+                      could navigate to is already on this screen, and a count
+                      that looks clickable and does nothing is the defect ADR
+                      034 exists to stop. */}
+                  <Glance
+                    date={glanceDate(+s.clock)}
+                    lead={
+                      customerNext ? (
+                        <GlanceLead
+                          when={dateLabel(customerNext.visit.start)}
+                          what={
+                            providers.find(
+                              (p) => p.id === customerNext.visit.providerId,
+                            )?.name || "Your provider"
+                          }
+                          where={customerNext.address}
+                        />
+                      ) : (
+                        <GlanceLead
+                          when="NEXT VISIT"
+                          what="Nothing scheduled yet."
+                        />
+                      )
+                    }
+                    metrics={[
+                      {
+                        label: "Waiting on you",
+                        value: customerAtAGlance.waiting,
+                        urgent: customerAtAGlance.waiting > 0,
+                      },
+                      {
+                        label: "Upcoming visits",
+                        value: customerAtAGlance.upcoming,
+                      },
+                      {
+                        label: "Open requests",
+                        value: customerAtAGlance.open,
+                      },
+                    ]}
+                  />
                   {/* Accordion, not a tab strip into a separate detail screen.
                       Everything about a request opens inline underneath its own
                       row, so nothing about it lives on another page. */}
@@ -2938,10 +2979,7 @@ function Workspace({
                 {providers.map((p) => (
                   <button
                     key={p.id}
-                    className={
-                      "badge " +
-                      (contractor === p.id ? "badge-accent" : "badge-neutral")
-                    }
+                    className="badge"
                     aria-pressed={contractor === p.id}
                     onClick={() => setContractor(p.id)}
                   >

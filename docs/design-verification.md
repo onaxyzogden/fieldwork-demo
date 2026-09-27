@@ -61,3 +61,37 @@ Also checked:
 Not verified: 200% browser zoom, reduced-motion emulation and printed PDF
 pagination remain unchecked, unchanged from previous rounds. The live site could
 not be reached from this environment, so these results are from the local build.
+
+# Glance, controls and the notifications panel — 2026-09-27
+
+- 394 tests (381 prior plus 13 new in `glance.test.ts`), `design:check`,
+  `catalogue:check`, `status:check` and the production build pass.
+  `prettier --check` passes on every file this round touched.
+- **Every guard in `glance.ts` removed in turn**, five of five now caught by the
+  suite. The first pass caught four: the sixth attempt, dropping `&& !running`
+  from the Upcoming filter, changed no test, and the missing case — a job
+  started ahead of its scheduled date — was added before the rule was kept.
+- **The contractor's counts equal its tabs by construction**, not by agreement:
+  the tabs call the same `tabWork()` the counts do, and a test asserts each
+  count against the length of the list its tab renders.
+- **Computed treatment of every choice control, both themes**, before and after.
+  Before: four different selected states, and the identity pills' selected and
+  unselected states byte-identical. After: one pair, applied to all four.
+  `.bp-stage-nav` confirmed to keep its underline.
+- **The notifications panel in three states**: nothing unread (no button, one
+  heading), something unread (button, two rows), and after marking all read
+  (button gone, rows remain) — which is what shows the gate is on unread-ness
+  rather than emptiness.
+- **The glance's lead line in both states**, populated and empty, for both new
+  roles. Populated reads "Wed, Sep 30, 6:00 a.m. / Marcus Chen / 90 Rebecca
+  Street" for the customer and "… / TV mounting / Oakville · $110" for the
+  contractor; empty reads "Nothing scheduled yet." / "Nothing accepted yet."
+- Last round's narrow-layout harness re-run across 360/480/600/878/1280 in both
+  themes: 0 squeezed-text findings, and the chip and gap counts unchanged at 30
+  and 14 — the same two known patterns, so the new card introduced nothing.
+- Screen crawl at 1440: no console or page errors. All five sample scenarios
+  open at 390px with no horizontal overflow and no errors.
+
+Not verified: 200% browser zoom, reduced-motion emulation and printed PDF
+pagination, unchanged from previous rounds. The live site is unreachable from
+this environment, so these results are from the local build.

@@ -19,6 +19,13 @@ import {
 import { respondToOffer } from "./dispatch";
 import { storablePhotos, unreadableMessage } from "./photos";
 import { MessageThread } from "./NotificationUI";
+import { Glance, GlanceLead } from "./Glance";
+import {
+  contractorGlance,
+  glanceDate,
+  tabWork,
+  type ContractorTab,
+} from "./glance";
 function Sheet({
   title,
   close,
@@ -443,43 +450,62 @@ export default function ContractorWork({
     );
     setDecline(false);
   };
-  const assignments = mine
-    .filter((a) => {
-      const v = s.visits.find((v) => v.id === a.visitId);
-      return (
-        v &&
-        (tab === "Offers"
-          ? a.status === "Offered"
-          : a.status === "Accepted" &&
-            (tab === "Today"
-              ? dayKey(v.start) === today ||
-                (!!v.execution?.startedAt && !v.execution.finishedAt)
-              : // Today claims anything in progress regardless of its
-                // scheduled date (an overrunning job shouldn't vanish); this
-                // exclusion is what keeps that same visit from also showing
-                // here if it was started ahead of its scheduled date.
-                dayKey(v.start) > today &&
-                !(v.execution?.startedAt && !v.execution.finishedAt)))
-      );
-    })
-    .sort(
-      (a, b) =>
-        +new Date(s.visits.find((v) => v.id === a.visitId)!.start) -
-        +new Date(s.visits.find((v) => v.id === b.visitId)!.start),
-    );
+  /* The same filter the glance counts, rather than a copy of it: a count that
+     promises a list has to be the list. */
+  const assignments = tabWork(s, provider, tab as ContractorTab, +s.clock);
+  const glance = contractorGlance(s, provider, +s.clock);
+  const nextVisit = glance.next?.visit;
+  const nextRequest = s.requests.find((r) => r.id === nextVisit?.requestId);
   return (
     <div className="contractor-wrap">
-      <div className="heading">
+      <div className="heading role-greeting">
         <div>
           <h1>Your Work</h1>
           <p>What’s next, all in one place.</p>
         </div>
       </div>
+      <Glance
+        date={glanceDate(+s.clock)}
+        onDate={() => setTab("Today")}
+        lead={
+          nextVisit ? (
+            <GlanceLead
+              when={dateLabel(nextVisit.start)}
+              what={
+                s.tasks.find((t) => nextVisit.taskIds.includes(t.id))
+                  ?.summary || "Scheduled job"
+              }
+              where={`${nextRequest?.city ?? ""} · ${money(glance.next!.assignment.pay)}`}
+            />
+          ) : (
+            <GlanceLead when="NEXT JOB" what="Nothing accepted yet." />
+          )
+        }
+        metrics={[
+          {
+            label: "New offers",
+            value: glance.offers,
+            urgent: glance.offers > 0,
+            onClick: () => setTab("Offers"),
+          },
+          {
+            label: "Today’s jobs",
+            value: glance.today,
+            onClick: () => setTab("Today"),
+          },
+          {
+            label: "Upcoming jobs",
+            value: glance.upcoming,
+            onClick: () => setTab("Upcoming"),
+          },
+        ]}
+      />
       <div className="segmented">
         {["Offers", "Today", "Upcoming"].map((t) => (
           <button
             key={t}
             className={tab === t ? "chosen" : ""}
+            aria-pressed={tab === t}
             onClick={() => {
               setTab(t);
               setSelected("");

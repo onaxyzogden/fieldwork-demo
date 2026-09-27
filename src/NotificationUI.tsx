@@ -46,22 +46,28 @@ export function NotificationInbox({
   const items = inbox(s, recipient);
   return (
     <div className="notification-list">
-      <h3>Notifications & messages</h3>
+      {/* No heading here: the dialog this renders inside is already titled
+          "Notifications", and saying it twice is what the second line was. */}
       <p>
         Updates for this account only. The channel beside each one is the one a
         real integration would use — no SMS is sent and no email is composed,
         and an external channel therefore never gets past “sent”.
       </p>
-      <button
-        className="secondary"
-        onClick={() =>
-          update((d) => {
-            inbox(d, recipient).forEach((n) => markRead(d, n.id));
-          })
-        }
-      >
-        Mark all read
-      </button>
+      {/* Gated on something being unread rather than on the list being
+          non-empty: a list where everything is already read has nothing to
+          mark either, so the button would be equally out of place. */}
+      {items.some((n) => !n.read) && (
+        <button
+          className="secondary"
+          onClick={() =>
+            update((d) => {
+              inbox(d, recipient).forEach((n) => markRead(d, n.id));
+            })
+          }
+        >
+          Mark all read
+        </button>
+      )}
       {!items.length && <p>No updates yet.</p>}
       {items.map((n) => (
         <button

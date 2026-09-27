@@ -558,3 +558,71 @@ spaces itself inside the Today card, `.task-review` inside a request panel.
 that card's own business and still varies; the report was about the boxes. The
 identity switcher keeps its left-flowing pills, because those are choices to
 read across rather than a status ending a row.
+
+## ADR 050: One selected state, one greeting size, one glance — and measuring the controls rather than looking at them
+
+Accepted. Four pieces of feedback from the live site, three of which turned out
+to be the same shape of problem: a rule that applied to one screen and was left
+to chance everywhere else.
+
+**A panel does not introduce itself twice.** The notifications panel rendered
+its own `<h3>Notifications & messages</h3>` inside a dialog the shell already
+titles "Notifications". "Mark all read" rendered unconditionally, so it sat
+above "No updates yet." offering to mark nothing. It is gated on something
+being unread rather than on the list being non-empty — a list where everything
+has already been read has nothing to mark either, and the button would be just
+as out of place there. Verified in all three states: nothing unread (no
+button), something unread (button), and after marking (button gone, rows stay).
+
+**Measuring the controls found a defect that looking at them did not.** The
+reported symptom was an extra bottom edge on the operator's selected view-switch
+button — `--shadow-selected` on a button that already carries an accent border.
+Dumping the computed selected and unselected treatment of every such control,
+in both themes, is what turned up the real one:
+
+```
+identity pill rest      bg rgb(58,47,28)  border rgb(46,53,64)  text rgb(240,205,150)
+identity pill SELECTED  bg rgb(58,47,28)  border rgb(46,53,64)  text rgb(240,205,150)
+```
+
+Byte-identical. `:root[data-theme] .badge` outranks `.badge-accent` and
+`.badge-neutral`, so nothing on screen said which account or contractor you were
+viewing as — `aria-pressed` was the only signal, and only a screen reader could
+read it. Four controls now share one pair of rules, each keeping its own layout;
+the pair reads `aria-pressed` directly, so the two pill classes are gone and the
+state lives in one place rather than in a class and an attribute that could
+disagree. The contractor's tab strip had the opposite gap — a `.chosen` class
+and no `aria-pressed` at all — and now carries both.
+
+`--shadow-selected` stays for `.bp-stage-nav`, where an underline is what a tab
+wants and there is no border for it to double up on.
+
+**A size that was a property of which screen you were on.** `.op-greeting h1`
+carried a deliberate choice — `--text-h3` with tight tracking, a heading that
+frames rather than dominates — and applied to the operator alone. The other two
+roles fell through to `.heading h1` and came out a step larger. The class is
+`.role-greeting` and all three home headers wear it.
+
+**The glance is one component, not three copies.** Extracting the operator's
+markup is what makes "the same card" true rather than aspirational; three
+hand-built copies would drift by the next round. The other two lead with the
+next thing in the diary above their counts, which is what someone with two jobs
+and one appointment is actually asking.
+
+The contractor's counts are not a second opinion about its own screen.
+`tabWork()` **is** the filter the Offers / Today / Upcoming tabs run — the tabs
+were rewritten to call it — so a count and the list it promises cannot disagree.
+A test asserts that equality rather than trusting it.
+
+The customer's numbers are deliberately not buttons, and its date chip is a
+plain span. Everything they could navigate to is already on that screen, and a
+control with no effect is the ADR 034 defect.
+
+**The break test found a rule nothing tested.** Removing each guard in
+`glance.ts` in turn, dropping `&& !running` from the Upcoming filter changed no
+test — because a merely overrunning job is already in the past, so the
+exclusion never fires for it. The case it exists for is a job *started ahead of
+its scheduled date*, which belongs to Today and must not also appear under
+Upcoming. That test exists now, and the break is caught. A guard that has never
+been seen to fail is not known to work, and this is the second round running
+where the exercise found the gap rather than confirming there wasn't one.
