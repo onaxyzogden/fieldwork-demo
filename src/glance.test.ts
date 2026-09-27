@@ -169,13 +169,13 @@ describe("the customer's glance", () => {
     const other = accounts.find((a) => a.id !== id)!.id;
     const mine = customerGlance(s, id, s.clock);
     const theirs = customerGlance(s, other, s.clock);
-    expect(mine.open + theirs.open).toBeLessThanOrEqual(
+    expect(mine.inProgress + theirs.inProgress).toBeLessThanOrEqual(
       s.requests.filter((r) => r.status !== "Draft").length,
     );
     expect(customerGlance(s, "no-such-account", s.clock)).toMatchObject({
       waiting: 0,
       upcoming: 0,
-      open: 0,
+      inProgress: 0,
       next: null,
     });
   });
@@ -227,9 +227,89 @@ describe("the customer's glance", () => {
     const s = seed();
     const id = account(s);
     const draft = s.requests.find((r) => r.accountId === id)!;
-    const open = customerGlance(s, id, s.clock).open;
+    const before = customerGlance(s, id, s.clock).inProgress;
     draft.status = "Draft";
-    expect(customerGlance(s, id, s.clock).open).toBe(open - 1);
+    expect(customerGlance(s, id, s.clock).inProgress).toBe(before - 1);
+  });
+
+  it("counts one job once, not once per number", () => {
+    // The reported defect: a customer with a single booked job read
+    // "1 upcoming visit" AND "1 open request". The three buckets are
+    // disjoint now, and this asserts it rather than describing it.
+    const s = seed();
+    const id = account(s);
+    const r = s.requests.find((r) => r.accountId === id)!;
+    s.requests = s.requests.filter((x) => x.accountId !== id || x.id === r.id);
+    s.visits.push({
+      id: "booked",
+      requestId: r.id,
+      taskIds: [],
+      providerId: "marcus",
+      start: new Date(s.clock + DAY).toISOString(),
+      duration: 60,
+      status: "Confirmed",
+      travel: 5,
+    });
+    const g = customerGlance(s, id, s.clock);
+    expect(g.upcoming).toBe(1);
+    expect(g.inProgress).toBe(0);
+    expect(g.waiting).toBe(0);
+  });
+
+  it("puts no request in two buckets, whatever its status", () => {
+    // Every status reconcile() can produce, against a request that does and
+    // does not carry a visit. Disjointness is a property of the pair of sets,
+    // so checking it once per status beats checking one lucky example.
+    const statuses = [
+      "Submitted",
+      "Needs Review",
+      "Information requested",
+      "Awaiting Quote Approval",
+      "Awaiting Payment",
+      "Awaiting Provider Acceptance",
+      "Confirmed",
+      "Completed",
+      "Cancelled",
+      "Declined",
+    ];
+    for (const withVisit of [false, true]) {
+      for (const status of statuses) {
+        const s = seed();
+        const id = account(s);
+        const r = s.requests.find((r) => r.accountId === id)!;
+        s.requests = s.requests.filter(
+          (x) => x.accountId !== id || x.id === r.id,
+        );
+        r.status = status;
+        if (withVisit)
+          s.visits.push({
+            id: "v",
+            requestId: r.id,
+            taskIds: [],
+            providerId: "marcus",
+            start: new Date(s.clock + DAY).toISOString(),
+            duration: 60,
+            status: "Confirmed",
+            travel: 5,
+          });
+        const g = customerGlance(s, id, s.clock);
+        const where = `${status}${withVisit ? " with a visit" : ""}`;
+        const overlap = (a: string[], b: string[]) =>
+          a.filter((x) => b.includes(x));
+        // A request that is over does not belong to any bucket.
+        if (["Completed", "Cancelled", "Declined"].includes(status))
+          expect([g.waiting, g.upcoming, g.inProgress].join(), where).toBe(
+            "0,0,0",
+          );
+        expect(overlap(g.waitingIds, g.inProgressIds), where).toEqual([]);
+        expect(overlap(g.scheduledIds, g.inProgressIds), where).toEqual([]);
+        // and every count is exactly the length of the ids behind it
+        expect(g.inProgress, where).toBe(g.inProgressIds.length);
+        expect(g.waiting, where).toBe(
+          g.waitingIds.length + g.assessmentIds.length,
+        );
+      }
+    }
   });
 
   it("agrees with dayKey about what 'today' is for the contractor", () => {

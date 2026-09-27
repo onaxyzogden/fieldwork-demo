@@ -476,6 +476,16 @@ export default function ContractorWork({
                   ?.summary || "Scheduled job"
               }
               where={`${nextRequest?.city ?? ""} · ${money(glance.next!.assignment.pay)}`}
+              onClick={() => {
+                /* The tab the job is actually under, so the row it opens is
+                   one the list is showing. */
+                setTab(
+                  dayKey(nextVisit.start) === dayKey(+s.clock)
+                    ? "Today"
+                    : "Upcoming",
+                );
+                setSelected(glance.next!.assignment.id);
+              }}
             />
           ) : (
             <GlanceLead when="NEXT JOB" what="Nothing accepted yet." />

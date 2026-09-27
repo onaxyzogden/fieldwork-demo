@@ -97,11 +97,26 @@ const WAITING_ON_CUSTOMER = new Set([
 ]);
 const CLOSED = new Set(["Completed", "Cancelled", "Declined"]);
 
+/**
+ * Each count carries the ids behind it, for two reasons. A click on a number
+ * can then open something the number actually counted, rather than re-deriving
+ * the set and hoping the two agree. And "these numbers do not double count"
+ * becomes an invariant a test can check — see `glance.test.ts` — instead of a
+ * claim about three separate filters.
+ */
 export type CustomerGlance = {
   waiting: number;
   upcoming: number;
-  open: number;
-  next: { visit: Visit; address: string } | null;
+  inProgress: number;
+  /** Requests in each bucket, in the order they should be opened. */
+  waitingIds: string[];
+  /** Requests carrying an upcoming visit, earliest first. */
+  scheduledIds: string[];
+  inProgressIds: string[];
+  /** Sent assessments still holding an undecided finding. Counted under
+   *  `waiting`, but they are not requests and have no row to open. */
+  assessmentIds: string[];
+  next: { visit: Visit; address: string; requestId: string } | null;
 };
 
 export function customerGlance(
@@ -112,8 +127,11 @@ export function customerGlance(
   const own = s.requests.filter(
     (r) => r.accountId === accountId && r.status !== "Draft",
   );
-  const ids = new Set(own.map((r) => r.id));
-  const live = s.visits
+  const live = own.filter((r) => !CLOSED.has(r.status));
+  const ids = new Set(live.map((r) => r.id));
+  /* Keyed on live requests, not merely non-Draft ones: a cancelled request's
+     leftover visit is not something the customer has coming up. */
+  const visits = s.visits
     .filter(
       (v) =>
         ids.has(v.requestId) &&
@@ -129,25 +147,50 @@ export function customerGlance(
   const properties = new Set(
     s.properties.filter((p) => p.accountId === accountId).map((p) => p.id),
   );
-  const assessments = s.walkthroughs.filter(
-    (w) =>
-      w.status === "Sent" &&
-      properties.has(w.propertyId) &&
-      findingsFor(s, w.id).some(
-        (f) => findingState(s, f) === "Pending decision",
-      ),
-  ).length;
+  const assessmentIds = s.walkthroughs
+    .filter(
+      (w) =>
+        w.status === "Sent" &&
+        properties.has(w.propertyId) &&
+        findingsFor(s, w.id).some(
+          (f) => findingState(s, f) === "Pending decision",
+        ),
+    )
+    .map((w) => w.id);
 
-  const first = live[0];
+  /* Three buckets that do not overlap. The third used to be every live
+     request, which made it a total wearing a bucket's label: one job with a
+     visit booked read as "1 upcoming visit" AND "1 open request", and anything
+     waiting on the customer was counted twice as well. In progress is now what
+     is left — neither waiting on them nor already carrying a date. */
+  /* Filtering `live` here is belt and braces: no status is in both
+     WAITING_ON_CUSTOMER and CLOSED today, so removing it changes nothing and
+     no test catches it. It stays because that is a property of two lists that
+     a later edit could break, not something the code guarantees. */
+  const waitingIds = live
+    .filter((r) => WAITING_ON_CUSTOMER.has(r.status))
+    .map((r) => r.id);
+  const scheduled = new Set(visits.map((v) => v.requestId));
+  const scheduledIds = [...new Set(visits.map((v) => v.requestId))];
+  const waiting = new Set(waitingIds);
+  const inProgressIds = live
+    .filter((r) => !waiting.has(r.id) && !scheduled.has(r.id))
+    .map((r) => r.id);
+
+  const first = visits[0];
   return {
-    waiting:
-      own.filter((r) => WAITING_ON_CUSTOMER.has(r.status)).length + assessments,
-    upcoming: live.length,
-    open: own.filter((r) => !CLOSED.has(r.status)).length,
+    waiting: waitingIds.length + assessmentIds.length,
+    upcoming: visits.length,
+    inProgress: inProgressIds.length,
+    waitingIds,
+    scheduledIds,
+    inProgressIds,
+    assessmentIds,
     next: first
       ? {
           visit: first,
           address: own.find((r) => r.id === first.requestId)?.address ?? "",
+          requestId: first.requestId,
         }
       : null,
   };

@@ -584,6 +584,22 @@ function Workspace({
   );
   const customerAtAGlance = customerGlance(s, customer, +s.clock);
   const customerNext = customerAtAGlance.next;
+  /* Open a request's row in the accordion below and bring it into view. The
+     row is already on this screen, so this expands rather than navigates. */
+  const openRequestRow = (id: string) => {
+    setActive(id);
+    setExpanded(true);
+    requestAnimationFrame(() =>
+      document
+        .getElementById("request-" + id)
+        ?.closest(".request-accordion-item")
+        ?.scrollIntoView({ block: "center", behavior: "smooth" }),
+    );
+  };
+  /* A count with nothing behind it gets no handler, so the card never offers
+     a button that would do nothing. */
+  const openFirst = (ids: string[]) =>
+    ids.length ? () => openRequestRow(ids[0]) : undefined;
   const hasReferral = tasks.some(
     (t) => getIssue(t.description).availability === "Referral only",
   );
@@ -2686,10 +2702,10 @@ function Workspace({
                       <p>Your requests and upcoming visits.</p>
                     </div>
                   </div>
-                  {/* The customer's numbers are not buttons. Everything they
-                      could navigate to is already on this screen, and a count
-                      that looks clickable and does nothing is the defect ADR
-                      034 exists to stop. */}
+                  {/* Each number opens the first thing it counted, so a
+                      count and what it points at cannot disagree. A bucket
+                      with nothing in it gets no onClick rather than a button
+                      that does nothing — the ADR 034 defect. */}
                   <Glance
                     date={glanceDate(+s.clock)}
                     lead={
@@ -2702,6 +2718,7 @@ function Workspace({
                             )?.name || "Your provider"
                           }
                           where={customerNext.address}
+                          onClick={() => openRequestRow(customerNext.requestId)}
                         />
                       ) : (
                         <GlanceLead
@@ -2715,14 +2732,17 @@ function Workspace({
                         label: "Waiting on you",
                         value: customerAtAGlance.waiting,
                         urgent: customerAtAGlance.waiting > 0,
+                        onClick: openFirst(customerAtAGlance.waitingIds),
                       },
                       {
                         label: "Upcoming visits",
                         value: customerAtAGlance.upcoming,
+                        onClick: openFirst(customerAtAGlance.scheduledIds),
                       },
                       {
-                        label: "Open requests",
-                        value: customerAtAGlance.open,
+                        label: "In progress",
+                        value: customerAtAGlance.inProgress,
+                        onClick: openFirst(customerAtAGlance.inProgressIds),
                       },
                     ]}
                   />
