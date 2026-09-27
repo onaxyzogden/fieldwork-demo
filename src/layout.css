@@ -70,6 +70,22 @@ select {
   outline: none;
   max-width: 100%;
 }
+/* iOS Safari gives input[type="date"] a native intrinsic width that
+   `width: 100%` does not shrink, and centres its value inside it. That is why
+   the Today toolbar's date box runs past its card on an iPhone while fitting
+   its column exactly in Chromium — measured at 320, 360 and 390px, where the
+   input's right edge and the card's content edge are the same pixel.
+
+   Dropping the native appearance is what lets the declared width win. Chromium
+   keeps its calendar affordance regardless, because that is a shadow
+   pseudo-element rather than part of the appearance. */
+input[type="date"] {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 100%;
+  min-width: 0;
+  text-align: left;
+}
 input:focus,
 textarea:focus,
 select:focus {
