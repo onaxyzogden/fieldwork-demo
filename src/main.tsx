@@ -1859,16 +1859,18 @@ function Workspace({
                           <small>{q.id.toUpperCase()}</small>
                         </div>
                         <p>
-                          <MapPin size={16} />
-                          {q.city} ·{" "}
-                          {
-                            s.tasks.filter(
-                              (t) => t.requestId === q.id && !t.mergedInto,
-                            ).length
-                          }{" "}
-                          tasks
+                          <span>
+                            <MapPin size={16} />
+                            {q.city} ·{" "}
+                            {
+                              s.tasks.filter(
+                                (t) => t.requestId === q.id && !t.mergedInto,
+                              ).length
+                            }{" "}
+                            tasks
+                          </span>
+                          {badge(requestStatus(q.id))}
                         </p>
-                        {badge(requestStatus(q.id))}
                       </button>
                     ))}
                 </section>

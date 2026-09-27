@@ -308,15 +308,20 @@
     width: 100%;
     margin: 0;
   }
-  .queue-item {
+  /* Scoped to .queue: below 800px the REQUEST queue becomes a wrapping strip of
+     shrink-to-fit chips. Unscoped, these three also hit the walkthrough list,
+     whose parent is a plain block — there width:auto made each row only as wide
+     as its text, so two rows sat side by side and the status chip landed after
+     the text instead of at the box edge, and the address line vanished. */
+  .queue .queue-item {
     width: auto;
     min-width: 140px;
     flex: 1;
   }
-  .queue-item .badge {
+  .queue .queue-item .badge {
     margin-top: var(--space-2);
   }
-  .queue-item small {
+  .queue .queue-item small {
     display: none;
   }
   .roster {
@@ -442,7 +447,7 @@
   .queue {
     padding: var(--space-3);
   }
-  .queue-item {
+  .queue .queue-item {
     padding: var(--space-2);
     min-width: 130px;
   }

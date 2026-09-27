@@ -619,9 +619,19 @@ footer {
   background: var(--panel);
 }
 .queue-item p {
+  display: flex;
+  flex-wrap: wrap;
   align-items: center;
   gap: var(--space-1);
   margin-bottom: var(--space-2);
+}
+/* A status chip ends the row, so it belongs at the row's right edge and not at
+   the end of the text: down a list that gives one column to scan for status.
+   On .row.between this is a no-op until the row wraps — and when it wraps, it
+   is what keeps the chip on the right instead of dropping it to the left. */
+.queue-item p > .badge:last-child,
+.row.between > .badge:last-child {
+  margin-left: auto;
 }
 .detail {
   display: flex;

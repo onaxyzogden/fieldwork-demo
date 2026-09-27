@@ -15,6 +15,15 @@
   color: var(--muted);
   font-weight: 400;
 }
+/* The finding's state belongs at the right edge of the row. The summary itself
+   stays a list-item: making it a flex row would right-align the chip but drop
+   the disclosure triangle, and a finding that no longer looks expandable is a
+   worse trade than a chip on its own line. */
+.work-task summary .badge:last-child {
+  display: flex;
+  width: fit-content;
+  margin: var(--space-2) 0 0 auto;
+}
 .work-photos {
   display: flex;
   flex-wrap: wrap;
@@ -68,9 +77,6 @@
   .work-detail .actions > * {
     flex: 1 1 100%;
   }
-}
-.queue-item p {
-  display: block;
 }
 .work-sheet {
   color: inherit;
