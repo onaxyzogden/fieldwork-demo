@@ -1,4 +1,6 @@
 import { useState } from "react";
+import { Glance, GlanceLead } from "./Glance";
+import { glanceDate, walkthroughGlance } from "./glance";
 import {
   ArrowLeft,
   ArrowRight,
@@ -100,6 +102,14 @@ function WalkthroughList({
   const [propertyId, setPropertyId] = useState(s.properties[0]?.id || "");
   const [mergeNote, setMergeNote] = useState("");
   const duplicates = duplicateProperties(s);
+  const pipeline = walkthroughGlance(s, +s.clock);
+  const chaseProperty = s.properties.find(
+    (p) => p.id === pipeline.chase?.walkthrough.propertyId,
+  );
+  const first = (ids: string[]) =>
+    ids.length ? () => open(ids[0]) : undefined;
+  const ago = (days: number) =>
+    days === 0 ? "today" : days === 1 ? "yesterday" : `${days} days ago`;
   /* What a merge would join, so the decision is made on evidence rather than
      on two addresses that happen to read alike. */
   const countFor = (id: string) => {
@@ -158,6 +168,49 @@ function WalkthroughList({
           <Plus size={16} /> New walkthrough
         </button>
       </div>
+      {/* Whose move it is, across the whole pipeline. Each number opens the
+          first walkthrough it counted; a bucket with nothing in it gets no
+          handler, so the card never offers a button that does nothing. */}
+      <Glance
+        date={glanceDate(+s.clock)}
+        lead={
+          pipeline.chase ? (
+            <GlanceLead
+              when="OLDEST UNDECIDED"
+              what={`${pipeline.chase.walkthrough.assessmentId} · ${chaseProperty?.address ?? ""}`}
+              where={`sent ${ago(pipeline.chase.daysSent)} · ${
+                pipeline.chase.opens
+                  ? `opened ${pipeline.chase.opens} time${pipeline.chase.opens === 1 ? "" : "s"}`
+                  : "not opened yet"
+              }`}
+              onClick={() => open(pipeline.chase!.walkthrough.id)}
+            />
+          ) : (
+            <GlanceLead
+              when="OLDEST UNDECIDED"
+              what="Nothing waiting on a customer."
+            />
+          )
+        }
+        metrics={[
+          {
+            label: "Drafts",
+            value: pipeline.draftIds.length,
+            onClick: first(pipeline.draftIds),
+          },
+          {
+            label: "With customer",
+            value: pipeline.withCustomerIds.length,
+            onClick: first(pipeline.withCustomerIds),
+          },
+          {
+            label: "Ready to convert",
+            value: pipeline.readyToConvertIds.length,
+            urgent: pipeline.readyToConvertIds.length > 0,
+            onClick: first(pipeline.readyToConvertIds),
+          },
+        ]}
+      />
       {/* A detector nothing renders is ADR 034's defect. This is where
           duplicates are made — an operator typing an address that already
           exists — so it is where they are shown. */}
