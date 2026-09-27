@@ -95,3 +95,38 @@ not be reached from this environment, so these results are from the local build.
 Not verified: 200% browser zoom, reduced-motion emulation and printed PDF
 pagination, unchanged from previous rounds. The live site is unreachable from
 this environment, so these results are from the local build.
+
+# Glance counts and click-through — 2026-09-27
+
+- 396 tests (394 prior plus 2 new), `design:check`, `catalogue:check`,
+  `status:check` and the production build pass; `prettier --check` passes on
+  every file touched.
+- **The reported defect reproduced first.** Seed account `c5` — one request,
+  `Awaiting Provider Acceptance`, one visit — read `waiting 0 / upcoming 1 /
+  open 1`, the same job counted twice. After: `0 / 1 / 0`.
+- **Disjointness is asserted, not described.** The test sweeps all ten request
+  statuses `reconcile()` can produce, each with and without a visit, and checks
+  the id sets do not intersect and that every count equals the length of its
+  own list.
+- **Break test, five rules removed in turn**: four caught. The two that were
+  missed the first time exposed a real bug — a closed request's leftover visit
+  counted as upcoming — which is fixed and now caught. The fifth changes no
+  behaviour and is documented in the source as unreachable rather than claimed
+  as covered.
+- **Click-through walked in the browser**, both empty and populated:
+  - Customer, nothing booked: only "In progress" is a button; it opens the
+    right accordion row. The two zero counts render as plain text.
+  - Customer, one visit booked: "Upcoming visits" and the lead line both open
+    `90 Rebecca Street`.
+  - Contractor: each count switches to its tab; the lead line moves the tab
+    from Offers to Upcoming and selects the TV mounting job.
+  - Operator: unchanged, all three still navigate.
+- Narrow-layout harness re-run at 360/480/600/878/1280 in both themes: 0
+  squeezed-text findings, chip and gap counts unchanged at 30 and 14, so the
+  lead-line button introduced nothing.
+- Screen crawl at 1440: no console or page errors. All five sample scenarios
+  open at 390px with no horizontal overflow and no errors.
+
+Not verified: 200% browser zoom, reduced-motion emulation and printed PDF
+pagination, unchanged from previous rounds. The live site is unreachable from
+this environment, so these results are from the local build.

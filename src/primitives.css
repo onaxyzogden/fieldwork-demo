@@ -653,6 +653,32 @@
 .op-glance-lead strong {
   font-size: var(--text-body);
 }
+/* The lead line as a button. It keeps the block's own layout rather than
+   inheriting button chrome, and puts the chevron at the right edge the way
+   every other row on these screens does. */
+.op-glance-lead-open {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: var(--space-3);
+  width: 100%;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: inherit;
+  text-align: left;
+}
+.op-glance-lead-open > :not(svg) {
+  grid-column: 1;
+}
+.op-glance-lead-open > svg {
+  grid-column: 2;
+  grid-row: 1 / -1;
+  color: var(--muted);
+}
+.op-glance-lead-open:hover strong {
+  color: var(--accent-text);
+}
 .op-glance-lead small {
   color: var(--muted);
 }

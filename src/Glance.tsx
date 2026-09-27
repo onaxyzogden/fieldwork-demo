@@ -74,21 +74,35 @@ export function Glance({
   );
 }
 
-/** The card's lead line: when, what, where. */
+/**
+ * The card's lead line: when, what, where. A button when there is something to
+ * open, a plain block when there is not — the empty state has nothing behind
+ * it, and a control with no effect is the ADR 034 defect.
+ */
 export function GlanceLead({
   when,
   what,
   where,
+  onClick,
 }: {
   when: string;
   what: string;
   where?: string;
+  onClick?: () => void;
 }) {
-  return (
+  const body = (
     <>
       <span className="eyebrow">{when}</span>
       <strong>{what}</strong>
       {where && <small>{where}</small>}
     </>
+  );
+  return onClick ? (
+    <button className="op-glance-lead-open" onClick={onClick}>
+      {body}
+      <ChevronRight size={16} />
+    </button>
+  ) : (
+    body
   );
 }
