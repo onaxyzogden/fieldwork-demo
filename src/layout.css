@@ -898,6 +898,10 @@ footer {
   display: flex;
   flex-direction: column;
   gap: var(--space-5);
+  /* main is a flex column, and auto side margins on a flex item switch off
+     stretching: without a width the column shrinks to its widest content, so
+     it changed size from tab to tab. Fill, then cap and centre. */
+  width: 100%;
   max-width: 760px;
   margin: 0 auto;
 }

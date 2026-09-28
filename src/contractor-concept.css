@@ -1,7 +1,3 @@
-.contractor-wrap {
-  max-width: 760px;
-  margin: auto;
-}
 .contractor-wrap .panel,
 .contractor-wrap .note {
   border: 1px solid var(--line);

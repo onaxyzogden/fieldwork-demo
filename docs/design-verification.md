@@ -233,3 +233,34 @@ it, and the carry-forward list did not offer it. Fixed per ADR 054.
   1440: no errors.
 - Still Chromium only, per the standing caveat in ADR 052.
 
+# Columns that changed width between tabs — 2026-09-28
+
+Reported from a phone: the contractor's Your Work column was a different width
+on Today than on Offers. The cause was the ADR 049 regression described in
+ADR 055.
+
+- **Measured, then fixed.** Column width against the width available, at 430px:
+  - contractor Offers / Today / Upcoming: 360 / 364 / 398 of 398 before, and 398 on every tab after;
+  - operator Home: 381 of 398 before, 398 after.
+
+  At 1280px:
+  - operator Home: 624 before, 944 after;
+  - contractor: 360–474 before, 760 after;
+  - New request form: 444 before, 760 after.
+
+  Every "after" value equals the commit before ADR 049, measured by running that
+  commit side by side.
+- **Width across states probe:** 24 findings before (contractor at 430 and
+  wider, operator Home at 878 and wider, both themes), 0 after, and 0 on the
+  commit before ADR 049.
+- **Shrink-wrap probe:** fired on `.customer-intake` after the first three
+  columns were fixed. 0 after, and 0 on the commit before ADR 049.
+- **Existing probes:** the four existing probes are unchanged at 0 / 30 / 14 / 0.
+  Console crawl at 1440: no errors.
+- **Visual check:** the three contractor tabs at 430px in both themes, side by
+  side, are the same width. Operator Home at 1280px shows the two-column request
+  grid again.
+- **Repo checks:** 409 tests, `design:check` and the production build pass;
+  `prettier --check` passes on the four touched stylesheets.
+- Still Chromium only, per the standing caveat in ADR 052.
+
