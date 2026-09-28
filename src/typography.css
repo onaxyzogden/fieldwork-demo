@@ -381,6 +381,8 @@ footer,
   display: none;
 }
 .customer-intake {
+  /* Fill, then cap and centre — see .customer-wrap in layout.css. */
+  width: 100%;
   max-width: 760px;
   margin: 0 auto;
 }

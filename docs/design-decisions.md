@@ -807,3 +807,46 @@ Rejected:
 - **Counting converted walkthroughs with leftovers on the glance card.** The
   page that number opens has nothing to act on (ADR 053's rule). The next
   walkthrough for the property is where the action is.
+
+## ADR 055: Centred columns fill their space before they cap
+
+Accepted. Reported as the contractor's Your Work page changing width between
+Offers, Today and Upcoming. This was a regression introduced by ADR 049's
+change, not an old defect.
+
+**Cause.** ADR 049 made `main` a flex column so the stack would own the space
+between boxes. The page columns inside it are centred with auto side margins,
+and in a flex container auto margins on the cross axis switch off stretching.
+Each column therefore shrank to its widest content, capped at its max-width.
+In a block `main`, which is what these rules were written for, the same margins
+fill the space and then centre. On the contractor page the widest content is
+each tab's empty-state heading, so the column followed it: at 430px it was
+360 / 364 / 398px across the three tabs, where 398px was available.
+
+It was not only the contractor page. Measured against the commit before ADR 049:
+
+| column                            | before ADR 049 | since                             | now |
+| --------------------------------- | -------------- | --------------------------------- | --- |
+| operator Home, 1280px             | 944            | 624, and 654 on All Requests      | 944 |
+| contractor, 1280px                | 760            | 360–474 by tab                    | 760 |
+| customer New request form, 1280px | 760            | 444                               | 760 |
+| customer home, 1280px             | 760            | 760, by luck: its content is wide | 760 |
+
+**Fix.** `.op-home`, `.customer-wrap`, `.contractor-wrap` and
+`.customer-intake` get `width: 100%` alongside their existing max-width and
+auto margins: fill, then cap, then centre. `align-self: stretch` would not have
+worked, because auto margins take precedence over it. The duplicate
+`.contractor-wrap { max-width; margin }` in `contractor-concept.css` is deleted.
+It restated the shared rule with `margin: auto` in place of `0 auto`.
+
+**Why the probes missed it.** All four existing probes measure one state of
+each screen, and each state looked internally fine. Two probes are added:
+
+- **Width across states:** click through every tab or segmented switch on a
+  screen and flag any column or glance card whose width changes.
+- **Shrink-wrapped by auto margins:** any flex-column item centred by auto
+  margins that is narrower than both its space and its max-width.
+
+Both are silent on the commit before ADR 049, and both fired on the four columns
+above before the fix. The second one also found the New request form, which
+the first cannot see because that screen has no tabs.
