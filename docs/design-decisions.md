@@ -751,11 +751,59 @@ approval, so the approved half is actionable now without waiting for the rest.
 **Converted walkthroughs are history and count nowhere** — including one whose
 second finding is still pending, because the page the number would open offers
 "Open the request", not anything about that finding. This exposes a
-pre-existing gap rather than creating one: a customer can still approve a
-leftover finding on a converted walkthrough, and nothing then offers to convert
-it. Recorded here rather than widened into this change.
+pre-existing gap rather than creating one. _Corrected in ADR 054:_ this
+paragraph first said a customer could still approve such a leftover. They
+cannot — the customer page locks every finding once the request exists — and
+that lock is the gap: the finding was stranded, reachable from no count, no
+page and no carry-forward list.
 
 "Ready" uses the same finding filter as `convertApproved()`, so it means exactly
 "the Convert button would do something". Its `!f.taskId` clause is unreachable
 while conversion always flips the walkthrough to Converted, and the source says
 so instead of claiming a test covers it.
+
+## ADR 054: Leftover findings are closed out or carried, never stranded
+
+Accepted. Once an assessment's approved work goes ahead, any finding the
+customer never decided on used to vanish. The customer page locks every finding
+once a request exists; the glance card counts converted walkthroughs nowhere
+(ADR 053); and the carry-forward list offered only deferred findings and ones
+needing a closer look. A finding in "Pending decision" on a converted
+walkthrough matched none of the three.
+
+There are two ways work goes ahead, and they get different treatment on
+purpose.
+
+**The customer submits.** Submitting ends their decision round. Anything left
+undecided is recorded as "Not now" through the ordinary `decide()` path, and a
+note above the submit button says so first, with the count. It is then an
+ordinary deferral: on the property record, and carryable onto the next
+walkthrough, which is the path deferrals already had. `closeOutUndecided()` in
+`pmw.ts`.
+
+**The operator converts early.** Conversion works per approval (ADR 053), so
+the operator may convert the approved half before the customer finishes. That
+path does **not** close anything out: an operator must never record a decision
+the customer did not make. The leftover stays "Pending decision", and instead
+`carryCandidates()` now also offers pending findings from converted
+walkthroughs. The Sent card warns before converting, and the Converted card
+says how many were left and where they will be offered.
+
+The carry-forward list is the one place both paths end up. That is the reason
+for the list, not a new mechanism: restating a finding on the next walkthrough
+gives it its own price and its own decision, and marks the original superseded
+so it is offered once.
+
+Rejected:
+
+- **Unlocking the customer page after conversion** so leftovers stay
+  decidable. That means a second approval against an assessment whose
+  authorization snapshot (ADR 036) already describes a different set. Each
+  later approval would need its own payment step and request, which amounts to
+  rebuilding conversion.
+- **Deferring leftovers on the operator's convert too.** It is simpler, but it
+  writes "Not now" into the record as the customer's answer when they never
+  gave one.
+- **Counting converted walkthroughs with leftovers on the glance card.** The
+  page that number opens has nothing to act on (ADR 053's rule). The next
+  walkthrough for the property is where the action is.

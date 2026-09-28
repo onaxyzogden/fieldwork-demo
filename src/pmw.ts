@@ -579,9 +579,37 @@ export function seedWalkthroughs(s: State) {
 }
 
 /**
+ * Findings still waiting on a decision. On a sent assessment that is simply
+ * the customer's turn; once the assessment has been converted it means the
+ * work went ahead without them, and the customer page has locked them.
+ */
+export const undecided = (s: State, walkthroughId: string) =>
+  findingsFor(s, walkthroughId).filter(
+    (f) => findingState(s, f) === "Pending decision",
+  );
+
+/**
+ * The customer's submit closes their decision round. Anything they left
+ * undecided becomes "Not now" through the ordinary decide() path — the page
+ * says so before they press submit, so this is their decision, not one taken
+ * for them. It then lives where every deferral lives: on the property record,
+ * carryable onto the next walkthrough.
+ *
+ * Deliberately NOT called from the operator's early "Convert" button: an
+ * operator must never record a customer's decision. Leftovers from that path
+ * stay undecided and are rescued by carryCandidates() instead.
+ */
+export function closeOutUndecided(s: State, walkthroughId: string) {
+  const left = undecided(s, walkthroughId);
+  for (const f of left) decide(s, f.id, "Not Now");
+  return left.length;
+}
+
+/**
  * What an in-progress walkthrough could usefully restate from earlier visits
  * to the same property: items the customer deferred, and items nobody could
  * price without a closer look. Both are the reason to walk a property twice.
+ * Also anything left undecided on an assessment whose work has gone ahead.
  *
  * Anything already carried into this walkthrough drops out, so the list is
  * what is left to do rather than a growing pile.
@@ -595,7 +623,16 @@ export function carryCandidates(s: State, walkthroughId: string) {
       .map((f) => f.carriedFrom)
       .filter(Boolean),
   );
-  return [...record.deferred, ...record.furtherAssessment].filter(
+  /* Undecided findings on a converted assessment are stranded: the customer
+     page has locked them and no count shows them. Offering them here is what
+     rescues them, however they got there. */
+  const converted = new Set(
+    record.walkthroughs
+      .filter((x) => x.status === "Converted")
+      .map((x) => x.id),
+  );
+  const stranded = record.pending.filter((f) => converted.has(f.walkthroughId));
+  return [...record.deferred, ...record.furtherAssessment, ...stranded].filter(
     (f) =>
       f.walkthroughId !== walkthroughId && !already.has(f.id) && !f.resolvedBy,
   );

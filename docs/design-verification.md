@@ -193,3 +193,43 @@ before the general rule was carved to exclude it.
 - All four harness probes unchanged at 0 / 30 / 14 / 0. Console crawl at 1440:
   no errors.
 - Still Chromium only, per the standing caveat in ADR 052.
+
+# Leftover findings no longer stranded — 2026-09-27
+
+The gap ADR 053 recorded. A finding still undecided when an assessment was
+converted appeared nowhere: the customer page had locked it, no count included
+it, and the carry-forward list did not offer it. Fixed per ADR 054.
+
+- **Five new tests** in `pmw.test.ts`:
+  - The customer's close-out defers only undecided findings.
+  - Nothing is stranded after a customer submit.
+  - The operator's early convert leaves the finding undecided but carryable.
+  - An undecided finding is not carryable while the walkthrough is still with the customer.
+  - A carried finding stops being offered.
+- **Every new guard was broken on purpose, and each one fails a test:**
+  - dropping the stranded findings from `carryCandidates`;
+  - dropping its converted-only filter;
+  - widening `undecided()` past "Pending decision";
+  - `closeOutUndecided` deferring nothing;
+  - removing the `resolvedBy` exclusion.
+
+  The one not reachable by a unit test is the call itself inside the customer's
+  submit in `Assessment.tsx`. The browser walk below covers it.
+- **Browser walk at 390px, both themes**, starting from a fresh seed.
+  - Customer path: approve one item, leave one undecided.
+    - The note ("1 item you haven't decided will be kept as "Not now"…") shows before submit.
+    - After submit the finding is "Not Now", the walkthrough is Converted, and the note is gone.
+    - A new walkthrough for the property offers the finding.
+  - Operator path: the customer approves one and stops.
+    - The Sent card warns before converting.
+    - After converting, the finding is still "Pending", never deferred for them.
+    - The Converted card shows the leftover line, and the customer page offers no decision buttons.
+    - The next walkthrough offers the finding. Carrying it marks the original resolved and drops it from the list (2 → 1).
+  - No console errors.
+- 409 tests, `design:check` and the production build pass. `prettier --check`
+  reports the same pre-existing lines as `main` on the three touched source
+  files, and none on the added lines.
+- The four harness probes are unchanged at 0 / 30 / 14 / 0. Console crawl at
+  1440: no errors.
+- Still Chromium only, per the standing caveat in ADR 052.
+

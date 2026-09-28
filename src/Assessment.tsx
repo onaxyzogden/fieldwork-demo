@@ -20,6 +20,7 @@ import {
 } from "./model";
 import {
   assessmentTotals,
+  closeOutUndecided,
   convertApproved,
   decide,
   findingEvidence,
@@ -29,6 +30,7 @@ import {
   requestAssessment,
   byToken,
   recordOpen,
+  undecided,
 } from "./pmw";
 import { KEY, load, commit } from "./store";
 import { SaveWarning } from "./NotificationUI";
@@ -148,6 +150,7 @@ export default function Assessment({
   );
   const approver = org ? approverId : people[0]?.id;
   const totals = assessmentTotals(s, w.id);
+  const leftUndecided = undecided(s, w.id).length;
   const request = s.requests.find((r) => r.walkthroughId === w.id);
   const quote = s.quotes.find((q) => q.requestId === request?.id);
   const paid = s.payments.some(
@@ -192,6 +195,10 @@ export default function Assessment({
         ...(approver ? { contactId: approver } : {}),
         agreedAt: new Date(d.clock).toISOString(),
       };
+      /* Submitting ends this decision round. Anything left undecided is kept
+         as "Not now" — the note above the button says so first — rather than
+         being locked in limbo once the request exists. */
+      closeOutUndecided(d, w.id);
       const created = convertApproved(d, w.id);
       const q = d.quotes.find((q) => q.requestId === created?.id);
       if (q)
@@ -398,6 +405,15 @@ export default function Assessment({
               <span className="field-message" role="alert">
                 {error}
               </span>
+            )}
+            {leftUndecided > 0 && (
+              <p className="note">
+                {leftUndecided === 1
+                  ? "1 item you haven’t decided will be kept as “Not now”."
+                  : `${leftUndecided} items you haven’t decided will be kept as “Not now”.`}{" "}
+                They stay on your property record, and can be raised again at
+                your next visit.
+              </p>
             )}
             <button className="primary full" onClick={submit}>
               Approve {totals.approved.length} item
