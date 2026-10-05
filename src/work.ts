@@ -70,9 +70,15 @@ export function bucket(s: State, id: string) {
     dispatch.includes("Needs reassignment")
   )
     return "Needs Action";
+  /* A declined quote leaves the request Awaiting Quote Approval, but the next
+     move is the operator's — the decision card's "Revise quote" — so it is
+     not waiting on anyone. */
+  const declined = s.quotes.some(
+    (q) => q.requestId === id && q.status === "Declined",
+  );
   if (
     dispatch ||
-    r.status.startsWith("Awaiting") ||
+    (r.status.startsWith("Awaiting") && !declined) ||
     r.status === "Information requested"
   )
     return "Waiting";

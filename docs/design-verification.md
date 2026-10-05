@@ -424,3 +424,65 @@ the same account skips it.
 - **Sweeps:** the narrow-layout probes are unchanged at 0 / 30 / 14 / 0, the
   tab-width and shrink-wrap probes are at 0, and the console crawl is clean.
   Chromium only, per ADR 052.
+
+# Operator decision queue — 2026-10-05
+
+ADR 059. Every seeded Needs-attention request was taken as far as the operator
+can take it, first through the request pages and then through the queue, by a
+scripted run.
+
+- **Request pages:** Review tasks, open each unsure task, Mark reviewed;
+  Offer to a contractor, Create visit & send offer, Back to request; Send
+  quote; Back to Home.
+- **Queue:** Work through 4 decisions, the suggestion on every screen, Back
+  to Home.
+
+|                                 | request pages     | queue |
+| ------------------------------- | ----------------- | ----- |
+| decisions completed             | 5 (and 1 refused) | 7     |
+| taps                            | 26                | 9     |
+| typed characters                | 0                 | 0     |
+| screens visited                 | 12                | 8     |
+| most controls on screen at once | 48 (52 at 1280px) | 12    |
+
+The request pages could not book 14 Iroquois Shore Road. No contractor can
+take every task there, and the panel refuses with "This provider is not
+eligible for every selected task". The queue offers Do it myself and goes on
+to quote it, which accounts for the two extra decisions.
+
+- **Tests:**
+  - Twelve new tests cover `decisions.ts`: the seeded queue and what stays out
+    of it, scope approval, no eligible contractor, nobody with a free time,
+    the pay floor and a repeated press, quote and revise, a re-offer at no
+    less pay, the operator never suggested as the replacement, a follow-up
+    first, oldest first, the quote formula, and a request waiting on the
+    customer.
+  - One new test in `work.test.ts` covers a declined quote landing in Needs
+    Action.
+  - Twenty-one guards were broken on purpose. Twenty fail a test. The
+    twenty-first, a Confirmed request returning nothing, cannot be reached:
+    the checks after it return nothing for it anyway. It stays to keep the
+    decision card's order, and the source says so.
+- **Browser walk, 390px and 1280px in both themes, with no console errors:**
+  - every kind: check the scope, book the work (contractor and Do it
+    myself), send the quote, quote declined, contractor declined (re-offer to
+    another contractor, and Do it myself when nobody else is free), follow up
+    the job;
+  - Skip moves on without writing; Change and Open request land on that
+    request; Close leaves; reopening shows the same count;
+  - a request acted on comes round again with its next decision;
+  - a $0 revision is refused on the field and clears as the price is typed;
+  - the re-offer pays $120 after a $110 decline (the new contractor's
+    floor), and the operator covering a job is paid nothing;
+  - the assign panel defaults to $240 (Nina Patel, 300 minutes), refuses
+    $239 on the field without booking, and sends $260 when typed. A pay
+    typed for one contractor gives way to the next one's own rate when
+    another is picked.
+- **Layout:** no horizontal overflow at 320px or 360px on any queue screen,
+  with Details open.
+- **Repo checks:** 436 tests, the build, `design:check`, `catalogue:check`
+  and `status:check` pass. New files are prettier-clean, and `main.tsx`
+  carries less than `main`'s drift: the replaced block was part of it.
+- **Sweeps:** the narrow-layout probes are unchanged at 0 / 30 / 14 / 0, the
+  tab-width and shrink-wrap probes are at 0, and the console crawl is clean.
+  Chromium only, per ADR 052.
