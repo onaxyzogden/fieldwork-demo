@@ -6,6 +6,8 @@ import {
   canWork,
   bucket,
   message,
+  needsNote,
+  openTasks,
   workStatus,
 } from "./work";
 function ready() {
@@ -201,5 +203,51 @@ describe("job execution", () => {
     expect(s.requests.find((r) => r.id === "r3")?.status).toBe(
       "Awaiting Quote Approval",
     );
+  });
+});
+
+describe("job mode rules", () => {
+  it("will not finish a job while an exception has no note", () => {
+    const s = ready();
+    const task = visit(s).taskIds[0];
+    execute(s, "work", "marcus", "start");
+    saveOutcome(s, "work", "marcus", task, { outcome: "Materials required" });
+    expect(execute(s, "work", "marcus", "finish")).toBe(false);
+    saveOutcome(s, "work", "marcus", task, { note: "   " });
+    expect(execute(s, "work", "marcus", "finish")).toBe(false);
+    saveOutcome(s, "work", "marcus", task, { note: "Needs a 1.2 m bracket" });
+    expect(execute(s, "work", "marcus", "finish")).toBe(true);
+  });
+
+  it("asks for no note when the task is done as described", () => {
+    expect(
+      needsNote({ outcome: "Completed", note: "", before: [], after: [] }),
+    ).toBe(false);
+    expect(needsNote(undefined)).toBe(false);
+    expect(needsNote({ outcome: "", note: "", before: [], after: [] })).toBe(
+      false,
+    );
+    expect(
+      needsNote({
+        outcome: "Unable to complete",
+        note: "",
+        before: [],
+        after: [],
+      }),
+    ).toBe(true);
+  });
+
+  it("lists the tasks still open, in visit order", () => {
+    const s = ready();
+    const v = visit(s);
+    v.taskIds = ["a", "b", "c"];
+    expect(openTasks(v)).toEqual(["a", "b", "c"]);
+    v.execution = {
+      outcomes: {
+        b: { outcome: "Completed", note: "", before: [], after: [] },
+        c: { outcome: "", note: "", before: ["x"], after: [] },
+      },
+    };
+    expect(openTasks(v)).toEqual(["a", "c"]);
   });
 });

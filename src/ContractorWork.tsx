@@ -13,12 +13,14 @@ import {
   execute,
   saveOutcome,
   outcomes,
+  needsNote,
   dayKey,
   workStatus,
 } from "./work";
 import { respondToOffer } from "./dispatch";
 import { storablePhotos, unreadableMessage } from "./photos";
 import { MessageThread } from "./NotificationUI";
+import JobMode from "./JobMode";
 import { Glance, GlanceLead } from "./Glance";
 import {
   contractorGlance,
@@ -79,6 +81,8 @@ export function JobWork({
   /* Which task's photo field rejected a file, so the message sits on that
      field rather than in a toast that leaves before it is read. */
   const [photoError, setPhotoError] = useState("");
+  /* Which task has an exception outcome and no note yet (needsNote). */
+  const [noteError, setNoteError] = useState("");
 
   const v = visit,
     x = v.execution,
@@ -173,7 +177,7 @@ export function JobWork({
           <details
             key={id}
             className="work-task"
-            open={outcomeError === id ? true : undefined}
+            open={outcomeError === id || noteError === id ? true : undefined}
           >
             <summary>
               {o?.outcome === "Completed" ? "✓ " : ""}
@@ -233,13 +237,27 @@ export function JobWork({
                     )}
                   </label>
                 )}
-                <label className="field">
-                  Task note (optional)
+                <label
+                  className={"field" + (noteError === id ? " field-error" : "")}
+                >
+                  {o?.outcome && o.outcome !== "Completed"
+                    ? "What is left to do"
+                    : "Task note (optional)"}
                   <textarea
+                    id={"note-" + id}
                     readOnly={!allowed}
                     value={o?.note || ""}
-                    onChange={(e) => patch({ note: e.target.value })}
+                    aria-invalid={noteError === id || undefined}
+                    onChange={(e) => {
+                      if (noteError === id) setNoteError("");
+                      patch({ note: e.target.value });
+                    }}
                   />
+                  {noteError === id && (
+                    <span className="field-message" role="alert">
+                      Say what is left to do, so the operator can follow it up.
+                    </span>
+                  )}
                 </label>
                 {(["before", "after"] as const).map((kind) => (
                   <div key={kind}>
@@ -311,6 +329,12 @@ export function JobWork({
                 return;
               }
               setOutcomeError("");
+              const unnoted = v.taskIds.find((id) => needsNote(x.outcomes[id]));
+              if (unnoted) {
+                setNoteError(unnoted);
+                document.getElementById("note-" + unnoted)?.focus();
+                return;
+              }
               setFinish(true);
             }}
           >
@@ -418,6 +442,12 @@ export default function ContractorWork({
   }, [openVisit, provider]);
   const [decline, setDecline] = useState(false);
   const [reason, setReason] = useState("");
+  /* Today's job, or one already running whatever its date, opens in job mode:
+     the whole screen, one step at a time. Other accepted jobs keep the page,
+     since there is nothing to do on them yet but read. */
+  const todaysJob = (v: Visit) =>
+    dayKey(v.start) === today ||
+    (!!v.execution?.startedAt && !v.execution.finishedAt);
   const a = mine.find((a) => a.id === selected),
     v = s.visits.find((v) => v.id === a?.visitId),
     r = s.requests.find((r) => r.id === v?.requestId);
@@ -634,6 +664,19 @@ export default function ContractorWork({
                 </Sheet>
               )}
             </section>
+          ) : a.status === "Accepted" && todaysJob(v) ? (
+            <JobMode
+              s={s}
+              provider={provider}
+              visit={v}
+              update={update}
+              exit={() => setSelected("")}
+              next={() => {
+                setSelected(nextAssignment?.id || "");
+                setTab("Today");
+              }}
+              nextLabel={nextAssignment ? "Next job" : "Done for today"}
+            />
           ) : a.status === "Accepted" ? (
             <>
               <JobWork s={s} provider={provider} update={update} visit={v} />

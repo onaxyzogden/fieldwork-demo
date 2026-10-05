@@ -1,6 +1,7 @@
-/* The on-site walkthrough (OnSite.tsx). A full-screen layer above the app
-   chrome: while it is open it is the whole screen, so nothing else on the
-   page competes with the next action. */
+/* The on-site layer, shared by the walkthrough (OnSite.tsx) and contractor
+   job mode (JobMode.tsx). A full-screen layer above the app chrome: while it
+   is open it is the whole screen, so nothing else competes with the next
+   action. */
 .onsite {
   position: fixed;
   inset: 0;
@@ -179,4 +180,88 @@
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: var(--space-2);
+}
+
+/* Contractor job mode (JobMode.tsx) shares the layer above: the same rule
+   about one thing at a time, for the person doing the work. */
+.job-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.job-list li {
+  padding: var(--space-3);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+  background: var(--panel);
+}
+.job-summary li {
+  padding: 0;
+}
+.job-summary button {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  width: 100%;
+  padding: var(--space-3);
+  text-align: left;
+}
+.job-summary small {
+  color: var(--muted);
+}
+.job-details summary {
+  cursor: pointer;
+  color: var(--muted);
+}
+.job-shots {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-3);
+}
+.job-shots > div {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  min-width: 0;
+}
+.job-shots .onsite-shoot {
+  min-height: 4.5rem;
+  font-size: var(--text-body);
+}
+.job-shots .photos img {
+  width: 64px;
+  height: 56px;
+}
+.job-outcomes {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  margin: 0;
+  padding: 0;
+  border: 0;
+  min-width: 0;
+}
+.job-outcomes legend {
+  margin-bottom: var(--space-3);
+  padding: 0;
+  color: var(--muted);
+}
+.job-outcomes > div {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+.job-outcomes button {
+  min-height: 2.75rem;
+  padding: var(--space-2) var(--space-4);
+  border-radius: var(--radius-pill);
+}
+.job-secondary {
+  justify-content: space-between;
+  align-items: center;
+  gap: var(--space-3);
+  margin-top: var(--space-2);
 }
