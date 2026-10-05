@@ -14,6 +14,19 @@ export const outcomes = [
   "Customer declined",
   "Materials required",
 ];
+type Outcome = NonNullable<Visit["execution"]>["outcomes"][string];
+/**
+ * An outcome other than Completed hands the task back to the operator, and the
+ * outcome alone does not say what is left to do: "Materials required" does not
+ * name the material. So it needs a note, and finishing the job checks for one
+ * — a rule about the data, like the walkthrough send rule (ADR 028), not a
+ * check living in one screen.
+ */
+export const needsNote = (o?: Outcome) =>
+  !!o?.outcome && o.outcome !== "Completed" && !o.note.trim();
+/** Tasks in this visit with no outcome recorded yet, in visit order. */
+export const openTasks = (v: Visit) =>
+  v.taskIds.filter((id) => !v.execution?.outcomes[id]?.outcome);
 export const dayKey = (value: string | number) => {
   const p = torontoParts(new Date(value));
   return `${p.year}-${p.month}-${p.day}`;
@@ -126,7 +139,8 @@ export function execute(
     if (
       !x.startedAt ||
       !v.taskIds.length ||
-      !v.taskIds.every((id) => outcomes.includes(x.outcomes[id]?.outcome))
+      !v.taskIds.every((id) => outcomes.includes(x.outcomes[id]?.outcome)) ||
+      v.taskIds.some((id) => needsNote(x.outcomes[id]))
     )
       return false;
     x.finishedAt = now;

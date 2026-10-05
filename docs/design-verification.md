@@ -323,3 +323,55 @@ then priced and sent.
 - **Not verified here:** whether `capture` opens the camera, and whether a
   focused price box raises the number pad on iOS, both need a real phone.
   Still Chromium only, per the standing caveat in ADR 052.
+
+# Contractor job mode — 2026-10-05
+
+ADR 057. The same job was measured through the old page and job mode by a
+scripted run at 390px. It was a four-task job, confirmed and accepted for
+today. Each task got a before and an after photo. Three tasks were done as
+described, and one was "Materials required" with the note "Need a longer
+bracket".
+
+The job was built from the app's own rules. The harness imports `eligible()`
+and `reconcile()` from the dev server, so the visit stays confirmed rather than
+being reset by the next save.
+
+|                                 | before | after |
+| ------------------------------- | ------ | ----- |
+| taps                            | 36     | 29    |
+| typed characters                | 21     | 21    |
+| most controls on screen at once | 41     | 15    |
+
+- **Five new tests** cover the note rule on finish (no note, a whitespace-only
+  note, then a real note), `needsNote()` across outcomes, and `openTasks()`
+  order. Four guards were broken on purpose, and each break fails a test:
+  - finishing without the note check;
+  - whitespace counting as a note;
+  - Completed needing a note;
+  - `openTasks()` ignoring outcomes.
+- **The browser walk passed all 17 checks in both themes**, with no console
+  errors:
+  - today's job opens in job mode at arrival, and "Already here? Start" skips
+    on-the-way;
+  - an empty exception and a whitespace-only note are refused, and nothing is
+    saved;
+  - Skip, Done and Back each land on the right task;
+  - Close leaves, and reopening resumes at the first open task;
+  - the finish list shows the skipped task as not done, and offers it instead
+    of "Finish job";
+  - a finished task can be changed to an exception from the list;
+  - Messages opens the thread inside job mode;
+  - finishing succeeds once every exception has a note;
+  - a job on another day keeps the page;
+  - the operator's own job page asks for the note on the exception task
+    instead of finishing.
+- **No horizontal overflow** at 320px or 360px on arrival, on the way, a task
+  with photos, an exception, messages, or finish.
+- **Repo checks:** 417 tests, the build, `design:check`, `catalogue:check` and
+  `status:check` pass. New files are prettier-clean. `ContractorWork.tsx`
+  carries exactly the pre-existing drift of `main`.
+- **Sweeps:** the narrow-layout probes are unchanged at 0 / 30 / 14 / 0, the
+  tab-width and shrink-wrap probes are at 0, and the console crawl has no
+  errors.
+- **Not verified here:** the camera opening directly needs a real phone.
+  Chromium only, per ADR 052.

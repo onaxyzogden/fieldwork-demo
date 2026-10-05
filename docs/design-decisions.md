@@ -919,3 +919,59 @@ focusing the price box raises the number pad on iOS, both need a real phone.
 In desktop Chromium the first falls back to a file picker. The full editing
 page is unchanged, and is still where internal notes, customer notes and
 corrections are made.
+
+## ADR 057: Today's job runs one step at a time
+
+Accepted. The second round of "one action at a time" (ADR 056 was the first).
+After "Start job", a contractor's job page showed every task as a collapsed
+panel. Each panel held:
+
+- a required five-option outcome dropdown;
+- a note;
+- separate before and after photo pickers that opened the file picker, not the camera.
+
+Below the tasks sat an always-open message thread, then "Complete job" and a
+confirmation pop-up. The glance card and tabs stayed above the whole job.
+
+**Job mode** is the same full-screen layer as the walkthrough capture
+(`onsite.css`). It opens when today's accepted job, or any job already running,
+is opened.
+
+1. **Arrival.** The address and the task list, with one main button: "On my
+   way", then "Start job". Navigate sits beside it, and "Already here? Start"
+   skips the on-the-way step.
+2. **One task per screen**, "Task 2 of 4":
+   - Before and After buttons that open the camera directly;
+   - the customer's answers and photos behind "Details";
+   - one tap for **Done as described**;
+   - **Something's different** opens the other four outcomes and a note box;
+   - **Skip for now** leaves the task open, and Back revisits the one before.
+3. **Finish.** "3 of 4 done", listing each task's outcome, and any task can be
+   reopened from the list. While anything is open the button is "Do the next
+   open task". Once nothing is, it is "Finish job". That screen replaces the
+   pop-up.
+4. **Finished.** "Next job" or "Done for today".
+
+Messages moved to a header button showing how many messages came from other
+people. There is no read state for messages, so it is a count, not "unread".
+"Close" is always there: a running job reopens on its own the next time the
+contractor opens Your Work, so leaving loses nothing.
+
+**An exception needs a note, and that is a data rule.** An outcome other than
+Completed hands the task back to the operator. "Materials required" does not
+name the material, so `needsNote()` in `work.ts` requires a few words, and
+`execute(…, "finish")` refuses while any exception lacks one. Job mode asks
+for the note before moving on. The old job page asks on "Complete job", on the
+note field itself.
+
+**Photos stay optional**, as before. Each is one tap. **Tasks come in order**,
+with skipping. `openTasks()` decides where job mode resumes and what the finish
+screen still owes.
+
+**What keeps the old page:**
+
+- an accepted job on another day, which can only be read until its day;
+- the operator's "View progress" and "Do it myself" job page, which is for
+  watching or self-fulfilment at a desk.
+
+**Not verifiable here:** whether `capture` opens the camera needs a real phone.
