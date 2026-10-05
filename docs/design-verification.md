@@ -264,3 +264,62 @@ ADR 055.
   `prettier --check` passes on the four touched stylesheets.
 - Still Chromium only, per the standing caveat in ADR 052.
 
+# Walkthrough captured on site, priced afterwards — 2026-10-05
+
+ADR 056. The same task was measured through the old screens and the new ones
+by a scripted run at 390px: three items, each with a photo, a note and a room,
+then priced and sent.
+
+|                                 | before | after                                                    |
+| ------------------------------- | ------ | -------------------------------------------------------- |
+| taps                            | 26     | 24                                                       |
+| typed characters                | 264    | 153, of which 145 are notes that can be dictated on site |
+| most controls on screen at once | 37     | 19                                                       |
+| titles typed                    | 3      | 0, all three accepted as suggested                       |
+
+- **Taps barely moved, and that is reported as measured.** The saving is in
+  what is typed and in what is on screen at once.
+  - The first version took 27 taps: each pricing screen cost a tap on the
+    price box before typing. Opening that screen with the box focused brought
+    it to 24.
+  - Elapsed time is not reported, because a scripted run's time says nothing
+    about a person's.
+- **Five new tests** cover the seed type, room sets with history merged, an
+  untyped property, title suggestion, and capture-then-price-then-send.
+  Eight guards were broken on purpose, and each break fails a test:
+  - other properties' areas leaking in;
+  - case-sensitive de-duplication;
+  - blank areas;
+  - the type's rooms;
+  - the full stop rule;
+  - the 60-character cap;
+  - the `needsPricing` filter;
+  - the seed type.
+- **The browser walk passed all 21 checks in both themes**, with no console
+  errors:
+  - the type picker appears only for an untyped property, the type is stored,
+    and the Townhouse rooms are offered;
+  - an empty save is refused and saves nothing;
+  - a note-only item with a typed room saves, and the room becomes its own
+    button for the next item;
+  - photos can be added and removed;
+  - Finish saves the item in hand;
+  - the title is suggested, and written on Next;
+  - "Needs a closer look" passes without a price;
+  - Back and Close work, and the draft card leads with the right action in
+    each state;
+  - the earlier-visit reminder appears and expands.
+
+  The customer's link opens with the three sent items.
+
+- **No horizontal overflow** on the overlay's capture, filled capture, pricing
+  and send screens at 320px and 360px.
+- **Repo checks:** 414 tests, `design:check`, `catalogue:check`, `status:check`
+  and the build pass. New files are prettier-clean. Touched files carry exactly
+  the pre-existing prettier drift of `main`.
+- **Sweeps:** the narrow-layout probes are unchanged at 0 / 30 / 14 / 0, the
+  tab-width and shrink-wrap probes are at 0, and the console crawl has no
+  errors.
+- **Not verified here:** whether `capture` opens the camera, and whether a
+  focused price box raises the number pad on iOS, both need a real phone.
+  Still Chromium only, per the standing caveat in ADR 052.

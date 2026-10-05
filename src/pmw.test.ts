@@ -12,8 +12,11 @@ import {
   findingEvidence,
   findingState,
   findingsFor,
+  needsPricing,
   nextAssessmentId,
   propertyRecord,
+  roomsFor,
+  ROOMS,
   quotable,
   carryCandidates,
   closeOutUndecided,
@@ -21,6 +24,7 @@ import {
   seedWalkthroughs,
   sendBlockers,
   sendWalkthrough,
+  suggestTitle,
   undecided,
 } from "./pmw";
 
@@ -536,5 +540,92 @@ describe("leftover findings once an assessment's work goes ahead", () => {
     expect(carryCandidates(s, later.id).map((f) => f.id)).not.toContain(
       railing.id,
     );
+  });
+});
+
+describe("capture on site, price later", () => {
+  it("seeds organisation properties as Commercial and the rest as House", () => {
+    const s = seed();
+    for (const p of s.properties) {
+      const org = accounts.find((a) => a.id === p.accountId)?.type;
+      expect(p.type).toBe(org === "organization" ? "Commercial" : "House");
+    }
+    expect(s.properties.some((p) => p.type === "Commercial")).toBe(true);
+  });
+
+  it("offers the type's rooms first, then this property's own areas once", () => {
+    const s = seed();
+    s.walkthroughs = [];
+    s.findings = [];
+    const property = s.properties.find((p) => p.type === "House")!;
+    const earlier = createWalkthrough(s, property.id);
+    addFinding(s, earlier.id, { area: "Second-floor corridor" });
+    addFinding(s, earlier.id, { area: "kitchen" }); // already a room
+    addFinding(s, earlier.id, { area: "second-floor corridor " }); // repeat
+    addFinding(s, earlier.id, { area: "" });
+    // Another property's area never leaks in.
+    const other = s.properties.find((p) => p.id !== property.id)!;
+    const elsewhere = createWalkthrough(s, other.id);
+    addFinding(s, elsewhere.id, { area: "Boiler room" });
+    expect(roomsFor(s, property.id)).toEqual([
+      ...ROOMS.House,
+      "Second-floor corridor",
+    ]);
+  });
+
+  it("offers a property with no type its own history only", () => {
+    const s = seed();
+    s.walkthroughs = [];
+    s.findings = [];
+    const property = s.properties[0];
+    delete property.type;
+    expect(roomsFor(s, property.id)).toEqual([]);
+    const w = createWalkthrough(s, property.id);
+    addFinding(s, w.id, { area: "Shed" });
+    expect(roomsFor(s, property.id)).toEqual(["Shed"]);
+  });
+
+  it("suggests a title from the first clause of the note", () => {
+    expect(suggestTitle("")).toBe("");
+    expect(suggestTitle("   ")).toBe("");
+    expect(suggestTitle("cabinet hinge loose, door sags when opened.")).toBe(
+      "Cabinet hinge loose",
+    );
+    expect(suggestTitle("Gap of 1.5 cm under the door. Draughty.")).toBe(
+      "Gap of 1.5 cm under the door",
+    );
+    expect(suggestTitle("Leak under sink\nsecond line")).toBe(
+      "Leak under sink",
+    );
+    const long = suggestTitle(
+      "The flashing along the whole north side of the roof has lifted and is letting water in",
+    );
+    expect(long.length).toBeLessThanOrEqual(60);
+    expect(long.endsWith(" ")).toBe(false);
+    expect("The flashing along the whole north side of the roof has").toBe(
+      long,
+    );
+  });
+
+  it("holds a capture back from sending until it is priced", () => {
+    const s = seed();
+    const w = createWalkthrough(s, s.properties[1].id);
+    const photo = addFinding(s, w.id, { area: "Kitchen", photos: ["data:x"] });
+    const noted = addFinding(s, w.id, {
+      area: "Bathroom",
+      observed: "Caulking cracked around the tub.",
+    });
+    expect(needsPricing(s, w.id).map((f) => f.id)).toEqual([
+      photo.id,
+      noted.id,
+    ]);
+    expect(sendWalkthrough(s, w.id)).toBe(false);
+    photo.title = "Cabinet hinge loose";
+    photo.price = 85;
+    expect(needsPricing(s, w.id).map((f) => f.id)).toEqual([noted.id]);
+    noted.title = suggestTitle(noted.observed);
+    noted.pricing = "Further Assessment Required";
+    expect(needsPricing(s, w.id)).toEqual([]);
+    expect(sendWalkthrough(s, w.id)).toBe(true);
   });
 });

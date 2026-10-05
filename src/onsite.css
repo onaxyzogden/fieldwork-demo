@@ -1,0 +1,182 @@
+/* The on-site walkthrough (OnSite.tsx). A full-screen layer above the app
+   chrome: while it is open it is the whole screen, so nothing else on the
+   page competes with the next action. */
+.onsite {
+  position: fixed;
+  inset: 0;
+  z-index: var(--z-modal);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  background: var(--bg);
+  color: var(--text);
+}
+.onsite-body {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  width: 100%;
+  max-width: 560px;
+  min-height: 100%;
+  margin: 0 auto;
+  padding: var(--space-4) var(--space-4) 0;
+}
+.onsite-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  color: var(--muted);
+  font-size: var(--text-label);
+}
+.onsite-head > span {
+  min-width: 0;
+}
+.onsite h1 {
+  margin: 0;
+  font-size: var(--text-h2);
+}
+.onsite .sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+.onsite-hint,
+.onsite-room {
+  margin: 0;
+  color: var(--muted);
+}
+.onsite-room {
+  font-weight: 600;
+  color: var(--text);
+}
+.onsite-types {
+  display: grid;
+  gap: var(--space-3);
+}
+.onsite-types button {
+  min-height: 4rem;
+  font-size: var(--text-intro);
+}
+
+/* The one big target: the camera. A label wrapping the input, so the whole
+   block opens it; the input stays focusable for a keyboard, just not seen. */
+.onsite-shoot {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-3);
+  min-height: 7rem;
+  border-radius: var(--radius-lg);
+  font-size: var(--text-intro);
+  font-weight: 600;
+  cursor: pointer;
+}
+.onsite-shoot input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+}
+.onsite-shoot:focus-within {
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
+}
+.onsite-thumb {
+  position: relative;
+  display: inline-flex;
+}
+.onsite-thumb button {
+  position: absolute;
+  top: var(--space-1);
+  right: var(--space-1);
+  min-height: 0;
+  padding: var(--space-1);
+  border-radius: var(--radius-pill);
+  background: var(--overlay);
+  color: var(--text);
+}
+.onsite .photos {
+  margin-top: 0;
+}
+.onsite .photos img {
+  width: 120px;
+  height: 100px;
+}
+
+.onsite-earlier {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+.onsite-earlier > button {
+  align-self: flex-start;
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+.onsite-earlier ul {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  margin: 0;
+  padding: var(--space-3);
+  list-style: none;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+  background: var(--panel);
+}
+.onsite-earlier li {
+  display: flex;
+  flex-direction: column;
+}
+.onsite-earlier small {
+  color: var(--muted);
+}
+.onsite-saved {
+  margin: 0;
+  color: var(--success);
+  font-weight: 600;
+}
+
+.onsite-rooms {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  margin: 0;
+  padding: 0;
+  border: 0;
+  min-width: 0;
+}
+.onsite-rooms legend {
+  margin-bottom: var(--space-3);
+  padding: 0;
+  color: var(--muted);
+}
+.onsite-rooms > div {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+.onsite-rooms button {
+  min-height: 2.75rem;
+  padding: var(--space-2) var(--space-4);
+  border-radius: var(--radius-pill);
+}
+
+/* The primary action stays under the thumb however far the page scrolls. */
+.onsite-bar {
+  position: sticky;
+  bottom: 0;
+  margin-top: auto;
+  padding: var(--space-3) 0 var(--space-4);
+  background: var(--bg);
+}
+.onsite-pricing {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-2);
+}

@@ -3,6 +3,7 @@ import {
   type Property,
   type Walkthrough,
   type Finding,
+  type PropertyType,
   type Request,
   type Task,
   uid,
@@ -165,6 +166,115 @@ export function sendBlockers(s: State, walkthroughId: string): SendBlocker[] {
       out.push({ finding: f, reason: "price" });
     return out;
   });
+}
+
+/**
+ * The findings the pricing step still has to visit, in the order they were
+ * captured. Derived from sendBlockers(), so "priced" in that step and
+ * "sendable" here are one rule rather than two that could disagree.
+ */
+export function needsPricing(s: State, walkthroughId: string) {
+  const blocked = new Set(
+    sendBlockers(s, walkthroughId).map((b) => b.finding.id),
+  );
+  return findingsFor(s, walkthroughId).filter((f) => blocked.has(f.id));
+}
+
+/**
+ * The rooms the on-site capture offers, by property type. A tap instead of
+ * typing, and one spelling per room, so a property's findings group by where
+ * they are rather than by however each was typed. "Other" belongs to the
+ * screen, not to the list.
+ */
+export const ROOMS: Record<PropertyType, string[]> = {
+  House: [
+    "Entry",
+    "Kitchen",
+    "Living room",
+    "Dining room",
+    "Bedroom",
+    "Bathroom",
+    "Laundry",
+    "Basement",
+    "Attic",
+    "Garage",
+    "Exterior",
+    "Roof & gutters",
+    "Yard",
+  ],
+  Townhouse: [
+    "Entry",
+    "Kitchen",
+    "Living room",
+    "Bedroom",
+    "Bathroom",
+    "Laundry",
+    "Basement",
+    "Garage",
+    "Exterior",
+    "Patio / balcony",
+  ],
+  Condo: [
+    "Entry",
+    "Kitchen",
+    "Living room",
+    "Bedroom",
+    "Bathroom",
+    "Laundry",
+    "Balcony",
+  ],
+  Commercial: [
+    "Entrance / lobby",
+    "Corridor",
+    "Stairwell",
+    "Office",
+    "Washroom",
+    "Kitchenette",
+    "Mechanical room",
+    "Parking",
+    "Exterior",
+    "Roof",
+  ],
+};
+
+/**
+ * The type's rooms, then every area already recorded at this property that the
+ * list does not have, so "Second-floor corridor" is one tap away on the next
+ * visit. Compared without case, so "kitchen" typed once does not sit beside
+ * "Kitchen". A property with no type offers its own history only.
+ */
+export function roomsFor(s: State, propertyId: string) {
+  const property = s.properties.find((p) => p.id === propertyId);
+  const rooms = property?.type ? [...ROOMS[property.type]] : [];
+  const seen = new Set(rooms.map((r) => r.toLowerCase()));
+  const visits = new Set(
+    s.walkthroughs.filter((w) => w.propertyId === propertyId).map((w) => w.id),
+  );
+  for (const f of s.findings) {
+    const area = f.area.trim();
+    if (!visits.has(f.walkthroughId) || !area) continue;
+    if (seen.has(area.toLowerCase())) continue;
+    seen.add(area.toLowerCase());
+    rooms.push(area);
+  }
+  return rooms;
+}
+
+/**
+ * A starting title from what the operator said on site: the first clause,
+ * sentence-cased, cut at a word boundary near 60 characters. Only a
+ * suggestion — the pricing step shows it in an editable box. A full stop
+ * ends a clause only before a space or the end, so "1.5 m" survives.
+ */
+export function suggestTitle(note: string) {
+  const first = note
+    .trim()
+    .split(/[.!?;](?=\s|$)|\n|,\s/)[0]
+    .trim();
+  if (!first) return "";
+  const cut =
+    first.length <= 60 ? first : first.slice(0, 60).replace(/\s+\S*$/, "");
+  return cut.charAt(0).toUpperCase() + cut.slice(1);
 }
 
 export function sendWalkthrough(s: State, walkthroughId: string) {
