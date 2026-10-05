@@ -975,3 +975,66 @@ screen still owes.
   watching or self-fulfilment at a desk.
 
 **Not verifiable here:** whether `capture` opens the camera needs a real phone.
+
+## ADR 058: The customer approves one decision at a time
+
+Accepted. This is the third round of "one action at a time", after ADR 056
+and ADR 057. The customer's assessment was one long page, about 3,960px at
+phone width: every finding card, a summary table, then an approval form.
+The form had a typed name (and, for an organisation, a contact list and a
+typed role), an "I am authorized" checkbox, and a payment toggle, followed by
+the Approve button.
+
+**The flow now:**
+
+- **Who is approving.** Organisations only. The customer taps their own name.
+  Someone without authority is told so on the spot, and the authority rule
+  stays in `mayApprove()` (ADR 048). An individual is one person, so they skip
+  this screen.
+- **One finding per screen**, "Item 1 of 3": the photos, what we saw, what we
+  would do, and the price, with **Approve · $180** or **Not now**. Each answer
+  moves to the next item. A finding that needs a closer look offers
+  **Request an assessment** or **Skip**, never a price or an approve control
+  (ADR 019).
+- **Review.** Each decision is listed, and tapping one reopens it. Then the
+  totals, "Approving as Sarah Lin" with Change, the saved card with Change,
+  and one button: **Approve 2 items · $452.00**.
+- **After approval**, the record page is unchanged: progress, findings,
+  summary, property record and print.
+
+The page reopens wherever the customer is next: the first priced finding
+still undecided, or the review.
+
+**What the customer no longer does:**
+
+- **Type their name.** It comes from the contact, as an individual's own
+  name or the organisation contact they tapped, along with that contact's
+  role. "Change" lets an individual correct it.
+- **Tick a checkbox.** The line under the button says what approving
+  confirms. The approval snapshot still records who and when (ADR 036).
+- **Add a card every time.** "Add payment method" saves a simulated card to
+  the account with `storePaymentMethod()`. The next assessment, and the
+  customer portal, find it there. The payment recorded at approval now names
+  that card (`methodId`).
+
+**Submitting is now a function, not a click handler.** `approveAssessment()`
+in `pmw.ts` refuses, in order:
+
+1. an assessment that is already closed;
+2. nothing approved;
+3. an approver without authority;
+4. no name;
+5. no saved card.
+
+It then writes what the handler used to write: the snapshot, the ADR 054
+close-out, the conversion, and the payment. The screen asks a copy first, so
+it can show the reason without writing anything. These checks used to be
+screen logic that no test could reach.
+
+**Unchanged:**
+
+- the print document;
+- the record page;
+- the further-assessment rules;
+- the simulated payment sequence. Approval still records the payment as it
+  did before; that is out of scope here.

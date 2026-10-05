@@ -777,7 +777,8 @@
 .segmented button.chosen,
 .identity-switch .badge[aria-pressed="true"],
 .onsite-rooms button[aria-pressed="true"],
-.job-outcomes button[aria-pressed="true"] {
+.job-outcomes button[aria-pressed="true"],
+.pmw-who button[aria-pressed="true"] {
   background: var(--accent-soft);
   border-color: var(--accent);
   color: var(--accent-text);

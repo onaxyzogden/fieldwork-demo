@@ -715,6 +715,64 @@ export function closeOutUndecided(s: State, walkthroughId: string) {
   return left.length;
 }
 
+/** Why an approval could not be written. */
+export type ApproveRefusal =
+  "closed" | "nothing approved" | "approver" | "name" | "payment";
+
+/**
+ * The customer's submit, as one write. It used to live in the page's click
+ * handler, where the checks that guard it — something approved, someone with
+ * authority, a way to pay — were screen logic that no test could reach. Here
+ * they are rules about the data, in the order a person would hit them.
+ *
+ * Writes the approval snapshot (ADR 036), keeps anything left undecided as
+ * "Not now" (ADR 054), converts the approved findings, and records the
+ * simulated payment against the account's saved card.
+ */
+export function approveAssessment(
+  s: State,
+  walkthroughId: string,
+  by: { name: string; role?: string; contactId?: string },
+): { ok: true } | { ok: false; reason: ApproveRefusal } {
+  const w = s.walkthroughs.find((x) => x.id === walkthroughId);
+  const property = s.properties.find((p) => p.id === w?.propertyId);
+  if (
+    !w ||
+    !property ||
+    w.status !== "Sent" ||
+    s.requests.some((r) => r.walkthroughId === w.id)
+  )
+    return { ok: false, reason: "closed" };
+  if (!assessmentTotals(s, w.id).approved.length)
+    return { ok: false, reason: "nothing approved" };
+  if (!mayApprove(s, property.accountId, by.contactId))
+    return { ok: false, reason: "approver" };
+  if (!by.name.trim()) return { ok: false, reason: "name" };
+  const method = (s.paymentMethods ?? []).find(
+    (m) => m.accountId === property.accountId,
+  );
+  if (!method) return { ok: false, reason: "payment" };
+  w.authorization = {
+    name: by.name.trim(),
+    ...(by.role?.trim() ? { role: by.role.trim() } : {}),
+    ...(by.contactId ? { contactId: by.contactId } : {}),
+    agreedAt: new Date(s.clock).toISOString(),
+  };
+  closeOutUndecided(s, w.id);
+  const created = convertApproved(s, w.id);
+  const q = s.quotes.find((q) => q.requestId === created?.id);
+  if (q)
+    s.payments.push({
+      id: uid(),
+      quoteId: q.id,
+      status: "Paid",
+      amount: q.amount,
+      reference: "demo_" + uid(),
+      methodId: method.id,
+    });
+  return { ok: true };
+}
+
 /**
  * What an in-progress walkthrough could usefully restate from earlier visits
  * to the same property: items the customer deferred, and items nobody could
