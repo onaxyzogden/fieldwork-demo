@@ -2,6 +2,7 @@ import { describe, it, expect, vi, afterEach } from "vitest";
 import { renderToString } from "react-dom/server";
 import { createElement } from "react";
 import Assessment from "./Assessment";
+import { FindingStep } from "./AssessmentSteps";
 import { reconcile, seed, uid, type State } from "./model";
 import {
   addFinding,
@@ -74,25 +75,64 @@ describe("the customer's assessment", () => {
     expect(render(draft, "PMW-0001")).toContain("Assessment not found");
   });
   it("offers no approval control and no price for a further-assessment finding", () => {
-    const { s, w, damp } = sent();
-    const html = screenOnly(render(s, w.access!.token));
-    const card = html.slice(html.indexOf(damp.title));
-    const next = card.indexOf("Work summary");
-    const section = card.slice(0, next > 0 ? next : undefined);
-    expect(section).toContain("Assessment required before pricing");
-    expect(section).toContain("Request an assessment");
-    expect(section).not.toContain("applicable tax");
-    expect(section).not.toMatch(/>\s*Approve\b/);
+    const { damp } = sent();
+    const html = readable(
+      renderToString(
+        createElement(FindingStep, {
+          finding: damp,
+          at: 2,
+          of: 3,
+          error: "",
+          decide: () => {},
+          requestAssessment: () => {},
+          next: () => {},
+        }),
+      ),
+    );
+    expect(html).toContain("Assessment required before pricing");
+    expect(html).toContain("Request an assessment");
+    expect(html).not.toContain("applicable tax");
+    expect(html).not.toMatch(/>\s*Approve\b/);
+  });
+  it("opens on the first finding, one at a time, for an individual", () => {
+    const { s, w, door } = sent();
+    const screen = screenOnly(render(s, w.access!.token));
+    expect(screen).toContain("Item 1 of 3");
+    expect(screen).toContain(door.title);
+    expect(screen).toContain("Approve · $180");
+    expect(screen).not.toContain("Shelving pulling away");
+  });
+  it("asks an organisation who is approving before anything else", () => {
+    const s = seed();
+    const w = createWalkthrough(s, "p6");
+    addFinding(s, w.id, { title: "Ceiling tiles", price: 300 });
+    sendWalkthrough(s, w.id);
+    const screen = screenOnly(render(s, w.access!.token));
+    expect(screen).toContain("Who is approving?");
+    expect(screen).toContain("Maya Okonkwo");
+    expect(screen).not.toContain("Ceiling tiles");
   });
   it("totals only what was approved, taxed at the walkthrough's own rate", () => {
     const { s, w, door, shelf } = sent();
     decide(s, door.id, "Approved");
     decide(s, shelf.id, "Not Now");
-    const html = render(s, w.access!.token);
+    // Nothing left to decide, so the page opens on the review.
+    const html = screenOnly(render(s, w.access!.token));
+    expect(html).toContain("Your approval");
     expect(html).toContain("$180");
     expect(html).toContain("$23.40");
     expect(html).toContain("$203.40");
     expect(html).toContain("Approve 1 item");
+  });
+  it("signs for an individual without typing, and states authority instead of a checkbox", () => {
+    const { s, w, door, shelf } = sent();
+    decide(s, door.id, "Approved");
+    decide(s, shelf.id, "Not Now");
+    const html = screenOnly(render(s, w.access!.token));
+    expect(html).toContain("Approving as <strong>Daniel Brooks</strong>");
+    expect(html).toContain("you confirm you are authorized");
+    expect(html).not.toContain('type="checkbox"');
+    expect(html).toContain("Add payment method");
   });
   it("swaps the approval form for progress once the work exists", () => {
     const { s, w, door } = sent();

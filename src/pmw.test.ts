@@ -1,9 +1,11 @@
 import { describe, it, expect } from "vitest";
 import { seed, reconcile, uid, accounts, type State } from "./model";
 import { execute, saveOutcome } from "./work";
+import { storePaymentMethod } from "./payments";
 import {
   HST,
   addFinding,
+  approveAssessment,
   assessmentTotals,
   carryForward,
   convertApproved,
@@ -627,5 +629,89 @@ describe("capture on site, price later", () => {
     noted.pricing = "Further Assessment Required";
     expect(needsPricing(s, w.id)).toEqual([]);
     expect(sendWalkthrough(s, w.id)).toBe(true);
+  });
+});
+
+describe("approving an assessment", () => {
+  /** A sent assessment on the given property: two priced, one unpriced. */
+  function ready(propertyId: string) {
+    const s = seed();
+    const w = createWalkthrough(s, propertyId);
+    const door = addFinding(s, w.id, { title: "Door", price: 180 });
+    const shelf = addFinding(s, w.id, { title: "Shelf", price: 220 });
+    const damp = addFinding(s, w.id, {
+      title: "Damp",
+      pricing: "Further Assessment Required",
+    });
+    sendWalkthrough(s, w.id);
+    const accountId = s.properties.find((p) => p.id === propertyId)!.accountId;
+    return { s, w, door, shelf, damp, accountId };
+  }
+  const card = { brand: "Visa", last4: "4242" };
+
+  it("needs something approved, a name and a saved card, in that order", () => {
+    const { s, w, door, accountId } = ready("p2");
+    const by = { name: "Daniel Brooks", contactId: "ct2" };
+    expect(approveAssessment(s, w.id, by)).toEqual({
+      ok: false,
+      reason: "nothing approved",
+    });
+    decide(s, door.id, "Approved");
+    expect(approveAssessment(s, w.id, { ...by, name: "  " })).toEqual({
+      ok: false,
+      reason: "name",
+    });
+    expect(approveAssessment(s, w.id, by)).toEqual({
+      ok: false,
+      reason: "payment",
+    });
+    expect(w.status).toBe("Sent");
+    const method = storePaymentMethod(s, accountId, card);
+    expect(approveAssessment(s, w.id, by)).toEqual({ ok: true });
+    expect(w.status).toBe("Converted");
+    expect(w.authorization).toMatchObject({
+      name: "Daniel Brooks",
+      contactId: "ct2",
+    });
+    const request = s.requests.find((r) => r.walkthroughId === w.id)!;
+    const quote = s.quotes.find((q) => q.requestId === request.id)!;
+    expect(s.payments.find((p) => p.quoteId === quote.id)?.methodId).toBe(
+      method.id,
+    );
+  });
+
+  it("keeps the undecided as Not now and refuses a second approval", () => {
+    const { s, w, door, shelf, accountId } = ready("p2");
+    decide(s, door.id, "Approved");
+    storePaymentMethod(s, accountId, card);
+    approveAssessment(s, w.id, { name: "Daniel Brooks", contactId: "ct2" });
+    expect(shelf.decision).toBe("Not Now");
+    expect(
+      approveAssessment(s, w.id, { name: "Daniel Brooks", contactId: "ct2" }),
+    ).toEqual({ ok: false, reason: "closed" });
+  });
+
+  it("takes an organisation's approval only from someone with authority", () => {
+    const { s, w, door, accountId } = ready("p6");
+    storePaymentMethod(s, accountId, card);
+    expect(decide(s, door.id, "Approved", "ct6")).toBe(true);
+    expect(
+      approveAssessment(s, w.id, {
+        name: "Tomas Reyes",
+        role: "Operations Manager",
+        contactId: "ct7",
+      }),
+    ).toEqual({ ok: false, reason: "approver" });
+    expect(
+      approveAssessment(s, w.id, { name: "Nobody", role: "Manager" }),
+    ).toEqual({ ok: false, reason: "approver" });
+    expect(
+      approveAssessment(s, w.id, {
+        name: "Maya Okonkwo",
+        role: "Property Manager",
+        contactId: "ct6",
+      }),
+    ).toEqual({ ok: true });
+    expect(w.authorization?.role).toBe("Property Manager");
   });
 });

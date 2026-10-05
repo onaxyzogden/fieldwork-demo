@@ -1,12 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import {
-  Check,
-  CheckCircle2,
-  ClipboardCheck,
-  Clock,
-  Printer,
-  Wallet,
-} from "lucide-react";
+import { CheckCircle2, ClipboardCheck, Clock, Printer } from "lucide-react";
 import {
   type State,
   type Finding,
@@ -16,12 +9,10 @@ import {
   accounts,
   contactsFor,
   mayApprove,
-  uid,
 } from "./model";
 import {
+  approveAssessment,
   assessmentTotals,
-  closeOutUndecided,
-  convertApproved,
   decide,
   findingEvidence,
   findingState,
@@ -30,8 +21,9 @@ import {
   requestAssessment,
   byToken,
   recordOpen,
-  undecided,
 } from "./pmw";
+import { forgetPaymentMethod, storePaymentMethod } from "./payments";
+import { FindingStep, ReviewStep, WhoStep } from "./AssessmentSteps";
 import { KEY, load, commit } from "./store";
 import { SaveWarning } from "./NotificationUI";
 import AssessmentPrint from "./AssessmentPrint";
@@ -45,6 +37,7 @@ import "./work.css";
 import "./primitives.css";
 import "./customer-concept.css";
 import "./cards.css";
+import "./onsite.css";
 import "./assessment.css";
 
 /** The five steps the printed template names, shown as live progress. */
@@ -69,8 +62,11 @@ export default function Assessment({
   const [name, setName] = useState("");
   const [role, setRole] = useState("");
   const [approverId, setApproverId] = useState("");
-  const [authority, setAuthority] = useState(false);
-  const [method, setMethod] = useState(false);
+  /* Where the customer is in the one-at-a-time flow: a finding's index, the
+     review, or null for "wherever is next" (see `resume` below). */
+  const [flowStep, setFlowStep] = useState<number | "review" | null>(null);
+  const [choosing, setChoosing] = useState(false);
+  const [editingName, setEditingName] = useState(false);
   useEffect(() => {
     const sync = (e: StorageEvent) => {
       if (e.key !== KEY || !e.newValue) return;
@@ -149,8 +145,22 @@ export default function Assessment({
     (c) => !c.inactiveAt,
   );
   const approver = org ? approverId : people[0]?.id;
+  const approverContact = people.find((c) => c.id === approver);
   const totals = assessmentTotals(s, w.id);
-  const leftUndecided = undecided(s, w.id).length;
+  /* An individual signs as themselves unless they correct it; an
+     organisation's approver is whoever they tapped, with that contact's role. */
+  const signedName = (editingName ? name : "") || approverContact?.name || "";
+  const signedRole = org ? approverContact?.role || role : "";
+  const card = (s.paymentMethods ?? []).find(
+    (m) => m.accountId === property?.accountId,
+  );
+  /* The first finding still waiting for an answer, else the review. Further
+     assessment items are shown on the way past but never hold the customer
+     back, since they have nothing to approve. */
+  const firstPending = totals.findings.findIndex(
+    (f) => f.decision === "Pending" && quotable(f),
+  );
+  const at = flowStep ?? (firstPending >= 0 ? firstPending : "review");
   const request = s.requests.find((r) => r.walkthroughId === w.id);
   const quote = s.quotes.find((q) => q.requestId === request?.id);
   const paid = s.payments.some(
@@ -168,49 +178,146 @@ export default function Assessment({
      one in progress. Reviewing the findings counts as reached on arrival. */
   const step = !request ? 1 : !paid ? 2 : !visit ? 3 : !done ? 4 : TRACK.length;
 
-  const submit = () => {
-    if (!totals.approved.length)
-      return setError("Approve at least one item before continuing.");
-    if (org && !approverId)
-      return setError("Choose who is approving this work.");
-    if (org && !mayApprove(s, property?.accountId || "", approverId))
-      return setError(
-        "That contact is not authorized to approve work for this account.",
-      );
-    if (!name.trim()) return setError("Enter the name authorizing this work.");
-    if (org && !role.trim())
-      return setError(
-        "Enter your role. An organization has more than one person who could approve this.",
-      );
-    if (!authority)
-      return setError("Confirm you are authorized to approve this work.");
-    if (!method)
-      return setError("Add the simulated payment method to continue.");
+  const refusal: Record<string, string> = {
+    "nothing approved": "Approve at least one item before continuing.",
+    approver: org
+      ? "Choose someone with authority to approve work for this account."
+      : "This assessment can only be approved by the account holder.",
+    name: "Enter the name authorizing this work.",
+    payment: "Add a payment method to continue.",
+    closed: "This assessment has already been approved.",
+  };
+  const approve = () => {
+    const by = {
+      name: signedName,
+      role: signedRole,
+      contactId: approver || undefined,
+    };
+    /* Asked of a copy first, so the reason can be shown without writing
+       anything; the real write runs only when the copy says it would land. */
+    const trial = approveAssessment(structuredClone(s), w.id, by);
+    if (!trial.ok) return setError(refusal[trial.reason]);
     setError("");
     update((d) => {
-      const target = d.walkthroughs.find((x) => x.id === w.id)!;
-      target.authorization = {
-        name: name.trim(),
-        ...(role.trim() ? { role: role.trim() } : {}),
-        ...(approver ? { contactId: approver } : {}),
-        agreedAt: new Date(d.clock).toISOString(),
-      };
-      /* Submitting ends this decision round. Anything left undecided is kept
-         as "Not now" — the note above the button says so first — rather than
-         being locked in limbo once the request exists. */
-      closeOutUndecided(d, w.id);
-      const created = convertApproved(d, w.id);
-      const q = d.quotes.find((q) => q.requestId === created?.id);
-      if (q)
-        d.payments.push({
-          id: uid(),
-          quoteId: q.id,
-          status: "Paid",
-          amount: q.amount,
-          reference: "demo_" + uid(),
-        });
+      approveAssessment(d, w.id, by);
     });
   };
+  const decideFinding = (f: Finding, decision: "Approved" | "Not Now") => {
+    const trial = structuredClone(s);
+    if (!decide(trial, f.id, decision, approver)) {
+      setError(
+        org && !approverId
+          ? "Choose who is approving first."
+          : "That contact is not authorized to approve work for this account. Ask whoever manages it to grant approval, or choose someone who has it.",
+      );
+      return;
+    }
+    setError("");
+    update((d) => {
+      decide(d, f.id, decision, approver);
+    });
+    const i = totals.findings.indexOf(f);
+    setFlowStep(i + 1 < totals.findings.length ? i + 1 : "review");
+  };
+  const askForAssessment = (id: string) =>
+    update((d) => {
+      requestAssessment(d, id);
+    });
+
+  if (!request)
+    return (
+      <>
+        <SaveWarning />
+        <main className="assessment pmw-flow">
+          <header className="pmw-flow-head">
+            <div>
+              <strong className="brand-mini">PMW</strong>{" "}
+              <small>
+                {property?.address}, {property?.city}
+              </small>
+            </div>
+            <button className="text-button" onClick={() => window.print()}>
+              <Printer size={16} /> Print
+            </button>
+          </header>
+          {org && (!approverId || choosing) ? (
+            <WhoStep
+              people={people}
+              chosen={approverId}
+              error={error}
+              choose={(c) => {
+                if (!mayApprove(s, property?.accountId || "", c.id))
+                  return setError(
+                    `${c.name} can’t approve work for this account. Ask whoever manages it to grant approval, or choose someone who can.`,
+                  );
+                setError("");
+                setApproverId(c.id);
+                setRole(c.role || "");
+                setChoosing(false);
+              }}
+            />
+          ) : at === "review" ? (
+            <ReviewStep
+              s={s}
+              walkthroughId={w.id}
+              approver={
+                signedName + (org && signedRole ? `, ${signedRole}` : "")
+              }
+              changeApprover={() => {
+                if (org) return setChoosing(true);
+                setName(signedName);
+                setEditingName(true);
+              }}
+              editingName={editingName}
+              name={name}
+              setName={setName}
+              card={card}
+              addCard={() =>
+                update((d) => {
+                  storePaymentMethod(d, property?.accountId || "", {
+                    brand: "Visa",
+                    last4: "4242",
+                  });
+                })
+              }
+              removeCard={() =>
+                update((d) => {
+                  forgetPaymentMethod(d, property?.accountId || "");
+                })
+              }
+              error={error}
+              open={(i) => {
+                setError("");
+                setFlowStep(i);
+              }}
+              requestAssessment={askForAssessment}
+              approve={approve}
+            />
+          ) : (
+            <FindingStep
+              key={totals.findings[at]?.id}
+              finding={totals.findings[at]}
+              at={at}
+              of={totals.findings.length}
+              error={error}
+              decide={(d) => decideFinding(totals.findings[at], d)}
+              requestAssessment={() => askForAssessment(totals.findings[at].id)}
+              next={() =>
+                setFlowStep(at + 1 < totals.findings.length ? at + 1 : "review")
+              }
+              back={at > 0 ? () => setFlowStep(at - 1) : undefined}
+            />
+          )}
+          <footer className="assessment-foot">
+            <p className="note">
+              Interactive prototype · this link is a demo URL, not a secured
+              private link. All data and transactions are simulated.
+            </p>
+          </footer>
+        </main>
+        <AssessmentPrint s={s} walkthroughId={w.id} />
+      </>
+    );
 
   return (
     <>
@@ -319,108 +426,6 @@ export default function Assessment({
             <strong>{money2(totals.total)}</strong>
           </div>
         </section>
-
-        {!request && (
-          <section className="card panel">
-            <div className="panel-title">
-              <h3>Approval &amp; payment</h3>
-            </div>
-            <p>
-              Approving authorizes the selected items at the prices shown. Any
-              work outside that scope needs your approval before it is carried
-              out.
-            </p>
-            <label className="field">
-              Authorized by
-              <input
-                value={name}
-                placeholder="Your name"
-                aria-invalid={!!error && !name.trim() ? true : undefined}
-                onChange={(e) => setName(e.target.value)}
-              />
-            </label>
-            {org && (
-              <label className="field">
-                Approving as
-                <select
-                  value={approverId}
-                  onChange={(e) => {
-                    setError("");
-                    setApproverId(e.target.value);
-                    const c = people.find((x) => x.id === e.target.value);
-                    if (c) {
-                      setName(c.name);
-                      setRole(c.role || "");
-                    }
-                  }}
-                >
-                  <option value="">Choose a contact…</option>
-                  {people.map((c) => (
-                    <option key={c.id} value={c.id}>
-                      {c.name}
-                      {c.role ? ` · ${c.role}` : ""}
-                      {c.canApprove ? "" : " · not authorized"}
-                    </option>
-                  ))}
-                </select>
-              </label>
-            )}
-            {org && (
-              <label className="field">
-                Your role
-                <input
-                  value={role}
-                  placeholder="Property Manager"
-                  aria-invalid={!!error && !role.trim() ? true : undefined}
-                  onChange={(e) => setRole(e.target.value)}
-                />
-              </label>
-            )}
-            <label className="assessment-check">
-              <input
-                type="checkbox"
-                checked={authority}
-                onChange={(e) => setAuthority(e.target.checked)}
-              />
-              I am authorized to approve maintenance work at this property.
-            </label>
-            <button
-              className={"payment-method " + (method ? "chosen" : "")}
-              onClick={() => setMethod(!method)}
-            >
-              <Wallet />
-              <div>
-                <strong>
-                  {method ? "Payment method on file" : "Add payment method"}
-                </strong>
-                <small>Simulated · test card •••• 4242, no real charge</small>
-              </div>
-              {method ? <Check size={16} /> : null}
-            </button>
-            <p className="note">
-              A payment method is authorized, not charged, before work is
-              scheduled. Card details are never entered on this page.
-            </p>
-            {error && (
-              <span className="field-message" role="alert">
-                {error}
-              </span>
-            )}
-            {leftUndecided > 0 && (
-              <p className="note">
-                {leftUndecided === 1
-                  ? "1 item you haven’t decided will be kept as “Not now”."
-                  : `${leftUndecided} items you haven’t decided will be kept as “Not now”.`}{" "}
-                They stay on your property record, and can be raised again at
-                your next visit.
-              </p>
-            )}
-            <button className="primary full" onClick={submit}>
-              Approve {totals.approved.length} item
-              {totals.approved.length === 1 ? "" : "s"} · {money2(totals.total)}
-            </button>
-          </section>
-        )}
 
         {done && (
           <section className="card panel">

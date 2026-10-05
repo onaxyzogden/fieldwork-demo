@@ -375,3 +375,52 @@ being reset by the next save.
   errors.
 - **Not verified here:** the camera opening directly needs a real phone.
   Chromium only, per ADR 052.
+
+# Customer one-decision-at-a-time approval — 2026-10-05
+
+ADR 058. The same approvals were measured on the seeded assessments through
+the old page and the new flow, by a scripted run at 390px.
+
+- **Individual (PMW-0001):** approve two priced findings and request
+  assessment on the third.
+- **Organisation (PMW-0002):** choose the approver and approve two findings.
+
+|                                 | before            | after                      |
+| ------------------------------- | ----------------- | -------------------------- |
+| taps, individual                | 7                 | 5                          |
+| taps, organisation              | 7                 | 5                          |
+| typed characters                | 9 (the name)      | 0                          |
+| most controls on screen at once | 10–11             | 6–7                        |
+| height at 390px                 | 3,957px, one page | at most 1,236px per screen |
+
+The new count includes the one tap that saves a card. The next assessment on
+the same account skips it.
+
+- **Tests:**
+  - Seven new tests cover `approveAssessment()`: its order of refusals, the
+    undecided close-out, refusing a second approval, organisation authority,
+    and the payment naming the saved card. Seven guards were broken on
+    purpose, and each break fails a test.
+  - The render tests now check that the flow opens on item 1 of 3 for an
+    individual and on "Who is approving?" for an organisation. They also check
+    that the review signs without typing and has no checkbox, and that a
+    closer-look finding has no price and no Approve.
+- **Browser walk: 20 checks in both themes, with no console errors.**
+  - On the organisation's screen, a contact without authority is refused and
+    an authorized one moves on.
+  - Moving between items works: Not now, Back (with the earlier answer
+    shown), Skip, and reopening an item from the review.
+  - Reloading resumes in the right place.
+  - Approving with nothing approved, or with no card, explains itself.
+  - The card is saved to the account, and Change removes it.
+  - Changing the name lands in the approval record.
+  - After approval, the page becomes the record, the print document is still
+    present, and the payment names the card.
+- **Layout:** no horizontal overflow at 320px or 360px on any screen: who,
+  item, closer look, review, review while editing the name, and record.
+- **Repo checks:** 423 tests, the build, `design:check`, `catalogue:check`
+  and `status:check` pass. New files are prettier-clean, and the touched
+  files carry exactly `main`'s drift.
+- **Sweeps:** the narrow-layout probes are unchanged at 0 / 30 / 14 / 0, the
+  tab-width and shrink-wrap probes are at 0, and the console crawl is clean.
+  Chromium only, per ADR 052.

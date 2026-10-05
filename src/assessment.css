@@ -66,14 +66,6 @@
   padding-top: var(--space-3);
   font-size: var(--text-h3);
 }
-.assessment .payment-method {
-  width: 100%;
-  text-align: left;
-}
-.assessment .payment-method.chosen {
-  border-color: var(--accent-text);
-  background: var(--accent-soft);
-}
 .property-record section {
   margin-top: var(--space-5);
 }
@@ -91,6 +83,107 @@
   margin-top: var(--space-6);
   padding-top: var(--space-5);
   border-top: 1px solid var(--line);
+}
+
+/* One decision at a time (AssessmentSteps.tsx, ADR 058). The page stays a
+   document — no app chrome — but each screen holds a single question, with
+   its answer under the thumb. */
+.pmw-flow {
+  min-height: 100vh;
+  padding-top: var(--space-4);
+}
+.pmw-flow-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  color: var(--muted);
+}
+.pmw-step {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  flex: 1;
+}
+.pmw-step h2 {
+  margin: 0;
+}
+.pmw-step .onsite-bar {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+.pmw-photos img {
+  width: 100%;
+  height: auto;
+  max-height: 18rem;
+  object-fit: cover;
+}
+.pmw-secondary {
+  justify-content: space-between;
+  align-items: center;
+}
+.pmw-who {
+  display: grid;
+  gap: var(--space-3);
+}
+.pmw-who button {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  min-height: 4rem;
+  padding: var(--space-3) var(--space-4);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+  background: var(--panel);
+  color: var(--text);
+  text-align: left;
+}
+.pmw-who small {
+  color: var(--muted);
+}
+.pmw-review {
+  display: flex;
+  flex-direction: column;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.pmw-review li {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  padding: var(--space-3) 0;
+  border-bottom: 1px solid var(--line);
+}
+.pmw-review li > button {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  min-width: 0;
+  text-align: left;
+}
+.pmw-review small,
+.pmw-muted {
+  color: var(--muted);
+}
+.pmw-totals .row.between {
+  padding: var(--space-1) 0;
+}
+.pmw-line {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+}
+.pmw-line .field {
+  flex: 1;
+}
+.pmw-fine {
+  margin: 0;
+  color: var(--muted);
+  font-size: var(--text-caption);
 }
 
 /* The printed assessment is rendered always and revealed only for print, so it
