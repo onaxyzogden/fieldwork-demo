@@ -1038,3 +1038,70 @@ screen logic that no test could reach.
 - the further-assessment rules;
 - the simulated payment sequence. Approval still records the payment as it
   did before; that is out of scope here.
+
+## ADR 059: The operator works through decisions one request at a time
+
+Accepted. This is the last round of "one action at a time", after ADR 056 to
+ADR 058. The request page already showed one decision per request (ADR 010),
+but the operator reached it through a page of about 25 controls and then went
+back to Home by hand. Nothing carried them to the next request. Contractor
+pay was a flat $180, never checked against the contractor's rate.
+
+**The flow now:**
+
+- **Entry.** Home has a **Work through N decisions** button above the
+  Needs-attention list. The list stays for browsing.
+- **One request per screen**, "Decision 2 of 5". Each screen shows the
+  customer, the address and the tasks with their estimates; notes, answers
+  and photos sit behind Details. One button carries the app's own suggestion:
+
+  | Decision            | Button                                         | Also                  |
+  | ------------------- | ---------------------------------------------- | --------------------- |
+  | Check the scope     | Scope looks right (all unsure tasks, one tap)  | Adjust                |
+  | Book the work       | Offer to Nina Patel · Wed, Oct 7, 11:00 · $240 | Do it myself, Change  |
+  | Send the quote      | Send quote · $525                              | Adjust (inline price) |
+  | Quote declined      | Send revised quote · $X (price box open)       |                       |
+  | Contractor declined | Re-offer to Nina Patel · Wed, Oct 7 · $120     | Do it myself, Change  |
+  | Follow up the job   | Open request                                   |                       |
+
+  When no contractor can take the work, the button is **Do it myself** if the
+  operator is free, and **Open request** if not. Every screen has **Skip**;
+  Adjust, Change and Open request leave for the request page, where the full
+  controls are.
+
+- **Order:** urgent first (a declined or expired offer, a late or unresolved
+  job), then oldest, by each request's earliest logged event. The order is
+  fixed when the queue opens. A request acted on goes to the back: if it now
+  needs something else (a quote once the work is accepted) it comes round
+  again; if it is waiting on someone else it is passed over.
+- **The end:** "All caught up · N decisions handled", then Home.
+
+**Pay is the contractor's rate × the job's length.** `suggestPay()` is the
+same floor reassignment has always enforced (`minimumPay` in
+`replacementOptions()`), which no ADR recorded until now. It is the
+queue's suggestion and the assign panel's default in place of $180. The panel
+still lets the operator raise it, and refuses less on the field.
+`offerVisit()` refuses it too, so the rule is data, not screen logic. A
+re-offer pays no less than the declined offer did.
+
+**The decisions are data, and the writes are shared.** `decisions.ts` holds
+`nextDecision()`, the decision card's branch order as a value, plus
+`decisionQueue()`. The request page's own writes were extracted into it
+rather than copied: `approveScope()`, `offerVisit()` (`bookVisit` and the
+offer) and `issueQuote()`. The page now calls them too, so the two screens
+cannot drift apart. Reassignment uses the existing `reoffer()`.
+
+**A declined quote is the operator's move.** A customer's decline left the
+request "Awaiting Quote Approval", and `bucket()` filed every Awaiting status
+under Waiting, so Home listed it under "Waiting for a response" while the
+request page asked the operator to revise it. `bucket()` now puts a request
+with a declined quote in Needs Action, and its Home card reads "Quote
+declined". Without this the queue could never reach a revision.
+
+**Unchanged:**
+
+- the request page and its decision card;
+- the reassign modal;
+- the Needs-attention list and its own order;
+- what each write records. The same log lines and fields come from the
+  extracted functions.

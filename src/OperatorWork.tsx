@@ -14,6 +14,8 @@ import { Glance } from "./Glance";
 import { glanceDate } from "./glance";
 import { requestDispatch } from "./dispatch";
 import { JobWork } from "./ContractorWork";
+import DecisionQueue from "./DecisionQueue";
+import { decisionQueue } from "./decisions";
 type Props = {
   s: State;
   open: (id: string) => void;
@@ -22,13 +24,12 @@ type Props = {
 export function OperatorHome({
   s,
   open,
+  update,
   today,
-}: {
-  s: State;
-  open: (id: string) => void;
-  today: () => void;
-}) {
+}: Props & { today: () => void }) {
   const [view, setView] = useState<"attention" | "all">("attention");
+  const [working, setWorking] = useState(false);
+  const decisions = decisionQueue(s).length;
   const needs = s.requests
     .filter((r) => bucket(s, r.id) === "Needs Action")
     .sort(
@@ -82,9 +83,11 @@ export function OperatorHome({
           : dispatch ||
             (r.status === "Submitted"
               ? "New request"
-              : r.status === "Awaiting Quote Approval"
-                ? "Quote awaiting approval"
-                : r.status);
+              : quote?.status === "Declined"
+                ? "Quote declined"
+                : r.status === "Awaiting Quote Approval"
+                  ? "Quote awaiting approval"
+                  : r.status);
       const tone =
         issue || dispatch.includes("Needs reassignment")
           ? "issue"
@@ -127,9 +130,11 @@ export function OperatorHome({
           ? `${Math.max(0, Math.round((+new Date(issue.execution.eta) - +new Date(issue.start)) / 60000))} min behind · simulated ETA`
           : dispatch.includes("Needs reassignment")
             ? "Needs reassignment"
-            : quote && r.status === "Awaiting Quote Approval"
-              ? `${money(quote.amount)} · ${taskList.length} task${taskList.length === 1 ? "" : "s"} · waiting for customer`
-              : `${taskList.length} task${taskList.length === 1 ? "" : "s"} · Est. ${taskList.reduce((n, t) => n + t.duration, 0)} min`;
+            : quote?.status === "Declined"
+              ? `${money(quote.amount)} · declined · revise the quote`
+              : quote && r.status === "Awaiting Quote Approval"
+                ? `${money(quote.amount)} · ${taskList.length} task${taskList.length === 1 ? "" : "s"} · waiting for customer`
+                : `${taskList.length} task${taskList.length === 1 ? "" : "s"} · Est. ${taskList.reduce((n, t) => n + t.duration, 0)} min`;
       return (
         <button
           className={"op-request-bento op-tone-" + tone}
@@ -199,6 +204,21 @@ export function OperatorHome({
           },
         ]}
       />
+      {/* The list stays for looking; this is for getting through it, one
+          request and one suggested action at a time (ADR 059). */}
+      {decisions > 0 && (
+        <button className="primary full" onClick={() => setWorking(true)}>
+          Work through {decisions} decision{decisions === 1 ? "" : "s"}
+        </button>
+      )}
+      {working && (
+        <DecisionQueue
+          s={s}
+          update={update}
+          open={open}
+          close={() => setWorking(false)}
+        />
+      )}
       <div className="op-view-switch" role="group" aria-label="Request view">
         <button
           aria-pressed={view === "attention"}

@@ -6,6 +6,7 @@ import Walkthroughs from "./Walkthroughs";
 import Assessment from "./Assessment";
 import PropertyRecord from "./PropertyRecord";
 import { bucket, workIssue, workStatus } from "./work";
+import { issueQuote, offerVisit, suggestPay, suggestQuote } from "./decisions";
 import CustomerIntake from "./CustomerIntake";
 import { validAddress, dayLabel } from "./intake";
 import {
@@ -74,7 +75,6 @@ import {
   accounts,
   approveQuote,
   auditFor,
-  bookVisit,
   secured,
   methodFor,
   isChange,
@@ -424,6 +424,10 @@ function Workspace({
   const [quoteTouched, setQuoteTouched] = useState(false);
   const [completion, setCompletion] = useState(false);
   const [pay, setPay] = useState(180);
+  /* Contractor pay is suggested from the provider's rate over the job until
+     the operator edits it, like the quote amount above. The reassign modal
+     keeps setting `pay` directly. */
+  const [payTouched, setPayTouched] = useState(false);
   const [modal, setModal] = useState("");
   const [reschedule, setReschedule] = useState("");
   const [fail, setFail] = useState(false);
@@ -610,6 +614,7 @@ function Workspace({
   const duration = tasks
     .filter((t) => !selected.length || selected.includes(t.id))
     .reduce((a, t) => a + t.duration, 0);
+  const assignPay = payTouched ? pay : suggestPay(provider, duration);
   const scopeTasks = tasks.filter(
     (t) => !selected.length || selected.includes(t.id),
   );
@@ -702,6 +707,7 @@ function Workspace({
   const choose = (id: string) => {
     setShowRequestQueue(false);
     setQuoteTouched(false);
+    setPayTouched(false);
     const req = s.requests.find((x) => x.id === id)!;
     setActive(id);
     setCustomer(req.accountId);
@@ -759,49 +765,33 @@ function Workspace({
         "slot",
         "No appointment fits. Try a shorter visit or another provider.",
       );
+    if (provider !== "yousef" && assignPay < suggestPay(provider, duration))
+      return invalidate(
+        "pay",
+        `Below this contractor's rate for the job. The offer needs at least ${money(suggestPay(provider, duration))}.`,
+      );
     clearAll();
     /* One key per press, so a double tap or a re-applied commit produces one
        visit rather than two. */
     const opKey = uid();
     let booked: Visit | null = null;
     update((d) => {
-        booked = bookVisit(d, {
-          requestId: r.id,
-          taskIds: ids,
-          providerId: provider,
-          start: sl.start,
-          duration,
-          travel: sl.travel,
-          city: r.city,
-          timing: r.timing,
-          opKey,
-        });
-        if (!booked) return;
-        d.assignments.push({
-          id: uid(),
-          visitId: booked.id,
-          providerId: provider,
-          status: provider === "yousef" ? "Accepted" : "Offered",
-          pay: provider === "yousef" ? 0 : pay,
-          expiresAt: d.clock + 7200000,
-        });
-        log(
-          d,
-          `${r.name} · visit created for ${providers.find((p) => p.id === provider)?.name}${provider === "yousef" ? "" : " · offer sent"}`,
-          {
-            actor: "Operator",
-            requestId: r.id,
-            entity: "visit",
-            entityId: booked.id,
-            field: "providerId",
-            to: providers.find((p) => p.id === provider)?.name || provider,
-          },
-        );
+      booked = offerVisit(d, {
+        requestId: r.id,
+        taskIds: ids,
+        providerId: provider,
+        start: sl.start,
+        travel: sl.travel,
+        duration,
+        pay: assignPay,
+        opKey,
+      });
     });
     /* The slot can go between the customer seeing it and the write landing,
-       which is exactly what bookVisit refuses. The success message is sent
-       after the fact rather than passed to update(), so a refused booking does
-       not get a "Visit created" toast over the top of its own error. */
+       which is exactly what bookVisit (inside offerVisit) refuses. The success
+       message is sent after the fact rather than passed to update(), so a
+       refused booking does not get a "Visit created" toast over the top of its
+       own error. */
     if (!booked)
       return invalidate(
         "slot",
@@ -1193,44 +1183,16 @@ function Workspace({
       s.requests.find((x) => x.id === id)!.status
     );
   };
-  /* Simulated customer price: a flat call-out plus a labour rate over the
-     estimated duration, rounded to $5. Contractor pay stays separate. */
-  const suggestedQuote =
-    Math.round(
-      (45 + (tasks.reduce((n, t) => n + t.duration, 0) / 60) * 120) / 5,
-    ) * 5;
-  const amount = quoteTouched ? quoteAmount : Math.max(95, suggestedQuote);
+  /* Simulated customer price (suggestQuote in decisions.ts, shared with the
+     decision queue). Contractor pay stays separate. */
+  const suggestedQuote = suggestQuote(tasks);
+  const amount = quoteTouched ? quoteAmount : suggestedQuote;
   const sendQuote = () =>
     update((d) => {
-      const previous = d.quotes.find(
-        (q) => q.requestId === r.id && q.status !== "Superseded",
-      );
-      d.quotes
-        .filter((q) => q.requestId === r.id)
-        .forEach((q) => (q.status = "Superseded"));
-      d.quotes.push({
-        id: uid(),
-        requestId: r.id,
+      issueQuote(d, r.id, {
         type: quoteType,
         amount,
-        high: Math.round(amount * 1.25),
-        status: "Sent",
-        notes:
-          quoteType === "Estimated range"
-            ? "Final price depends on site conditions. Any additional work requires your approval."
-            : "Labour and standard materials included. Quote valid for 7 days.",
         payOnCompletion: completion,
-      });
-      log(d, `Quote sent to ${r.name} · ${money(amount)}`, {
-        actor: "Operator",
-        requestId: r.id,
-        entity: "quote",
-        entityId: r.id,
-        field: "amount",
-        // Absent rather than "none" when this is the first quote: there was no
-        // previous price, which is different from a previous price of nothing.
-        ...(previous ? { from: money(previous.amount) } : {}),
-        to: money(amount),
       });
     }, "Quote ready in customer portal");
   const quoteFields = () => (
@@ -1763,6 +1725,7 @@ function Workspace({
                 choose(id);
                 setPage("Requests");
               }}
+              update={update}
               today={() => setPage("Today")}
             />
           )}
@@ -2268,7 +2231,10 @@ function Workspace({
                               }
                               onClick={() => {
                                 clear("provider");
+                                clear("pay");
                                 setProvider(c.provider.id);
+                                // Each contractor's own rate, not the last one's.
+                                setPayTouched(false);
                                 setSlot("");
                                 setOverride("");
                               }}
@@ -2443,11 +2409,15 @@ function Workspace({
                             <input
                               type="number"
                               min="0"
-                              value={pay}
-                              onChange={(e) =>
-                                setPay(Math.max(0, +e.target.value))
-                              }
+                              value={assignPay}
+                              {...invalid("pay")}
+                              onChange={(e) => {
+                                clear("pay");
+                                setPayTouched(true);
+                                setPay(Math.max(0, +e.target.value));
+                              }}
                             />
+                            <Message field="pay" />
                           </label>
                         )}
                         <div className="note">

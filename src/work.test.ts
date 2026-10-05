@@ -204,6 +204,19 @@ describe("job execution", () => {
       "Awaiting Quote Approval",
     );
   });
+  it("hands a declined quote back to the operator, not to the customer", () => {
+    const s = ready();
+    const q = s.quotes.find((q) => q.id === "work-quote")!;
+    q.status = "Sent";
+    reconcile(s);
+    expect(bucket(s, "r3")).toBe("Waiting");
+    q.status = "Declined";
+    reconcile(s);
+    expect(s.requests.find((r) => r.id === "r3")?.status).toBe(
+      "Awaiting Quote Approval",
+    );
+    expect(bucket(s, "r3")).toBe("Needs Action");
+  });
 });
 
 describe("job mode rules", () => {
