@@ -251,7 +251,18 @@ export type Property = {
   postalCode?: string;
   notes?: string;
   nextWalkthrough?: string;
+  /** Decides which rooms the on-site capture offers. Optional because saved
+   *  data predates it: a property without one is asked once, at its next
+   *  walkthrough, and remembers the answer. */
+  type?: PropertyType;
 };
+export const PROPERTY_TYPES = [
+  "House",
+  "Townhouse",
+  "Condo",
+  "Commercial",
+] as const;
+export type PropertyType = (typeof PROPERTY_TYPES)[number];
 /** One dated assessment of one property. */
 export type Walkthrough = {
   id: string;
@@ -1157,6 +1168,10 @@ export function seed(): State {
     accountId: r.accountId,
     address: r.address,
     city: r.city,
+    type:
+      accounts.find((a) => a.id === r.accountId)?.type === "organization"
+        ? "Commercial"
+        : "House",
   }));
   requests.forEach((r, i) => (r.propertyId = properties[i].id));
   // One seeded request carries a stated preference so the operator queue and the

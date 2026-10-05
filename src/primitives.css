@@ -766,14 +766,16 @@
    could disagree. */
 .op-view-switch button,
 .segmented button,
-.identity-switch .badge[aria-pressed="false"] {
+.identity-switch .badge[aria-pressed="false"],
+.onsite-rooms button[aria-pressed="false"] {
   background: var(--bg);
   border: 1px solid var(--line);
   color: var(--muted);
 }
 .op-view-switch button[aria-pressed="true"],
 .segmented button.chosen,
-.identity-switch .badge[aria-pressed="true"] {
+.identity-switch .badge[aria-pressed="true"],
+.onsite-rooms button[aria-pressed="true"] {
   background: var(--accent-soft);
   border-color: var(--accent);
   color: var(--accent-text);

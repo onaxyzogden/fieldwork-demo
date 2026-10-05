@@ -54,6 +54,7 @@ import {
 } from "./pmw";
 import { assessmentLink } from "./store";
 import PropertyRecord from "./PropertyRecord";
+import OnSite, { type OnSiteMode } from "./OnSite";
 
 type Props = {
   s: State;
@@ -72,7 +73,21 @@ export default function Walkthroughs({
   openRequest,
 }: Props) {
   const [openId, setOpenId] = useState("");
+  /* On site and pricing take the whole screen, and only while the
+     walkthrough is still a draft — once sent there is nothing to capture. */
+  const [onSite, setOnSite] = useState<OnSiteMode | "">("");
   const open = s.walkthroughs.find((w) => w.id === openId);
+  if (open && onSite && open.status === "Draft")
+    return (
+      <OnSite
+        s={s}
+        walkthrough={open}
+        mode={onSite}
+        update={update}
+        setMode={setOnSite}
+        exit={() => setOnSite("")}
+      />
+    );
   return open ? (
     <WalkthroughDetail
       s={s}
@@ -80,10 +95,20 @@ export default function Walkthroughs({
       update={update}
       notify={notify}
       openRequest={openRequest}
+      onSite={setOnSite}
       back={() => setOpenId("")}
     />
   ) : (
-    <WalkthroughList s={s} update={update} notify={notify} open={setOpenId} />
+    <WalkthroughList
+      s={s}
+      update={update}
+      notify={notify}
+      open={setOpenId}
+      startOnSite={(id) => {
+        setOpenId(id);
+        setOnSite("capture");
+      }}
+    />
   );
 }
 
@@ -92,11 +117,14 @@ function WalkthroughList({
   update,
   notify,
   open,
+  startOnSite,
 }: {
   s: State;
   update: Props["update"];
   notify: Props["notify"];
   open: (id: string) => void;
+  /** A new walkthrough is started on site, so it opens straight into capture. */
+  startOnSite: (id: string) => void;
 }) {
   const { fail, clear, fieldClass, invalid, Message } = useFieldErrors();
   const [creating, setCreating] = useState(false);
@@ -148,10 +176,12 @@ function WalkthroughList({
       }
       const w = createWalkthrough(d, target);
       w.id = id;
-    }, "Walkthrough started");
+      /* No toast: the capture screen it opens onto says where you are, and a
+         toast would sit over its Save button for three seconds. */
+    });
     setCreating(false);
     setAddress("");
-    open(id);
+    startOnSite(id);
   };
 
   return (
@@ -405,6 +435,7 @@ function WalkthroughDetail({
   update,
   notify,
   openRequest,
+  onSite,
   back,
 }: {
   s: State;
@@ -412,6 +443,7 @@ function WalkthroughDetail({
   update: Props["update"];
   notify: Props["notify"];
   openRequest: Props["openRequest"];
+  onSite: (mode: OnSiteMode) => void;
   back: () => void;
 }) {
   const property = s.properties.find((p) => p.id === w.propertyId);
@@ -422,14 +454,11 @@ function WalkthroughDetail({
      is still a draft: carrying into a sent assessment would change what the
      customer is already looking at. */
   const carryable = carryCandidates(s, w.id);
-  /* What is standing between this assessment and the customer, and whether the
-     operator has asked to send yet. Incomplete is the normal state of a card
-     being filled in, so the messages appear on the first attempt, not before. */
+  /* What is standing between this assessment and the customer. The draft card
+     only offers Send once this is empty; anything unpriced goes through the
+     pricing step, which names the missing title or price on its own field. */
   const blockers = sendBlockers(s, w.id);
-  const [revealed, setRevealed] = useState(false);
   const send = () => {
-    if (!totals.findings.length) return setRevealed(true);
-    if (blockers.length) return setRevealed(true);
     update((d) => {
       sendWalkthrough(d, w.id);
     }, "Assessment sent to the customer");
@@ -485,7 +514,7 @@ function WalkthroughDetail({
         converted={converted?.id}
         blockers={blockers}
         send={send}
-        revealedEmpty={revealed && !totals.findings.length}
+        onSite={onSite}
       />
 
       {findings.map((f) => (
@@ -496,13 +525,6 @@ function WalkthroughDetail({
           editable={draft}
           patch={patch}
           attach={attach}
-          blockers={
-            revealed
-              ? blockers
-                  .filter((b) => b.finding.id === f.id)
-                  .map((b) => b.reason)
-              : []
-          }
           remove={() =>
             update((d) => {
               d.findings = d.findings.filter((x) => x.id !== f.id);
@@ -586,7 +608,7 @@ function NextStep({
   converted,
   blockers,
   send,
-  revealedEmpty,
+  onSite,
 }: {
   s: State;
   walkthrough: Walkthrough;
@@ -599,8 +621,7 @@ function NextStep({
   converted?: string;
   blockers: SendBlocker[];
   send: () => void;
-  /** The operator pressed send with nothing recorded yet. */
-  revealedEmpty: boolean;
+  onSite: (mode: OnSiteMode) => void;
 }) {
   const incomplete = new Set(blockers.map((b) => b.finding.id)).size;
   const leftover = undecided(s, w.id).length;
@@ -767,26 +788,41 @@ function NextStep({
           {!totals.findings.length
             ? "Record what you saw"
             : incomplete
-              ? `${incomplete} finding${incomplete === 1 ? "" : "s"} not ready to send`
+              ? `${incomplete} item${incomplete === 1 ? "" : "s"} to price`
               : "Ready to send"}
         </h3>
         <p>
           {!totals.findings.length
-            ? "Add one finding per issue. Each is approved or deferred on its own."
+            ? "On site: a photo, a few words, the room. Pricing comes after."
             : incomplete
               ? "Each needs a title the customer can recognise, and either a price or a note that it needs further assessment."
               : `${totals.findings.length} finding${totals.findings.length === 1 ? "" : "s"} ready for the customer to review.`}
         </p>
       </div>
-      {revealedEmpty && (
-        <span className="field-message" role="alert">
-          Add at least one finding before sending.
-        </span>
-      )}
+      {/* One lead action, chosen by what the draft needs next: capture when
+          there is nothing, pricing while anything is unpriced, sending once
+          nothing is. Capturing more stays one tap away after the first. */}
       <div className="op-decision-actions">
-        <button className="primary" onClick={send}>
-          <Send size={16} /> Send to customer
-        </button>
+        {!totals.findings.length ? (
+          <button className="primary" onClick={() => onSite("capture")}>
+            <Camera size={16} /> Start on site
+          </button>
+        ) : (
+          <>
+            {incomplete ? (
+              <button className="primary" onClick={() => onSite("price")}>
+                Price {incomplete} item{incomplete === 1 ? "" : "s"}
+              </button>
+            ) : (
+              <button className="primary" onClick={send}>
+                <Send size={16} /> Send to customer
+              </button>
+            )}
+            <button className="secondary" onClick={() => onSite("capture")}>
+              <Camera size={16} /> Continue on site
+            </button>
+          </>
+        )}
       </div>
     </section>
   );
@@ -799,7 +835,6 @@ function FindingCard({
   patch,
   attach,
   remove,
-  blockers,
 }: {
   s: State;
   finding: Finding;
@@ -807,15 +842,9 @@ function FindingCard({
   patch: (id: string, values: Partial<Finding>, msg?: string) => void;
   attach: (f: Finding, file?: File) => Promise<boolean>;
   remove: () => void;
-  /* Only after the operator has tried to send: a card being incomplete while
-     it is still being filled in is not an error, it is a card being filled
-     in. */
-  blockers?: SendBlocker["reason"][];
 }) {
   const state = findingState(s, f);
   const [photoRejected, setPhotoRejected] = useState(false);
-  const blocked = (reason: SendBlocker["reason"]) =>
-    (blockers || []).includes(reason);
   const number = String(f.number).padStart(2, "0");
   return (
     <details className="card panel work-task" open={editable}>
@@ -836,24 +865,13 @@ function FindingCard({
                 onChange={(e) => patch(f.id, { area: e.target.value })}
               />
             </label>
-            <label
-              className={
-                "mini-field" + (blocked("title") ? " field-error" : "")
-              }
-            >
+            <label className="mini-field">
               Short title
               <input
                 value={f.title}
                 placeholder="Door rubbing against frame"
-                aria-invalid={blocked("title") || undefined}
                 onChange={(e) => patch(f.id, { title: e.target.value })}
               />
-              {blocked("title") && (
-                <span className="field-message" role="alert">
-                  The customer sees this as the name of the work. Give it one
-                  before sending.
-                </span>
-              )}
             </label>
           </div>
           <label className="field">
@@ -914,17 +932,12 @@ function FindingCard({
               </select>
             </label>
             {f.pricing === "Quoted" && (
-              <label
-                className={
-                  "mini-field" + (blocked("price") ? " field-error" : "")
-                }
-              >
+              <label className="mini-field">
                 Estimated price (CAD)
                 <input
                   type="number"
                   min="1"
                   value={f.price ?? ""}
-                  aria-invalid={blocked("price") || undefined}
                   onChange={(e) =>
                     patch(f.id, {
                       price: e.target.value
@@ -933,11 +946,6 @@ function FindingCard({
                     })
                   }
                 />
-                {blocked("price") && (
-                  <span className="field-message" role="alert">
-                    Price it, or mark it as further assessment required.
-                  </span>
-                )}
               </label>
             )}
           </div>

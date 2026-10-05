@@ -850,3 +850,72 @@ each screen, and each state looked internally fine. Two probes are added:
 Both are silent on the commit before ADR 049, and both fired on the four columns
 above before the fix. The second one also found the New request form, which
 the first cannot see because that screen has no tabs.
+
+## ADR 056: The walkthrough is captured on site and priced afterwards
+
+Accepted. The aim is time spent on the work rather than on the screen, and one
+action at a time. A draft finding used to show ten fields at once: area,
+title, observed, proposed, photo, pricing, price, two notes, and remove. Its
+photo button opened a file picker rather than the camera, and nothing
+separated standing in a room from writing a quote.
+
+**Two modes, each the whole screen.**
+
+- **Capture** asks only for what a person on site can give without stopping:
+  a photo, a few words (the keyboard's own microphone is the voice input), and
+  the room.
+  - "Save & next item" keeps the room, since the next item is usually in the
+    same one.
+  - "Finish" saves an item that is half done and moves on to pricing.
+- **Pricing** comes afterwards, one item per screen. The title is suggested
+  from the note's first clause, and the price box has focus when the screen
+  opens. It ends on "Send to customer".
+
+Both are a fixed layer above the app chrome, so nothing else competes for
+attention.
+
+**A capture is an ordinary `Finding`, with no title and no price.** The send
+rule from ADR 028 therefore already holds it back until it is priced. Neither
+screen adds a gate of its own:
+
+- `needsPricing()` is `sendBlockers()` asked which findings still need work;
+- the pricing step checks one item with the same `named()` and `quotable()`.
+
+**The room is a tap, not typing.**
+
+- `Property` gains an optional `type`, with four values: House, Townhouse,
+  Condo, Commercial. It is asked once, at the first on-site walkthrough, and
+  stored on the property. It is optional so saved data keeps loading. The
+  seed sets organisation properties to Commercial and the rest to House.
+- `roomsFor()` returns the type's rooms, then any area this property already
+  has, compared without regard to case. "Other" opens a text box, and a room
+  typed there becomes its own button from the next item on. One spelling per
+  room keeps the property record grouped by place.
+
+**Choices made on purpose:**
+
+- **A photo is optional.** A photo or a note is enough, which covers a noise
+  or a smell. An item can have several photos.
+- **The capture input carries `capture="environment"`,** which opens the rear
+  camera directly on a phone.
+- **Items still open from earlier visits** appear as one collapsed line, "N to
+  re-check", rather than a panel. The operator needs to know they are there,
+  not to read them at every item.
+- **Nothing is priced on site.** Pricing is the slow, desk-shaped step, and it
+  is the one that blocks sending.
+
+**The draft card leads with one action,** chosen by state: "Start on site"
+when the draft is empty, "Price N items" while anything is unpriced, otherwise
+"Send to customer". "Continue on site" sits second.
+
+**A path deliberately removed.** Pressing Send on an incomplete draft used to
+reveal field errors on the finding cards. That attempt can no longer happen,
+because Send is offered only once nothing blocks it. The pricing step names
+the missing title or price on its own field, so the reveal code was deleted
+rather than left unreachable (ADR 029).
+
+**Not verifiable here.** Whether `capture` opens the camera, and whether
+focusing the price box raises the number pad on iOS, both need a real phone.
+In desktop Chromium the first falls back to a file picker. The full editing
+page is unchanged, and is still where internal notes, customer notes and
+corrections are made.
