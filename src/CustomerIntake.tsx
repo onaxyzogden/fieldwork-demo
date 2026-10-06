@@ -511,7 +511,6 @@ export default function CustomerIntake({
                   <br />
                   {r.city}
                 </strong>
-                <small>Illustrative location · simulated, not geocoded</small>
               </div>
             )}
           </section>

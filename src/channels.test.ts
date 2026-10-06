@@ -17,11 +17,17 @@ import {
   markOfferSeen,
   markRead,
   offerSeen,
+  sendMessage,
   unreachable,
   unseen,
 } from "./notifications";
 import { commit } from "./store";
-import { approveScope, nextDecision, offerVisit } from "./decisions";
+import {
+  approveScope,
+  issueQuote,
+  nextDecision,
+  offerVisit,
+} from "./decisions";
 
 const at = "2026-01-01T00:00:00.000Z";
 
@@ -285,5 +291,88 @@ describe("what the operator reads on a request (ADR 060)", () => {
     // Another request's bounces are not this one's.
     expect(unreachable(s, "r2")).toEqual([]);
     expect(unreachable(book(seed(), "r2"), "r2")).toEqual([]);
+  });
+});
+
+describe("the customer's notices read as production (ADR 061)", () => {
+  const texts = (s: State, recipient: string) =>
+    (s.notifications ?? [])
+      .filter((n) => n.recipient === recipient)
+      .map((n) => n.text);
+  /** Apply a write and raise its notices, as commit() does. */
+  const after = (before: State, write: (d: State) => void) => {
+    const d: State = structuredClone(before);
+    write(d);
+    reconcile(d);
+    deliverUpdates(before, d);
+    return d;
+  };
+
+  it("words a booking the way the badges do", () => {
+    const s = book(seed(), "r2");
+    const mine = texts(s, "Customer:c2");
+    expect(mine).toContain("Your request: Matching you with a provider");
+    expect(
+      mine.some((t) => t.startsWith("Visit awaiting confirmation · ")),
+    ).toBe(true);
+    // The operator keeps the record's own words.
+    const ops = texts(s, "Operator");
+    expect(ops.some((t) => t.startsWith("Visit proposed · "))).toBe(true);
+    expect(ops.some((t) => /awaiting provider acceptance/.test(t))).toBe(true);
+  });
+
+  it("says a quote is ready and a payment was received", () => {
+    const quoted = after(seed(), (d) => {
+      issueQuote(d, "r2", {
+        type: "Manual quote",
+        amount: 300,
+        payOnCompletion: false,
+      });
+    });
+    expect(texts(quoted, "Customer:c2")).toContain(
+      "Your quote is ready · 38 Lakeshore Road West",
+    );
+    expect(texts(quoted, "Operator")).toContain(
+      "Quote sent · 38 Lakeshore Road West",
+    );
+    const q = quoted.quotes.at(-1)!;
+    for (const [status, mine] of [
+      ["Paid", "Payment received"],
+      ["Failed", "Your payment didn’t go through"],
+    ] as const) {
+      const paid = after(quoted, (d) => {
+        d.payments.push({
+          id: "p-" + status,
+          quoteId: q.id,
+          status,
+          amount: 300,
+          reference: "r",
+        });
+      });
+      expect(texts(paid, "Customer:c2")).toContain(
+        `${mine} · 38 Lakeshore Road West`,
+      );
+      expect(texts(paid, "Operator")).toContain(
+        `Simulated payment ${status.toLowerCase()} · 38 Lakeshore Road West`,
+      );
+    }
+  });
+
+  it("signs the business's messages as the business, and asks as us", () => {
+    const booked = book(seed(), "r2");
+    const v = booked.visits.at(-1)!;
+    const sent = after(booked, (d) => {
+      sendMessage(d, v.id, "Operator", "Gate code is 1234");
+      d.requests.find((r) => r.id === "r2")!.operatorNote = "Which door?";
+    });
+    expect(texts(sent, "Customer:c2")).toContain(
+      "fieldwork: Gate code is 1234",
+    );
+    expect(texts(sent, "Customer:c2")).toContain(
+      "We have a question: Which door?",
+    );
+    expect(texts(sent, "Operator")).toContain(
+      "Information requested: Which door?",
+    );
   });
 });

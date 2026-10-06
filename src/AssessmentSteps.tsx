@@ -306,8 +306,7 @@ export function ReviewStep({
         {card ? (
           <>
             <span>
-              <CreditCard size={16} /> {card.brand} ···· {card.last4}{" "}
-              <small className="pmw-muted">simulated, no real charge</small>
+              <CreditCard size={16} /> {card.brand} ···· {card.last4}
             </span>
             <button className="text-button" onClick={removeCard}>
               Change
@@ -316,7 +315,6 @@ export function ReviewStep({
         ) : (
           <button className="secondary full" onClick={addCard}>
             <CreditCard size={16} /> Add payment method
-            <small> · simulated test card, no real charge</small>
           </button>
         )}
       </div>

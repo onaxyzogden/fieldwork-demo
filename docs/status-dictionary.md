@@ -37,9 +37,12 @@ can ask.
 records with identical fields always produce the same label, and a stale label
 cannot exist.
 
-A fourth thing that is *not* a status: `customerStatusText()` (`main.tsx`)
-translates internal statuses into customer language. The colour still keys off
-the real status; only the words change.
+A fourth thing that is *not* a status: `customerStatusText()`,
+`customerQuoteText()`, `customerVisitText()` and `customerAssessmentText()`
+(`customerText.ts`) translate
+internal statuses into customer language, on badges and in the customer's
+notifications alike (ADR 061). The colour still keys off the real status; only
+the words change.
 
 | Customer sees | Internal status |
 |---|---|
@@ -48,6 +51,13 @@ the real status; only the words change.
 | `Quote ready` | Awaiting Quote Approval |
 | `Payment due` | Awaiting Payment |
 | `Waiting on your reply` | Information requested |
+| `Awaiting your approval` | Quote `Sent` |
+| `Awaiting confirmation` | Visit `Proposed` |
+| `On the way` | Visit `On the Way` |
+| `In progress` | Visit `In Progress` |
+| `Follow-up needed` | Visit `Issue` |
+| `Being prepared` | Walkthrough `Draft` |
+| `Approved` | Walkthrough `Converted` |
 
 This is the mechanism behind the HandyFlow audit's rule *"never tell the
 customer something is confirmed while provider acceptance is still pending"* —

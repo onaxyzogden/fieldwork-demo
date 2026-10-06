@@ -44,15 +44,20 @@ export function NotificationInbox({
   open: (requestId: string, visitId: string) => void;
 }) {
   const items = inbox(s, recipient);
+  /* A customer's inbox reads as production (ADR 061): no note about the
+     simulation and no delivery rows. Staff keep both. */
+  const staff = !recipient.startsWith("Customer:");
   return (
     <div className="notification-list">
       {/* No heading here: the dialog this renders inside is already titled
           "Notifications", and saying it twice is what the second line was. */}
-      <p>
-        Updates for this account only. The channel beside each one is the one a
-        real integration would use — no SMS is sent and no email is composed,
-        and an external channel therefore never gets past “sent”.
-      </p>
+      {staff && (
+        <p>
+          Updates for this account only. The channel beside each one is the one
+          a real integration would use — no SMS is sent and no email is
+          composed, and an external channel therefore never gets past “sent”.
+        </p>
+      )}
       {/* Gated on something being unread rather than on the list being
           non-empty: a list where everything is already read has nothing to
           mark either, so the button would be equally out of place. */}
@@ -84,10 +89,12 @@ export function NotificationInbox({
               {dateLabel(n.at)} · {n.read ? "Read" : "Unread"} · Open{" "}
               {n.kind === "message" ? "conversation" : "details"}
             </small>
-            <small>
-              {(n.deliveries ?? []).map(deliveryLabel).join(" · ") ||
-                "In-app · delivered"}
-            </small>
+            {staff && (
+              <small>
+                {(n.deliveries ?? []).map(deliveryLabel).join(" · ") ||
+                  "In-app · delivered"}
+              </small>
+            )}
           </span>
         </button>
       ))}
@@ -108,10 +115,13 @@ export function MessageThread({
   const [text, setText] = useState("");
   const [error, setError] = useState("");
   const box = useRef<HTMLTextAreaElement>(null);
+  /* The customer's thread reads as production (ADR 061); staff are told the
+     channel is simulated. */
+  const customer = sender.startsWith("Customer:");
   return (
     <details className="work-task message-thread" id={"messages-" + visit.id}>
       <summary>
-        Messages <small>In-app simulation</small>
+        Messages {!customer && <small>In-app simulation</small>}
       </summary>
       <div aria-live="polite">
         {visit.messages?.map((m) => (
@@ -127,7 +137,9 @@ export function MessageThread({
                 : m.sender.startsWith("Customer:")
                   ? "Customer"
                   : m.sender === "Operator"
-                    ? "Operator"
+                    ? customer
+                      ? "fieldwork"
+                      : "Operator"
                     : providers.find((p) => p.id === m.sender)?.name ||
                       m.sender}
             </strong>
@@ -177,13 +189,18 @@ export function MessageThread({
                   box.current?.focus();
                   return;
                 }
-                update((d) => {
-                  sendMessage(d, visit.id, sender, text);
-                }, "Message sent · in-app simulation");
+                update(
+                  (d) => {
+                    sendMessage(d, visit.id, sender, text);
+                  },
+                  customer
+                    ? "Message sent"
+                    : "Message sent · in-app simulation",
+                );
                 setText("");
               }}
             >
-              Send simulated message
+              {customer ? "Send" : "Send simulated message"}
             </button>
           </>
         )}

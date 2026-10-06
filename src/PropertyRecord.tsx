@@ -1,6 +1,7 @@
 import { type State, money, dateLabel } from "./model";
 import { findingEvidence, findingState, propertyRecord } from "./pmw";
 import { assessmentLink } from "./store";
+import { customerAssessmentText } from "./customerText";
 
 /**
  * A property's maintenance history, assembled on read from records that already
@@ -93,7 +94,10 @@ export default function PropertyRecord({
                 Open assessment
               </a>
             ) : (
-              <span className="badge">{w.status}</span>
+              /* Without links this is the customer's copy (ADR 061). */
+              <span className="badge">
+                {links ? w.status : customerAssessmentText(w.status)}
+              </span>
             )}
           </div>
         ))}

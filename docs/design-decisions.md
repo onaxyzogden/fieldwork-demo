@@ -1150,3 +1150,57 @@ opening the offer does not count.
 - the notices themselves, their channels and delivery rows (ADR 045);
 - the bell inbox, which still shows each notice's delivery;
 - History on the request.
+
+## ADR 061: The customer view reads as production; the demo says so once
+
+Accepted. This narrows ADR 044/055 ("say once per surface that payment is
+simulated") and ADR 047 (the guest assessment link keeps saying it is not a
+secret), for the customer view only.
+
+The customer screens explained the simulation inside the product: "Demo
+payment due after approval · No real charge. Nothing is stored, held or
+moved…", "Test card", "Send simulated message", "Illustrative location ·
+simulated, not geocoded". They also showed the records' own vocabulary:
+"YOUR MANUAL QUOTE" with a "Sent" badge, visits "Proposed", notices reading
+"Your request: Awaiting Provider Acceptance".
+
+**The demo now says it is a demo in one place.** The top "Interactive
+prototype" banner stays, and so does the "Viewing as" switcher, because it is
+how the demo is driven. Everything inside the product reads as it would in
+production:
+
+- **Words for the customer.** The customer gets what they are waiting for or
+  have to do, not the record's state:
+  - a quote is "Awaiting your approval", not "Sent";
+  - a visit is "Awaiting confirmation", "On the way" or "Follow-up needed";
+  - an assessment is "Being prepared", "Awaiting your approval" or
+    "Approved".
+
+  `customerText.ts` holds these maps, next to the existing request map. The
+  badges and the customer's notifications both use them, so the two cannot
+  disagree. `status:check` reads the maps from there, and every label has a
+  row in the status dictionary.
+
+- **No disclaimers.**
+  - The quote's payment line, checkout, the assessment's card line, the
+    intake address preview and the guest assessment footer lose their notes
+    about the simulation.
+  - Checkout shows the card on file and one "Pay $165" button.
+  - Receipts drop the "demo_" prefix.
+- **No back office.**
+  - "Operator has a question" becomes "We have a question".
+  - The business's messages are signed "fieldwork".
+  - The 24-hour change and cancellation toasts say "We'll be in touch."
+  - The customer's inbox has no delivery rows and no note about
+    integrations.
+- **The test control moved out.** "Simulate a failed payment" was a checkbox
+  in the customer's checkout. It is now "Customer payments fail" in Demo
+  settings, and a failure tells the customer "Your payment didn't go through.
+  Try again, or use another card."
+- **The footer's "Local prototype · CAD · America/Toronto" is gone.**
+
+**Unchanged:** the operator and contractor views keep their wording, where it
+is useful to them. That covers the inbox's delivery rows and note, "In-app
+simulation" on threads, "Quote sent", "Simulated payment paid" and the event
+log's "Demo payment received". The records keep their states too: only the
+customer's words change.
