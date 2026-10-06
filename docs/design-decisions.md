@@ -1105,3 +1105,48 @@ declined". Without this the queue could never reach a revision.
 - the Needs-attention list and its own order;
 - what each write records. The same log lines and fields come from the
   extracted functions.
+
+## ADR 060: The request page says whether an offer was opened, not how every notice travelled
+
+Accepted. The request page carried a collapsible **Delivery (N)** log: every
+notification raised for the request, one row each, such as `offer →
+Contractor:nina · In-app · delivered`. It was added for ADR 045's question,
+"has the contractor seen the offer?", but it did not answer it for the
+operator:
+
+- the rows used internal kinds and raw IDs, gave no times, and almost all
+  read "delivered";
+- half of them were the operator's own copies or the customer's;
+- the decline notice showed no recipient at all;
+- the note under it explained the simulation, not what to do.
+
+The question only matters while an offer is waiting. On a declined or
+accepted offer it is already answered.
+
+**The log is gone. Two facts replace it, each where it changes the next
+step:**
+
+- **A waiting offer says whether it was opened.** Under "Waiting on Nina
+  Patel to accept", the "Offer sent" card reads "Sent Tue, Oct 6, 11:39 a.m. ·
+  not opened yet" or "Opened Tue, Oct 6, 11:52 a.m.". The operator waits on
+  one and chases the other. It is read from the contractor's own copy of the
+  offer, never the operator's (`offerSeen()`).
+- **Someone who could not be reached gets one warning.** Under the decision
+  card: "Couldn't text James Carter: no mobile number on file. Call or email
+  them about this request." There is one line per person and channel, by
+  name, however many notices bounced (`unreachable()`). The operator's own
+  copies are left out, since there is nobody for the operator to chase.
+
+**Opening an offer on Your Work now counts as seeing it.** Until now only
+opening the notice from the bell marked it read. A contractor who opened the
+offer from their work list, or landed on it because it was their only one,
+would have shown as "not opened yet" while looking at it. An offer open on
+that screen is now marked seen (`markOfferSeen()`). The write happens once,
+only while it is unopened, and never during render. Seeing the list without
+opening the offer does not count.
+
+**Unchanged:**
+
+- the notices themselves, their channels and delivery rows (ADR 045);
+- the bell inbox, which still shows each notice's delivery;
+- History on the request.

@@ -2,6 +2,7 @@ import { describe, it, expect } from "vitest";
 import {
   channelsFor,
   notificationKinds,
+  reconcile,
   seed,
   urgency,
   type NotificationKind,
@@ -10,12 +11,17 @@ import {
 import {
   addressFor,
   bounced,
+  deliverUpdates,
   deliveriesFor,
   deliveryLabel,
+  markOfferSeen,
   markRead,
+  offerSeen,
+  unreachable,
   unseen,
 } from "./notifications";
 import { commit } from "./store";
+import { approveScope, nextDecision, offerVisit } from "./decisions";
 
 const at = "2026-01-01T00:00:00.000Z";
 
@@ -155,5 +161,129 @@ describe("notifications raised by a real write", () => {
     )!;
     expect(raised.deliveries?.length).toBe(2);
     expect(raised.deliveries!.map((d) => d.channel)).toContain("sms");
+  });
+});
+
+/** Book a request with the queue's own suggestion, and raise the notices a
+ *  real write would (commit()'s own steps, without the storage it needs). */
+function book(before: State, requestId: string) {
+  const d: State = structuredClone(before);
+  approveScope(d, requestId);
+  const x = nextDecision(d, requestId);
+  if (x?.kind !== "assign" || !x.offer) throw new Error("no offer");
+  offerVisit(d, {
+    requestId,
+    taskIds: x.taskIds,
+    ...x.offer,
+    duration: x.duration,
+    opKey: "book-" + requestId,
+  });
+  reconcile(d);
+  deliverUpdates(before, d);
+  return d;
+}
+
+describe("what the operator reads on a request (ADR 060)", () => {
+  it("says whether the contractor has opened a waiting offer", () => {
+    const s = book(seed(), "r2");
+    const a = s.assignments.at(-1)!;
+    expect(offerSeen(s, a.id)).toEqual({ sentAt: expect.any(String) });
+    expect(markOfferSeen(s, a.id)).toBe(true);
+    expect(offerSeen(s, a.id)?.openedAt).toBeTruthy();
+    // Only the contractor's copy: the operator's own notice of the offer is
+    // not the contractor seeing it.
+    expect(
+      s
+        .notifications!.filter(
+          (n) => n.assignmentId === a.id && n.recipient === "Operator",
+        )
+        .every((n) => !n.read),
+    ).toBe(true);
+    expect(markOfferSeen(s, a.id)).toBe(false);
+    expect(offerSeen(s, "nope")).toBeUndefined();
+  });
+  it("reads only the contractor's own offer notice", () => {
+    const s = book(seed(), "r2");
+    const a = s.assignments.at(-1)!;
+    // Opened notices about the same offer that are not the contractor's copy
+    // of it, raised before it, so they come first if the filter slips.
+    for (const other of [
+      { recipient: "Operator", kind: "offer" },
+      { recipient: "Contractor:" + a.providerId, kind: "message" },
+    ]) {
+      s.notifications!.push({
+        id: "other",
+        ...other,
+        requestId: "r2",
+        visitId: a.visitId,
+        assignmentId: a.id,
+        text: "Not the offer",
+        at,
+        read: true,
+      });
+      expect(offerSeen(s, a.id)?.openedAt).toBeUndefined();
+      s.notifications!.pop();
+    }
+  });
+  it("counts the bell inbox opening it the same way", () => {
+    const s = book(seed(), "r2");
+    const a = s.assignments.at(-1)!;
+    const n = s.notifications!.find(
+      (n) =>
+        n.assignmentId === a.id && n.recipient === "Contractor:" + a.providerId,
+    )!;
+    markRead(s, n.id);
+    expect(offerSeen(s, a.id)?.openedAt).toBeTruthy();
+  });
+  it("names each person who could not be reached, once per channel", () => {
+    const s = book(seed(), "r4");
+    // James Carter has no mobile, so the visit notice's SMS bounced. A
+    // second bounced notice to him still makes one line, not two.
+    (s.notifications ??= []).unshift({
+      id: "again",
+      recipient: "Customer:c4",
+      requestId: "r4",
+      visitId: "",
+      assignmentId: "",
+      kind: "visit",
+      text: "Moved",
+      at,
+      read: false,
+      deliveries: deliveriesFor(s, "Customer:c4", "visit", at),
+    });
+    expect(
+      bounced(s).filter((n) => n.requestId === "r4").length,
+    ).toBeGreaterThan(1);
+    expect(unreachable(s, "r4")).toEqual([
+      {
+        name: "James Carter",
+        channel: "sms",
+        reason: "No mobile number on file",
+      },
+    ]);
+    // The operator's own copy bouncing is not someone to reach.
+    s.notifications.unshift({
+      id: "mine",
+      recipient: "Operator",
+      requestId: "r4",
+      visitId: "",
+      assignmentId: "",
+      kind: "visit",
+      text: "Moved",
+      at,
+      read: false,
+      deliveries: [
+        {
+          channel: "sms",
+          state: "bounced",
+          at,
+          reason: "No mobile number on file",
+        },
+      ],
+    });
+    expect(unreachable(s, "r4")).toHaveLength(1);
+    // Another request's bounces are not this one's.
+    expect(unreachable(s, "r2")).toEqual([]);
+    expect(unreachable(book(seed(), "r2"), "r2")).toEqual([]);
   });
 });

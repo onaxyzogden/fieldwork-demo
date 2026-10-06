@@ -300,3 +300,66 @@ export const deliveryLabel = (d: {
   d.state === "bounced"
     ? `${d.channel.toUpperCase()} · ${d.reason}`
     : `${d.channel === "in-app" ? "In-app" : d.channel.toUpperCase()} · ${d.state}`;
+
+/** The contractor's own copy of an offer: the one notice that says whether
+ *  they have seen it. The first raised, since later ones record the answer. */
+const offerNotice = (s: State, assignmentId: string) => {
+  const a = s.assignments.find((x) => x.id === assignmentId);
+  return (s.notifications ?? [])
+    .filter(
+      (n) =>
+        a &&
+        n.assignmentId === a.id &&
+        n.kind === "offer" &&
+        n.recipient === "Contractor:" + a.providerId,
+    )
+    .at(-1);
+};
+
+/**
+ * "Has the contractor seen the offer?" (ADR 045), as the operator reads it on
+ * a waiting offer (ADR 060): when it went, and when it was opened, if it was.
+ */
+export function offerSeen(s: State, assignmentId: string) {
+  const n = offerNotice(s, assignmentId);
+  if (!n) return undefined;
+  const inApp = (n.deliveries ?? []).find((d) => d.channel === "in-app");
+  return {
+    sentAt: n.at,
+    openedAt: n.read ? inApp?.at || n.at : undefined,
+  };
+}
+
+/** Opening the offer on Your Work is seeing it, as much as opening the bell. */
+export const markOfferSeen = (s: State, assignmentId: string) => {
+  const n = offerNotice(s, assignmentId);
+  return n ? markRead(s, n.id) : false;
+};
+
+/**
+ * Who on a request could not be reached, and how: one entry per person and
+ * channel, by name. A bounce is the one delivery state the operator can act
+ * on — by reaching that person some other way.
+ */
+export function unreachable(s: State, requestId: string) {
+  const out: { name: string; channel: Channel; reason: string }[] = [];
+  for (const n of bounced(s)) {
+    if (n.requestId !== requestId) continue;
+    const [role, id] = (n.recipient || "Operator").split(":");
+    const name =
+      role === "Customer"
+        ? primaryContact(id)?.name
+        : role === "Contractor"
+          ? providers.find((p) => p.id === id)?.name
+          : undefined;
+    // The operator's own copies are not someone the operator has to reach.
+    if (!name) continue;
+    for (const d of n.deliveries ?? [])
+      if (
+        d.state === "bounced" &&
+        !out.some((o) => o.name === name && o.channel === d.channel)
+      )
+        out.push({ name, channel: d.channel, reason: d.reason || "" });
+  }
+  return out;
+}
