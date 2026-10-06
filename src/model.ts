@@ -187,6 +187,9 @@ export type Quote = {
     high: number;
     taskIds: string[];
   };
+  /** Why the customer said no, if they said (ADR 062). Shown to the operator
+   *  revising the price. */
+  declineReason?: string;
 };
 export type Payment = {
   id: string;
@@ -593,6 +596,38 @@ export function approveQuote(s: State, quoteId: string, contactId?: string) {
     from: "Sent",
     to: "Approved",
   });
+  return true;
+}
+/**
+ * The customer turns a quote down, with a reason if they gave one (ADR 062).
+ * Only a quote still awaiting them can be declined.
+ */
+export function declineQuote(s: State, quoteId: string, reason?: string) {
+  const q = s.quotes.find((x) => x.id === quoteId);
+  if (!q || q.status !== "Sent") return false;
+  q.status = "Declined";
+  if (reason) q.declineReason = reason;
+  log(s, `Customer declined the quote${reason ? ` · ${reason}` : ""}`, {
+    actor: "Customer",
+    requestId: q.requestId,
+    entity: "quote",
+    entityId: q.id,
+    field: "status",
+    from: "Sent",
+    to: "Declined",
+  });
+  return true;
+}
+/**
+ * The customer answers the operator's one question (ADR 062). One reply per
+ * question: a blank one, or a second one, is refused.
+ */
+export function answerQuestion(s: State, requestId: string, reply: string) {
+  const r = s.requests.find((x) => x.id === requestId);
+  const text = reply.trim();
+  if (!r || !r.operatorNote || r.customerReply || !text) return false;
+  r.customerReply = text;
+  log(s, "Customer replied: " + text);
   return true;
 }
 /**

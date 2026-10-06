@@ -167,8 +167,20 @@ export function customerGlance(
      WAITING_ON_CUSTOMER and CLOSED today, so removing it changes nothing and
      no test catches it. It stays because that is a property of two lists that
      a later edit could break, not something the code guarantees. */
+  /* A declined quote leaves the request "Awaiting Quote Approval", but the
+     next move is the operator's revision, not the customer's (ADR 059 made
+     the same correction to the operator's bucket()). */
+  const declined = (id: string) =>
+    s.quotes.some((q) => q.requestId === id && q.status === "Declined");
+  /* And an unanswered question is waiting on them whatever else is in
+     flight: reconcile() lets "Awaiting Provider Acceptance" outrank it, so the
+     status alone would leave it uncounted (ADR 062). */
+  const asked = (r: (typeof live)[number]) =>
+    !!r.operatorNote && !r.customerReply;
   const waitingIds = live
-    .filter((r) => WAITING_ON_CUSTOMER.has(r.status))
+    .filter(
+      (r) => (WAITING_ON_CUSTOMER.has(r.status) && !declined(r.id)) || asked(r),
+    )
     .map((r) => r.id);
   const scheduled = new Set(visits.map((v) => v.requestId));
   const scheduledIds = [...new Set(visits.map((v) => v.requestId))];

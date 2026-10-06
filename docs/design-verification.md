@@ -559,3 +559,56 @@ ADR 061.
 - **Sweeps:** the narrow-layout probes are unchanged at 0 / 30 / 14 / 0, the
   tab-width and shrink-wrap probes are at 0, and the console crawl is clean.
   Chromium only, per ADR 052.
+
+# Customer and contractor queues — 2026-10-06
+
+ADR 062.
+
+- **Tests:**
+  - Six new tests in `roleQueues.test.ts` cover the following:
+    - the customer's queue equals the glance's "Waiting on you" for every
+      account;
+    - quote, then pay (failure first), ahead of the assessment;
+    - a declined quote leaving with its reason;
+    - a question asked while a contractor is still being found;
+    - an answered question;
+    - the contractor's queue equals the Offers tab.
+  - Eleven guards were broken on purpose, and each break fails a test.
+  - Two conditions in the queue builder could not be broken without the glance
+    already excluding the same case, so they were removed rather than kept
+    untested.
+- **Before and after (390px):**
+
+  |                                  | today     | queue              |
+  | -------------------------------- | --------- | ------------------ |
+  | contractor, two offers (taps)    | 6         | 4                  |
+  | customer, approve and pay (taps) | 3         | 3                  |
+  | customer, sent assessment        | no way in | 2 taps to its flow |
+
+  For the customer the gain is not taps. One request's to-dos were already
+  one tap each, because the portal opens that row. The gain is that
+  everything waiting is in one place, and the assessment is reachable at all.
+
+- **Browser walk:** 390px and 1280px in both themes, with no console errors.
+  - **Sarah Lin:** her assessment, Skip, then "All caught up · 0 done".
+  - **Northline:** the quote; approving brings the payment next, ahead of the
+    assessment. A failed payment stays and says so; reopening lands on it;
+    paying moves on.
+  - **Marcus:** "Review 2 offers", both accepted, and the button goes.
+  - **Elias:** Decline, then "Too far", which is stored on the assignment.
+  - **Priya:** the quote declined with "Too expensive". It leaves her queue,
+    and the operator's queue reads "The customer declined $285 · Too
+    expensive."
+  - **James Carter:** a question asked from the request page; an empty reply
+    is refused; the reply is stored.
+  - **Seen:** the queue marks only the offer it shows as seen.
+  - **Wording:** no demo or internal wording on any customer queue screen.
+- **Layout:** no overflow at 320px or 360px on the quote, its reasons, the
+  payment, the assessment, an offer or its reasons.
+- **Repo checks:** 449 tests, the build, `design:check`, `catalogue:check`
+  and `status:check` pass. New files are prettier-clean, and touched files
+  carry no new drift.
+- **Sweeps:** the narrow-layout probes are unchanged at 0 / 30 / 14 / 0, the
+  tab-width and shrink-wrap probes are at 0, the console crawl is clean, and
+  the ADR 061 customer crawl finds no demo wording. Chromium only, per
+  ADR 052.

@@ -6,6 +6,8 @@ import Walkthroughs from "./Walkthroughs";
 import Assessment from "./Assessment";
 import PropertyRecord from "./PropertyRecord";
 import { bucket, workIssue, workStatus } from "./work";
+import CustomerQueue from "./CustomerQueue";
+import { customerQueue } from "./roleQueues";
 import { issueQuote, offerVisit, suggestPay, suggestQuote } from "./decisions";
 import {
   customerQuoteText,
@@ -78,7 +80,9 @@ import {
   torontoParts,
   instantEligible,
   accounts,
+  answerQuestion,
   approveQuote,
+  declineQuote,
   auditFor,
   secured,
   methodFor,
@@ -95,8 +99,8 @@ import {
   authorizePayment,
   capturePayment,
   outstandingFor,
+  payQuote,
   refundPayment,
-  storePaymentMethod,
 } from "./payments";
 import { storablePhoto, unreadableMessage } from "./photos";
 import { Sidebar, DemoBar, Topbar, DemoSettings } from "./Shell";
@@ -436,6 +440,8 @@ function Workspace({
   const [modal, setModal] = useState("");
   const [reschedule, setReschedule] = useState("");
   const [fail, setFail] = useState(false);
+  /* The customer's one-at-a-time queue is open (ADR 062). */
+  const [reviewing, setReviewing] = useState(false);
   const [sidebar, setSidebar] = useState(false);
   const menuTrigger = React.useRef<HTMLButtonElement>(null);
   /* Validation that names a field says so on the field. See fields.tsx for
@@ -591,6 +597,7 @@ function Workspace({
         )),
   );
   const customerAtAGlance = customerGlance(s, customer, +s.clock);
+  const customerTodos = customerQueue(s, customer, s.clock).length;
   const customerNext = customerAtAGlance.next;
   /* Open a request's row in the accordion below and bring it into view. The
      row is already on this screen, so this expands rather than navigates. */
@@ -1143,8 +1150,7 @@ function Workspace({
               className="secondary"
               onClick={() =>
                 update((d) => {
-                  d.quotes.find((q) => q.id === quote.id)!.status = "Declined";
-                  log(d, "Customer declined quote");
+                  declineQuote(d, quote.id);
                 }, "Quote declined")
               }
             >
@@ -1420,7 +1426,7 @@ function Workspace({
       body =
         `${money(quote.amount)} · ` +
         (quote.status === "Declined"
-          ? "the customer declined this price. Revise it and send again."
+          ? `the customer declined this price${quote.declineReason ? ` · ${quote.declineReason}` : ""}. Revise it and send again.`
           : quote.status === "Approved"
             ? paid || quote.payOnCompletion
               ? "approved; the visit confirms once the remaining conditions are met."
@@ -2724,6 +2730,26 @@ function Workspace({
                       },
                     ]}
                   />
+                  {/* Everything waiting on them, one thing at a time (ADR
+                      062). The number is the glance's own "Waiting on you". */}
+                  {customerTodos > 0 && (
+                    <button
+                      className="primary full"
+                      onClick={() => setReviewing(true)}
+                    >
+                      Review {customerTodos} thing
+                      {customerTodos === 1 ? "" : "s"} waiting on you
+                    </button>
+                  )}
+                  {reviewing && (
+                    <CustomerQueue
+                      s={s}
+                      update={update}
+                      accountId={customer}
+                      failPayment={fail}
+                      close={() => setReviewing(false)}
+                    />
+                  )}
                   {/* Accordion, not a tab strip into a separate detail screen.
                       Everything about a request opens inline underneath its own
                       row, so nothing about it lives on another page. */}
@@ -2909,10 +2935,7 @@ function Workspace({
                                     <NoteReply
                                       onSend={(reply) =>
                                         update((d) => {
-                                          d.requests.find(
-                                            (x) => x.id === r.id,
-                                          )!.customerReply = reply;
-                                          log(d, "Customer replied: " + reply);
+                                          answerQuestion(d, r.id, reply);
                                         }, "Reply sent")
                                       }
                                     />
@@ -3206,29 +3229,7 @@ function Workspace({
                     } else if (quote) {
                       update(
                         (d) => {
-                          /* Store the method as well as taking the payment.
-                             The decided sequence turns on a method being on
-                             file — it is what lets a visit be confirmed before
-                             money moves — and the shortcut below would leave
-                             that half of the model unreachable. */
-                          if (!fail)
-                            storePaymentMethod(d, r.accountId, {
-                              brand: "Visa",
-                              last4: "4242",
-                            });
-                          d.payments.push({
-                            id: uid(),
-                            quoteId: quote.id,
-                            status: fail ? "Failed" : "Paid",
-                            amount: quote.amount,
-                            reference: uid(),
-                          });
-                          log(
-                            d,
-                            fail
-                              ? "Demo payment failed"
-                              : "Demo payment received · receipt issued",
-                          );
+                          payQuote(d, quote.id, fail);
                         },
                         fail
                           ? "Your payment didn’t go through. Try again, or use another card."

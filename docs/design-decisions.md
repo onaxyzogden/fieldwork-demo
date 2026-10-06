@@ -1204,3 +1204,62 @@ is useful to them. That covers the inbox's delivery rows and note, "In-app
 simulation" on threads, "Quote sent", "Simulated payment paid" and the event
 log's "Demo payment received". The records keep their states too: only the
 customer's words change.
+
+## ADR 062: The customer and the contractor get their own one-at-a-time queue
+
+Accepted. The operator's **Work through N decisions** (ADR 059) now has a
+counterpart for the other two roles. All three use the same rules: one item
+per screen, the suggested action on one button, Skip, an order fixed when the
+queue opens, items re-read live, and "All caught up" at the end. The two new
+queues share `QueueLayer.tsx`.
+
+**Customer: "Review N things waiting on you".** N is the glance's own
+"Waiting on you" count, because the queue is built from it
+(`customerQueue()` in `roleQueues.ts`). Four kinds of screen:
+
+- **Quote:** "Approve · $165". Decline reveals optional reasons (_Too
+  expensive · Changed my mind · Found someone else · No reason_), and one tap
+  declines. The reason is stored on the quote (`declineReason`). The operator
+  sees it on the request page's "Quote declined" card and on the operator
+  queue's revise screen.
+- **Payment:** the card on file and "Pay $165". A failure (Demo settings'
+  "Customer payments fail") stays on the screen and says so.
+- **Our question:** the question, a reply box and Send. An empty reply is
+  refused on the field.
+- **Assessment:** "Your assessment is ready · N items to decide" and
+  **Review assessment**, which opens the assessment's own one-item-per-screen
+  flow (ADR 058). Until now the portal counted these under "Waiting on you"
+  but had no way into them.
+
+Assessments come last, because reviewing one leaves the queue. Something the
+customer acts on and that comes round again (an approved quote, now to pay)
+goes back in ahead of them.
+
+**Contractor: "Review N offers".** N is the Offers tab's count, built from
+the same list (`contractorQueue()` uses `tabWork()`). Each screen shows the
+job, customer, time, length and pay, with task details behind Details. Accept
+job; Decline reveals reasons (_Not available · Too far · Pay doesn't work ·
+Outside my skill set · No reason_), and one tap declines; or Skip. An offer
+shown counts as seen (ADR 060). Today's jobs stay in job mode (ADR 057),
+which already runs one step at a time.
+
+**One write per action, shared with the portal.** The queues call the same
+functions as the portal's own buttons, so the two cannot drift apart:
+
+- `approveQuote()`;
+- `declineQuote()`, new, which the quote card's Decline now uses too;
+- `payQuote()`, extracted from the checkout dialog;
+- `answerQuestion()`, which the portal's reply box now uses too;
+- `respondToOffer()`.
+
+**Two counting corrections found on the way:**
+
+- **A declined quote** left the request "Awaiting Quote Approval", so the
+  customer's glance still counted it as waiting on them. The operator's
+  bucket had the same problem, fixed in ADR 059. `customerGlance()` now
+  leaves it out.
+- **An unanswered question** on a request still waiting for a contractor was
+  never counted. `reconcile()` lets "Awaiting Provider Acceptance" outrank
+  the question, so the status never said "Information requested". The glance
+  now counts any unanswered question, and the queue asks it first, since it
+  is quick and the request comes round again for whatever follows.

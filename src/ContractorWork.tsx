@@ -22,6 +22,7 @@ import { storablePhotos, unreadableMessage } from "./photos";
 import { MessageThread } from "./NotificationUI";
 import { markOfferSeen, offerSeen } from "./notifications";
 import JobMode from "./JobMode";
+import ContractorQueue from "./ContractorQueue";
 import { Glance, GlanceLead } from "./Glance";
 import {
   contractorGlance,
@@ -458,6 +459,8 @@ export default function ContractorWork({
   }, [selected, !!seen, !!seen?.openedAt]);
   const [decline, setDecline] = useState(false);
   const [reason, setReason] = useState("");
+  /* The offers, one at a time (ADR 062). */
+  const [reviewing, setReviewing] = useState(false);
   /* Today's job, or one already running whatever its date, opens in job mode:
      the whole screen, one step at a time. Other accepted jobs keep the page,
      since there is nothing to do on them yet but read. */
@@ -556,6 +559,20 @@ export default function ContractorWork({
           },
         ]}
       />
+      {/* The same count as the Offers tab, because it is the same list. */}
+      {glance.offers > 0 && (
+        <button className="primary full" onClick={() => setReviewing(true)}>
+          Review {glance.offers} offer{glance.offers === 1 ? "" : "s"}
+        </button>
+      )}
+      {reviewing && (
+        <ContractorQueue
+          s={s}
+          update={update}
+          provider={provider}
+          close={() => setReviewing(false)}
+        />
+      )}
       <div className="segmented">
         {["Offers", "Today", "Upcoming"].map((t) => (
           <button

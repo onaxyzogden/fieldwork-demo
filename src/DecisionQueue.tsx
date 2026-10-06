@@ -294,10 +294,12 @@ function Step({
         "",
       );
     };
-    if (d.kind === "revise")
-      why = `The customer declined ${money(
-        s.quotes.find((q) => q.id === d.quoteId)?.amount ?? d.amount,
-      )}.`;
+    if (d.kind === "revise") {
+      const declined = s.quotes.find((q) => q.id === d.quoteId);
+      why = `The customer declined ${money(declined?.amount ?? d.amount)}${
+        declined?.declineReason ? ` · ${declined.declineReason}` : ""
+      }.`;
+    }
     primary = {
       label: `${d.kind === "revise" ? "Send revised quote" : "Send quote"} · ${money(amount || 0)}`,
       run: send,
