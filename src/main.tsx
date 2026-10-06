@@ -115,7 +115,7 @@ import "./operator-concept.css";
 import "./contractor-concept.css";
 import "./cards.css";
 import "./assessment.css";
-import { deliveryLabel, inbox } from "./notifications";
+import { inbox, offerSeen, unreachable } from "./notifications";
 import { NotificationInbox, MessageThread } from "./NotificationUI";
 import { Glance, GlanceLead } from "./Glance";
 import { customerGlance, glanceDate } from "./glance";
@@ -554,7 +554,6 @@ function Workspace({
   const r = s.requests.find((r) => r.id === active) || s.requests[0];
   const tasks = s.tasks.filter((t) => t.requestId === r.id && !t.mergedInto);
   const trail = auditFor(s, r.id);
-  const sentHere = (s.notifications ?? []).filter((n) => n.requestId === r.id);
   const payMethod = (s.paymentMethods ?? []).find(
     (m) => m.accountId === r.accountId,
   );
@@ -1354,6 +1353,23 @@ function Workspace({
       Icon = Clock;
       title = "Offer sent";
       body = `Waiting on ${named(awaiting.providerId)} to accept · ${dateLabel(awaiting.start)}`;
+      /* The one delivery fact that changes what the operator does next:
+         wait, or chase (ADR 060). */
+      const offer = s.assignments.find(
+        (a) =>
+          a.visitId === awaiting.id &&
+          a.providerId === awaiting.providerId &&
+          a.status === "Offered",
+      );
+      const seen = offer && offerSeen(s, offer.id);
+      if (seen)
+        extra = (
+          <p className="op-decision-seen">
+            {seen.openedAt
+              ? `Opened ${dateLabel(seen.openedAt)}`
+              : `Sent ${dateLabel(seen.sentAt)} · not opened yet`}
+          </p>
+        );
     } else if (!quote) {
       tone = "quote";
       Icon = Wallet;
@@ -1600,36 +1616,6 @@ function Workspace({
                   </p>
                 )}
               </section>
-            )}
-            {/* "Has the contractor seen the offer?" is the question the
-                audits asked and the operator could not ask: an offer expiring
-                unseen looked identical to one being ignored. */}
-            {sentHere.length > 0 && (
-              <details className="note">
-                <summary>Delivery ({sentHere.length})</summary>
-                <p>
-                  Channel follows urgency, not role. Nothing is actually sent —
-                  an external channel never gets past “sent”, because without a
-                  provider nothing reports back.
-                </p>
-                <ul className="audit">
-                  {sentHere.map((n) => (
-                    <li key={n.id}>
-                      <strong>{n.kind}</strong> → {n.recipient} ·{" "}
-                      {(n.deliveries ?? []).map(deliveryLabel).join(" · ") ||
-                        "In-app · delivered"}
-                    </li>
-                  ))}
-                </ul>
-                {sentHere.some((n) =>
-                  (n.deliveries ?? []).some((d) => d.state === "bounced"),
-                ) && (
-                  <p className="warning">
-                    <AlertCircle size={16} /> A channel bounced — there is no
-                    address on file for it, so that route was never attempted.
-                  </p>
-                )}
-              </details>
             )}
             {/* A log nothing renders is ADR 034 again. Changes first, because
                 "who changed this price" is the question the narrative could
@@ -1906,6 +1892,16 @@ function Workspace({
                     </a>
                   </section>
                   {decisionCard()}
+                  {/* A bounce is the one delivery state the operator can act
+                      on: reach that person another way (ADR 060). */}
+                  {unreachable(s, r.id).map((u) => (
+                    <p className="warning" key={u.name + u.channel}>
+                      <AlertCircle size={16} />
+                      {u.channel === "sms"
+                        ? `Couldn’t text ${u.name}: ${u.reason.toLowerCase()}. Call or email them about this request.`
+                        : `Couldn’t email ${u.name}: ${u.reason.toLowerCase()}. Call or text them about this request.`}
+                    </p>
+                  ))}
                   {r.operatorNote && (
                     /* Single Q&A slot: waiting, then answered. Asking again
                        replaces it rather than growing a history. */

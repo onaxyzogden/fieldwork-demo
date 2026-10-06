@@ -486,3 +486,37 @@ to quote it, which accounts for the two extra decisions.
 - **Sweeps:** the narrow-layout probes are unchanged at 0 / 30 / 14 / 0, the
   tab-width and shrink-wrap probes are at 0, and the console crawl is clean.
   Chromium only, per ADR 052.
+
+# Delivery log replaced — 2026-10-06
+
+ADR 060.
+
+- **Tests:**
+  - Four new tests in `channels.test.ts` cover the following:
+    - a waiting offer before and after it is opened;
+    - the bell inbox counting the same;
+    - stand-in notices (the operator's copy of the offer, a message to the
+      contractor) never read as the offer;
+    - one warning per person and channel by name, leaving out the operator's
+      own bounce and another request's bounces.
+  - The notices are raised by `deliverUpdates()` on a real booking, not
+    written by hand.
+  - Seven guards were broken on purpose. Each break fails a test. Four of
+    them failed nothing until the stand-in cases were added.
+- **Browser walk:** 390px and 1280px in both themes, plus 320px, with no
+  console errors.
+  - An offer to Nina Patel reads "not opened yet". It reads "Opened …" once
+    she views Your Work, which opens on her only offer.
+  - Marcus Chen has two offers. His list showing them does not count; opening
+    the notice from the bell does.
+  - Booking 62 Thompson Road shows "Couldn't text James Carter: no mobile
+    number on file. Call or email them about this request." No warning
+    appears on 38 Lakeshore Road West.
+  - No Delivery section appears on any request, and the card does not
+    overflow.
+- **Repo checks:** 440 tests, the build, `design:check`, `catalogue:check`
+  and `status:check` pass. New lines are prettier-clean, and the touched
+  files keep exactly `main`'s drift.
+- **Sweeps:** the narrow-layout probes are unchanged at 0 / 30 / 14 / 0, the
+  tab-width and shrink-wrap probes are at 0, and the console crawl is clean.
+  Chromium only, per ADR 052.

@@ -20,6 +20,7 @@ import {
 import { respondToOffer } from "./dispatch";
 import { storablePhotos, unreadableMessage } from "./photos";
 import { MessageThread } from "./NotificationUI";
+import { markOfferSeen, offerSeen } from "./notifications";
 import JobMode from "./JobMode";
 import { Glance, GlanceLead } from "./Glance";
 import {
@@ -440,6 +441,21 @@ export default function ContractorWork({
       if (assignment) setSelected(assignment.id);
     }
   }, [openVisit, provider]);
+  /* An offer open on this screen has been seen, however it was opened: the
+     bell, a card, the glance, or the page opening on the only offer. The
+     operator's "not opened yet" depends on it (ADR 060). Only an unopened
+     one writes. */
+  const seen = offerSeen(s, selected);
+  useEffect(() => {
+    if (
+      seen &&
+      !seen.openedAt &&
+      mine.some((a) => a.id === selected && a.status === "Offered")
+    )
+      update((d) => {
+        markOfferSeen(d, selected);
+      });
+  }, [selected, !!seen, !!seen?.openedAt]);
   const [decline, setDecline] = useState(false);
   const [reason, setReason] = useState("");
   /* Today's job, or one already running whatever its date, opens in job mode:
