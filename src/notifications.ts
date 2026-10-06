@@ -10,6 +10,11 @@ import {
   uid,
   urgency,
 } from "./model";
+import {
+  customerQuoteText,
+  customerStatusText,
+  customerVisitText,
+} from "./customerText";
 
 /**
  * Where a channel would actually reach someone.
@@ -107,7 +112,9 @@ export function deliverUpdates(before: State, after: State) {
           "",
           "",
           "information",
-          `Information requested: ${r.operatorNote}`,
+          recipient === "Operator"
+            ? `Information requested: ${r.operatorNote}`
+            : `We have a question: ${r.operatorNote}`,
         );
     }
     if (old && old.customerReply !== r.customerReply && r.customerReply) {
@@ -135,7 +142,7 @@ export function deliverUpdates(before: State, after: State) {
         "",
         "",
         "request",
-        `Your request: ${r.status}`,
+        `Your request: ${customerStatusText(r.status)}`,
       );
     }
   }
@@ -158,18 +165,32 @@ export function deliverUpdates(before: State, after: State) {
       "Customer:" + r.accountId,
       ...(v.providerId === "yousef" ? [] : ["Contractor:" + v.providerId]),
     ];
-    const changes: string[] = [];
-    if (old && old.start !== v.start)
-      changes.push(`Appointment changed to ${dateLabel(v.start)}`);
+    /* Each change has the staff wording and the customer's (ADR 061). */
+    const changes: [staff: string, customer: string][] = [];
+    if (old && old.start !== v.start) {
+      const text = `Appointment changed to ${dateLabel(v.start)}`;
+      changes.push([text, text]);
+    }
     if (old?.status !== v.status)
-      changes.push(`Visit ${v.status.toLowerCase()} · ${dateLabel(v.start)}`);
+      changes.push([
+        `Visit ${v.status.toLowerCase()} · ${dateLabel(v.start)}`,
+        `Visit ${customerVisitText(v.status).toLowerCase()} · ${dateLabel(v.start)}`,
+      ]);
     if (v.execution?.onWayAt && !old?.execution?.onWayAt)
-      changes.push(
+      changes.push([
         `Provider is on the way · simulated ETA ${dateLabel(v.execution.eta || v.start)}`,
-      );
-    for (const text of changes)
+        `Your provider is on the way · arriving around ${dateLabel(v.execution.eta || v.start)}`,
+      ]);
+    for (const [staff, customer] of changes)
       for (const recipient of targets)
-        emit(recipient, r.id, v.id, "", "visit", text);
+        emit(
+          recipient,
+          r.id,
+          v.id,
+          "",
+          "visit",
+          recipient.startsWith("Customer:") ? customer : staff,
+        );
     for (const m of v.messages || []) {
       if (old?.messages?.some((x) => x.id === m.id)) continue;
       const sender = m.sender.startsWith("Customer:")
@@ -184,7 +205,8 @@ export function deliverUpdates(before: State, after: State) {
           v.id,
           "",
           "message",
-          `${sender}: ${m.text}`,
+          // The business, not its back-office role, to the customer.
+          `${recipient.startsWith("Customer:") && sender === "Operator" ? "fieldwork" : sender}: ${m.text}`,
           recipient ===
             (m.sender === "Operator" || m.sender.startsWith("Customer:")
               ? m.sender
@@ -207,7 +229,11 @@ export function deliverUpdates(before: State, after: State) {
         "",
         "",
         "quote",
-        `Quote ${q.status.toLowerCase()} · ${r.address}`,
+        recipient === "Operator"
+          ? `Quote ${q.status.toLowerCase()} · ${r.address}`
+          : q.status === "Sent"
+            ? `Your quote is ready · ${r.address}`
+            : `Quote ${customerQuoteText(q.status).toLowerCase()} · ${r.address}`,
       );
   }
   for (const p of after.payments) {
@@ -223,7 +249,13 @@ export function deliverUpdates(before: State, after: State) {
         "",
         "",
         "payment",
-        `Simulated payment ${p.status.toLowerCase()} · ${r.address}`,
+        recipient === "Operator"
+          ? `Simulated payment ${p.status.toLowerCase()} · ${r.address}`
+          : p.status === "Paid"
+            ? `Payment received · ${r.address}`
+            : p.status === "Failed"
+              ? `Your payment didn’t go through · ${r.address}`
+              : `Payment ${p.status.toLowerCase()} · ${r.address}`,
       );
   }
 }

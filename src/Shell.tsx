@@ -321,6 +321,8 @@ export function Topbar({
 export function DemoSettings({
   role,
   autoReoffer,
+  failPayment,
+  onToggleFailPayment,
   activeScenario,
   onChooseScenario,
   onToggleAutoReoffer,
@@ -329,6 +331,8 @@ export function DemoSettings({
 }: {
   role: Role;
   autoReoffer: boolean;
+  failPayment: boolean;
+  onToggleFailPayment: (on: boolean) => void;
   activeScenario: string;
   onChooseScenario: (requestId: string) => void;
   onToggleAutoReoffer: (on: boolean) => void;
@@ -383,6 +387,16 @@ export function DemoSettings({
           </p>
         </div>
       )}
+      {/* A test control, so it lives here rather than in the customer's
+          checkout, which reads as production (ADR 061). */}
+      <label className="row">
+        <input
+          type="checkbox"
+          checked={failPayment}
+          onChange={(e) => onToggleFailPayment(e.target.checked)}
+        />{" "}
+        Customer payments fail
+      </label>
       <p>
         Mock data is stored in this browser. No real payments or notifications
         are sent.

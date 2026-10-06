@@ -79,12 +79,6 @@
 .record-item .photos img {
   max-height: var(--space-30);
 }
-.assessment-foot {
-  margin-top: var(--space-6);
-  padding-top: var(--space-5);
-  border-top: 1px solid var(--line);
-}
-
 /* One decision at a time (AssessmentSteps.tsx, ADR 058). The page stays a
    document — no app chrome — but each screen holds a single question, with
    its answer under the thumb. */

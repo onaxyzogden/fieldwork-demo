@@ -308,12 +308,6 @@ export default function Assessment({
               back={at > 0 ? () => setFlowStep(at - 1) : undefined}
             />
           )}
-          <footer className="assessment-foot">
-            <p className="note">
-              Interactive prototype · this link is a demo URL, not a secured
-              private link. All data and transactions are simulated.
-            </p>
-          </footer>
         </main>
         <AssessmentPrint s={s} walkthroughId={w.id} />
       </>
@@ -449,13 +443,6 @@ export default function Assessment({
             <PropertyRecord s={s} propertyId={property.id} />
           </details>
         )}
-
-        <footer className="assessment-foot">
-          <p className="note">
-            Interactive prototype · this link is a demo URL, not a secured
-            private link. All data and transactions are simulated.
-          </p>
-        </footer>
       </main>
       <AssessmentPrint s={s} walkthroughId={w.id} />
     </>

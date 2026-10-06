@@ -7,6 +7,11 @@ import Assessment from "./Assessment";
 import PropertyRecord from "./PropertyRecord";
 import { bucket, workIssue, workStatus } from "./work";
 import { issueQuote, offerVisit, suggestPay, suggestQuote } from "./decisions";
+import {
+  customerQuoteText,
+  customerStatusText,
+  customerVisitText,
+} from "./customerText";
 import CustomerIntake from "./CustomerIntake";
 import { validAddress, dayLabel } from "./intake";
 import {
@@ -892,15 +897,7 @@ function Workspace({
      status string — "Awaiting Provider Acceptance" is jargon to the one
      person with no stake in that state machine, and it clashed with the
      plain-language note rendered right below it. Colour still keys off the
-     real status via badgeTone(); only the words change. */
-  const customerStatusText = (status: string) =>
-    ({
-      "Needs Review": "In review",
-      "Awaiting Provider Acceptance": "Matching you with a provider",
-      "Awaiting Quote Approval": "Quote ready",
-      "Awaiting Payment": "Payment due",
-      "Information requested": "Waiting on your reply",
-    })[status] || status;
+     real status via badgeTone(); only the words change (customerText.ts). */
   const customerBadge = (status: string) => (
     <span className={"badge " + badgeTone(status)}>
       {customerStatusText(status)}
@@ -928,7 +925,13 @@ function Workspace({
         <strong>
           <CalendarDays size={16} /> {dateLabel(v.start)}
         </strong>
-        {badge(workStatus(v))}
+        {role === "Customer" ? (
+          <span className={"badge " + badgeTone(workStatus(v))}>
+            {customerVisitText(workStatus(v))}
+          </span>
+        ) : (
+          badge(workStatus(v))
+        )}
       </div>
       <p>
         {providers.find((p) => p.id === v.providerId)?.name} · {v.duration} min
@@ -950,7 +953,7 @@ function Workspace({
           {v.execution?.finishedAt && (
             <p className="note">
               {workIssue(v)
-                ? "Your visit has finished. The operator will review the remaining work."
+                ? "Your visit has finished. We’ll be in touch about the remaining work."
                 : "Your visit is complete."}
             </p>
           )}
@@ -964,7 +967,7 @@ function Workspace({
               if (+new Date(v.start) - s.clock < 86400000) {
                 update(
                   (d) => log(d, "Customer requested a change within 24 hours"),
-                  "Change request sent to operator",
+                  "Change request sent. We’ll be in touch.",
                 );
                 return;
               }
@@ -981,7 +984,7 @@ function Workspace({
                 return update(
                   (d) =>
                     log(d, "Customer requested cancellation within 24 hours"),
-                  "Cancellation request sent to operator",
+                  "Cancellation request sent. We’ll be in touch.",
                 );
               setModal("Cancel booking");
             }}
@@ -1098,8 +1101,14 @@ function Workspace({
     quote ? (
       <div className="card panel quote">
         <div className="row between">
-          <span className="eyebrow">YOUR {quote.type.toUpperCase()}</span>
-          {badge(quote.status)}
+          {/* The pricing path is how the operator priced it; to the customer
+              it is a quote, or an estimate when it is a range. */}
+          <span className="eyebrow">
+            {quote.type === "Estimated range" ? "YOUR ESTIMATE" : "YOUR QUOTE"}
+          </span>
+          <span className={"badge " + badgeTone(quote.status)}>
+            {customerQuoteText(quote.status)}
+          </span>
         </div>
         <h2>
           {money(quote.amount)}
@@ -1115,10 +1124,7 @@ function Workspace({
             ? "Payment received"
             : quote.payOnCompletion
               ? "Payment due on completion"
-              : "Demo payment due after approval"}{" "}
-          · No real charge. Nothing is stored, held or moved — the payment
-          states this demo shows model a real provider's sequence without
-          contacting one.
+              : "Payment due after approval"}
         </small>
         {role === "Customer" && quote.status === "Sent" && (
           <div className="row actions">
@@ -1153,11 +1159,9 @@ function Workspace({
           ) && (
             <button
               className="primary actions"
-              onClick={() => setModal("Demo payment")}
+              onClick={() => setModal("Payment")}
             >
-              {quote.payOnCompletion
-                ? "Simulate completion & pay"
-                : "Continue to demo payment"}{" "}
+              {quote.payOnCompletion ? "Pay now" : "Continue to payment"}{" "}
               <ArrowRight size={16} />
             </button>
           )}
@@ -1165,7 +1169,11 @@ function Workspace({
           .filter((p) => p.quoteId === quote.id)
           .map((p) => (
             <p key={p.id}>
-              {badge(p.status)} <small>{p.reference}</small>
+              {badge(p.status)}{" "}
+              <small>
+                {/* Receipts taken before ADR 061 carry a "demo_" prefix. */}
+                Receipt {p.reference.replace(/^demo_/, "").toUpperCase()}
+              </small>
             </p>
           ))}
       </div>
@@ -1693,7 +1701,11 @@ function Workspace({
             <Bell size={16} />
             <button onClick={() => setModal("Notifications")}>
               {notices.find((n) => !n.read)!.text}
-              <small>View update · in-app simulation</small>
+              <small>
+                {role === "Customer"
+                  ? "View update"
+                  : "View update · in-app simulation"}
+              </small>
             </button>
           </div>
         )}
@@ -2884,8 +2896,8 @@ function Workspace({
                                 >
                                   <span className="eyebrow">
                                     {r.customerReply
-                                      ? "OPERATOR ASKED"
-                                      : "OPERATOR HAS A QUESTION"}
+                                      ? "WE ASKED"
+                                      : "WE HAVE A QUESTION"}
                                   </span>
                                   <p>{r.operatorNote}</p>
                                   {r.customerReply ? (
@@ -2901,7 +2913,7 @@ function Workspace({
                                             (x) => x.id === r.id,
                                           )!.customerReply = reply;
                                           log(d, "Customer replied: " + reply);
-                                        }, "Reply shared with Yousef")
+                                        }, "Reply sent")
                                       }
                                     />
                                   )}
@@ -2987,7 +2999,6 @@ function Workspace({
               <span className="brand-mini">fieldwork.</span> Home services,
               coordinated.
             </span>
-            <span>Local prototype · CAD · America/Toronto</span>
           </footer>
         </main>
       </div>
@@ -3020,6 +3031,8 @@ function Workspace({
               <DemoSettings
                 role={role}
                 autoReoffer={s.settings?.autoReofferDeclined || false}
+                failPayment={fail}
+                onToggleFailPayment={setFail}
                 activeScenario={active}
                 onChooseScenario={(id) => {
                   choose(id);
@@ -3088,14 +3101,13 @@ function Workspace({
                 }}
               />
             )}
-            {["Instant payment", "Demo payment"].includes(modal) && (
+            {["Instant payment", "Payment"].includes(modal) && (
               <>
-                <p>Simulated checkout · no card information or real charge.</p>
                 <div className="payment-method">
                   <Wallet />
                   <div>
-                    <strong>Demo payment method</strong>
-                    <small>Test card •••• 4242</small>
+                    <strong>Visa •••• 4242</strong>
+                    <small>Card on file</small>
                   </div>
                   <Check size={16} />
                 </div>
@@ -3110,21 +3122,13 @@ function Workspace({
                     modal === "Instant payment" ? 129 : quote?.amount || 0,
                   )}
                 </h1>
-                <label className="row">
-                  <input
-                    type="checkbox"
-                    checked={fail}
-                    onChange={(e) => setFail(e.target.checked)}
-                  />{" "}
-                  Simulate a failed payment
-                </label>
                 <button
                   className="primary full actions"
                   onClick={() => {
                     if (modal === "Instant payment") {
                       if (fail) {
                         notify(
-                          "Demo payment failed. Uncheck failure and retry.",
+                          "Your payment didn’t go through. Try again, or use another card.",
                         );
                         return;
                       }
@@ -3187,7 +3191,7 @@ function Workspace({
                           quoteId: qid,
                           status: "Paid",
                           amount: 129,
-                          reference: "demo_" + uid(),
+                          reference: uid(),
                         });
                         log(
                           d,
@@ -3217,7 +3221,7 @@ function Workspace({
                             quoteId: quote.id,
                             status: fail ? "Failed" : "Paid",
                             amount: quote.amount,
-                            reference: "demo_" + uid(),
+                            reference: uid(),
                           });
                           log(
                             d,
@@ -3227,8 +3231,8 @@ function Workspace({
                           );
                         },
                         fail
-                          ? "Payment failed; retry available"
-                          : "Demo payment successful",
+                          ? "Your payment didn’t go through. Try again, or use another card."
+                          : "Payment received. Thank you.",
                       );
                       if (fail) return;
                     }
@@ -3236,7 +3240,11 @@ function Workspace({
                     setModal("");
                   }}
                 >
-                  Simulate payment <ArrowRight size={16} />
+                  Pay{" "}
+                  {money(
+                    modal === "Instant payment" ? 129 : quote?.amount || 0,
+                  )}{" "}
+                  <ArrowRight size={16} />
                 </button>
               </>
             )}
@@ -3424,8 +3432,8 @@ function Workspace({
             {modal === "Cancel booking" && (
               <>
                 <p>
-                  Cancel this request and all its visits? Any paid demo
-                  transactions will be marked refunded.
+                  Cancel this request and all its visits? Any payment will be
+                  refunded.
                 </p>
                 <button
                   className="primary full"

@@ -520,3 +520,42 @@ ADR 060.
 - **Sweeps:** the narrow-layout probes are unchanged at 0 / 30 / 14 / 0, the
   tab-width and shrink-wrap probes are at 0, and the console crawl is clean.
   Chromium only, per ADR 052.
+
+# Customer view reads as production — 2026-10-06
+
+ADR 061.
+
+- **Tests:**
+  - Three new tests in `channels.test.ts` cover the customer's notices for a
+    booking, a quote, a payment received and failed, a message from the
+    business and a question, each beside the operator's unchanged wording.
+  - Eight customer-wording branches were broken on purpose, and each break
+    fails a test.
+  - `status:check` now reads all four customer maps from `customerText.ts`.
+    Removing a label's dictionary row fails it.
+- **Browser crawl of the customer view:** 390px and 1280px in both themes,
+  45 screens each, with no console errors. It covers:
+  - every account, in the seed state and after the operator's queue sends
+    quotes;
+  - each request expanded, and the inbox and the new-notice popup;
+  - approving a quote, then checkout with Demo settings' "Customer payments
+    fail" on, then paying for real;
+  - sending a message;
+  - a visit on the way, and one finished with an unresolved task;
+  - New request;
+  - both sent guest assessments.
+
+  No visible text outside the banner and the "Viewing as" switcher matches
+  `demo`, `simulat`, `prototype`, `test card`, `manual quote`, `in-app`,
+  `integration` or `operator`. None of the raw statuses `Proposed`, `Sent`,
+  `On the Way`, `In Progress`, `Converted` or `Awaiting …` appears either,
+  apart from a chat bubble's own "· Sent".
+
+- **Staff views:** the operator's inbox keeps its note, delivery rows and
+  "Quote sent · …", and its popup keeps "in-app simulation".
+- **Repo checks:** 443 tests, the build, `design:check`, `catalogue:check`
+  and `status:check` pass. New files are prettier-clean, and touched files
+  carry no new drift beyond the dictionary's existing table style.
+- **Sweeps:** the narrow-layout probes are unchanged at 0 / 30 / 14 / 0, the
+  tab-width and shrink-wrap probes are at 0, and the console crawl is clean.
+  Chromium only, per ADR 052.

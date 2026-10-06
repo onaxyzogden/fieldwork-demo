@@ -49,7 +49,17 @@ const DERIVED = {
 /** Two lists that are part of the vocabulary without being a `status` field. */
 const LISTS = [
   ["work.ts", /export const outcomes = \[([\s\S]*?)\]/, "outcomes"],
-  ["main.tsx", /customerStatusText = \(status: string\) =>\s*\(\{([\s\S]*?)\}\)/, "customerStatusText"],
+  // The customer's words for a request, quote, visit and assessment (ADR 061).
+  ...[
+    "customerStatusText",
+    "customerQuoteText",
+    "customerVisitText",
+    "customerAssessmentText",
+  ].map((fn) => [
+    "customerText.ts",
+    new RegExp(fn + String.raw` = \(status: string\) =>\s*\(\{([\s\S]*?)\}\)`),
+    fn,
+  ]),
 ];
 
 function block(text, from) {
