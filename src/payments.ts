@@ -64,6 +64,38 @@ export function forgetPaymentMethod(s: State, accountId: string) {
 }
 
 /**
+ * Pay an approved quote with the card on file — the customer's checkout and
+ * their queue both call this (ADR 062). `fail` is Demo settings' "Customer
+ * payments fail": the attempt is recorded, nothing is stored, and it returns
+ * false so the screen can say so.
+ */
+export function payQuote(s: State, quoteId: string, fail = false) {
+  const q = s.quotes.find((x) => x.id === quoteId);
+  const r = q && s.requests.find((x) => x.id === q.requestId);
+  if (!q || !r || q.status !== "Approved") return false;
+  if (s.payments.some((p) => p.quoteId === q.id && p.status === "Paid"))
+    return false;
+  /* Store the method as well as taking the payment. The decided sequence
+     turns on a method being on file — it is what lets a visit be confirmed
+     before money moves — and the shortcut below would leave that half of
+     the model unreachable. */
+  if (!fail)
+    storePaymentMethod(s, r.accountId, { brand: "Visa", last4: "4242" });
+  s.payments.push({
+    id: uid(),
+    quoteId: q.id,
+    status: fail ? "Failed" : "Paid",
+    amount: q.amount,
+    reference: uid(),
+  });
+  log(
+    s,
+    fail ? "Demo payment failed" : "Demo payment received · receipt issued",
+  );
+  return !fail;
+}
+
+/**
  * When the authorization for a visit should be placed.
  *
  * Inside the window, at confirmation. Beyond it, a fixed lead before service,
