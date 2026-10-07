@@ -91,14 +91,15 @@ it returns early rather than recomputing them (`model.ts`).
 ## Task
 
 Stored on `Task.status`, recomputed by `reconcile()` from the visit's per-task
-outcomes. Three values, lower-cased for two of them because they describe
+outcomes. Four values, lower-cased for two of them because they describe
 where the task sits rather than naming a lifecycle stage.
 
 | Status | Condition |
 |---|---|
 | `Completed` | The visit's execution records outcome `Completed` for this task |
-| `assigned to visit` | On a live visit, not yet completed |
-| `unassigned` | Not on any live visit |
+| `Not done` | A finished visit left it undone and the operator closed it (ADR 065) |
+| `assigned to visit` | On a live visit that has not finished |
+| `unassigned` | Not on any unfinished visit — including a task a finished visit left undone, until a return visit holds it |
 
 Both audits propose a longer task lifecycle — `Open`, `Needs Clarification`,
 `In Progress`, `Needs Return Visit`, `Unable to Complete`. Those are not task
@@ -135,6 +136,18 @@ stored state machine, because it records what a *person* did and when.
 | `Declined` | contractor | May trigger a reoffer when the operator has enabled it |
 | `Expired` | `reconcile()` | `expiresAt <= clock`; does **not** auto-reoffer |
 | `Reassigned` | operator | Superseded by a new offer |
+
+## Charge
+
+Stored on `Charge.status` (ADR 065): an additional charge for a return visit
+whose scope changed, which the customer approves and pays before the return
+visit is offered.
+
+| Status | Set by | Notes |
+|---|---|---|
+| `Sent` | `requestExtraCharge()` | With the customer; the request waits on them |
+| `Approved` | `approveCharge()` | Paid; the return visit is booked, or goes back to the operator if its time has gone |
+| `Declined` | `declineCharge()` | Back to the operator, to close the task or come back at no charge |
 
 ## Quote
 

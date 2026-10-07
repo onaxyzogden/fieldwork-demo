@@ -14,6 +14,7 @@ export type CustomerTodo =
   | { key: string; kind: "quote"; requestId: string; quoteId: string }
   | { key: string; kind: "pay"; requestId: string; quoteId: string }
   | { key: string; kind: "question"; requestId: string }
+  | { key: string; kind: "charge"; requestId: string; chargeId: string }
   | { key: string; kind: "assessment"; walkthroughId: string };
 
 const liveQuote = (s: State, requestId: string) =>
@@ -32,6 +33,12 @@ function requestTodo(s: State, requestId: string): CustomerTodo | null {
   if (!r) return null;
   if (r.operatorNote && !r.customerReply)
     return { key: requestId, kind: "question", requestId };
+  /* An additional charge (ADR 065): the return visit waits on it. */
+  const charge = s.charges?.find(
+    (c) => c.requestId === requestId && c.status === "Sent",
+  );
+  if (charge)
+    return { key: requestId, kind: "charge", requestId, chargeId: charge.id };
   if (r.status === "Awaiting Quote Approval" && q)
     return { key: requestId, kind: "quote", requestId, quoteId: q.id };
   if (r.status === "Awaiting Payment" && q)

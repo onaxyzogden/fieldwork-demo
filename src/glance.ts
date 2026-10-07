@@ -177,9 +177,16 @@ export function customerGlance(
      status alone would leave it uncounted (ADR 062). */
   const asked = (r: (typeof live)[number]) =>
     !!r.operatorNote && !r.customerReply;
+  /* An additional charge for a return visit is theirs to answer whatever
+     the request's own status says (ADR 065). */
+  const charged = (id: string) =>
+    (s.charges ?? []).some((c) => c.requestId === id && c.status === "Sent");
   const waitingIds = live
     .filter(
-      (r) => (WAITING_ON_CUSTOMER.has(r.status) && !declined(r.id)) || asked(r),
+      (r) =>
+        (WAITING_ON_CUSTOMER.has(r.status) && !declined(r.id)) ||
+        asked(r) ||
+        charged(r.id),
     )
     .map((r) => r.id);
   const scheduled = new Set(visits.map((v) => v.requestId));

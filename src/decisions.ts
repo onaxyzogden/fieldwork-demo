@@ -12,6 +12,8 @@
  * quote" on the page cannot drift into two behaviours.
  */
 import {
+  type Charge,
+  type ReturnPlan,
   type State,
   type Task,
   type Visit,
@@ -21,13 +23,21 @@ import {
   methodFor,
   money,
   providers,
+  sentence,
+  timeLabel,
   uid,
 } from "./model";
 import { dispatchStatus, replacementOptions } from "./dispatch";
 import { refundPayment } from "./payments";
 import { suggestTitle } from "./pmw";
 import { suitableProviders } from "./suitability";
-import { bucket, callBackDue, feeUndecided, workIssue } from "./work";
+import {
+  bucket,
+  callBackDue,
+  feeUndecided,
+  unresolved,
+  workIssue,
+} from "./work";
 
 /** A slot, a provider and what they would be paid for it. */
 export type Offer = {
@@ -42,7 +52,21 @@ export type Decision =
   | { kind: "late-cancel"; fee: number; held: number }
   /** A customer who could not change a visit themselves, waiting on a call. */
   | { kind: "call-back"; visitId: string; by: string }
-  | { kind: "follow-up"; visitId: string; issue: string }
+  | {
+      kind: "follow-up";
+      visitId: string;
+      issue: string;
+      /** What the visits left undone (ADR 065). Empty for a late arrival. */
+      tasks: Unfinished[];
+      /** A late arrival the customer has not been told about: when. */
+      eta?: string;
+      /** The return visit for the tasks suggested back, if anyone is free. */
+      offer?: Offer;
+      self?: Offer;
+      /** The last charge on these tasks, if it came back: paid but its time
+       *  had gone, or declined. */
+      charge?: { id: string; amount: number; status: string };
+    }
   | {
       kind: "reassign";
       visitId: string;
@@ -90,6 +114,18 @@ export function suggestPay(providerId: string, duration: number) {
 const requestTasks = (s: State, requestId: string) =>
   s.tasks.filter((t) => t.requestId === requestId && !t.mergedInto);
 
+/** One task a visit could not finish, as the follow-up shows it (ADR 065). */
+export type Unfinished = {
+  taskId: string;
+  visitId: string;
+  outcome: string;
+  note: string;
+  /** Close what the customer declined; bring everything else back. */
+  action: "return" | "close";
+  /** Its share of what was paid: the refund suggested if it is closed. */
+  refund: number;
+};
+
 export function nextDecision(s: State, requestId: string): Decision | null {
   const r = s.requests.find((x) => x.id === requestId);
   if (!r) return null;
@@ -116,13 +152,44 @@ export function nextDecision(s: State, requestId: string): Decision | null {
   /* First, because the card cannot show it: a confirmed job that is late or
      came back unresolved has nothing to press, but it is still the operator's
      to look at. */
-  const troubled = live.find((v) => workIssue(v));
-  if (troubled)
+  /* Unfinished work before a late arrival: it is the one with money and a
+     second trip in it. */
+  const troubled =
+    live.find((v) => unresolved(v).length) ?? live.find((v) => workIssue(v));
+  if (troubled) {
+    const tasks = unfinished(s, r.id);
+    const back = tasks.filter((t) => t.action === "return");
+    const charge = (s.charges ?? [])
+      .filter(
+        (c) =>
+          c.requestId === r.id &&
+          c.taskIds.some((id) => tasks.some((t) => t.taskId === id)) &&
+          (c.status === "Declined" || (c.status === "Approved" && !c.visitId)),
+      )
+      .at(-1);
     return {
       kind: "follow-up",
       visitId: troubled.id,
       issue: workIssue(troubled),
+      tasks,
+      ...(tasks.length
+        ? returnOptions(
+            s,
+            r.id,
+            (back.length ? back : tasks).map((t) => t.taskId),
+          )
+        : { eta: troubled.execution?.eta }),
+      ...(charge
+        ? {
+            charge: {
+              id: charge.id,
+              amount: charge.amount,
+              status: charge.status,
+            },
+          }
+        : {}),
     };
+  }
   /* Mirrors the card's "Confirmed" state. Unreachable today — a confirmed
      request has every task reviewed, assigned and accepted and its quote
      approved, so the checks below return null for it anyway, and removing
@@ -325,6 +392,8 @@ export function offerVisit(
     duration: number;
     pay: number;
     opKey: string;
+    /** A return visit (ADR 065): any pay from $0, set by the reason. */
+    returning?: boolean;
   },
 ): Visit | null {
   const r = s.requests.find((x) => x.id === o.requestId);
@@ -332,7 +401,8 @@ export function offerVisit(
   const self = o.providerId === "yousef";
   if (
     !self &&
-    (!Number.isFinite(o.pay) || o.pay < suggestPay(o.providerId, o.duration))
+    (!Number.isFinite(o.pay) ||
+      o.pay < (o.returning ? 0 : suggestPay(o.providerId, o.duration)))
   )
     return null;
   const booked = bookVisit(s, {
@@ -623,5 +693,388 @@ export function rescheduleVisit(
   const r = s.requests.find((x) => x.id === v.requestId);
   if (r && callBackDue(r) && r.callBack!.visitId === v.id)
     r.callBack!.done = true;
+  return true;
+}
+
+/* ── Follow-ups (ADR 065) ────────────────────────────────────────────────── */
+
+/** "Unable to complete" is finishing work already paid for; anything else
+ *  is a second trip the contractor is paid for. */
+const UNPAID_RETURN = new Set(["Unable to complete"]);
+
+/** What the request's paid payments still hold, the most a refund can be.
+ *  The work's own payments only: not a late fee or an additional charge. */
+const refundable = (s: State, requestId: string) =>
+  s.payments
+    .filter(
+      (p) =>
+        ["Paid", "Partially Refunded"].includes(p.status) &&
+        !p.fee &&
+        !p.chargeId &&
+        s.quotes.some((q) => q.id === p.quoteId && q.requestId === requestId),
+    )
+    .map((p) => ({ p, left: p.amount - (p.refunded ?? 0) }));
+
+/** A task's share of the quote by its estimated time, to the dollar, and no
+ *  more than is left to refund. */
+export function refundShare(s: State, taskId: string) {
+  const t = s.tasks.find((x) => x.id === taskId);
+  if (!t) return 0;
+  const quote = liveQuote(s, t.requestId);
+  const all = requestTasks(s, t.requestId);
+  const minutes = all.reduce((n, x) => n + x.duration, 0);
+  const share = quote && minutes ? (quote.amount * t.duration) / minutes : 0;
+  return Math.round(Math.min(share, refundLeft(s, t.requestId)));
+}
+
+/** The most the work's payments can still give back. */
+export const refundLeft = (s: State, requestId: string) =>
+  refundable(s, requestId).reduce((n, x) => n + x.left, 0);
+
+/** Every task a finished visit on the request left undone and nobody has
+ *  decided about, with what the follow-up suggests for it. */
+export function unfinished(s: State, requestId: string): Unfinished[] {
+  return s.visits
+    .filter((v) => v.requestId === requestId && v.status !== "Cancelled")
+    .flatMap((v) =>
+      unresolved(v).map((taskId) => {
+        const o = v.execution!.outcomes[taskId];
+        return {
+          taskId,
+          visitId: v.id,
+          outcome: o.outcome,
+          note: o.note,
+          action: o.outcome === "Customer declined" ? "close" : "return",
+          refund: refundShare(s, taskId),
+        } as Unfinished;
+      }),
+    );
+}
+
+/** What a contractor is offered to come back for these tasks: their rate for
+ *  the ones that need a second trip, nothing for finishing what they could
+ *  not. The operator doing it themselves is paid nothing either way. */
+export function returnPay(s: State, providerId: string, taskIds: string[]) {
+  const minutes = taskIds
+    .filter((id) => {
+      const o = s.visits
+        .map((v) =>
+          v.execution?.finishedAt ? v.execution.outcomes[id] : undefined,
+        )
+        .filter(Boolean)
+        .at(-1);
+      return !UNPAID_RETURN.has(o?.outcome ?? "");
+    })
+    .reduce(
+      (n, id) => n + (s.tasks.find((t) => t.id === id)?.duration ?? 0),
+      0,
+    );
+  /* No minutes is no pay: suggestPay of nothing is $0. */
+  return suggestPay(providerId, minutes);
+}
+
+/**
+ * Who could come back for these tasks, and when: the contractor who was there
+ * first if they are free, else the first other contractor who can do them,
+ * and the operator themselves.
+ */
+export function returnOptions(
+  s: State,
+  requestId: string,
+  taskIds: string[],
+): { offer?: Offer; self?: Offer } {
+  const r = s.requests.find((x) => x.id === requestId);
+  const tasks = s.tasks.filter((t) => taskIds.includes(t.id));
+  /* No tasks needs no time, and no time gets no slot, so an empty list
+     comes back empty without a check of its own. */
+  if (!r) return {};
+  const first = s.visits
+    .filter((v) => v.requestId === r.id && v.execution?.finishedAt)
+    .find((v) => v.taskIds.some((id) => taskIds.includes(id)))?.providerId;
+  const free = (self: boolean) =>
+    suitableProviders(s, tasks, r.city, r.timing, self).filter(
+      (c) => c.appointments.length,
+    );
+  const others = free(false);
+  const pick = others.find((c) => c.provider.id === first) ?? others[0];
+  const mine = free(true)[0];
+  const as = (c: (typeof others)[number]): Offer => ({
+    providerId: c.provider.id,
+    start: c.appointments[0].start,
+    travel: c.appointments[0].travel,
+    pay: returnPay(s, c.provider.id, taskIds),
+  });
+  return {
+    ...(pick ? { offer: as(pick) } : {}),
+    ...(mine ? { self: as(mine) } : {}),
+  };
+}
+
+/** The undecided outcome for a task, or the one waiting on `chargeId`. */
+const openOutcome = (s: State, taskId: string, chargeId?: string) =>
+  s.visits
+    .filter((v) => v.execution?.finishedAt && v.status !== "Cancelled")
+    .map((v) => v.execution!.outcomes[taskId])
+    .find(
+      (o) =>
+        o &&
+        o.outcome !== "Completed" &&
+        (!o.resolution ||
+          (!!chargeId &&
+            o.resolution.kind === "Return visit" &&
+            o.resolution.chargeId === chargeId &&
+            !o.resolution.visitId)),
+    );
+
+/**
+ * Book the return visit for unfinished tasks and resolve them. The offer goes
+ * through offerVisit like any other, at any pay from $0. With `chargeId`, the
+ * tasks are the ones a paid charge was waiting on.
+ */
+export function bookReturnVisit(
+  s: State,
+  requestId: string,
+  taskIds: string[],
+  o: Offer & { opKey: string },
+  chargeId?: string,
+) {
+  const outcomes = taskIds.map((id) => openOutcome(s, id, chargeId));
+  /* An empty list books nothing: bookVisit refuses a visit under 15
+     minutes. */
+  if (outcomes.some((x) => !x)) return null;
+  const duration = taskIds.reduce(
+    (n, id) => n + (s.tasks.find((t) => t.id === id)?.duration ?? 0),
+    0,
+  );
+  const booked = offerVisit(s, {
+    requestId,
+    taskIds,
+    providerId: o.providerId,
+    start: o.start,
+    travel: o.travel,
+    duration,
+    pay: o.pay,
+    opKey: o.opKey,
+    returning: true,
+  });
+  if (!booked) return null;
+  const at = new Date(s.clock).toISOString();
+  for (const x of outcomes)
+    x!.resolution = {
+      kind: "Return visit",
+      at,
+      visitId: booked.id,
+      ...(chargeId ? { chargeId } : {}),
+    };
+  const charge = s.charges?.find((c) => c.id === chargeId);
+  if (charge) charge.visitId = booked.id;
+  log(
+    s,
+    `Return visit booked · ${taskIds.length} task${taskIds.length === 1 ? "" : "s"}`,
+    {
+      actor: "Operator",
+      requestId,
+      entity: "visit",
+      entityId: booked.id,
+      field: "returnFor",
+      to: taskIds.join(", "),
+    },
+  );
+  return booked;
+}
+
+/**
+ * Send the customer an additional charge for a return visit whose scope
+ * changed. The tasks count as heading for a return visit from now, so the
+ * follow-up leaves the operator's list while the customer decides.
+ */
+export function requestExtraCharge(
+  s: State,
+  requestId: string,
+  c: { amount: number; reason: string; taskIds: string[]; plan: ReturnPlan },
+) {
+  const outcomes = c.taskIds.map((id) => openOutcome(s, id));
+  if (
+    !c.taskIds.length ||
+    outcomes.some((x) => !x) ||
+    !Number.isFinite(c.amount) ||
+    c.amount < 1 ||
+    !c.reason.trim()
+  )
+    return null;
+  const at = new Date(s.clock).toISOString();
+  const charge: Charge = {
+    id: uid(),
+    requestId,
+    amount: Math.round(c.amount * 100) / 100,
+    reason: c.reason.trim(),
+    taskIds: c.taskIds,
+    status: "Sent",
+    plan: c.plan,
+    sentAt: at,
+  };
+  (s.charges ??= []).push(charge);
+  for (const x of outcomes)
+    x!.resolution = { kind: "Return visit", at, chargeId: charge.id };
+  log(
+    s,
+    `Additional charge sent · ${money(charge.amount)} · ${charge.reason}`,
+    {
+      actor: "Operator",
+      requestId,
+      entity: "charge",
+      entityId: charge.id,
+      field: "status",
+      to: "Sent",
+    },
+  );
+  return charge;
+}
+
+/** Undo the "heading for a return visit" a charge put on its tasks. */
+const release = (s: State, charge: Charge) => {
+  for (const id of charge.taskIds) {
+    const o = openOutcome(s, id, charge.id);
+    if (o?.resolution) delete o.resolution;
+  }
+};
+
+/**
+ * The customer approves and pays an additional charge; the return visit it
+ * pays for is then offered. Payment goes through the same simulated checkout
+ * as a quote (`fail` is Demo settings' "Customer payments fail"). If the time
+ * has gone meanwhile, the paid tasks go back to the operator to book.
+ */
+export function approveCharge(s: State, chargeId: string, fail = false) {
+  const c = s.charges?.find((x) => x.id === chargeId);
+  const quote = c && liveQuote(s, c.requestId);
+  if (!c || c.status !== "Sent" || !quote) return false;
+  if (fail) {
+    s.payments.push({
+      id: uid(),
+      quoteId: quote.id,
+      chargeId: c.id,
+      status: "Failed",
+      amount: c.amount,
+      reference: uid(),
+    });
+    log(s, "Demo payment failed");
+    return false;
+  }
+  s.payments.push({
+    id: uid(),
+    quoteId: quote.id,
+    chargeId: c.id,
+    status: "Paid",
+    amount: c.amount,
+    reference: uid(),
+    capturedAt: new Date(s.clock).toISOString(),
+  });
+  c.status = "Approved";
+  log(s, `Additional charge approved and paid · ${money(c.amount)}`, {
+    actor: "Customer",
+    requestId: c.requestId,
+    entity: "charge",
+    entityId: c.id,
+    field: "status",
+    from: "Sent",
+    to: "Approved",
+  });
+  const booked = bookReturnVisit(
+    s,
+    c.requestId,
+    c.taskIds,
+    { ...c.plan, opKey: "charge-" + c.id },
+    c.id,
+  );
+  if (!booked) release(s, c);
+  return true;
+}
+
+/** The customer declines an additional charge: back to the operator. */
+export function declineCharge(s: State, chargeId: string) {
+  const c = s.charges?.find((x) => x.id === chargeId);
+  if (!c || c.status !== "Sent") return false;
+  c.status = "Declined";
+  release(s, c);
+  log(s, `Additional charge declined · ${money(c.amount)}`, {
+    actor: "Customer",
+    requestId: c.requestId,
+    entity: "charge",
+    entityId: c.id,
+    field: "status",
+    from: "Sent",
+    to: "Declined",
+  });
+  return true;
+}
+
+/**
+ * Close an unfinished task as not done, refunding `refund` from what was
+ * paid for the work (0 refunds nothing). Never more than is left to refund.
+ */
+export function closeTask(s: State, taskId: string, refund: number) {
+  const t = s.tasks.find((x) => x.id === taskId);
+  const o = openOutcome(s, taskId);
+  if (!t || !o || !Number.isFinite(refund) || refund < 0) return false;
+  const pots = refundable(s, t.requestId);
+  if (refund > refundLeft(s, t.requestId)) return false;
+  let owed = Math.round(refund * 100) / 100;
+  for (const { p, left } of pots) {
+    const give = Math.min(owed, left);
+    /* A payment with nothing to give back is skipped by refundPayment, which
+       refuses a zero refund. */
+    refundPayment(s, p.id, give);
+    owed -= give;
+  }
+  o.resolution = {
+    kind: "Closed",
+    at: new Date(s.clock).toISOString(),
+    refund,
+  };
+  log(
+    s,
+    `Task closed as not done · ${t.summary}${refund ? ` · ${money(refund)} refunded` : ""}`,
+    {
+      actor: "Operator",
+      requestId: t.requestId,
+      entity: "task",
+      entityId: t.id,
+      field: "status",
+      to: "Not done",
+    },
+  );
+  return true;
+}
+
+/**
+ * Tell the customer their contractor is running late, in the visit's own
+ * conversation, and take the late arrival off the operator's list.
+ */
+export function tellCustomerLate(s: State, visitId: string) {
+  const v = s.visits.find((x) => x.id === visitId);
+  const x = v?.execution;
+  /* Once told, the visit is no longer a work issue, so telling twice is
+     refused here too. */
+  if (!v || !x?.eta || !workIssue(v)) return false;
+  const name =
+    providers.find((p) => p.id === v.providerId)?.name || "Your provider";
+  (v.messages ??= []).push({
+    id: uid(),
+    sender: "Operator",
+    text: sentence(
+      `Running a little late: ${name} is arriving around ${timeLabel(x.eta)}`,
+    ),
+    at: new Date(s.clock).toISOString(),
+  });
+  x.lateToldAt = new Date(s.clock).toISOString();
+  log(s, "Customer told about the late arrival", {
+    actor: "Operator",
+    requestId: v.requestId,
+    entity: "visit",
+    entityId: v.id,
+    field: "lateToldAt",
+    to: x.lateToldAt,
+  });
   return true;
 }

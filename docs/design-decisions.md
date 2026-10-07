@@ -1399,3 +1399,90 @@ smallest change on the same hue that passes on every surface. The dark value
 also passes on raised surfaces, where it measured 3.9:1. The upcoming step
 is muted by that colour instead of opacity. That is the one component rule
 changed; the plan expected tokens only.
+
+## ADR 065: Follow-ups are solved, not just flagged
+
+Accepted. The first half of the third UI/UX batch. Distance on offers,
+visit-day banners and notification links follow as ADR 066.
+
+**Before this, a follow-up could not be cleared.**
+
+- A visit that finished with a task not `Completed` kept `workIssue()` true
+  forever, so the request stayed in Needs attention with only "Open request".
+- The request page had no action for it either.
+- The unfinished task counted as "assigned to visit", because the finished
+  visit still listed it, so it could not even be booked again.
+- A late arrival cleared only when the job started.
+
+**Each unfinished task now gets a decision.** Its outcome records a
+`resolution`:
+
+- **Return visit**, when it is booked or sent to the customer as a charge;
+- **Closed**, with the refund given, possibly $0.
+
+`unresolved()` lists the outcomes still undecided, and `workIssue()` counts
+only those. `reconcile()` gives a closed task the new status `Not done`.
+`assigned to visit` now means an unfinished visit. A request completes when
+every task is `Completed` or `Not done`.
+
+**One screen, in two places.** `FollowUp.tsx` is the same component in the
+operator's queue and on the request page's decision card. For each task it
+offers **Return visit** or **Close as not done**:
+
+- "Customer declined" defaults to Close; every other outcome to Return.
+- **Close** suggests the task's share of the quote by estimated minutes,
+  capped at what is left to refund (`refundShare`, `refundLeft`). It is
+  editable, $0 is allowed, and a refund over what is left is refused inline.
+- **Return** suggests the contractor who went first if they are free, then the
+  first other contractor who can do the tasks, and the operator themselves
+  (`returnOptions`).
+  - **Pay** is suggested by reason (`returnPay`): the contractor's rate for
+    "Needs return visit" and "Materials required", $0 for "Unable to
+    complete". It is always editable.
+  - `offerVisit()` accepts pay below the contractor's rate, down to $0, only
+    when `returning` is set; every other offer keeps the floor.
+  - **"Scope changed: charge the customer"** asks for an amount and a reason.
+
+**An additional charge is approved and paid first.**
+
+- `requestExtraCharge()` creates a `Charge` (`Sent`) carrying the planned
+  return visit. The tasks count as heading for a return visit, so the request
+  waits on the customer (the Waiting bucket, "Waiting on approval" on Home).
+- The customer sees an "Additional charge" panel on the booking and a screen
+  in their one-at-a-time queue, which counts it as waiting on them.
+- `approveCharge()` takes the payment (Demo settings' "Customer payments
+  fail" applies) and books the planned visit. If that time has gone, the
+  tasks return to the operator with the charge already paid.
+- `declineCharge()` hands the tasks back to the operator, who can close them
+  or come back at no charge.
+
+A charge is its own record rather than a second live quote. "The live quote"
+is looked up throughout the app as the one quote not superseded, and a second
+one would have changed every one of those answers. Its payment is an ordinary
+`Payment` on the quote with `chargeId`, as ADR 064's fee used `fee: true`.
+`workPayment()` keeps both out of "has the quote been paid?". Without it, a
+paid charge would have hidden "Pay now" for the work itself on a
+pay-on-completion quote, and payQuote would have refused it.
+
+**A late arrival is told, then cleared.** `tellCustomerLate()` posts "Running
+a little late: Nina Patel is arriving around 11:20 a.m." in the visit's
+conversation, as the operator, and records `lateToldAt`. The job is still
+late, but nothing is left for the operator to do.
+
+**Who is told what.**
+
+- **The customer** is told:
+  - when a charge is waiting for them;
+  - when a task is closed, and what was refunded;
+  - what a finished visit means: "A return visit is booked for the rest. One
+    task won't be done, and $164 was refunded."
+- **The operator** is told when a charge is approved or declined.
+- **Home rows** read "Unfinished work · 2 tasks left undone · return or
+  close", then "Waiting on approval · $45 additional charge · …".
+
+**Smaller fixes.**
+
+- `sentence()` ends a sentence once. A time already ends in "a.m.", so the
+  late message, the follow-up summary and ADR 064's call-back message all
+  ended in "a.m..".
+- Unfinished work is chosen before a late arrival on the same request.

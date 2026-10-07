@@ -134,15 +134,35 @@ export type Hold = {
 };
 /** How long a slot is held while someone finishes booking it. */
 export const HOLD_MS = 10 * 60 * 1000;
+/**
+ * What the operator did about a task the contractor could not finish
+ * (ADR 065). Absent while it is still the operator's to decide.
+ *
+ * A return visit is recorded the moment it is asked for — booked, or sent to
+ * the customer as an extra charge (`chargeId`) — so the follow-up leaves the
+ * operator's list; it is removed again if the charge is declined or its time
+ * has gone. A closed task records what was refunded for it, possibly 0.
+ */
+export type Resolution =
+  | { kind: "Return visit"; at: string; visitId?: string; chargeId?: string }
+  | { kind: "Closed"; at: string; refund: number };
 export type Visit = {
   execution?: {
     onWayAt?: string;
     eta?: string;
     startedAt?: string;
     finishedAt?: string;
+    /** The customer was told about a late arrival (ADR 065). */
+    lateToldAt?: string;
     outcomes: Record<
       string,
-      { outcome: string; note: string; before: string[]; after: string[] }
+      {
+        outcome: string;
+        note: string;
+        before: string[];
+        after: string[];
+        resolution?: Resolution;
+      }
     >;
   };
   messages?: { id: string; sender: string; text: string; at: string }[];
@@ -217,6 +237,34 @@ export type Payment = {
   refunded?: number;
   /** A late-cancellation fee charged on its own (ADR 064), not the work. */
   fee?: boolean;
+  /** The additional charge this pays (ADR 065), not the original quote. */
+  chargeId?: string;
+};
+/** The return visit an additional charge pays for, booked on approval. */
+export type ReturnPlan = {
+  providerId: string;
+  start: string;
+  travel: number;
+  duration: number;
+  pay: number;
+};
+/**
+ * An additional charge for a return visit whose scope changed (ADR 065): the
+ * customer approves and pays it before the return visit is offered. A
+ * separate record rather than a second live quote, because "the live quote"
+ * is looked up as the one quote not superseded all through the app.
+ */
+export type Charge = {
+  id: string;
+  requestId: string;
+  amount: number;
+  reason: string;
+  taskIds: string[];
+  status: string;
+  plan: ReturnPlan;
+  sentAt: string;
+  /** The return visit booked once it was paid, if one was. */
+  visitId?: string;
 };
 /**
  * A stored payment method.
@@ -391,6 +439,8 @@ export type State = {
   clock: number;
   /** Slots being taken right now. Backfilled by `migrateDispatch()`. */
   holds?: Hold[];
+  /** Additional charges (ADR 065). Backfilled by `migrateDispatch()`. */
+  charges?: Charge[];
   /** Tokenized payment methods. Backfilled by `migrateDispatch()`. */
   paymentMethods?: PaymentMethod[];
   /**
@@ -986,6 +1036,9 @@ export const dateLabel = (s: string) =>
     hour: "numeric",
     minute: "2-digit",
   });
+/** End a sentence once: a time already ends in "a.m." or "p.m.". */
+export const sentence = (text: string) =>
+  text.endsWith(".") ? text : text + ".";
 /** The time of day alone, "6:15 p.m.", for something due within hours. */
 export const timeLabel = (s: string) =>
   new Date(s).toLocaleTimeString("en-CA", {
@@ -1450,6 +1503,12 @@ export const secured = (s: State, q: Quote) =>
   ) ||
   !!methodFor(s, q);
 /**
+ * A payment for the quote's own work. A late-cancellation fee (ADR 064) and
+ * an additional charge (ADR 065) are recorded against the quote too, so
+ * "has the quote been paid?" must not count them.
+ */
+export const workPayment = (p: Payment) => !p.fee && !p.chargeId;
+/**
  * Every kind of notification this app emits.
  *
  * A union rather than a loose string so `urgency` below must cover all of
@@ -1560,21 +1619,26 @@ export function reconcile(s: State) {
       if (!["In Progress", "Completed"].includes(v.status))
         v.status = ready ? "Confirmed" : "Proposed";
     for (const t of tasks) {
-      const completed = vs.some(
-        (v) =>
-          v.execution?.finishedAt &&
-          v.execution.outcomes[t.id]?.outcome === "Completed",
-      );
+      const done = (v: Visit) =>
+        v.execution?.finishedAt ? v.execution.outcomes[t.id] : undefined;
+      const completed = vs.some((v) => done(v)?.outcome === "Completed");
+      /* Closed by the operator after a visit could not finish it (ADR 065):
+         finished with, but not done, so neither Completed nor waiting. */
+      const closed = vs.some((v) => done(v)?.resolution?.kind === "Closed");
+      /* A finished visit no longer holds a task it did not finish: the task
+         waits for a return visit, which is the visit that holds it next. */
       t.status = completed
         ? "Completed"
-        : vs.some((v) => v.taskIds.includes(t.id))
-          ? "assigned to visit"
-          : "unassigned";
+        : closed
+          ? "Not done"
+          : vs.some((v) => v.taskIds.includes(t.id) && !v.execution?.finishedAt)
+            ? "assigned to visit"
+            : "unassigned";
     }
     if (
       vs.length &&
       vs.every((v) => v.status === "Completed") &&
-      tasks.every((t) => t.status === "Completed")
+      tasks.every((t) => ["Completed", "Not done"].includes(t.status!))
     )
       r.status = "Completed";
   }

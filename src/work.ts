@@ -32,15 +32,24 @@ export const dayKey = (value: string | number) => {
   const p = torontoParts(new Date(value));
   return `${p.year}-${p.month}-${p.day}`;
 };
+/**
+ * The tasks a finished visit left undone that the operator has not decided
+ * about yet (ADR 065). A return visit or closing the task resolves it.
+ */
+export const unresolved = (v: Visit) =>
+  v.execution?.finishedAt
+    ? Object.entries(v.execution.outcomes)
+        .filter(([, o]) => o.outcome !== "Completed" && !o.resolution)
+        .map(([id]) => id)
+    : [];
 export function workIssue(v: Visit) {
-  if (
-    v.execution?.finishedAt &&
-    Object.values(v.execution.outcomes).some((o) => o.outcome !== "Completed")
-  )
-    return "Unresolved tasks · Operator follow-up";
+  if (unresolved(v).length) return "Unresolved tasks · Operator follow-up";
+  /* Until the customer has been told: after that, the job is still late but
+     there is nothing left for the operator to do about it (ADR 065). */
   if (
     !v.execution?.startedAt &&
     !v.execution?.finishedAt &&
+    !v.execution?.lateToldAt &&
     v.execution?.eta &&
     +new Date(v.execution.eta) > +new Date(v.start)
   )
@@ -73,6 +82,9 @@ export function bucket(s: State, id: string) {
     return "History";
   if (r.status === "Draft") return "Draft";
   if (callBackDue(r)) return "Needs Action";
+  /* An additional charge with the customer (ADR 065): theirs to answer. */
+  if (s.charges?.some((c) => c.requestId === id && c.status === "Sent"))
+    return "Waiting";
   const dispatch = requestDispatch(s, id);
   if (
     s.visits.some(

@@ -4,9 +4,12 @@ import {
   type State,
   answerQuestion,
   approveQuote,
+  dateLabel,
   declineQuote,
   money,
+  providers,
 } from "./model";
+import { approveCharge, declineCharge } from "./decisions";
 import { payQuote } from "./payments";
 import { findingsFor, findingState } from "./pmw";
 import { assessmentLink } from "./store";
@@ -141,7 +144,7 @@ function Step({
 
   const r = s.requests.find((x) => x.id === todo.requestId)!;
   const quote =
-    todo.kind === "question"
+    todo.kind === "question" || todo.kind === "charge"
       ? undefined
       : s.quotes.find((x) => x.id === todo.quoteId);
   const tasks = s.tasks.filter((t) => t.requestId === r.id && !t.mergedInto);
@@ -206,6 +209,64 @@ function Step({
         </div>
       </>
     );
+
+  if (todo.kind === "charge") {
+    /* An additional charge for a return visit (ADR 065): approving pays it,
+       and the return visit is booked straight after. */
+    const c = s.charges!.find((x) => x.id === todo.chargeId)!;
+    const who = providers.find((p) => p.id === c.plan.providerId)?.name;
+    return (
+      <>
+        <h1 tabIndex={-1}>Additional charge</h1>
+        {summary}
+        <p className="finding-price">
+          {money(c.amount)} <small>CAD</small>
+        </p>
+        <p className="onsite-room">{c.reason}</p>
+        <p className="onsite-hint">
+          For a return visit {who ? `with ${who} ` : ""}on{" "}
+          {dateLabel(c.plan.start)}, booked once you approve.
+        </p>
+        <div className="payment-method">
+          <Wallet />
+          <div>
+            <strong>Visa •••• 4242</strong>
+            <small>Card on file</small>
+          </div>
+        </div>
+        {message}
+        <div className="onsite-bar">
+          <button
+            className="primary full"
+            onClick={() =>
+              act(
+                (d) => approveCharge(d, c.id, failPayment),
+                "Your payment didn’t go through. Try again, or use another card.",
+              )
+            }
+          >
+            Approve & pay {money(c.amount)}
+          </button>
+          <div className="row job-secondary">
+            <button
+              className="text-button"
+              onClick={() =>
+                act(
+                  (d) => declineCharge(d, c.id),
+                  "This charge has already been answered.",
+                )
+              }
+            >
+              Decline
+            </button>
+            <button className="text-button" onClick={skip}>
+              Skip
+            </button>
+          </div>
+        </div>
+      </>
+    );
+  }
 
   if (todo.kind === "pay")
     return (
