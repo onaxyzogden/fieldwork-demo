@@ -315,10 +315,12 @@ describe("the customer's notices read as production (ADR 061)", () => {
     expect(
       mine.some((t) => t.startsWith("Visit awaiting confirmation · ")),
     ).toBe(true);
-    // The operator keeps the record's own words.
+    // The operator's words say whose request it is (ADR 064).
     const ops = texts(s, "Operator");
-    expect(ops.some((t) => t.startsWith("Visit proposed · "))).toBe(true);
-    expect(ops.some((t) => /awaiting provider acceptance/.test(t))).toBe(true);
+    expect(
+      ops.some((t) => t.startsWith("Visit proposed for Daniel Brooks · ")),
+    ).toBe(true);
+    expect(ops).toContain("Finding a contractor for Daniel Brooks");
   });
 
   it("says a quote is ready and a payment was received", () => {

@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState } from "react";
 import { MapPin, Check, Plus } from "lucide-react";
 import {
+  type Property,
   type State,
   type Request,
   type Task,
@@ -27,6 +28,7 @@ import {
   intakeOptions,
   preferenceSignature,
 } from "./intake";
+import { savedAddresses } from "./pmw";
 type Props = {
   s: State;
   r: Request;
@@ -108,6 +110,45 @@ export default function CustomerIntake({
         patch,
       ),
     );
+  /* Addresses this customer has booked before, as one-tap choices (ADR 064).
+     Picking one links the request to that property, so the work lands on the
+     same maintenance record; changing the street or municipality after that
+     unlinks it, and submitting links it again by the address it ends up at. */
+  const saved = savedAddresses(s, r.accountId);
+  const [typing, setTyping] = useState(!!r.address && !r.propertyId);
+  const picking = saved.length > 0 && !typing;
+  const pick = (p: Property) => {
+    patchRequest({
+      propertyId: p.id,
+      address: p.address,
+      city: p.city,
+      postalCode: p.postalCode || "",
+      unit: p.unit || "",
+    });
+    /* An address saved before postal codes were asked for: show the fields
+       with the one thing missing marked, rather than a Continue that fails
+       for a reason nobody can see. */
+    if (!validPostal({ ...r, postalCode: p.postalCode })) {
+      setTyping(true);
+      setAddressError({ postal: "Add the postal code for this address." });
+    } else setAddressError({});
+  };
+  const typeAnother = (keep: boolean) => {
+    if (!keep)
+      patchRequest({
+        propertyId: undefined,
+        address: "",
+        postalCode: "",
+        unit: "",
+      });
+    setTyping(true);
+    requestAnimationFrame(() => streetRef.current?.focus());
+  };
+  /* One address on file is the likely answer: start on it. */
+  useEffect(() => {
+    if (screen === "address" && saved.length === 1 && !r.address && !typing)
+      pick(saved[0]);
+  }, [screen]);
   const patchTask = (id: string, patch: Partial<Task>) =>
     update((d) =>
       Object.assign(
@@ -168,8 +209,12 @@ export default function CustomerIntake({
     if (!validPostal(r))
       errs.postal = "Enter a Canadian postal code, for example L6J 4S7.";
     setAddressError(errs);
-    if (errs.street) return streetRef.current?.focus();
-    if (errs.postal) return postalRef.current?.focus();
+    if (errs.street || errs.postal) {
+      setTyping(true);
+      return requestAnimationFrame(() =>
+        (errs.street ? streetRef : postalRef).current?.focus(),
+      );
+    }
     patchRequest({ intakeScreen: "tasks" });
   };
   /** Reopen an earlier step without discarding anything entered after it. */
@@ -412,7 +457,57 @@ export default function CustomerIntake({
             <h1>Where should we come?</h1>
             <p>One address for everything on your list.</p>
           </header>
-          <section className="customer-address-section">
+          {picking && (
+            <section
+              className="customer-address-section saved-addresses"
+              aria-label="Your addresses"
+            >
+              {saved.map((p) => (
+                <button
+                  key={p.id}
+                  className={
+                    "slot" + (r.propertyId === p.id ? " selected" : "")
+                  }
+                  aria-pressed={r.propertyId === p.id}
+                  onClick={() => pick(p)}
+                >
+                  <strong>
+                    {p.address}
+                    {p.unit ? `, unit ${p.unit}` : ""}
+                  </strong>
+                  <small>
+                    {p.city}
+                    {p.postalCode ? ` · ${p.postalCode}` : ""}
+                  </small>
+                </button>
+              ))}
+              <button
+                className="slot"
+                aria-pressed={false}
+                onClick={() => typeAnother(false)}
+              >
+                <strong>
+                  <Plus size={16} /> A different address
+                </strong>
+              </button>
+              {r.propertyId && (
+                <button
+                  className="text-button"
+                  onClick={() => typeAnother(true)}
+                >
+                  Edit this address
+                </button>
+              )}
+            </section>
+          )}
+          {/* Hidden rather than unmounted while a saved address is picked, so
+              its fields are there to focus the moment they are needed. */}
+          <section className="customer-address-section" hidden={picking}>
+            {saved.length > 0 && (
+              <button className="text-button" onClick={() => setTyping(false)}>
+                ← Choose a saved address
+              </button>
+            )}
             <label
               className={"field" + (addressError.street ? " field-error" : "")}
             >
@@ -427,7 +522,10 @@ export default function CustomerIntake({
                 }
                 placeholder="Street number and street name"
                 onChange={(e) => {
-                  patchRequest({ address: e.target.value });
+                  patchRequest({
+                    address: e.target.value,
+                    propertyId: undefined,
+                  });
                   if (addressError.street)
                     setAddressError((x) => ({ ...x, street: undefined }));
                 }}
@@ -447,7 +545,12 @@ export default function CustomerIntake({
                 Municipality
                 <select
                   value={r.city}
-                  onChange={(e) => patchRequest({ city: e.target.value })}
+                  onChange={(e) =>
+                    patchRequest({
+                      city: e.target.value,
+                      propertyId: undefined,
+                    })
+                  }
                 >
                   {cities.map((c) => (
                     <option key={c}>{c}</option>

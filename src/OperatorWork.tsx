@@ -8,14 +8,28 @@ import {
   CalendarDays,
 } from "lucide-react";
 import { useState, type ReactNode } from "react";
-import { type State, providers, dateLabel, money, torontoParts } from "./model";
-import { bucket, dayKey, workIssue, workStatus } from "./work";
+import {
+  type State,
+  providers,
+  dateLabel,
+  money,
+  timeLabel,
+  torontoParts,
+} from "./model";
+import {
+  bucket,
+  callBackDue,
+  dayKey,
+  feeUndecided,
+  workIssue,
+  workStatus,
+} from "./work";
 import { Glance } from "./Glance";
 import { glanceDate } from "./glance";
 import { requestDispatch } from "./dispatch";
 import { JobWork } from "./ContractorWork";
 import DecisionQueue from "./DecisionQueue";
-import { decisionQueue } from "./decisions";
+import { decisionQueue, heldFor } from "./decisions";
 type Props = {
   s: State;
   open: (id: string) => void;
@@ -72,24 +86,32 @@ export function OperatorHome({
       const quote = s.quotes.find(
         (q) => q.requestId === r.id && q.status !== "Superseded",
       );
-      const title = issue
-        ? issue.execution?.finishedAt
-          ? "Work needs follow-up"
-          : "Job running late"
-        : dispatch.includes("Needs reassignment")
-          ? dispatch.startsWith("Offer expired")
-            ? "Offer expired"
-            : "Contractor declined"
-          : dispatch ||
-            (r.status === "Submitted"
-              ? "New request"
-              : quote?.status === "Declined"
-                ? "Quote declined"
-                : r.status === "Awaiting Quote Approval"
-                  ? "Quote awaiting approval"
-                  : r.status);
+      /* A change inside 24 hours (ADR 064) outranks everything on the row:
+         money is held, or someone is waiting by the phone. */
+      const late = feeUndecided(r);
+      const call = callBackDue(r) ? r.callBack : undefined;
+      const title = late
+        ? "Late cancellation"
+        : call
+          ? `Call back by ${timeLabel(call.by)}`
+          : issue
+            ? issue.execution?.finishedAt
+              ? "Work needs follow-up"
+              : "Job running late"
+            : dispatch.includes("Needs reassignment")
+              ? dispatch.startsWith("Offer expired")
+                ? "Offer expired"
+                : "Contractor declined"
+              : dispatch ||
+                (r.status === "Submitted"
+                  ? "New request"
+                  : quote?.status === "Declined"
+                    ? "Quote declined"
+                    : r.status === "Awaiting Quote Approval"
+                      ? "Quote awaiting approval"
+                      : r.status);
       const tone =
-        issue || dispatch.includes("Needs reassignment")
+        late || call || issue || dispatch.includes("Needs reassignment")
           ? "issue"
           : r.status === "Awaiting Quote Approval"
             ? "quote"
@@ -124,17 +146,22 @@ export function OperatorHome({
               : age < 1440
                 ? `${Math.floor(age / 60)} hr ago`
                 : `${Math.floor(age / 1440)} days ago`;
-      const detail = issue?.execution?.finishedAt
-        ? "Unresolved tasks · operator follow-up"
-        : issue?.execution?.eta
-          ? `${Math.max(0, Math.round((+new Date(issue.execution.eta) - +new Date(issue.start)) / 60000))} min behind · simulated ETA`
-          : dispatch.includes("Needs reassignment")
-            ? "Needs reassignment"
-            : quote?.status === "Declined"
-              ? `${money(quote.amount)} · declined · revise the quote`
-              : quote && r.status === "Awaiting Quote Approval"
-                ? `${money(quote.amount)} · ${taskList.length} task${taskList.length === 1 ? "" : "s"} · waiting for customer`
-                : `${taskList.length} task${taskList.length === 1 ? "" : "s"} · Est. ${taskList.reduce((n, t) => n + t.duration, 0)} min`;
+      const moving = call && s.visits.find((v) => v.id === call.visitId);
+      const detail = late
+        ? `${money(heldFor(s, r.id))} held · decide the fee`
+        : moving
+          ? `Wants a new time for ${dateLabel(moving.start)}`
+          : issue?.execution?.finishedAt
+            ? "Unresolved tasks · operator follow-up"
+            : issue?.execution?.eta
+              ? `${Math.max(0, Math.round((+new Date(issue.execution.eta) - +new Date(issue.start)) / 60000))} min behind · simulated ETA`
+              : dispatch.includes("Needs reassignment")
+                ? "Needs reassignment"
+                : quote?.status === "Declined"
+                  ? `${money(quote.amount)} · declined · revise the quote`
+                  : quote && r.status === "Awaiting Quote Approval"
+                    ? `${money(quote.amount)} · ${taskList.length} task${taskList.length === 1 ? "" : "s"} · waiting for customer`
+                    : `${taskList.length} task${taskList.length === 1 ? "" : "s"} · Est. ${taskList.reduce((n, t) => n + t.duration, 0)} min`;
       return (
         <button
           className={"op-request-bento op-tone-" + tone}

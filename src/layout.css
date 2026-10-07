@@ -1043,7 +1043,8 @@ footer {
   align-items: center;
   gap: var(--space-3);
   padding: var(--space-1) 0;
-  opacity: 0.4;
+  /* Muted by colour, not opacity: a faded step name fell below AA (ADR 064). */
+  color: var(--ink-muted);
   pointer-events: none;
 }
 .step-upcoming-ring {

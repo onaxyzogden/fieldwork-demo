@@ -1314,3 +1314,88 @@ quote card shows the button only then.
 booked "three days out" at 15:00 UTC, which lands on a weekend from a
 Wednesday or Thursday, so four tests failed on those days on `main` as
 well. The helper now moves to the Monday when that happens.
+
+## ADR 064: Changes inside 24 hours, saved addresses, readable inboxes, contrast
+
+Accepted. The second of four batches from the UI/UX review, planned and
+confirmed before it was built. "Book the same as last time" was dropped:
+the same job is almost never requested twice by one customer.
+
+**A late cancellation cancels, holds the money and asks the operator.**
+Inside 24 hours of a visit, "Cancel" used to log a line and show "We'll be
+in touch", leaving the visit booked and nobody asked to act. Now:
+
+- `cancelBooking()` is the only cancellation write, taken out of the Cancel
+  booking modal. It always cancels the request, its visits and the offers
+  still open on them. Declined and expired offers keep their status, where
+  the old modal rewrote them.
+- With every visit more than a day out, the money is refunded, as before.
+  Inside a day it is held: the request records `lateCancel`, and the
+  customer reads "Your visit is cancelled. Because it was less than 24 hours
+  away, a late-cancellation fee may apply. We'll confirm." The modal says so
+  before they confirm.
+- `nextDecision()` gives the cancelled request one more decision,
+  `late-cancel`, with a fee suggested at 25% of the quote. `bucket()` keeps
+  it in Needs Action until then. The queue, the request page and the Home
+  row all show it.
+- `settleLateCancel()` keeps the fee and refunds the rest
+  (`Partially Refunded`), or refunds in full when waived. A fee larger than
+  what was paid charges the difference to the card on file as its own
+  payment (`fee: true`). With no card on file the difference is
+  `Outstanding`, the operator's to chase, never dropped.
+
+**A late change promises a call.** Inside 24 hours, "Reschedule" records
+`callBack` with a time two hours out. The customer reads "Your visit is less
+than 24 hours away, so we'll arrange the new time with you. Expect a call by
+6:15 p.m." The visit stays booked. The operator gets a `call-back` decision
+with the customer's number, and two ways to close it:
+
+- **Reschedule visit** opens the reschedule panel on the request page.
+  Moving the visit closes the call.
+- **Called, no change** closes it as it is.
+
+`rescheduleVisit()` is the one write for moving a visit to a new time with
+the same contractor; the customer's own reschedule uses it too. The renewed
+offer carries the pay the contractor accepted, rather than the first offer's.
+
+**Repeat customers pick a saved address.** The address step lists the
+addresses the account has booked before, most recent first, plus "A
+different address". With exactly one, it is preselected. Picking one links
+the request to that property, so the work lands on the same maintenance
+record. Changing the street or municipality unlinks it, and submitting links
+it again by address. A saved address with no postal code opens the fields
+with that one thing marked. The seeded requests now carry postal codes.
+
+This fixed a bug: `migratePmw()` runs on every commit, so a new draft, with
+no address yet, was given a property with an empty address that typing never
+updated. Drafts are now skipped and linked once submitted.
+
+**The staff inbox says what happened and to whom.** "Nina Patel: offer
+offered · …" and "Sarah Lin: request awaiting payment" read like status
+codes. The operator now reads, for example:
+
+- "Offer sent to Nina Patel · …" and "Nina Patel accepted · …";
+- "New request from Sarah Lin" and "Sarah Lin approved the quote";
+- "Visit proposed for Sarah Lin · …";
+- "Nina Patel is on the way · arriving around …".
+
+The contractor reads "New job offer", "Offer expired", "Offer withdrawn",
+"Job cancelled" and "You're on the way". Nobody is told about what they just
+did themselves, so a contractor's own answer and the operator's own
+withdrawal raise no notice. An offer withdrawn and renewed at a new time in
+the same change reads only as a new offer. The request texts are a function
+of status and name (`operatorRequestText`), not labels, so they sit in
+`notifications.ts` rather than `customerText.ts`.
+
+**Contrast meets WCAG AA in both themes.** A sweep over every role's
+screens, the queues, the intake and the new late-change screens found four
+colour pairs under 4.5:1:
+
+- `--ink-muted` in the light theme (3.5:1);
+- the intake's upcoming step names, dimmed with 40% opacity, in both themes.
+
+`--ink-muted` moves to `#656a77` (light) and `#88919f` (dark). Both are the
+smallest change on the same hue that passes on every surface. The dark value
+also passes on raised surfaces, where it measured 3.9:1. The upcoming step
+is muted by that colour instead of opacity. That is the one component rule
+changed; the plan expected tokens only.

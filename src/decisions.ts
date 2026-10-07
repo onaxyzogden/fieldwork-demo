@@ -18,14 +18,16 @@ import {
   bookVisit,
   genericTitle,
   log,
+  methodFor,
   money,
   providers,
   uid,
 } from "./model";
 import { dispatchStatus, replacementOptions } from "./dispatch";
+import { refundPayment } from "./payments";
 import { suggestTitle } from "./pmw";
 import { suitableProviders } from "./suitability";
-import { bucket, workIssue } from "./work";
+import { bucket, callBackDue, feeUndecided, workIssue } from "./work";
 
 /** A slot, a provider and what they would be paid for it. */
 export type Offer = {
@@ -36,6 +38,10 @@ export type Offer = {
 };
 
 export type Decision =
+  /** Money held after a late cancellation: keep a fee, or refund it all. */
+  | { kind: "late-cancel"; fee: number; held: number }
+  /** A customer who could not change a visit themselves, waiting on a call. */
+  | { kind: "call-back"; visitId: string; by: string }
   | { kind: "follow-up"; visitId: string; issue: string }
   | {
       kind: "reassign";
@@ -86,11 +92,27 @@ const requestTasks = (s: State, requestId: string) =>
 
 export function nextDecision(s: State, requestId: string): Decision | null {
   const r = s.requests.find((x) => x.id === requestId);
-  if (!r || ["Cancelled", "Declined", "Completed", "Draft"].includes(r.status))
+  if (!r) return null;
+  /* The one decision a cancelled request can still have (ADR 064). */
+  if (feeUndecided(r))
+    return {
+      kind: "late-cancel",
+      fee: suggestLateFee(s, r.id),
+      held: heldFor(s, r.id),
+    };
+  if (["Cancelled", "Declined", "Completed", "Draft"].includes(r.status))
     return null;
   const live = s.visits.filter(
     (v) => v.requestId === r.id && v.status !== "Cancelled",
   );
+  /* Before anything else on a live request: someone was promised a call by
+     a time, and the visit they want moved is less than a day away. */
+  if (callBackDue(r))
+    return {
+      kind: "call-back",
+      visitId: r.callBack!.visitId,
+      by: r.callBack!.by,
+    };
   /* First, because the card cannot show it: a confirmed job that is late or
      came back unresolved has nothing to press, but it is still the operator's
      to look at. */
@@ -203,7 +225,12 @@ export function nextDecision(s: State, requestId: string): Decision | null {
 }
 
 /** Decisions that are about something going wrong, not something new. */
-const URGENT = new Set<Decision["kind"]>(["reassign", "follow-up"]);
+const URGENT = new Set<Decision["kind"]>([
+  "late-cancel",
+  "call-back",
+  "reassign",
+  "follow-up",
+]);
 
 /**
  * The requests the operator has a decision on, urgent first, then oldest.
@@ -385,5 +412,216 @@ export function issueQuote(
     ...(previous ? { from: money(previous.amount) } : {}),
     to: money(q.amount),
   });
+  return true;
+}
+
+/* ── Changes inside 24 hours (ADR 064) ───────────────────────────────────── */
+
+/** How close to a visit the customer stops changing it themselves. */
+export const LATE_WINDOW = 24 * 3600000;
+/** How soon the customer is promised a call about a late change. */
+export const CALL_BACK_WITHIN = 2 * 3600000;
+/** The late-cancellation fee starts at this share of the quote. */
+export const LATE_FEE_SHARE = 0.25;
+
+/** A visit close enough that changing it is the operator's to arrange. */
+export const lateFor = (s: State, v: Visit) =>
+  +new Date(v.start) - s.clock < LATE_WINDOW;
+
+const liveQuote = (s: State, requestId: string) =>
+  s.quotes.find((q) => q.requestId === requestId && q.status !== "Superseded");
+
+/** The request's payments still holding money, the only ones a cancellation
+ *  refunds. */
+const paidFor = (s: State, requestId: string) =>
+  s.payments.filter(
+    (p) =>
+      p.status === "Paid" &&
+      s.quotes.some((q) => q.id === p.quoteId && q.requestId === requestId),
+  );
+
+/** What the customer has paid that a late cancellation is holding. */
+export const heldFor = (s: State, requestId: string) =>
+  paidFor(s, requestId).reduce((n, p) => n + p.amount, 0);
+
+/** The fee the operator is offered: a share of the quote, to the dollar. */
+export const suggestLateFee = (s: State, requestId: string) =>
+  Math.round((liveQuote(s, requestId)?.amount ?? 0) * LATE_FEE_SHARE);
+
+/**
+ * The customer's "Cancel", the only cancellation write. It always cancels the
+ * request, its visits and the offers still open on them. Whether the money
+ * goes back depends on how close the work was: with every visit more than a
+ * day out it is refunded, as it always was; inside that, it is held and the
+ * operator decides the fee (settleLateCancel).
+ */
+export function cancelBooking(s: State, requestId: string) {
+  const r = s.requests.find((x) => x.id === requestId);
+  if (!r || ["Cancelled", "Declined", "Completed", "Draft"].includes(r.status))
+    return false;
+  const visits = s.visits.filter((v) => v.requestId === r.id);
+  const late = visits.some(
+    (v) =>
+      v.status !== "Cancelled" && !v.execution?.finishedAt && lateFor(s, v),
+  );
+  r.status = "Cancelled";
+  visits.forEach((v) => (v.status = "Cancelled"));
+  /* Open offers only: a decline or an expiry already said what it says. */
+  s.assignments
+    .filter(
+      (a) =>
+        visits.some((v) => v.id === a.visitId) &&
+        ["Offered", "Accepted"].includes(a.status),
+    )
+    .forEach((a) => (a.status = "Cancelled"));
+  if (late) {
+    r.lateCancel = { at: new Date(s.clock).toISOString() };
+    log(s, "Customer cancelled within 24 hours · payment held for the fee", {
+      actor: "Customer",
+      requestId: r.id,
+      entity: "request",
+      entityId: r.id,
+      field: "status",
+      to: "Cancelled",
+    });
+    return true;
+  }
+  paidFor(s, r.id).forEach((p) => (p.status = "Refunded"));
+  log(s, "Customer cancelled booking · simulated refund issued");
+  return true;
+}
+
+/**
+ * Settle a late cancellation: keep `fee` and refund the rest, or refund it
+ * all with a fee of 0. A fee larger than what was paid charges the
+ * difference to the card on file; with no card on file it is owed instead
+ * (`Outstanding`, the operator's to chase), never silently dropped.
+ */
+export function settleLateCancel(s: State, requestId: string, fee: number) {
+  const r = s.requests.find((x) => x.id === requestId);
+  if (!r || !feeUndecided(r) || !Number.isFinite(fee) || fee < 0) return false;
+  const quote = liveQuote(s, r.id);
+  /* A fee is charged against the quote. Unreachable from the screens — only
+     a confirmed visit can be cancelled, and confirming needs a quote. */
+  if (fee > 0 && !quote) return false;
+  let keep = Math.round(fee * 100) / 100;
+  for (const p of paidFor(s, r.id)) {
+    const kept = Math.min(keep, p.amount);
+    keep -= kept;
+    /* Kept whole, nothing goes back: refundPayment refuses a zero refund. */
+    refundPayment(s, p.id, p.amount - kept);
+  }
+  if (keep > 0) {
+    const method = methodFor(s, quote!);
+    s.payments.push({
+      id: uid(),
+      quoteId: quote!.id,
+      status: method ? "Paid" : "Outstanding",
+      amount: keep,
+      reference: uid(),
+      fee: true,
+      ...(method
+        ? {
+            methodId: method.id,
+            capturedAt: new Date(s.clock).toISOString(),
+          }
+        : {}),
+    });
+  }
+  r.lateCancel = { ...r.lateCancel!, fee };
+  log(
+    s,
+    fee
+      ? `Late-cancellation fee ${money(fee)} · the rest refunded`
+      : "Late-cancellation fee waived · refunded in full",
+    {
+      actor: "Operator",
+      requestId: r.id,
+      entity: "request",
+      entityId: r.id,
+      field: "lateFee",
+      to: money(fee),
+    },
+  );
+  return true;
+}
+
+/**
+ * The customer's "Reschedule" inside the window: no new time is picked, a
+ * call is promised instead. One promise at a time — asking again while one is
+ * open changes nothing.
+ */
+export function requestCallBack(s: State, visitId: string) {
+  const v = s.visits.find((x) => x.id === visitId);
+  const r = v && s.requests.find((x) => x.id === v.requestId);
+  if (!v || !r || v.status === "Cancelled" || callBackDue(r)) return false;
+  r.callBack = {
+    visitId,
+    by: new Date(s.clock + CALL_BACK_WITHIN).toISOString(),
+  };
+  log(s, "Customer asked to change a visit within 24 hours · call back due", {
+    actor: "Customer",
+    requestId: r.id,
+    entity: "visit",
+    entityId: v.id,
+    field: "callBack",
+    to: r.callBack.by,
+  });
+  return true;
+}
+
+/** The operator called and the visit stays as it is. */
+export function completeCallBack(s: State, requestId: string) {
+  const r = s.requests.find((x) => x.id === requestId);
+  if (!r || !callBackDue(r)) return false;
+  r.callBack!.done = true;
+  log(s, "Operator called the customer · visit unchanged", {
+    actor: "Operator",
+    requestId: r.id,
+    entity: "request",
+    entityId: r.id,
+    field: "callBack",
+    to: "done",
+  });
+  return true;
+}
+
+/**
+ * Move a visit to a new time with the same contractor, who has to accept
+ * again. The customer's own reschedule and the operator's, after the call,
+ * both land here; moving the visit is what the call was for, so it closes it.
+ */
+export function rescheduleVisit(
+  s: State,
+  visitId: string,
+  slot: { start: string; travel: number },
+  actor: "Customer" | "Operator",
+) {
+  const v = s.visits.find((x) => x.id === visitId);
+  if (!v || v.status === "Cancelled") return false;
+  v.start = slot.start;
+  v.travel = slot.travel;
+  if (v.providerId !== "yousef") {
+    const accepted = s.assignments.filter(
+      (a) => a.visitId === v.id && a.status === "Accepted",
+    );
+    const pay =
+      accepted.at(-1)?.pay ??
+      s.assignments.find((a) => a.visitId === v.id)?.pay ??
+      0;
+    accepted.forEach((a) => (a.status = "Reassigned"));
+    s.assignments.push({
+      id: uid(),
+      visitId: v.id,
+      providerId: v.providerId,
+      status: "Offered",
+      pay,
+      expiresAt: s.clock + 7200000,
+    });
+  }
+  log(s, `${actor} rescheduled visit · provider notified`);
+  const r = s.requests.find((x) => x.id === v.requestId);
+  if (r && callBackDue(r) && r.callBack!.visitId === v.id)
+    r.callBack!.done = true;
   return true;
 }

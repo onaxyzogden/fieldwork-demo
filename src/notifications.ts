@@ -5,8 +5,10 @@ import {
   channelsFor,
   contacts,
   dateLabel,
+  money,
   primaryContact,
   providers,
+  timeLabel,
   uid,
   urgency,
 } from "./model";
@@ -72,6 +74,55 @@ export function deliveriesFor(
         };
   });
 }
+/**
+ * How a request's new status reads in the operator's inbox (ADR 064): what
+ * happened and to whom, rather than the record's own state name.
+ */
+export const operatorRequestText = (status: string, name: string) =>
+  ({
+    Submitted: `New request from ${name}`,
+    "Needs Review": `${name}’s request needs review`,
+    "Information requested": `Waiting on ${name}’s answer`,
+    "Awaiting Quote Approval": `Quote sent to ${name}`,
+    "Awaiting Payment": `${name} approved the quote`,
+    "Awaiting Provider Acceptance": `Finding a contractor for ${name}`,
+    Confirmed: `${name}’s booking is confirmed`,
+    Completed: `${name}’s request is complete`,
+  })[status] || `${name}’s request is ${status.toLowerCase()}`;
+
+/**
+ * An offer's new status, for the contractor and for the operator (ADR 064).
+ * Nobody is told about what they just did themselves — a contractor's own
+ * answer, the operator's own withdrawal — so those are absent. Declines and
+ * expiries reach the operator as the reassignment alert, not as a notice.
+ */
+const offerText = (status: string, name: string, when: string) => ({
+  contractor: (
+    {
+      Offered: `New job offer · ${when}`,
+      Expired: `Offer expired · ${when}`,
+      Reassigned: `Offer withdrawn · ${when}`,
+      Cancelled: `Job cancelled · ${when}`,
+    } as Record<string, string>
+  )[status],
+  operator: (
+    {
+      Offered: `Offer sent to ${name} · ${when}`,
+      Accepted: `${name} accepted · ${when}`,
+    } as Record<string, string>
+  )[status],
+});
+
+/** What the customer is told when they cancel inside 24 hours (ADR 064). */
+export const LATE_CANCEL_TEXT =
+  "Your visit is cancelled. Because it was less than 24 hours away, a late-cancellation fee may apply. We’ll confirm.";
+/** What the customer is told when they ask to change a visit inside 24 hours. */
+export const callBackText = (by: string) => {
+  /* "p.m." already ends the sentence. */
+  const at = timeLabel(by);
+  return `Your visit is less than 24 hours away, so we’ll arrange the new time with you. Expect a call by ${at}${at.endsWith(".") ? "" : "."}`;
+};
+
 export const inbox = (s: State, recipient: string) =>
   (s.notifications || []).filter(
     (n) => (n.recipient || "Operator") === recipient,
@@ -127,6 +178,9 @@ export function deliverUpdates(before: State, after: State) {
         `${r.name} answered: ${r.customerReply}`,
       );
     }
+    /* A late cancellation says so, and what happens to the money, rather
+       than the plain "Cancelled" (ADR 064). */
+    const late = !!r.lateCancel && !old?.lateCancel;
     if (r.status !== "Draft" && old?.status !== r.status) {
       emit(
         "Operator",
@@ -134,7 +188,9 @@ export function deliverUpdates(before: State, after: State) {
         "",
         "",
         "request",
-        `${r.name}: request ${r.status.toLowerCase()}`,
+        late
+          ? `${r.name} cancelled within 24 hours · decide the late fee`
+          : operatorRequestText(r.status, r.name),
       );
       emit(
         "Customer:" + r.accountId,
@@ -142,7 +198,39 @@ export function deliverUpdates(before: State, after: State) {
         "",
         "",
         "request",
-        `Your request: ${customerStatusText(r.status)}`,
+        late
+          ? LATE_CANCEL_TEXT
+          : `Your request: ${customerStatusText(r.status)}`,
+      );
+    }
+    const fee = r.lateCancel?.fee;
+    if (fee !== undefined && old?.lateCancel?.fee === undefined)
+      emit(
+        "Customer:" + r.accountId,
+        r.id,
+        "",
+        "",
+        "request",
+        fee
+          ? `Late-cancellation fee: ${money(fee)}. Anything else you paid has been refunded.`
+          : "No late-cancellation fee. Anything you paid has been refunded in full.",
+      );
+    if (r.callBack && r.callBack.by !== old?.callBack?.by) {
+      emit(
+        "Operator",
+        r.id,
+        r.callBack.visitId,
+        "",
+        "request",
+        `Call ${r.name} by ${timeLabel(r.callBack.by)} to reschedule`,
+      );
+      emit(
+        "Customer:" + r.accountId,
+        r.id,
+        r.callBack.visitId,
+        "",
+        "request",
+        callBackText(r.callBack.by),
       );
     }
   }
@@ -151,10 +239,33 @@ export function deliverUpdates(before: State, after: State) {
     if (old?.status === a.status) continue;
     const v = after.visits.find((v) => v.id === a.visitId);
     if (!v) continue;
-    const text = `${providers.find((p) => p.id === a.providerId)?.name || a.providerId}: offer ${a.status.toLowerCase()} · ${dateLabel(v.start)}`;
-    emit("Contractor:" + a.providerId, v.requestId, v.id, a.id, "offer", text);
-    if (!["Declined", "Expired"].includes(a.status))
-      emit("Operator", v.requestId, v.id, a.id, "offer", text);
+    const text = offerText(
+      a.status,
+      providers.find((p) => p.id === a.providerId)?.name || a.providerId,
+      dateLabel(v.start),
+    );
+    /* Moving a visit withdraws the accepted offer and makes a new one to the
+       same contractor in the same change; "New job offer" says it,
+       "withdrawn" would not. */
+    const renewed =
+      a.status === "Reassigned" &&
+      after.assignments.some(
+        (x) =>
+          x.visitId === a.visitId &&
+          x.providerId === a.providerId &&
+          !before.assignments.some((b) => b.id === x.id),
+      );
+    if (text.contractor && !renewed)
+      emit(
+        "Contractor:" + a.providerId,
+        v.requestId,
+        v.id,
+        a.id,
+        "offer",
+        text.contractor,
+      );
+    if (text.operator)
+      emit("Operator", v.requestId, v.id, a.id, "offer", text.operator);
   }
   for (const v of after.visits) {
     const old = before.visits.find((x) => x.id === v.id),
@@ -165,23 +276,34 @@ export function deliverUpdates(before: State, after: State) {
       "Customer:" + r.accountId,
       ...(v.providerId === "yousef" ? [] : ["Contractor:" + v.providerId]),
     ];
-    /* Each change has the staff wording and the customer's (ADR 061). */
-    const changes: [staff: string, customer: string][] = [];
-    if (old && old.start !== v.start) {
-      const text = `Appointment changed to ${dateLabel(v.start)}`;
-      changes.push([text, text]);
+    /* Each change in the operator's, the contractor's and the customer's
+       words (ADR 061, ADR 064): the operator needs whose visit it is. */
+    const changes: [operator: string, contractor: string, customer: string][] =
+      [];
+    const when = dateLabel(v.start);
+    if (old && old.start !== v.start)
+      changes.push([
+        `${r.name}’s visit moved to ${when}`,
+        `Visit moved to ${when}`,
+        `Appointment changed to ${when}`,
+      ]);
+    if (old?.status !== v.status) {
+      const status = v.status.toLowerCase();
+      changes.push([
+        `Visit ${status} for ${r.name} · ${when}`,
+        `Visit ${status} · ${when}`,
+        `Visit ${customerVisitText(v.status).toLowerCase()} · ${when}`,
+      ]);
     }
-    if (old?.status !== v.status)
+    if (v.execution?.onWayAt && !old?.execution?.onWayAt) {
+      const eta = dateLabel(v.execution.eta || v.start);
       changes.push([
-        `Visit ${v.status.toLowerCase()} · ${dateLabel(v.start)}`,
-        `Visit ${customerVisitText(v.status).toLowerCase()} · ${dateLabel(v.start)}`,
+        `${providers.find((p) => p.id === v.providerId)?.name || "The contractor"} is on the way · arriving around ${eta}`,
+        `You’re on the way · arriving around ${eta}`,
+        `Your provider is on the way · arriving around ${eta}`,
       ]);
-    if (v.execution?.onWayAt && !old?.execution?.onWayAt)
-      changes.push([
-        `Provider is on the way · simulated ETA ${dateLabel(v.execution.eta || v.start)}`,
-        `Your provider is on the way · arriving around ${dateLabel(v.execution.eta || v.start)}`,
-      ]);
-    for (const [staff, customer] of changes)
+    }
+    for (const [operator, contractor, customer] of changes)
       for (const recipient of targets)
         emit(
           recipient,
@@ -189,7 +311,11 @@ export function deliverUpdates(before: State, after: State) {
           v.id,
           "",
           "visit",
-          recipient.startsWith("Customer:") ? customer : staff,
+          recipient.startsWith("Customer:")
+            ? customer
+            : recipient === "Operator"
+              ? operator
+              : contractor,
         );
     for (const m of v.messages || []) {
       if (old?.messages?.some((x) => x.id === m.id)) continue;

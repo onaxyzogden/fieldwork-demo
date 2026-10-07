@@ -5,13 +5,27 @@ import { OperatorHome, OperatorToday } from "./OperatorWork";
 import Walkthroughs from "./Walkthroughs";
 import Assessment from "./Assessment";
 import PropertyRecord from "./PropertyRecord";
-import { bucket, workIssue, workStatus } from "./work";
+import {
+  bucket,
+  callBackDue,
+  feeUndecided,
+  workIssue,
+  workStatus,
+} from "./work";
 import CustomerQueue from "./CustomerQueue";
 import { customerQueue } from "./roleQueues";
 import {
+  cancelBooking,
+  completeCallBack,
+  heldFor,
   issueQuote,
+  lateFor,
   offerVisit,
+  requestCallBack,
+  rescheduleVisit,
   reviewTask,
+  settleLateCancel,
+  suggestLateFee,
   suggestPay,
   suggestQuote,
 } from "./decisions";
@@ -99,6 +113,8 @@ import {
   materialsResponsibilities,
   type MaterialsResponsibility,
   accountName,
+  primaryContact,
+  timeLabel,
   coordinated,
   quoted,
   confirmed,
@@ -134,7 +150,13 @@ import "./operator-concept.css";
 import "./contractor-concept.css";
 import "./cards.css";
 import "./assessment.css";
-import { inbox, offerSeen, unreachable } from "./notifications";
+import {
+  LATE_CANCEL_TEXT,
+  callBackText,
+  inbox,
+  offerSeen,
+  unreachable,
+} from "./notifications";
 import { NotificationInbox, MessageThread } from "./NotificationUI";
 import { Glance, GlanceLead } from "./Glance";
 import { customerGlance, glanceDate } from "./glance";
@@ -455,6 +477,8 @@ function Workspace({
   const [fail, setFail] = useState(false);
   /* Titles typed for tasks the classifier could not name (ADR 063). */
   const [taskTitles, setTaskTitles] = useState<Record<string, string>>({});
+  /* The late-cancellation fee as typed; null is the suggestion (ADR 064). */
+  const [lateFee, setLateFee] = useState<number | null>(null);
   /* The customer's one-at-a-time queue is open (ADR 062). */
   const [reviewing, setReviewing] = useState(false);
   const [sidebar, setSidebar] = useState(false);
@@ -734,6 +758,7 @@ function Workspace({
     setShowRequestQueue(false);
     setQuoteTouched(false);
     setPayTouched(false);
+    setLateFee(null);
     const req = s.requests.find((x) => x.id === id)!;
     setActive(id);
     setCustomer(req.accountId);
@@ -981,35 +1006,33 @@ function Workspace({
           )}
         </>
       )}
+      {/* Inside a day, a new time is ours to arrange (ADR 064): the
+          customer is told when we will call, here and in their inbox. */}
+      {role === "Customer" &&
+        callBackDue(r) &&
+        r.callBack!.visitId === v.id && (
+          <p className="note">{callBackText(r.callBack!.by)}</p>
+        )}
       {role === "Customer" && v.status === "Confirmed" && (
         <div className="row actions">
-          <button
-            className="secondary"
-            onClick={() => {
-              if (+new Date(v.start) - s.clock < 86400000) {
-                update(
-                  (d) => log(d, "Customer requested a change within 24 hours"),
-                  "Change request sent. We’ll be in touch.",
-                );
-                return;
-              }
-              setReschedule(v.id);
-              setModal("Reschedule");
-            }}
-          >
-            Reschedule
-          </button>
+          {!(callBackDue(r) && r.callBack!.visitId === v.id) && (
+            <button
+              className="secondary"
+              onClick={() => {
+                if (lateFor(s, v))
+                  return update((d) => {
+                    requestCallBack(d, v.id);
+                  });
+                setReschedule(v.id);
+                setModal("Reschedule");
+              }}
+            >
+              Reschedule
+            </button>
+          )}
           <button
             className="text-button"
-            onClick={() => {
-              if (+new Date(v.start) - s.clock < 86400000)
-                return update(
-                  (d) =>
-                    log(d, "Customer requested cancellation within 24 hours"),
-                  "Cancellation request sent. We’ll be in touch.",
-                );
-              setModal("Cancel booking");
-            }}
+            onClick={() => setModal("Cancel booking")}
           >
             Cancel
           </button>
@@ -1289,7 +1312,98 @@ function Workspace({
     let actions: React.ReactNode = null;
     let extra: React.ReactNode = null;
     let closed = false;
-    if (["Cancelled", "Declined", "Completed"].includes(r.status)) {
+    if (feeUndecided(r)) {
+      /* The cancelled request's last decision (ADR 064): the money is held
+         until the fee is settled, so the card says how much and asks. */
+      const held = heldFor(s, r.id);
+      const fee = lateFee ?? suggestLateFee(s, r.id);
+      closed = true;
+      tone = "issue";
+      Icon = AlertCircle;
+      title = "Late cancellation";
+      body = `${r.name} cancelled less than 24 hours before the visit. ${
+        held ? `${money(held)} paid is held` : "Nothing was paid"
+      } until you decide the fee.`;
+      extra = (
+        <>
+          <label className={fieldClass("lateFee")}>
+            Late-cancellation fee (CAD)
+            <input
+              type="number"
+              inputMode="numeric"
+              min={1}
+              value={Number.isFinite(fee) ? fee : ""}
+              {...invalid("lateFee")}
+              onChange={(e) => {
+                clear("lateFee");
+                setLateFee(Number(e.target.value));
+              }}
+            />
+            <Message field="lateFee" />
+          </label>
+          <div className="row actions wrap op-decision-actions">
+            <button
+              className="primary"
+              onClick={() => {
+                if (!Number.isFinite(fee) || fee < 1)
+                  return invalidate(
+                    "lateFee",
+                    "Enter a fee of at least $1, or waive it.",
+                  );
+                update((d) => {
+                  settleLateCancel(d, r.id, fee);
+                }, "Fee charged");
+              }}
+            >
+              Charge fee · {money(fee || 0)}
+            </button>
+            <button
+              className="secondary"
+              onClick={() =>
+                update((d) => {
+                  settleLateCancel(d, r.id, 0);
+                }, "Fee waived · refunded in full")
+              }
+            >
+              Waive fee
+            </button>
+          </div>
+        </>
+      );
+    } else if (callBackDue(r)) {
+      /* Promised a call by a time (ADR 064): the card is the call sheet. */
+      const v = s.visits.find((x) => x.id === r.callBack!.visitId);
+      const phone = primaryContact(r.accountId)?.phone;
+      tone = "issue";
+      Icon = Clock;
+      title = `Call back by ${timeLabel(r.callBack!.by)}`;
+      body = `${r.name} wants to change ${v ? dateLabel(v.start) : "their visit"}, less than 24 hours away${phone ? ` · ${phone}` : ""}.`;
+      actions = (
+        <>
+          {v && v.status !== "Cancelled" && (
+            <button
+              className="primary"
+              onClick={() => {
+                setReschedule(v.id);
+                setModal("Reschedule");
+              }}
+            >
+              Reschedule visit <ArrowRight size={16} />
+            </button>
+          )}
+          <button
+            className="secondary"
+            onClick={() =>
+              update((d) => {
+                completeCallBack(d, r.id);
+              }, "Call logged")
+            }
+          >
+            Called, no change
+          </button>
+        </>
+      );
+    } else if (["Cancelled", "Declined", "Completed"].includes(r.status)) {
       closed = true;
       tone = "complete";
       Icon = CheckCircle2;
@@ -2856,7 +2970,13 @@ function Workspace({
                                    has no honest way to represent "stopped."
                                    Say so directly instead. */
                                 <p className="note">
-                                  This request was {r.status.toLowerCase()}.
+                                  {r.lateCancel
+                                    ? r.lateCancel.fee === undefined
+                                      ? LATE_CANCEL_TEXT
+                                      : r.lateCancel.fee
+                                        ? `This request was cancelled less than 24 hours before the visit. Late-cancellation fee: ${money(r.lateCancel.fee)}. Anything else you paid has been refunded.`
+                                        : "This request was cancelled. No late-cancellation fee applies, and anything you paid has been refunded in full."
+                                    : `This request was ${r.status.toLowerCase()}.`}
                                 </p>
                               ) : (
                                 <div className="status-track">
@@ -3406,8 +3526,9 @@ function Workspace({
                 return (
                   <>
                     <p>
-                      Fresh route-aware options for your provider. Contractor
-                      changes require renewed acceptance.
+                      {role === "Customer"
+                        ? "Fresh route-aware options for your provider. Contractor changes require renewed acceptance."
+                        : `Times ${providers.find((p) => p.id === v.providerId)?.name || "the contractor"} has free. Moving the visit asks them to accept it again.`}
                     </p>
                     {slots(s, v.providerId, v.duration, r.city, v.id)
                       .filter((o) => o.start !== v.start)
@@ -3417,34 +3538,11 @@ function Workspace({
                           key={o.start}
                           onClick={() => {
                             update((d) => {
-                              const visit = d.visits.find(
-                                (x) => x.id === v.id,
-                              )!;
-                              visit.start = o.start;
-                              visit.travel = o.travel;
-                              if (v.providerId !== "yousef") {
-                                d.assignments
-                                  .filter(
-                                    (a) =>
-                                      a.visitId === v.id &&
-                                      a.status === "Accepted",
-                                  )
-                                  .forEach((a) => (a.status = "Reassigned"));
-                                d.assignments.push({
-                                  id: uid(),
-                                  visitId: v.id,
-                                  providerId: v.providerId,
-                                  status: "Offered",
-                                  pay:
-                                    s.assignments.find(
-                                      (a) => a.visitId === v.id,
-                                    )?.pay || 0,
-                                  expiresAt: d.clock + 7200000,
-                                });
-                              }
-                              log(
+                              rescheduleVisit(
                                 d,
-                                "Customer rescheduled visit · provider notified",
+                                v.id,
+                                o,
+                                role === "Customer" ? "Customer" : "Operator",
                               );
                             }, "Reschedule saved");
                             setModal("");
@@ -3458,34 +3556,23 @@ function Workspace({
               })()}
             {modal === "Cancel booking" && (
               <>
+                {/* Inside a day the money is held, not refunded, and the
+                    customer is told before they confirm (ADR 064). */}
                 <p>
-                  Cancel this request and all its visits? Any payment will be
-                  refunded.
+                  {visits.some(
+                    (v) =>
+                      v.status !== "Cancelled" &&
+                      !v.execution?.finishedAt &&
+                      lateFor(s, v),
+                  )
+                    ? "Cancel this request and all its visits? Your visit is less than 24 hours away, so a late-cancellation fee may apply. We’ll confirm it and refund the rest."
+                    : "Cancel this request and all its visits? Any payment will be refunded."}
                 </p>
                 <button
                   className="primary full"
                   onClick={() => {
                     update((d) => {
-                      d.requests.find((q) => q.id === r.id)!.status =
-                        "Cancelled";
-                      d.visits
-                        .filter((v) => v.requestId === r.id)
-                        .forEach((v) => (v.status = "Cancelled"));
-                      d.assignments
-                        .filter((a) => visits.some((v) => v.id === a.visitId))
-                        .forEach((a) => (a.status = "Cancelled"));
-                      d.payments
-                        .filter(
-                          (p) =>
-                            s.quotes.some(
-                              (q) => q.id === p.quoteId && q.requestId === r.id,
-                            ) && p.status === "Paid",
-                        )
-                        .forEach((p) => (p.status = "Refunded"));
-                      log(
-                        d,
-                        "Customer cancelled booking · simulated refund issued",
-                      );
+                      cancelBooking(d, r.id);
                     }, "Booking cancelled");
                     setModal("");
                   }}
