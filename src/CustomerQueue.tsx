@@ -15,6 +15,7 @@ import { findingsFor, findingState } from "./pmw";
 import { assessmentLink } from "./store";
 import { type CustomerTodo, customerQueue } from "./roleQueues";
 import { AllCaughtUp, QueueLayer, useOneAtATime } from "./QueueLayer";
+import QueueAside from "./QueueAside";
 
 /**
  * What is waiting on the customer, one thing per screen (ADR 062): a quote to
@@ -57,6 +58,13 @@ export default function CustomerQueue({
       position={q.position}
       screen={q.screen}
       close={close}
+      aside={
+        /* An assessment has no request behind it, so no panel. */
+        todo &&
+        "requestId" in todo && (
+          <QueueAside s={s} role="Customer" requestId={todo.requestId} />
+        )
+      }
     >
       {todo ? (
         <Step

@@ -888,3 +888,59 @@ ADR 067.
   - The ADR 061 customer crawl finds no demo wording.
   - The contrast sweep is clean in both themes.
   - Chromium only, per ADR 052.
+
+# A quieter request page and a desktop panel (batch 4b) — 2026-10-07
+
+ADR 068.
+
+- **Tests:** `aside.test.ts`.
+  - **A live visit:** a request is booked until its only visit is cancelled.
+  - **The operator's panel:** who and where, the tasks without answers,
+    notes, and only this request's five newest history entries.
+  - **The customer's panel:** "Your booking", and no history.
+  - **The contractor's panel:**
+    - the city only, and no notes;
+    - only the offer's tasks, with their answers;
+    - the offer's own time even with an earlier visit on the request.
+  - **The visit time:** the earliest live, unfinished visit, never a
+    cancelled one.
+  - **Merged tasks** are left out, and a missing request has no panel.
+  - **Guards broken on purpose:** 15. Fourteen failed a test at once. The
+    fifteenth, the offer's own time, failed once its test was added.
+- **Browser walk:** 320px, 360px, 390px, 1024px and 1280px in both themes,
+  with no console errors, no element past the edge, and AA contrast on every
+  new screen.
+  - **An unbooked request:**
+    - It opens on Tasks, with the count matching the list.
+    - Notes and History show only on their tabs, and History is gone from
+      More actions.
+    - "Need More Info" is a main button.
+    - "Review tasks" from the History tab switches to Tasks and scrolls to
+      them.
+    - Fulfilment hides the tabs, and Back brings them back.
+  - **A booked request:**
+    - It opens on Visits, with the visit card on it.
+    - "Need More Info" is only in More actions.
+    - A tab picked by hand resets on choosing another request.
+  - **Notices:** a visit notice and a message notice, opened from another
+    request's Tasks tab, land on Visits and mark the visit card and its
+    conversation.
+  - **The panels:**
+    - At 1024px and 1280px all three queues show their panel.
+    - The decision column stays 560px.
+    - The customer's panel has no internal history.
+    - The contractor's panel has the city and not the street.
+    - The contractor's inline Details is hidden there.
+    - On phones there is no panel, and the inline Details is kept.
+  - **Earlier walks:** the 3b walk now opens More actions before asking on a
+    booked request. The 2, 3a, 3b and 4a walks pass.
+- **Repo checks:** 541 tests, the build, `design:check`, `catalogue:check`
+  and `status:check` pass. New files are prettier-clean, and touched source
+  carries no new drift.
+- **Sweeps:**
+  - The narrow-layout probes are unchanged at 0 / 30 / 14 / 0.
+  - The tab-width and shrink-wrap probes are at 0.
+  - The console crawl matches `main`.
+  - The ADR 061 customer crawl finds no demo wording.
+  - The contrast sweep is clean in both themes.
+  - Chromium only, per ADR 052.
