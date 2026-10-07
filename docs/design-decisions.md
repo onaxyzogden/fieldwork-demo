@@ -1486,3 +1486,58 @@ late, but nothing is left for the operator to do.
   late message, the follow-up summary and ADR 064's call-back message all
   ended in "a.m..".
 - Unfinished work is chosen before a late arrival on the same request.
+
+## ADR 066: Trips on offers, visit day at a glance, notices that open the thing
+
+Accepted. The second half of the third UI/UX batch, after ADR 065.
+
+**An offer says how far it is.** "About 24 min · 16 km from Burlington"
+appears on:
+
+- the contractor's offer screen;
+- each job card;
+- the offers queue.
+
+The minutes are the visit's own `travel`, the figure the scheduler booked it
+with, so the 8-or-24-minute rule is not written a third time. `trip()` adds
+where the contractor starts and a distance from a small table:
+
+- 5 km across one city;
+- a symmetric figure for each pair of the four cities.
+
+When a pair is not in the table, the label leaves the distance out rather
+than guess (`tripLabel`).
+
+**Visit day, live.** `todaysVisits()` lists a day's visits in the demo's
+timezone, earliest first. It leaves out cancelled visits and visits on
+cancelled or declined requests, and keeps finished ones for the day.
+`visitDayState()` says where each one is: Scheduled, On the way, Running
+late, In progress, Done or Unfinished.
+
+- **The customer** sees a banner at the top of My bookings, one line per
+  visit today. Tapping it opens that visit:
+  - "Today: Yousef Haddad arrives at 11:00 a.m. · in 2 h";
+  - "… is on the way · arriving around 10:55 a.m.";
+  - "Running late · … arriving around 11:25 a.m.", in the warning colour;
+  - "Work in progress · started 11:25 a.m.";
+  - "Done · finished 12:30 p.m.".
+- **The operator** sees a Today strip on Home: a row per visit with its
+  time, customer, contractor and a state chip, and a link to all of today.
+  The strip and the "Scheduled visits" count are one list, so they cannot
+  disagree.
+
+**A notice opens the exact thing.** `noticeTarget()` maps each notice to
+where it is about, for the role reading it:
+
+- **Operator:** the decision card, a visit, a conversation or the question.
+- **Customer:** the quote, an additional charge, a visit, a conversation,
+  the question or the booking. A charge notice carries `chargeId`, so it
+  opens the charge rather than the quote its kind would mean. A payment
+  opens the quote, unless it came of a visit (a task closed with a refund).
+- **Contractor:** the job, or its conversation.
+
+The inbox opens that target. The pop-up now opens its own item, read,
+rather than the whole inbox. `reveal()` scrolls the target into view and
+outlines it for two seconds, one mark at a time. Nothing moves, so reduced
+motion needs no rule of its own. The quote, charge and question cards gained
+anchors for this.

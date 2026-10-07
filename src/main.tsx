@@ -159,12 +159,20 @@ import {
   LATE_CANCEL_TEXT,
   callBackText,
   inbox,
+  markRead,
+  noticeTarget,
   offerSeen,
   unreachable,
 } from "./notifications";
 import { NotificationInbox, MessageThread } from "./NotificationUI";
 import { Glance, GlanceLead } from "./Glance";
-import { customerGlance, glanceDate } from "./glance";
+import {
+  customerGlance,
+  glanceDate,
+  todaysVisits,
+  visitDayLine,
+  visitDayState,
+} from "./glance";
 import {
   migrateDispatch,
   dispatchStatus,
@@ -573,6 +581,7 @@ function Workspace({
         ? "Customer:" + customer
         : "Contractor:" + contractor;
   const notices = inbox(s, recipient);
+  const latest = notices.find((n) => !n.read);
   React.useEffect(() => {
     if (!modal) return;
     const previous = document.activeElement as HTMLElement | null;
@@ -645,6 +654,11 @@ function Workspace({
   const customerNext = customerAtAGlance.next;
   /* Open a request's row in the accordion below and bring it into view. The
      row is already on this screen, so this expands rather than navigates. */
+  const customerToday = todaysVisits(
+    s,
+    s.clock,
+    (v) => s.requests.find((x) => x.id === v.requestId)?.accountId === customer,
+  );
   const openRequestRow = (id: string) => {
     setActive(id);
     setExpanded(true);
@@ -654,6 +668,50 @@ function Workspace({
         ?.closest(".request-accordion-item")
         ?.scrollIntoView({ block: "center", behavior: "smooth" }),
     );
+  };
+  /* Bring something into view once the page has drawn it, and mark it for a
+     moment so the eye lands on it (ADR 066). A conversation opens too. */
+  const reveal = (id: string) =>
+    setTimeout(() => {
+      const el = document.getElementById(id);
+      if (!el) return;
+      if (el instanceof HTMLDetailsElement) el.open = true;
+      el.scrollIntoView({ block: "center" });
+      /* One mark at a time: opening another notice moves it. */
+      document
+        .querySelectorAll(".flash")
+        .forEach((x) => x.classList.remove("flash"));
+      el.classList.add("flash");
+      setTimeout(() => el.classList.remove("flash"), 2000);
+    }, 120);
+  /* A notice opens the exact thing it is about (ADR 066): the page, the
+     booking, then the card, scrolled to and marked. */
+  const openNotice = (n: NonNullable<State["notifications"]>[number]) => {
+    const target = noticeTarget(
+      n,
+      role as "Operator" | "Customer" | "Contractor",
+    );
+    if (role === "Contractor") {
+      setContractorVisit("");
+      setTimeout(() => setContractorVisit(n.visitId), 0);
+      setPage("Your Work");
+    } else {
+      choose(n.requestId);
+      setExpanded(true);
+      setPage(role === "Operator" ? "Requests" : "My bookings");
+    }
+    setModal("");
+    const id = {
+      decision: "decision",
+      question: idPrefix + "question",
+      visit: idPrefix + "visit-" + n.visitId,
+      messages: "messages-" + n.visitId,
+      quote: idPrefix + "quote",
+      charge: idPrefix + "charge",
+      booking: "request-" + n.requestId,
+      job: "",
+    }[target];
+    if (id) reveal(id);
   };
   /* A count with nothing behind it gets no handler, so the card never offers
      a button that would do nothing. */
@@ -1181,7 +1239,7 @@ function Workspace({
     if (!c) return null;
     const who = providers.find((p) => p.id === c.plan.providerId)?.name;
     return (
-      <div className="card panel quote" id="charge">
+      <div className="card panel quote" id={idPrefix + "charge"}>
         <div className="row between">
           <span className="eyebrow">ADDITIONAL CHARGE</span>
           <span className={"badge " + badgeTone(c.status)}>
@@ -1232,7 +1290,7 @@ function Workspace({
   };
   const quotePanel = () =>
     quote ? (
-      <div className="card panel quote">
+      <div className="card panel quote" id={idPrefix + "quote"}>
         <div className="row between">
           {/* The pricing path is how the operator priced it; to the customer
               it is a quote, or an estimate when it is a range. */}
@@ -1961,11 +2019,20 @@ function Workspace({
           unread={notices.filter((n) => !n.read).length}
           menuTrigger={menuTrigger}
         />
-        {notices.find((n) => !n.read) && (
+        {latest && (
           <div className="incoming-notice" role="status">
             <Bell size={16} />
-            <button onClick={() => setModal("Notifications")}>
-              {notices.find((n) => !n.read)!.text}
+            {/* Opens the update itself, read, rather than the inbox it sits
+                at the top of (ADR 066). */}
+            <button
+              onClick={() => {
+                update((d) => {
+                  markRead(d, latest.id);
+                });
+                openNotice(latest);
+              }}
+            >
+              {latest.text}
               <small>
                 {role === "Customer"
                   ? "View update"
@@ -2183,6 +2250,7 @@ function Workspace({
                     /* Single Q&A slot: waiting, then answered. Asking again
                        replaces it rather than growing a history. */
                     <section
+                      id={idPrefix + "question"}
                       className={
                         "card operator-note " +
                         (r.customerReply ? "answered" : "waiting")
@@ -2950,6 +3018,34 @@ function Workspace({
                       <p>Your requests and upcoming visits.</p>
                     </div>
                   </div>
+                  {/* Visit day, live (ADR 066): one line per visit today,
+                      opening that visit. */}
+                  {customerToday.length > 0 && (
+                    <section
+                      className="card panel visit-day"
+                      aria-label="Today"
+                    >
+                      {customerToday.map((v) => (
+                        <button
+                          key={v.id}
+                          className={
+                            "visit-day-line" +
+                            (visitDayState(v) === "Running late"
+                              ? " is-late"
+                              : "")
+                          }
+                          onClick={() => {
+                            setActive(v.requestId);
+                            setExpanded(true);
+                            reveal(idPrefix + "visit-" + v.id);
+                          }}
+                        >
+                          <CalendarDays size={20} />
+                          <span>{visitDayLine(v, s.clock)}</span>
+                        </button>
+                      ))}
+                    </section>
+                  )}
                   {/* Each number opens the first thing it counted, so a
                       count and what it points at cannot disagree. A bucket
                       with nothing in it gets no onClick rather than a button
@@ -3185,6 +3281,7 @@ function Workspace({
                                 /* One question, one reply. Not a thread: see §7.3 — a new
                          question replaces this pair rather than appending. */
                                 <div
+                                  id={idPrefix + "question"}
                                   className={
                                     "card operator-note " +
                                     (r.customerReply ? "answered" : "waiting")
@@ -3373,26 +3470,7 @@ function Workspace({
                 s={s}
                 recipient={recipient}
                 update={update}
-                open={(requestId, visitId) => {
-                  if (role === "Contractor") {
-                    setContractorVisit("");
-                    setTimeout(() => setContractorVisit(visitId), 0);
-                    setPage("Your Work");
-                  } else {
-                    choose(requestId);
-                    setPage(role === "Operator" ? "Requests" : "My bookings");
-                  }
-                  setModal("");
-                  setTimeout(() => {
-                    const thread = document.getElementById(
-                      "messages-" + visitId,
-                    );
-                    if (thread instanceof HTMLDetailsElement) {
-                      thread.open = true;
-                      thread.scrollIntoView({ block: "center" });
-                    }
-                  }, 100);
-                }}
+                open={openNotice}
               />
             )}
             {["Instant payment", "Payment"].includes(modal) && (

@@ -41,7 +41,8 @@ export function NotificationInbox({
   s: State;
   recipient: string;
   update: Update;
-  open: (requestId: string, visitId: string) => void;
+  /** Open what the notice is about (ADR 066). */
+  open: (n: NonNullable<State["notifications"]>[number]) => void;
 }) {
   const items = inbox(s, recipient);
   /* A customer's inbox reads as production (ADR 061): no note about the
@@ -80,7 +81,7 @@ export function NotificationInbox({
           key={n.id}
           onClick={() => {
             update((d) => markRead(d, n.id));
-            open(n.requestId, n.visitId);
+            open(n);
           }}
         >
           <span>

@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { questionAnswers } from "./clarification";
-import { respondToOffer } from "./dispatch";
+import { respondToOffer, tripLabel } from "./dispatch";
 import { type State, accountName, dateLabel, money } from "./model";
 import { markOfferSeen, offerSeen } from "./notifications";
 import { contractorQueue } from "./roleQueues";
@@ -100,6 +100,7 @@ function Offer({
           {accountName(r.accountId)} · {r.city}
         </strong>
         <span>{dateLabel(v.start)}</span>
+        <span>{tripLabel(v.providerId, r.city, v.travel)}</span>
         <span>
           {v.duration} minutes · {tasks.length} task
           {tasks.length === 1 ? "" : "s"}

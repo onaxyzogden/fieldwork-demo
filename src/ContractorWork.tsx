@@ -17,7 +17,7 @@ import {
   dayKey,
   workStatus,
 } from "./work";
-import { respondToOffer } from "./dispatch";
+import { respondToOffer, tripLabel } from "./dispatch";
 import { storablePhotos, unreadableMessage } from "./photos";
 import { MessageThread } from "./NotificationUI";
 import { markOfferSeen, offerSeen } from "./notifications";
@@ -616,6 +616,10 @@ export default function ContractorWork({
               <p>
                 {v.duration} minutes · {v.taskIds.length} tasks
               </p>
+              {/* How far it is, beside what it pays (ADR 066). */}
+              <p className="muted">
+                {tripLabel(v.providerId, r.city, v.travel)}
+              </p>
               <h3 className="contractor-pay">Your pay: {money(a.pay)} CAD</h3>
               <p>
                 <When
@@ -782,6 +786,9 @@ export default function ContractorWork({
                   <p>
                     {accountName(r.accountId)} · {r.city} ·{" "}
                     <When clock={s.clock} at={v.start} lead="Starts in" />
+                  </p>
+                  <p className="muted">
+                    {tripLabel(v.providerId, r.city, v.travel)}
                   </p>
                   {/* Accepted-but-not-yet-startable visits (planning ahead,
                       before the day-of execution controls unlock) still

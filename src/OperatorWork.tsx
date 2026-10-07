@@ -25,7 +25,7 @@ import {
   workStatus,
 } from "./work";
 import { Glance } from "./Glance";
-import { glanceDate } from "./glance";
+import { glanceDate, todaysVisits, visitDayState } from "./glance";
 import { requestDispatch } from "./dispatch";
 import { JobWork } from "./ContractorWork";
 import DecisionQueue from "./DecisionQueue";
@@ -62,10 +62,10 @@ export function OperatorHome({
         ),
     );
   const waiting = s.requests.filter((r) => bucket(s, r.id) === "Waiting");
-  const visits = s.visits.filter(
-    (v) =>
-      dayKey(v.start) === dayKey(s.clock) &&
-      ["Confirmed", "In Progress", "Completed"].includes(v.status),
+  /* Today's booked visits: the "Scheduled visits" count and the strip
+     below are this one list, so they cannot disagree (ADR 066). */
+  const visits = todaysVisits(s, s.clock, (v) =>
+    ["Confirmed", "In Progress", "Completed"].includes(v.status),
   );
   const hour = Number(torontoParts(new Date(s.clock)).hour);
   const greeting =
@@ -254,6 +254,49 @@ export function OperatorHome({
           open={open}
           close={() => setWorking(false)}
         />
+      )}
+      {/* Visit day, live (ADR 066): who is where, a row each. */}
+      {visits.length > 0 && (
+        <section className="card panel op-today" aria-label="Today’s visits">
+          <div className="row between">
+            <h2>Today</h2>
+            <button className="text-button" onClick={today}>
+              All of today
+            </button>
+          </div>
+          {visits.map((v) => {
+            const state = visitDayState(v);
+            return (
+              <button
+                key={v.id}
+                className="op-today-row"
+                onClick={() => open(v.requestId)}
+              >
+                <span className="op-today-time">{timeLabel(v.start)}</span>
+                <span className="op-today-who">
+                  <strong>
+                    {s.requests.find((r) => r.id === v.requestId)?.name}
+                  </strong>
+                  <small>
+                    {providers.find((p) => p.id === v.providerId)?.name}
+                  </small>
+                </span>
+                <span
+                  className={
+                    "badge" +
+                    (state === "Done"
+                      ? " green"
+                      : ["Running late", "Unfinished"].includes(state)
+                        ? " warning"
+                        : "")
+                  }
+                >
+                  {state}
+                </span>
+              </button>
+            );
+          })}
+        </section>
       )}
       <div className="op-view-switch" role="group" aria-label="Request view">
         <button

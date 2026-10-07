@@ -790,6 +790,43 @@
   padding: var(--space-1) var(--space-2);
   font-size: var(--text-caption);
 }
+/* Today's visits on operator Home (ADR 066): one compact row each. */
+.op-today {
+  display: grid;
+  gap: var(--space-1);
+}
+.op-today h2 {
+  margin: 0;
+  font-size: var(--text-h3);
+}
+.op-today-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  width: 100%;
+  min-height: 44px;
+  padding: var(--space-2) 0;
+  background: none;
+  border: 0;
+  border-top: 1px solid var(--line);
+  color: var(--text);
+  text-align: left;
+}
+.op-today-time {
+  flex: 0 0 auto;
+  min-width: 4.5em;
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+.op-today-who {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-width: 0;
+}
+.op-today-who small {
+  color: var(--muted);
+}
 .op-attention-list {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -978,4 +1015,10 @@
 .when-soon {
   color: var(--warning);
   font-weight: 600;
+}
+/* Where a notice or a visit-day line just took you (ADR 066): outlined for
+   a moment, then gone. Nothing moves, so reduced motion needs no rule. */
+.flash {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
 }

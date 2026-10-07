@@ -74,6 +74,33 @@
 .customer-timing-section {
   margin-top: var(--space-6);
 }
+/* Visit day (ADR 066): today's visits, live, above everything else. */
+.visit-day {
+  display: grid;
+  gap: var(--space-1);
+  margin-bottom: var(--space-4);
+}
+.visit-day-line {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  width: 100%;
+  min-height: 44px;
+  padding: var(--space-2) 0;
+  background: none;
+  border: 0;
+  color: var(--text);
+  font-weight: 600;
+  text-align: left;
+}
+.visit-day-line svg {
+  flex-shrink: 0;
+  color: var(--accent-text);
+}
+.visit-day-line.is-late,
+.visit-day-line.is-late svg {
+  color: var(--warning);
+}
 /* Addresses booked before, one tap each (ADR 064). */
 .saved-addresses {
   display: grid;

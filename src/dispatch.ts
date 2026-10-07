@@ -289,3 +289,36 @@ export function respondToOffer(
   }
   return true;
 }
+
+/* ── The trip to a job (ADR 066) ─────────────────────────────────────────── */
+
+/** Rough driving distances between the cities the demo serves, in km. */
+const KM: Record<string, number> = {
+  "Burlington|Oakville": 16,
+  "Milton|Oakville": 22,
+  "Mississauga|Oakville": 20,
+  "Burlington|Milton": 20,
+  "Burlington|Mississauga": 35,
+  "Milton|Mississauga": 30,
+};
+/** Across town, inside one city. */
+const SAME_CITY_KM = 5;
+
+/**
+ * How far a contractor travels to a job: where from, and roughly how far. The
+ * minutes are the visit's own `travel`, the figure the scheduler booked it
+ * with, so they are not worked out a second time here. An estimate either
+ * way, which is how the offer words it.
+ */
+export function trip(providerId: string, city: string) {
+  const from = providers.find((p) => p.id === providerId)?.city ?? "";
+  const km = from === city ? SAME_CITY_KM : KM[[from, city].sort().join("|")];
+  return { from, km };
+}
+
+/** "About 24 min · 16 km from Burlington", or without the distance when the
+ *  pair is not in the table. */
+export function tripLabel(providerId: string, city: string, minutes: number) {
+  const t = trip(providerId, city);
+  return `About ${minutes} min${t.km ? ` · ${t.km} km` : ""}${t.from ? ` from ${t.from}` : ""}`;
+}

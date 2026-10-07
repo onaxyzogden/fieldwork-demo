@@ -12,7 +12,9 @@
  * that happen to agree today.
  */
 import type { Assignment, State, Visit, Walkthrough } from "./model";
-import { dayKey } from "./work";
+import { providers, timeLabel } from "./model";
+import { countdown } from "./countdown";
+import { dayKey, unresolved } from "./work";
 import { findingsFor, findingState, quotable } from "./pmw";
 
 export type ContractorTab = "Offers" | "Today" | "Upcoming";
@@ -279,4 +281,67 @@ export function walkthroughGlance(s: State, clock: number): WalkthroughGlance {
         }
       : null,
   };
+}
+
+/* ── Visit day (ADR 066) ─────────────────────────────────────────────────── */
+
+/**
+ * Today's visits in the demo's timezone, earliest first, for the customer's
+ * banner and the operator's strip. A cancelled visit, or one on a cancelled
+ * or declined request, is not happening; a finished one stays for the day.
+ */
+export function todaysVisits(
+  s: State,
+  clock: number,
+  include: (v: Visit) => boolean = () => true,
+) {
+  const today = dayKey(clock);
+  const off = new Set(
+    s.requests
+      .filter((r) => ["Cancelled", "Declined"].includes(r.status))
+      .map((r) => r.id),
+  );
+  return s.visits
+    .filter(
+      (v) =>
+        v.status !== "Cancelled" &&
+        !off.has(v.requestId) &&
+        dayKey(v.start) === today &&
+        include(v),
+    )
+    .sort((a, b) => a.start.localeCompare(b.start));
+}
+
+/** Where a visit is today, in a word: the operator's chip. */
+export function visitDayState(v: Visit) {
+  const x = v.execution;
+  if (x?.finishedAt) return unresolved(v).length ? "Unfinished" : "Done";
+  if (x?.startedAt) return "In progress";
+  if (x?.onWayAt)
+    return x.eta && x.eta > v.start ? "Running late" : "On the way";
+  return "Scheduled";
+}
+
+/** The customer's line for a visit today. */
+export function visitDayLine(v: Visit, clock: number) {
+  const x = v.execution;
+  const who =
+    providers.find((p) => p.id === v.providerId)?.name || "Your provider";
+  switch (visitDayState(v)) {
+    case "Done":
+      return `Done · finished ${timeLabel(x!.finishedAt!)}`;
+    case "Unfinished":
+      return `Visit finished at ${timeLabel(x!.finishedAt!)} · see your booking for what’s next`;
+    case "In progress":
+      return `Work in progress · started ${timeLabel(x!.startedAt!)}`;
+    case "Running late":
+      return `Running late · ${who} is arriving around ${timeLabel(x!.eta!)}`;
+    case "On the way":
+      /* execute() sets the ETA with "on the way", always together. */
+      return `${who} is on the way · arriving around ${timeLabel(x!.eta!)}`;
+    default: {
+      const left = countdown(clock, v.start);
+      return `Today: ${who} arrives at ${timeLabel(v.start)}${left ? ` · in ${left.text}` : ""}`;
+    }
+  }
 }
