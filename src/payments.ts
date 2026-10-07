@@ -8,6 +8,7 @@ import {
   type PaymentMethod,
   type Quote,
   type State,
+  workPayment,
 } from "./model";
 
 /**
@@ -74,7 +75,11 @@ export function payQuote(s: State, quoteId: string, fail = false) {
   const q = s.quotes.find((x) => x.id === quoteId);
   const r = q && s.requests.find((x) => x.id === q.requestId);
   if (!q || !r || q.status !== "Approved") return false;
-  if (s.payments.some((p) => p.quoteId === q.id && p.status === "Paid"))
+  if (
+    s.payments.some(
+      (p) => p.quoteId === q.id && workPayment(p) && p.status === "Paid",
+    )
+  )
     return false;
   /* Store the method as well as taking the payment. The decided sequence
      turns on a method being on file — it is what lets a visit be confirmed
@@ -104,7 +109,11 @@ export function payQuote(s: State, quoteId: string, fail = false) {
  */
 export function readyToPay(s: State, quote: Quote) {
   if (quote.status !== "Approved") return false;
-  if (s.payments.some((p) => p.quoteId === quote.id && p.status === "Paid"))
+  if (
+    s.payments.some(
+      (p) => p.quoteId === quote.id && workPayment(p) && p.status === "Paid",
+    )
+  )
     return false;
   if (!quote.payOnCompletion) return true;
   const visits = s.visits.filter(

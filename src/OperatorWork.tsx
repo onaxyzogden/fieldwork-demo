@@ -29,7 +29,7 @@ import { glanceDate } from "./glance";
 import { requestDispatch } from "./dispatch";
 import { JobWork } from "./ContractorWork";
 import DecisionQueue from "./DecisionQueue";
-import { decisionQueue, heldFor } from "./decisions";
+import { decisionQueue, heldFor, unfinished } from "./decisions";
 type Props = {
   s: State;
   open: (id: string) => void;
@@ -90,26 +90,32 @@ export function OperatorHome({
          money is held, or someone is waiting by the phone. */
       const late = feeUndecided(r);
       const call = callBackDue(r) ? r.callBack : undefined;
+      /* An additional charge with the customer (ADR 065). */
+      const charge = s.charges?.find(
+        (c) => c.requestId === r.id && c.status === "Sent",
+      );
       const title = late
         ? "Late cancellation"
         : call
           ? `Call back by ${timeLabel(call.by)}`
-          : issue
-            ? issue.execution?.finishedAt
-              ? "Work needs follow-up"
-              : "Job running late"
-            : dispatch.includes("Needs reassignment")
-              ? dispatch.startsWith("Offer expired")
-                ? "Offer expired"
-                : "Contractor declined"
-              : dispatch ||
-                (r.status === "Submitted"
-                  ? "New request"
-                  : quote?.status === "Declined"
-                    ? "Quote declined"
-                    : r.status === "Awaiting Quote Approval"
-                      ? "Quote awaiting approval"
-                      : r.status);
+          : charge
+            ? "Waiting on approval"
+            : issue
+              ? issue.execution?.finishedAt
+                ? "Unfinished work"
+                : "Job running late"
+              : dispatch.includes("Needs reassignment")
+                ? dispatch.startsWith("Offer expired")
+                  ? "Offer expired"
+                  : "Contractor declined"
+                : dispatch ||
+                  (r.status === "Submitted"
+                    ? "New request"
+                    : quote?.status === "Declined"
+                      ? "Quote declined"
+                      : r.status === "Awaiting Quote Approval"
+                        ? "Quote awaiting approval"
+                        : r.status);
       const tone =
         late || call || issue || dispatch.includes("Needs reassignment")
           ? "issue"
@@ -147,21 +153,24 @@ export function OperatorHome({
                 ? `${Math.floor(age / 60)} hr ago`
                 : `${Math.floor(age / 1440)} days ago`;
       const moving = call && s.visits.find((v) => v.id === call.visitId);
+      const undone = unfinished(s, r.id).length;
       const detail = late
         ? `${money(heldFor(s, r.id))} held · decide the fee`
         : moving
           ? `Wants a new time for ${dateLabel(moving.start)}`
-          : issue?.execution?.finishedAt
-            ? "Unresolved tasks · operator follow-up"
-            : issue?.execution?.eta
-              ? `${Math.max(0, Math.round((+new Date(issue.execution.eta) - +new Date(issue.start)) / 60000))} min behind · simulated ETA`
-              : dispatch.includes("Needs reassignment")
-                ? "Needs reassignment"
-                : quote?.status === "Declined"
-                  ? `${money(quote.amount)} · declined · revise the quote`
-                  : quote && r.status === "Awaiting Quote Approval"
-                    ? `${money(quote.amount)} · ${taskList.length} task${taskList.length === 1 ? "" : "s"} · waiting for customer`
-                    : `${taskList.length} task${taskList.length === 1 ? "" : "s"} · Est. ${taskList.reduce((n, t) => n + t.duration, 0)} min`;
+          : charge
+            ? `${money(charge.amount)} additional charge · ${charge.reason}`
+            : issue?.execution?.finishedAt
+              ? `${undone} task${undone === 1 ? "" : "s"} left undone · return or close`
+              : issue?.execution?.eta
+                ? `${Math.max(0, Math.round((+new Date(issue.execution.eta) - +new Date(issue.start)) / 60000))} min behind · simulated ETA`
+                : dispatch.includes("Needs reassignment")
+                  ? "Needs reassignment"
+                  : quote?.status === "Declined"
+                    ? `${money(quote.amount)} · declined · revise the quote`
+                    : quote && r.status === "Awaiting Quote Approval"
+                      ? `${money(quote.amount)} · ${taskList.length} task${taskList.length === 1 ? "" : "s"} · waiting for customer`
+                      : `${taskList.length} task${taskList.length === 1 ? "" : "s"} · Est. ${taskList.reduce((n, t) => n + t.duration, 0)} min`;
       return (
         <button
           className={"op-request-bento op-tone-" + tone}

@@ -25,6 +25,7 @@ import {
 } from "./model";
 import { suggestTitle } from "./pmw";
 import { useFieldErrors } from "./fields";
+import FollowUp, { followUpLine } from "./FollowUp";
 import { bucket } from "./work";
 import "./onsite.css";
 
@@ -194,11 +195,40 @@ function Step({
     else setRefused(refusal);
   };
 
+  /* Unfinished work and late arrivals have their own screen (ADR 065), the
+     same one the request page shows. */
+  if (d.kind === "follow-up")
+    return (
+      <>
+        <h1 tabIndex={-1}>
+          {d.tasks.length ? "Unfinished work" : "Running late"}
+        </h1>
+        <div className="dq-request">
+          <strong>{accountName(r.accountId)}</strong>
+          <span>
+            {r.address || r.name}, {r.city}
+          </span>
+        </div>
+        <p className="onsite-hint">{followUpLine(s, d)}</p>
+        <FollowUp
+          s={s}
+          update={update}
+          requestId={requestId}
+          d={d}
+          done={done}
+          layout="queue"
+          secondary={[
+            { label: "Open request", run: open },
+            { label: "Skip", run: skip },
+          ]}
+        />
+      </>
+    );
+
   const unsure = d.kind === "review" ? d.taskIds : [];
   const heading = {
     "late-cancel": "Late cancellation",
     "call-back": "Call back",
-    "follow-up": "Follow up the job",
     reassign:
       d.kind === "reassign" && d.expired
         ? "Offer expired"
@@ -239,9 +269,6 @@ function Step({
       label: "Called, no change",
       run: () => act((x) => completeCallBack(x, requestId), ""),
     });
-  } else if (d.kind === "follow-up") {
-    why = d.issue;
-    primary = { label: "Open request", run: open };
   } else if (d.kind === "reassign") {
     why = d.previousProviderId
       ? `${nameOf(d.previousProviderId)} ${d.expired ? "did not answer in time" : "declined"}.`

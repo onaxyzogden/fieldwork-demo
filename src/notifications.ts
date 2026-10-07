@@ -8,6 +8,7 @@ import {
   money,
   primaryContact,
   providers,
+  sentence,
   timeLabel,
   uid,
   urgency,
@@ -117,11 +118,10 @@ const offerText = (status: string, name: string, when: string) => ({
 export const LATE_CANCEL_TEXT =
   "Your visit is cancelled. Because it was less than 24 hours away, a late-cancellation fee may apply. We’ll confirm.";
 /** What the customer is told when they ask to change a visit inside 24 hours. */
-export const callBackText = (by: string) => {
-  /* "p.m." already ends the sentence. */
-  const at = timeLabel(by);
-  return `Your visit is less than 24 hours away, so we’ll arrange the new time with you. Expect a call by ${at}${at.endsWith(".") ? "" : "."}`;
-};
+export const callBackText = (by: string) =>
+  sentence(
+    `Your visit is less than 24 hours away, so we’ll arrange the new time with you. Expect a call by ${timeLabel(by)}`,
+  );
 
 export const inbox = (s: State, recipient: string) =>
   (s.notifications || []).filter(
@@ -266,6 +266,48 @@ export function deliverUpdates(before: State, after: State) {
       );
     if (text.operator)
       emit("Operator", v.requestId, v.id, a.id, "offer", text.operator);
+  }
+  /* Additional charges and closed tasks (ADR 065): the customer hears what
+     they are asked to pay or have had back, the operator what they said. */
+  for (const c of after.charges ?? []) {
+    const old = before.charges?.find((x) => x.id === c.id);
+    const r = after.requests.find((x) => x.id === c.requestId);
+    if (!r || old?.status === c.status) continue;
+    if (c.status === "Sent")
+      emit(
+        "Customer:" + r.accountId,
+        r.id,
+        "",
+        "",
+        "quote",
+        `Additional charge to approve · ${money(c.amount)} · ${c.reason}`,
+      );
+    else
+      emit(
+        "Operator",
+        r.id,
+        c.visitId ?? "",
+        "",
+        "quote",
+        `${r.name} ${c.status === "Approved" ? "approved" : "declined"} the ${money(c.amount)} charge`,
+      );
+  }
+  for (const v of after.visits) {
+    const r = after.requests.find((x) => x.id === v.requestId);
+    const was = before.visits.find((x) => x.id === v.id)?.execution?.outcomes;
+    for (const [taskId, o] of Object.entries(v.execution?.outcomes ?? {})) {
+      const closed = o.resolution?.kind === "Closed" ? o.resolution : null;
+      if (!r || !closed || was?.[taskId]?.resolution) continue;
+      const task = after.tasks.find((t) => t.id === taskId)?.summary;
+      emit(
+        "Customer:" + r.accountId,
+        r.id,
+        v.id,
+        "",
+        "payment",
+        `We’ve closed “${task}” without doing it${closed.refund ? ` and refunded ${money(closed.refund)}` : ""}.`,
+      );
+    }
   }
   for (const v of after.visits) {
     const old = before.visits.find((x) => x.id === v.id),

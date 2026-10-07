@@ -9,6 +9,7 @@ import {
   accounts,
   contactsFor,
   mayApprove,
+  workPayment,
 } from "./model";
 import {
   approveAssessment,
@@ -164,7 +165,7 @@ export default function Assessment({
   const request = s.requests.find((r) => r.walkthroughId === w.id);
   const quote = s.quotes.find((q) => q.requestId === request?.id);
   const paid = s.payments.some(
-    (p) => p.quoteId === quote?.id && p.status === "Paid",
+    (p) => p.quoteId === quote?.id && workPayment(p) && p.status === "Paid",
   );
   const visit = s.visits.find(
     (v) => v.requestId === request?.id && v.status !== "Cancelled",

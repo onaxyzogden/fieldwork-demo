@@ -15,11 +15,14 @@ import {
 import CustomerQueue from "./CustomerQueue";
 import { customerQueue } from "./roleQueues";
 import {
+  approveCharge,
   cancelBooking,
   completeCallBack,
+  declineCharge,
   heldFor,
   issueQuote,
   lateFor,
+  nextDecision,
   offerVisit,
   requestCallBack,
   rescheduleVisit,
@@ -37,6 +40,7 @@ import {
   customerVisitText,
 } from "./customerText";
 import CustomerIntake from "./CustomerIntake";
+import FollowUp, { followUpLine } from "./FollowUp";
 import { validAddress, dayLabel } from "./intake";
 import {
   getIssue,
@@ -113,6 +117,7 @@ import {
   materialsResponsibilities,
   type MaterialsResponsibility,
   accountName,
+  workPayment,
   primaryContact,
   timeLabel,
   coordinated,
@@ -966,6 +971,37 @@ function Workspace({
       <Message field={"photo-" + t.id} />
     </div>
   );
+  /* What a finished visit means for the customer, including what the
+     operator decided about anything it left undone (ADR 065). */
+  const finishedNote = (v: Visit) => {
+    const left = Object.values(v.execution?.outcomes ?? {}).filter(
+      (o) => o.outcome !== "Completed",
+    );
+    if (!left.length) return "Your visit is complete.";
+    if (workIssue(v))
+      return "Your visit has finished. We’ll be in touch about the remaining work.";
+    const back = left.filter((o) => o.resolution?.kind === "Return visit");
+    const closed = left.flatMap((o) =>
+      o.resolution?.kind === "Closed" ? [o.resolution] : [],
+    );
+    const refund = closed.reduce((n, c) => n + c.refund, 0);
+    return [
+      "Your visit has finished.",
+      back.length
+        ? back.some(
+            (o) =>
+              o.resolution?.kind === "Return visit" && !o.resolution.visitId,
+          )
+          ? "The rest needs a return visit, once you approve the additional charge."
+          : "A return visit is booked for the rest."
+        : "",
+      closed.length
+        ? `${closed.length === 1 ? "One task" : `${closed.length} tasks`} won’t be done${refund ? `, and ${money(refund)} was refunded` : ""}.`
+        : "",
+    ]
+      .filter(Boolean)
+      .join(" ");
+  };
   const visitCard = (v: Visit) => (
     <div className="visit-card" key={v.id} id={idPrefix + "visit-" + v.id}>
       <div className="row between">
@@ -997,13 +1033,7 @@ function Workspace({
               update={update}
             />
           </div>
-          {v.execution?.finishedAt && (
-            <p className="note">
-              {workIssue(v)
-                ? "Your visit has finished. We’ll be in touch about the remaining work."
-                : "Your visit is complete."}
-            </p>
-          )}
+          {v.execution?.finishedAt && <p className="note">{finishedNote(v)}</p>}
         </>
       )}
       {/* Inside a day, a new time is ours to arrange (ADR 064): the
@@ -1142,6 +1172,64 @@ function Workspace({
       </div>
     );
   }
+  /* An additional charge for a return visit (ADR 065), beside the quote it
+     adds to; approving pays it and books the return visit. */
+  const chargePanel = () => {
+    const c = s.charges?.find(
+      (x) => x.requestId === r.id && x.status === "Sent",
+    );
+    if (!c) return null;
+    const who = providers.find((p) => p.id === c.plan.providerId)?.name;
+    return (
+      <div className="card panel quote" id="charge">
+        <div className="row between">
+          <span className="eyebrow">ADDITIONAL CHARGE</span>
+          <span className={"badge " + badgeTone(c.status)}>
+            {customerQuoteText(c.status)}
+          </span>
+        </div>
+        <h2>
+          {money(c.amount)}
+          <small> CAD</small>
+        </h2>
+        <p>{c.reason}</p>
+        <small>
+          For a return visit{who ? ` with ${who}` : ""} on{" "}
+          {dateLabel(c.plan.start)}, booked once you approve.
+        </small>
+        <div className="row actions">
+          <button
+            className="primary"
+            onClick={() => {
+              let ok = false;
+              update((d) => {
+                ok = approveCharge(d, c.id, fail);
+              });
+              if (ok) notify("Charge approved · return visit booked");
+              else
+                invalidate(
+                  "charge",
+                  "Your payment didn’t go through. Try again, or use another card.",
+                );
+            }}
+          >
+            Approve & pay {money(c.amount)}
+          </button>
+          <button
+            className="text-button"
+            onClick={() =>
+              update((d) => {
+                declineCharge(d, c.id);
+              }, "Charge declined")
+            }
+          >
+            Decline
+          </button>
+        </div>
+        <Message field="charge" />
+      </div>
+    );
+  };
   const quotePanel = () =>
     quote ? (
       <div className="card panel quote">
@@ -1165,7 +1253,10 @@ function Workspace({
             "Labour and standard materials included. Additional work requires your approval."}
         </p>
         <small>
-          {s.payments.some((p) => p.quoteId === quote.id && p.status === "Paid")
+          {s.payments.some(
+            (p) =>
+              p.quoteId === quote.id && workPayment(p) && p.status === "Paid",
+          )
             ? "Payment received"
             : quote.payOnCompletion
               ? "Payment due on completion"
@@ -1312,6 +1403,12 @@ function Workspace({
     let actions: React.ReactNode = null;
     let extra: React.ReactNode = null;
     let closed = false;
+    /* The follow-up's own decision (ADR 065): unfinished work or a late
+       arrival, before anything else on a live request. */
+    const followUp = nextDecision(s, r.id);
+    const charge = s.charges?.find(
+      (c) => c.requestId === r.id && c.status === "Sent",
+    );
     if (feeUndecided(r)) {
       /* The cancelled request's last decision (ADR 064): the money is held
          until the fee is settled, so the card says how much and asks. */
@@ -1403,6 +1500,33 @@ function Workspace({
           </button>
         </>
       );
+    } else if (followUp?.kind === "follow-up") {
+      closed = true;
+      tone = "issue";
+      Icon = AlertCircle;
+      title = followUp.tasks.length ? "Unfinished work" : "Running late";
+      body = followUpLine(s, followUp);
+      extra = (
+        <FollowUp
+          key={followUp.visitId + followUp.tasks.map((t) => t.taskId).join()}
+          s={s}
+          update={update}
+          requestId={r.id}
+          d={followUp}
+          done={() =>
+            notify(
+              followUp.tasks.length ? "Follow-up handled" : "Customer told",
+            )
+          }
+          layout="card"
+        />
+      );
+    } else if (charge) {
+      /* An additional charge with the customer: nothing to do but wait. */
+      closed = true;
+      Icon = Clock;
+      title = "Waiting on approval";
+      body = `${r.name} has a ${money(charge.amount)} charge to approve: ${charge.reason}. The return visit is offered once they do.`;
     } else if (["Cancelled", "Declined", "Completed"].includes(r.status)) {
       closed = true;
       tone = "complete";
@@ -1546,7 +1670,7 @@ function Workspace({
       );
     } else {
       const paid = s.payments.some(
-        (p) => p.quoteId === quote.id && p.status === "Paid",
+        (p) => p.quoteId === quote.id && workPayment(p) && p.status === "Paid",
       );
       tone = quote.status === "Declined" ? "issue" : "quote";
       Icon = quote.status === "Declined" ? AlertCircle : Wallet;
@@ -3102,6 +3226,7 @@ function Workspace({
                                 </div>
                               ))}
                               {quotePanel()}
+                              {chargePanel()}
                               {visits.map(visitCard)}
                             </div>
                           )}

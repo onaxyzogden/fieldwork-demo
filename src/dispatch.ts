@@ -19,6 +19,7 @@ export function migrateDispatch(s: State): State {
   s.settings ??= { autoReofferDeclined: false };
   s.rev ??= 0;
   s.holds ??= [];
+  s.charges ??= [];
   s.mergedFrom ??= {};
   s.paymentMethods ??= [];
   s.approvers ??= {};

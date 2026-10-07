@@ -714,3 +714,56 @@ ADR 064.
   - The console crawl matches `main`.
   - The ADR 061 customer crawl finds no demo wording.
   - Chromium only, per ADR 052.
+
+# Follow-ups (batch 3a) — 2026-10-07
+
+ADR 065.
+
+- **Tests:**
+  - `followUps.test.ts`:
+    - undecided tasks stay the operator's, with defaults by outcome;
+    - the refund share, and refunds only from the work's payments;
+    - return pay by reason;
+    - closing: `Not done`, partial refund, $0, and refusals;
+    - booking a return visit: same contractor first, any pay only as a
+      return, no rebooking;
+    - charges: sent, approved and booked, failed payment, slot gone, declined,
+      only their own tasks, not reused after a second unfinished visit;
+    - unfinished work before a late arrival;
+    - telling the customer once, and not when on time;
+    - notices said once;
+    - a charge is not the work's payment.
+  - 45 guards were broken on purpose. 42 fail a test. The other three were
+    redundant and removed: an empty task list in `returnOptions` and
+    `bookReturnVisit`, which no slot or booking accepts anyway, and
+    `lateToldAt` in `tellCustomerLate`, which `workIssue` already covers. Two
+    more were removed on inspection: a zero-minute check in `returnPay` and a
+    `workPayment` check in `secured()` that no state can reach.
+- **Browser walk:** 320px, 360px, 390px and 1280px in both themes, with no
+  console errors, no element past the edge, and AA contrast on every new
+  screen.
+  - A contractor finishes with "Materials required" and "Customer declined".
+    The Home row reads "2 tasks left undone · return or close".
+  - In the queue, the declined task defaults to Close with $164 suggested.
+    The other defaults to a return with Nina Patel at $60. An empty charge is
+    refused inline.
+  - A $45 charge is sent and the declined task closed: `Not done`, $164
+    refunded, and "Waiting on approval" on Home.
+  - Daniel sees the charge on his booking, approves and pays it from his
+    queue, and Nina is offered the return visit. His visit note explains
+    both.
+  - A second run declines a $60 charge from the booking. The request page
+    card says so and books the return at no charge.
+  - A late arrival opens on "Running late". "Tell the customer" posts the
+    message to the visit's conversation.
+- **Repo checks:** 512 tests, the build, `design:check`, `catalogue:check`
+  and `status:check` (54 values) pass. New files are prettier-clean.
+  Touched source carries no new drift. The status dictionary's tables were
+  never column-aligned, and the new rows follow them.
+- **Sweeps:**
+  - The narrow-layout probes are unchanged at 0 / 30 / 14 / 0.
+  - The tab-width and shrink-wrap probes are at 0.
+  - The console crawl matches `main`.
+  - The ADR 061 customer crawl finds no demo wording.
+  - The contrast sweep is clean in both themes.
+  - Chromium only, per ADR 052.
