@@ -129,3 +129,80 @@
     grid-template-columns: 1fr;
   }
 }
+
+/* Availability (ADR 067): a day's name, then its three blocks. */
+.hours-row {
+  display: grid;
+  grid-template-columns: 3rem minmax(0, 1fr);
+  align-items: center;
+  gap: var(--space-3);
+  margin-top: var(--space-2);
+}
+.hours-row .time-pills {
+  padding: 0;
+}
+.hours-add {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: end;
+  gap: var(--space-3);
+}
+.hours-add .field {
+  flex: 0 1 16rem;
+}
+.hours-now span {
+  white-space: nowrap;
+}
+.hours-off {
+  list-style: none;
+  padding: 0;
+  margin: var(--space-3) 0 0;
+}
+.hours-off li {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: var(--space-3);
+  border-top: 1px solid var(--line);
+}
+.hours-result {
+  margin: var(--space-3) 0;
+}
+
+/* Earnings (ADR 067). */
+.earnings-totals {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--space-4);
+}
+.earnings-totals strong {
+  display: block;
+  font-size: var(--text-h2);
+  font-variant-numeric: tabular-nums;
+}
+.earnings-totals small {
+  color: var(--ink-muted);
+}
+.earnings-payout.paid {
+  color: var(--success);
+}
+.earnings-jobs {
+  list-style: none;
+  padding: 0;
+  margin: var(--space-3) 0 0;
+}
+.earnings-jobs li {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--space-3);
+  padding: var(--space-2) 0;
+  border-top: 1px solid var(--line);
+}
+.earnings-jobs small {
+  display: block;
+}
+.earnings-jobs li > span:last-child {
+  flex: none;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}

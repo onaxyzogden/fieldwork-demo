@@ -812,3 +812,79 @@ ADR 066.
   - The ADR 061 customer crawl finds no demo wording.
   - The contrast sweep is clean in both themes.
   - Chromium only, per ADR 052.
+
+# Contractor availability and earnings (batch 4a) — 2026-10-07
+
+ADR 067.
+
+- **Tests:** `availability.test.ts`.
+  - **Windows:** each block, joined blocks across lunch, morning with
+    evening as two windows.
+  - **Fitting the hours:** the default 9–5 to the minute at both edges with
+    travel and wrap-up, weekends, days off (and only that contractor's).
+  - **Times offered:**
+    - no evening or weekend slot until one is opened;
+    - each customer timing's bounds;
+    - "Weekdays" excluding weekends.
+  - **Labels:** hours in a line for the common shapes, and "No hours set".
+  - **Changing hours:**
+    - only the offer the new hours miss is withdrawn;
+    - accepted, started, fitting and other people's jobs are untouched;
+    - only unstarted jobs outside are listed;
+    - the operator is told;
+    - saving again withdraws nothing;
+    - auto-reoffer hands the withdrawn offer to Nina.
+  - **Earnings:**
+    - Toronto week edges;
+    - earned against upcoming;
+    - an unfinished visit paid as agreed;
+    - cancelled, declined and other people's jobs left out;
+    - a job counted in the week it was finished;
+    - pending against paid at Friday midnight;
+    - this week always present;
+    - week labels across a month end.
+  - **Guards broken on purpose:** 34, of which 28 failed a test at once.
+    - Three were removed as dead:
+      - the evening score penalty, because a stable sort already puts
+        same-day daytime first;
+      - the migration backfill, because `hoursOf()` defaults;
+      - the `Offered` check before `respondToOffer()`, which refuses
+        anything else itself.
+    - The other three got tests, and all 5 that were broken again now fail
+      one.
+- **Browser walk:** 320px, 360px, 390px and 1280px in both themes, 45
+  checks each, with no console errors, no element past the edge, and AA
+  contrast on every new screen.
+  - **Opening hours:**
+    - Nina opens Tuesday evening and Saturday morning.
+    - The line under the pills follows each tap.
+    - Save says saved, and saving again says nothing changed.
+    - A day off is added. A past date and the same day twice are refused
+      inline.
+  - **The roster** shows "Mon, Wed–Fri 9–5 · Tue 9–9 · Sat 9–12" and her
+    next day off. Marcus keeps "Mon–Fri 9–5".
+  - **An evening request:** a request for "Weekdays · 5–9 PM" gets only
+    Nina's Tuesday 5 and 6 p.m., and nobody else's times.
+  - **Removing time with work in it:** Monday and Wednesday mornings, with an
+    offer on one and a booked job on the other.
+    - Save reports "1 offer withdrawn and sent back to the operator".
+    - The booked job is listed as outside the new hours and opens on Your
+      Work.
+    - The operator's inbox has the decline.
+  - **Earnings:**
+    - This week shows $90 earned.
+    - The week before last shows "Payout pending · Fri, Oct 9 · $150", and
+      "Paid" once the clock reaches that Friday.
+    - Elias, with no work, sees the empty state.
+  - **The decline nudge:** declining as "Not available" shows "Update your
+    availability", which opens the page.
+- **Repo checks:** 535 tests, the build, `design:check`, `catalogue:check`
+  and `status:check` pass. New files are prettier-clean, and touched source
+  carries no new drift.
+- **Sweeps:**
+  - The narrow-layout probes are unchanged at 0 / 30 / 14 / 0.
+  - The tab-width and shrink-wrap probes are at 0.
+  - The console crawl matches `main`, with the two new pages in it.
+  - The ADR 061 customer crawl finds no demo wording.
+  - The contrast sweep is clean in both themes.
+  - Chromium only, per ADR 052.

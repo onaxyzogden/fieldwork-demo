@@ -1,6 +1,8 @@
 import { suitableProviders } from "./suitability";
 import Blueprint from "./Blueprint";
 import ContractorWork, { JobWork } from "./ContractorWork";
+import Availability from "./Availability";
+import Earnings from "./Earnings";
 import { OperatorHome, OperatorToday } from "./OperatorWork";
 import Walkthroughs from "./Walkthroughs";
 import Assessment from "./Assessment";
@@ -11,6 +13,7 @@ import {
   feeUndecided,
   workIssue,
   workStatus,
+  dayKey,
 } from "./work";
 import CustomerQueue from "./CustomerQueue";
 import { customerQueue } from "./roleQueues";
@@ -123,6 +126,8 @@ import {
   coordinated,
   quoted,
   confirmed,
+  hoursLabel,
+  hoursOf,
 } from "./model";
 import {
   authorizationDue,
@@ -684,6 +689,12 @@ function Workspace({
       el.classList.add("flash");
       setTimeout(() => el.classList.remove("flash"), 2000);
     }, 120);
+  /* A contractor's job, opened on Your Work from anywhere else. */
+  const openContractorJob = (visitId: string) => {
+    setContractorVisit("");
+    setTimeout(() => setContractorVisit(visitId), 0);
+    setPage("Your Work");
+  };
   /* A notice opens the exact thing it is about (ADR 066): the page, the
      booking, then the card, scrolled to and marked. */
   const openNotice = (n: NonNullable<State["notifications"]>[number]) => {
@@ -691,11 +702,8 @@ function Workspace({
       n,
       role as "Operator" | "Customer" | "Contractor",
     );
-    if (role === "Contractor") {
-      setContractorVisit("");
-      setTimeout(() => setContractorVisit(n.visitId), 0);
-      setPage("Your Work");
-    } else {
+    if (role === "Contractor") openContractorJob(n.visitId);
+    else {
       choose(n.requestId);
       setExpanded(true);
       setPage(role === "Operator" ? "Requests" : "My bookings");
@@ -2905,8 +2913,8 @@ function Workspace({
                   <div className="eyebrow">YOUR TRUSTED NETWORK</div>
                   <h1>Good people. Great work.</h1>
                   <p>
-                    Invite-only roster · illustrative availability and
-                    eligibility
+                    Invite-only roster · hours set by each contractor ·
+                    illustrative eligibility
                   </p>
                 </div>
               </div>
@@ -2925,7 +2933,20 @@ function Workspace({
                       {money(p.rate)}
                       <small> / hour</small>
                     </h3>
-                    <span className="badge green">Active · Weekdays 9–5</span>
+                    {/* Their own hours, as they set them (ADR 067). */}
+                    <span className="badge green">
+                      Active · {hoursLabel(hoursOf(s, p.id))}
+                    </span>
+                    {hoursOf(s, p.id).off.some((d) => d >= dayKey(s.clock)) && (
+                      <p>
+                        Next day off:{" "}
+                        {dayLabel(
+                          hoursOf(s, p.id).off.find(
+                            (d) => d >= dayKey(s.clock),
+                          )!,
+                        )}
+                      </p>
+                    )}
                     <p>
                       {p.eligible
                         ? "Restricted work eligibility marked by operator; credentials not verified by software."
@@ -3376,13 +3397,26 @@ function Workspace({
                   </button>
                 ))}
               </div>
-              <ContractorWork
-                key={contractor}
-                s={s}
-                provider={contractor}
-                openVisit={contractorVisit}
-                update={update}
-              />
+              {page === "Earnings" ? (
+                <Earnings key={contractor} s={s} provider={contractor} />
+              ) : page === "Availability" ? (
+                <Availability
+                  key={contractor}
+                  s={s}
+                  update={update}
+                  provider={contractor}
+                  openJob={openContractorJob}
+                />
+              ) : (
+                <ContractorWork
+                  key={contractor}
+                  s={s}
+                  provider={contractor}
+                  openVisit={contractorVisit}
+                  update={update}
+                  openAvailability={() => setPage("Availability")}
+                />
+              )}
             </>
           )}
           <footer>

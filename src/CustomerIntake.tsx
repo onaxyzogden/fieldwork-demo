@@ -972,6 +972,7 @@ export default function CustomerIntake({
                           "Weekdays · flexible",
                           "Weekdays · 9 AM–12 PM",
                           "Weekdays · 1–5 PM",
+                          "Weekdays · 5–9 PM",
                           "Any day · flexible",
                         ].includes(r.timing)
                           ? r.timing
@@ -988,6 +989,7 @@ export default function CustomerIntake({
                         "Weekdays · flexible",
                         "Weekdays · 9 AM–12 PM",
                         "Weekdays · 1–5 PM",
+                        "Weekdays · 5–9 PM",
                         "Any day · flexible",
                       ].map((t) => (
                         <option key={t}>{t}</option>

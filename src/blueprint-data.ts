@@ -562,7 +562,7 @@ export const alternatives = [
     "Production integrations",
     "Browser-local records simulate coordination among roles in the same browser.",
     "Production gap",
-    "Authentication, shared-device state, durable backend, real notifications, GPS tracking, provider payouts and review collection are not implemented.",
+    "Authentication, shared-device state, durable backend, real notifications, GPS tracking, real provider payouts and review collection are not implemented. Payouts are simulated: each week is shown as paid the Friday after it.",
   ],
 ] as const;
 export const queueRules =
