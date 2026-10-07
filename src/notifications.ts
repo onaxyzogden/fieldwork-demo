@@ -138,7 +138,7 @@ export function deliverUpdates(before: State, after: State) {
     read = false,
   ) => {
     const at = new Date(after.clock).toISOString();
-    (after.notifications ??= []).unshift({
+    const n = {
       id: uid(),
       recipient,
       requestId,
@@ -149,7 +149,9 @@ export function deliverUpdates(before: State, after: State) {
       at,
       read,
       deliveries: deliveriesFor(after, recipient, kind as NotificationKind, at),
-    });
+    };
+    (after.notifications ??= []).unshift(n);
+    return n;
   };
   for (const r of after.requests) {
     const old = before.requests.find((x) => x.id === r.id);
@@ -274,13 +276,16 @@ export function deliverUpdates(before: State, after: State) {
     const r = after.requests.find((x) => x.id === c.requestId);
     if (!r || old?.status === c.status) continue;
     if (c.status === "Sent")
-      emit(
-        "Customer:" + r.accountId,
-        r.id,
-        "",
-        "",
-        "quote",
-        `Additional charge to approve · ${money(c.amount)} · ${c.reason}`,
+      Object.assign(
+        emit(
+          "Customer:" + r.accountId,
+          r.id,
+          "",
+          "",
+          "quote",
+          `Additional charge to approve · ${money(c.amount)} · ${c.reason}`,
+        ),
+        { chargeId: c.id },
       );
     else
       emit(
@@ -562,4 +567,37 @@ export function unreachable(s: State, requestId: string) {
         out.push({ name, channel: d.channel, reason: d.reason || "" });
   }
   return out;
+}
+
+/** Where opening a notice takes each role (ADR 066). */
+export type NoticeTarget =
+  | "decision"
+  | "question"
+  | "visit"
+  | "messages"
+  | "quote"
+  | "charge"
+  | "booking"
+  | "job";
+
+/**
+ * The exact thing a notice is about, for the role reading it: the operator's
+ * decision card, a visit, a conversation, the question, the customer's quote
+ * or charge. A contractor's notices are all about a job, which opens whole.
+ */
+export function noticeTarget(
+  n: { kind: string; visitId: string; chargeId?: string },
+  role: "Operator" | "Customer" | "Contractor",
+): NoticeTarget {
+  const visit = n.kind === "visit" || n.kind.startsWith("work-");
+  if (n.kind === "message") return "messages";
+  if (role === "Contractor") return "job";
+  if (n.kind === "information") return "question";
+  if (role === "Operator") return visit ? "visit" : "decision";
+  if (n.chargeId) return "charge";
+  if (n.kind === "quote") return "quote";
+  /* A payment is the quote's, unless it came of a visit: a task closed after
+     one, with what was refunded. */
+  if (n.kind === "payment") return n.visitId ? "visit" : "quote";
+  return n.visitId ? "visit" : "booking";
 }

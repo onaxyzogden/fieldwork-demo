@@ -403,6 +403,9 @@ export type State = {
   notifications?: {
     recipient?: string;
     id: string;
+    /** An additional charge this is about (ADR 066): it opens that, not
+     *  the quote its kind would otherwise mean. */
+    chargeId?: string;
     assignmentId: string;
     visitId: string;
     requestId: string;

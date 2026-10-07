@@ -767,3 +767,48 @@ ADR 065.
   - The ADR 061 customer crawl finds no demo wording.
   - The contrast sweep is clean in both themes.
   - Chromium only, per ADR 052.
+
+# Trips, visit day and notice links (batch 3b) — 2026-10-07
+
+ADR 066.
+
+- **Tests:**
+  - `visitDay.test.ts`:
+    - every city pair, both ways, and 5 km across town;
+    - the label leaving out an unknown distance;
+    - today's visits in order, without tomorrow's, cancelled ones or ones on
+      a cancelled request;
+    - each state's line, and the countdown dropping once the start has
+      passed;
+    - where every notice kind opens for each role.
+  - `followUps.test.ts`: a charge notice carries its charge.
+  - 23 guards were broken on purpose. 22 fail a test. The ETA fallback in
+    the on-the-way line was unreachable, because `execute()` always sets
+    the ETA with "on the way", and was removed.
+- **Browser walk:** 320px, 360px, 390px and 1280px in both themes, with no
+  console errors, no element past the edge, and AA contrast on every new
+  screen.
+  - Nina's offer for 38 Lakeshore reads "About 8 min · 5 km from Oakville"
+    in her queue. Yousef's job in Burlington reads "About 24 min · 16 km
+    from Oakville".
+  - With Priya's visit at 11:00 and the clock at 9:00, her banner and the
+    operator's strip move through scheduled, on the way, running late, in
+    progress and done. The "Scheduled visits" count matches the strip.
+  - The banner opens and marks the visit card.
+  - From the inbox:
+    - the customer's quote, visit and payment notices open the quote panel,
+      the visit and the quote panel;
+    - the operator's request and visit notices open the decision card and
+      the visit;
+    - Daniel's question notice opens the question.
+  - The pop-up opens and marks its item without opening the inbox.
+- **Repo checks:** 520 tests, the build, `design:check`, `catalogue:check`
+  and `status:check` pass. New files are prettier-clean, and touched source
+  carries no new drift.
+- **Sweeps:**
+  - The narrow-layout probes are unchanged at 0 / 30 / 14 / 0.
+  - The tab-width and shrink-wrap probes are at 0.
+  - The console crawl matches `main`.
+  - The ADR 061 customer crawl finds no demo wording.
+  - The contrast sweep is clean in both themes.
+  - Chromium only, per ADR 052.

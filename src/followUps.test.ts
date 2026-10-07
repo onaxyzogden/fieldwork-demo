@@ -512,6 +512,11 @@ describe("what everyone is told", () => {
     expect(texts(x.s, "Customer:c2")).toContain(
       "Additional charge to approve · $45 · Replacement hinge and second trip",
     );
+    // It opens the charge, not the quote its kind would mean (ADR 066).
+    expect(
+      inbox(x.s, "Customer:c2").find((n) => n.text.startsWith("Additional"))
+        ?.chargeId,
+    ).toBe(c.id);
     was = structuredClone(x.s);
     declineCharge(x.s, c.id);
     deliverUpdates(was, x.s);
