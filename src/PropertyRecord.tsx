@@ -12,11 +12,16 @@ export default function PropertyRecord({
   s,
   propertyId,
   links = false,
+  current,
 }: {
   s: State;
   propertyId: string;
-  /** Operators get links back to each assessment; customers just get the history. */
+  /** The operator's copy: a link in place of each assessment's status. The
+   *  customer's copy shows the status in their words and a link beside it
+   *  (ADR 063). */
   links?: boolean;
+  /** The assessment this record is shown on, which needs no link to itself. */
+  current?: string;
 }) {
   const record = propertyRecord(s, propertyId);
   if (!record.walkthroughs.length) return null;
@@ -93,10 +98,18 @@ export default function PropertyRecord({
               >
                 Open assessment
               </a>
+            ) : links ? (
+              <span className="badge">{w.status}</span>
             ) : (
-              /* Without links this is the customer's copy (ADR 061). */
-              <span className="badge">
-                {links ? w.status : customerAssessmentText(w.status)}
+              <span className="row record-links">
+                <span className="badge">
+                  {customerAssessmentText(w.status)}
+                </span>
+                {w.status !== "Draft" && w.access && w.id !== current && (
+                  <a className="link" href={assessmentLink(w.access.token)}>
+                    Open assessment
+                  </a>
+                )}
               </span>
             )}
           </div>

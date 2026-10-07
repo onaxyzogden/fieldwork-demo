@@ -970,3 +970,12 @@
   border-radius: var(--radius-md);
   font-size: var(--text-caption);
 }
+
+/* Countdowns (When.tsx, ADR 063). */
+.when-at {
+  color: var(--muted);
+}
+.when-soon {
+  color: var(--warning);
+  font-weight: 600;
+}

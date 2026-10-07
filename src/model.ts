@@ -972,6 +972,15 @@ export const dateLabel = (s: string) =>
     hour: "numeric",
     minute: "2-digit",
   });
+/**
+ * What the classifier calls work it cannot name: no rule matched, or a
+ * restricted phrase overrode the match. Fine as a reason to review, wrong as
+ * the name of a job — a reviewed task never keeps one (ADR 063).
+ */
+export const UNCLASSIFIED_TITLE = "Tell us a little more";
+export const RESTRICTED_TITLE = "Electrical / restricted work review";
+export const genericTitle = (t: { summary: string }) =>
+  t.summary === UNCLASSIFIED_TITLE || t.summary === RESTRICTED_TITLE;
 export function classify(description: string) {
   const t = description.toLowerCase().replace(/[’]/g, "'");
   const restricted =
@@ -1039,7 +1048,7 @@ export function classify(description: string) {
   ];
   if (restricted)
     return {
-      summary: "Electrical / restricted work review",
+      summary: RESTRICTED_TITLE,
       category: "Electrical / Restricted work",
       duration: 90,
       confidence: 1,
@@ -1105,7 +1114,7 @@ export function classify(description: string) {
           issueId: intakeIssue.id,
         }
       : {
-          summary: "Tell us a little more",
+          summary: UNCLASSIFIED_TITLE,
           category: "Needs Review",
           duration: 60,
           confidence: 0.25,

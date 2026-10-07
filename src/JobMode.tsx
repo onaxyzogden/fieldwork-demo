@@ -12,6 +12,7 @@ import {
 } from "./work";
 import { storablePhoto, unreadableMessage } from "./photos";
 import { MessageThread } from "./NotificationUI";
+import { When } from "./When";
 import "./onsite.css";
 
 /**
@@ -198,7 +199,8 @@ function Arrival({
       {head}
       <h1 tabIndex={-1}>{r?.address}</h1>
       <p className="onsite-hint">
-        {r?.city} · {dateLabel(v.start)} · {v.duration} minutes
+        {r?.city} · <When clock={s.clock} at={v.start} lead="Starts in" /> ·{" "}
+        {v.duration} minutes
         {x?.eta ? ` · ETA ${dateLabel(x.eta)}` : ""}
       </p>
       <ul className="job-list">

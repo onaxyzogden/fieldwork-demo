@@ -11,9 +11,12 @@ import {
 
 const PROVIDER = "marcus";
 
-/** A weekday slot inside working hours, far enough out to be bookable. */
+/** A weekday slot inside working hours, far enough out to be bookable. Three
+ *  days out unless that is a weekend, when it is the Monday after: plain
+ *  "three days out" failed every test run made on a Wednesday or Thursday. */
 function slotThreeDaysOut(s: State) {
   const d = new Date(s.clock + 3 * 86400000);
+  while ([0, 6].includes(d.getUTCDay())) d.setUTCDate(d.getUTCDate() + 1);
   d.setUTCHours(15, 0, 0, 0);
   return d.toISOString();
 }
