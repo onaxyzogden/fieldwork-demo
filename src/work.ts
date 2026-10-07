@@ -1,4 +1,5 @@
 import {
+  type Request,
   type State,
   type Visit,
   uid,
@@ -57,11 +58,21 @@ export function workStatus(v: Visit) {
           ? "On the Way"
           : v.status;
 }
+/** A late cancellation whose fee nobody has decided yet (ADR 064). */
+export const feeUndecided = (r: Request) =>
+  !!r.lateCancel && r.lateCancel.fee === undefined;
+/** A customer waiting for the call they were promised (ADR 064). */
+export const callBackDue = (r: Request) => !!r.callBack && !r.callBack.done;
+
 export function bucket(s: State, id: string) {
   const r = s.requests.find((r) => r.id === id)!;
+  /* Cancelled, but not finished with: the money is held until the operator
+     settles the fee, so it stays in front of them rather than in History. */
+  if (feeUndecided(r)) return "Needs Action";
   if (["Cancelled", "Declined", "Completed"].includes(r.status))
     return "History";
   if (r.status === "Draft") return "Draft";
+  if (callBackDue(r)) return "Needs Action";
   const dispatch = requestDispatch(s, id);
   if (
     s.visits.some(

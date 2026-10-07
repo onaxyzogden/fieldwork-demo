@@ -5,10 +5,12 @@ import { reoffer } from "./dispatch";
 import {
   type Decision,
   approveScope,
+  completeCallBack,
   decisionQueue,
   issueQuote,
   nextDecision,
   offerVisit,
+  settleLateCancel,
 } from "./decisions";
 import {
   type State,
@@ -16,7 +18,9 @@ import {
   dateLabel,
   genericTitle,
   money,
+  primaryContact,
   providers,
+  timeLabel,
   uid,
 } from "./model";
 import { suggestTitle } from "./pmw";
@@ -169,6 +173,8 @@ function Step({
   const [opKey] = useState(uid);
   const quoting = d.kind === "quote" || d.kind === "revise";
   const [amount, setAmount] = useState(quoting ? d.amount : 0);
+  /* The late-cancellation fee, starting at the suggested share (ADR 064). */
+  const [fee, setFee] = useState(d.kind === "late-cancel" ? d.fee : 0);
   /* A revision is a new price, so its box starts open; a first quote starts
      on the suggestion, one press away. */
   const [adjusting, setAdjusting] = useState(d.kind === "revise");
@@ -190,6 +196,8 @@ function Step({
 
   const unsure = d.kind === "review" ? d.taskIds : [];
   const heading = {
+    "late-cancel": "Late cancellation",
+    "call-back": "Call back",
     "follow-up": "Follow up the job",
     reassign:
       d.kind === "reassign" && d.expired
@@ -204,7 +212,34 @@ function Step({
   let why = "";
   let primary: { label: string; run: () => void };
   const secondary: { label: string; run: () => void }[] = [];
-  if (d.kind === "follow-up") {
+  if (d.kind === "late-cancel") {
+    why = `${accountName(r.accountId)} cancelled less than 24 hours before the visit. ${
+      d.held ? `${money(d.held)} paid is held` : "Nothing was paid"
+    } until you decide.`;
+    primary = {
+      label: `Charge fee · ${money(fee || 0)}`,
+      run: () => {
+        if (!Number.isFinite(fee) || fee < 1) {
+          fail("fee", "Enter a fee of at least $1, or waive it.");
+          return;
+        }
+        act((x) => settleLateCancel(x, requestId, fee), "");
+      },
+    };
+    secondary.push({
+      label: "Waive fee",
+      run: () => act((x) => settleLateCancel(x, requestId, 0), ""),
+    });
+  } else if (d.kind === "call-back") {
+    const v = s.visits.find((x) => x.id === d.visitId);
+    const phone = primaryContact(r.accountId)?.phone;
+    why = `Call ${phone || "them"} by ${timeLabel(d.by)}: they want to move ${v ? dateLabel(v.start) : "their visit"}, less than 24 hours away.`;
+    primary = { label: "Reschedule visit", run: open };
+    secondary.push({
+      label: "Called, no change",
+      run: () => act((x) => completeCallBack(x, requestId), ""),
+    });
+  } else if (d.kind === "follow-up") {
     why = d.issue;
     primary = { label: "Open request", run: open };
   } else if (d.kind === "reassign") {
@@ -384,6 +419,23 @@ function Step({
           </div>
         ))}
       </details>
+      {d.kind === "late-cancel" && (
+        <label className={fieldClass("fee")}>
+          Late-cancellation fee (CAD)
+          <input
+            type="number"
+            inputMode="numeric"
+            min={1}
+            value={Number.isFinite(fee) ? fee : ""}
+            {...invalid("fee")}
+            onChange={(e) => {
+              clear("fee");
+              setFee(Number(e.target.value));
+            }}
+          />
+          <Message field="fee" />
+        </label>
+      )}
       {quoting && adjusting && (
         <label className={fieldClass("amount")}>
           Price

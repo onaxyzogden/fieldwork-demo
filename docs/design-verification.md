@@ -654,3 +654,63 @@ ADR 063.
   tab-width and shrink-wrap probes are at 0, the console crawl is clean, and
   the ADR 061 customer crawl finds no demo wording. Chromium only, per
   ADR 052.
+
+# Polish (batch 2) — 2026-10-07
+
+ADR 064.
+
+- **Tests:**
+  - `lateChanges.test.ts`:
+    - an on-time cancellation refunds;
+    - a late one holds the payment and leads the queue;
+    - cancelling twice refuses, and declined offers keep their status;
+    - a cancelled or finished visit does not make a cancellation late;
+    - waiving refunds in full, a fee refunds the rest, a larger fee charges
+      the difference, nothing paid charges the whole fee (or leaves it
+      `Outstanding` with no card), and settling twice refuses;
+    - the call-back is two hours out, once; it leads the queue and is
+      closed by a call or by moving that visit, at the accepted pay;
+    - the customer's and operator's texts.
+  - `inboxWording.test.ts`: each offer status for the contractor and the
+    operator, a renewed offer not called withdrawn, request texts, and the
+    on-the-way and moved-visit texts.
+  - `pmw-migrate.test.ts`:
+    - a draft gets no property until it is submitted, then is linked by
+      address;
+    - saved addresses come most recently booked first, ignoring drafts,
+      blanks and other accounts.
+  - Two existing notification tests were updated to the new wording.
+  - 32 guards were broken on purpose. 30 fail a test. The two that did not
+    were redundant and were removed: a zero refund, which `refundPayment`
+    already refuses, and an offer-status check on a renewed offer.
+- **Browser walk:** 320px, 360px, 390px and 1280px, in both themes, with no
+  console errors and no element past the edge.
+  - Priya reschedules within 24 hours and sees "Expect a call by …".
+    Reschedule is gone. The queue opens on "Call back" with her number. The
+    request page card's "Reschedule visit" opens the panel in the operator's
+    words, and moving the visit closes the call.
+  - Priya cancels within 24 hours. The modal names the fee, the request is
+    cancelled at once, and her payment stays `Paid`. The queue opens on
+    "Late cancellation" with 25% of $285 ($71) prefilled. A zero fee is
+    refused inline. A $50 fee leaves the payment `Partially Refunded` by
+    $235, and she sees "Late-cancellation fee: $50".
+  - From the Home row, which reads "Late cancellation · $285 held · decide
+    the fee", waiving on the request page refunds in full.
+  - Daniel starts a new request on his one saved address, preselected. "A
+    different address" shows empty fields with the street focused.
+    Continuing on the saved one links his property, and no empty-address
+    property is made.
+- **Contrast:**
+  - The sweep covers every role's screens, the request page, the decision
+    and offer queues, notifications and the intake, in both themes. It
+    found four colour pairs under AA before the fix and none after.
+  - The walk audits each new screen at 390px in both themes.
+- **Repo checks:** 488 tests, the build, `design:check`, `catalogue:check`
+  and `status:check` pass. New files are prettier-clean, and touched files
+  carry no new drift.
+- **Sweeps:**
+  - The narrow-layout probes are unchanged at 0 / 30 / 14 / 0.
+  - The tab-width and shrink-wrap probes are at 0.
+  - The console crawl matches `main`.
+  - The ADR 061 customer crawl finds no demo wording.
+  - Chromium only, per ADR 052.

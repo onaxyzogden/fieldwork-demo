@@ -70,13 +70,16 @@ describe("Account notifications", () => {
   it("notifies the offered provider without exposing customer pricing", () => {
     const s = ready(),
       before = structuredClone(s);
-    s.assignments[0].status = "Accepted";
+    /* A new offer, not an answer: nobody is told about their own answer
+       (ADR 064). */
+    const offer = { ...s.assignments.at(-1)!, id: "fresh", status: "Offered" };
+    s.assignments.push(offer);
     deliverUpdates(before, s);
-    expect(
-      inbox(s, "Contractor:" + s.assignments[0].providerId).some(
-        (n) => n.kind === "offer",
-      ),
-    ).toBe(true);
+    const notices = inbox(s, "Contractor:" + offer.providerId).filter(
+      (n) => n.kind === "offer",
+    );
+    expect(notices.map((n) => n.text)[0]).toMatch(/^New job offer · /);
+    expect(notices.every((n) => !n.text.includes("$"))).toBe(true);
   });
   it("delivers quote updates only to customer and operator", () => {
     const s = ready(),

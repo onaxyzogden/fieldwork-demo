@@ -47,13 +47,19 @@ export const propertyKey = (p: {
  * property. Additive and idempotent, in the shape of migrateDispatch: a request
  * that already has a propertyId is left exactly as it was, which is why seeded
  * state passes through unchanged.
+ *
+ * A draft is skipped: it has no address yet, and this runs on every commit, so
+ * a new request used to be given a property with an empty address the moment
+ * it was created, which typing the address never updated (ADR 064). It is
+ * linked here on the first commit after it is submitted, by the address it
+ * was submitted with — or already carries the saved address it was booked at.
  */
 export function migratePmw(s: State) {
   s.properties ??= [];
   s.walkthroughs ??= [];
   s.findings ??= [];
   for (const r of s.requests) {
-    if (r.propertyId) continue;
+    if (r.propertyId || r.status === "Draft") continue;
     const key = propertyKey(r);
     let property = s.properties.find((p) => propertyKey(p) === key);
     if (!property) {
@@ -816,4 +822,25 @@ export function carryCandidates(s: State, walkthroughId: string) {
     (f) =>
       f.walkthroughId !== walkthroughId && !already.has(f.id) && !f.resolvedBy,
   );
+}
+
+/**
+ * The addresses an account has booked before, most recently booked first, for
+ * picking one on a new request (ADR 064). Read from properties, so a saved
+ * address is the same record its maintenance history hangs off.
+ */
+export function savedAddresses(s: State, accountId: string) {
+  const last = (id: string) =>
+    Math.max(
+      -1,
+      ...s.requests
+        .map((r, i) => ({ r, i }))
+        .filter(({ r }) => r.propertyId === id && r.status !== "Draft")
+        .map(({ i }) => i),
+    );
+  return s.properties
+    .filter((p) => p.accountId === accountId && p.address.trim())
+    .map((p) => ({ p, at: last(p.id) }))
+    .sort((a, b) => b.at - a.at)
+    .map(({ p }) => p);
 }

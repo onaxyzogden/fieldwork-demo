@@ -103,6 +103,18 @@ export type Request = {
   propertyId?: string;
   /** Set when the request was created by approving walkthrough findings. */
   walkthroughId?: string;
+  /**
+   * The customer asked to change a visit too close to it to pick a new time
+   * themselves (ADR 064): someone calls them about `visitId` by `by`. `done`
+   * once the visit was moved or the call was made.
+   */
+  callBack?: { visitId: string; by: string; done?: boolean };
+  /**
+   * The customer cancelled within 24 hours of a visit (ADR 064). Their money
+   * is held, not refunded, until the operator settles it: `fee` is what was
+   * kept (0 when waived), absent while undecided.
+   */
+  lateCancel?: { at: string; fee?: number };
 };
 /**
  * A slot a customer is in the middle of taking. Without it, two people at the
@@ -203,6 +215,8 @@ export type Payment = {
   capturedAt?: string;
   /** How much has gone back, for the partial case. */
   refunded?: number;
+  /** A late-cancellation fee charged on its own (ADR 064), not the work. */
+  fee?: boolean;
 };
 /**
  * A stored payment method.
@@ -972,6 +986,13 @@ export const dateLabel = (s: string) =>
     hour: "numeric",
     minute: "2-digit",
   });
+/** The time of day alone, "6:15 p.m.", for something due within hours. */
+export const timeLabel = (s: string) =>
+  new Date(s).toLocaleTimeString("en-CA", {
+    timeZone: "America/Toronto",
+    hour: "numeric",
+    minute: "2-digit",
+  });
 /**
  * What the classifier calls work it cannot name: no rule matched, or a
  * restricted phrase overrode the match. Fine as a reason to review, wrong as
@@ -1135,6 +1156,7 @@ export function seed(): State {
       "Draft",
       "Instant Book",
       "ct1",
+      "L6J 4V1",
     ],
     [
       "r2",
@@ -1145,6 +1167,7 @@ export function seed(): State {
       "Submitted",
       "Request to Book",
       "ct2",
+      "L6K 1E2",
     ],
     [
       "r3",
@@ -1155,6 +1178,7 @@ export function seed(): State {
       "Submitted",
       "Request to Book",
       "ct3",
+      "L7R 1C3",
     ],
     [
       "r4",
@@ -1165,6 +1189,7 @@ export function seed(): State {
       "Needs Review",
       "Request to Book",
       "ct4",
+      "L9T 2X5",
     ],
     [
       "r5",
@@ -1175,6 +1200,7 @@ export function seed(): State {
       "Awaiting Provider Acceptance",
       "Request to Book",
       "ct5",
+      "L6K 1J2",
     ],
     // The commercial case. Raised by one contact at an organization; a second
     // contact can approve it. Without a seeded organization, Account.type has a
@@ -1188,6 +1214,7 @@ export function seed(): State {
       "Submitted",
       "Request to Book",
       "ct6",
+      "L6H 1M3",
     ],
   ].map((a) => ({
     id: a[0],
@@ -1196,6 +1223,7 @@ export function seed(): State {
     name: a[2],
     address: a[3],
     city: a[4],
+    postalCode: a[8],
     status: a[5],
     mode: a[6],
     timing: "Weekdays · 9 AM–5 PM · Flexible",
@@ -1212,6 +1240,7 @@ export function seed(): State {
     accountId: r.accountId,
     address: r.address,
     city: r.city,
+    postalCode: r.postalCode,
     type:
       accounts.find((a) => a.id === r.accountId)?.type === "organization"
         ? "Commercial"
