@@ -8,7 +8,15 @@ import PropertyRecord from "./PropertyRecord";
 import { bucket, workIssue, workStatus } from "./work";
 import CustomerQueue from "./CustomerQueue";
 import { customerQueue } from "./roleQueues";
-import { issueQuote, offerVisit, suggestPay, suggestQuote } from "./decisions";
+import {
+  issueQuote,
+  offerVisit,
+  reviewTask,
+  suggestPay,
+  suggestQuote,
+} from "./decisions";
+import { suggestTitle } from "./pmw";
+import { countdown } from "./countdown";
 import {
   customerQuoteText,
   customerStatusText,
@@ -82,6 +90,7 @@ import {
   accounts,
   answerQuestion,
   approveQuote,
+  genericTitle,
   declineQuote,
   auditFor,
   secured,
@@ -100,6 +109,7 @@ import {
   capturePayment,
   outstandingFor,
   payQuote,
+  readyToPay,
   refundPayment,
 } from "./payments";
 import { storablePhoto, unreadableMessage } from "./photos";
@@ -374,6 +384,7 @@ function Workspace({
   theme,
   setTheme,
   initialRole = "Operator",
+  initialCustomer = "c2",
   compareMode = false,
   onEnterCompare,
   onExitCompare,
@@ -383,6 +394,8 @@ function Workspace({
   theme: "light" | "dark";
   setTheme: React.Dispatch<React.SetStateAction<"light" | "dark">>;
   initialRole?: Role;
+  /** The customer to view as, e.g. from an assessment's "← My bookings". */
+  initialCustomer?: string;
   compareMode?: boolean;
   onEnterCompare?: () => void;
   onExitCompare?: () => void;
@@ -407,7 +420,7 @@ function Workspace({
   const [payError, setPayError] = useState(false);
   const [contractor, setContractor] = useState("marcus");
   const [contractorVisit, setContractorVisit] = useState("");
-  const [customer, setCustomer] = useState("c2");
+  const [customer, setCustomer] = useState(initialCustomer);
   const [toast, setToast] = useState("");
   const [search, setSearch] = useState("");
   const [filter, setFilter] = useState("Needs Action");
@@ -440,6 +453,8 @@ function Workspace({
   const [modal, setModal] = useState("");
   const [reschedule, setReschedule] = useState("");
   const [fail, setFail] = useState(false);
+  /* Titles typed for tasks the classifier could not name (ADR 063). */
+  const [taskTitles, setTaskTitles] = useState<Record<string, string>>({});
   /* The customer's one-at-a-time queue is open (ADR 062). */
   const [reviewing, setReviewing] = useState(false);
   const [sidebar, setSidebar] = useState(false);
@@ -1158,19 +1173,17 @@ function Workspace({
             </button>
           </div>
         )}
-        {role === "Customer" &&
-          quote.status === "Approved" &&
-          !s.payments.some(
-            (p) => p.quoteId === quote.id && p.status === "Paid",
-          ) && (
-            <button
-              className="primary actions"
-              onClick={() => setModal("Payment")}
-            >
-              {quote.payOnCompletion ? "Pay now" : "Continue to payment"}{" "}
-              <ArrowRight size={16} />
-            </button>
-          )}
+        {/* Pay on completion means after the work, not on approval
+            (readyToPay, ADR 063). */}
+        {role === "Customer" && readyToPay(s, quote) && (
+          <button
+            className="primary actions"
+            onClick={() => setModal("Payment")}
+          >
+            {quote.payOnCompletion ? "Pay now" : "Continue to payment"}{" "}
+            <ArrowRight size={16} />
+          </button>
+        )}
         {s.payments
           .filter((p) => p.quoteId === quote.id)
           .map((p) => (
@@ -1376,12 +1389,20 @@ function Workspace({
           a.status === "Offered",
       );
       const seen = offer && offerSeen(s, offer.id);
+      const expires = offer && countdown(s.clock, offer.expiresAt);
       if (seen)
         extra = (
           <p className="op-decision-seen">
             {seen.openedAt
               ? `Opened ${dateLabel(seen.openedAt)}`
               : `Sent ${dateLabel(seen.sentAt)} · not opened yet`}
+            {/* How long the contractor has left to answer (ADR 063). */}
+            {expires && (
+              <span className={expires.soon ? "when-soon" : undefined}>
+                {" "}
+                · expires in {expires.text}
+              </span>
+            )}
           </p>
         );
     } else if (!quote) {
@@ -2054,26 +2075,31 @@ function Workspace({
                           </select>
                         </label>
                         {taskPhotos(t)}
+                        {/* A task the classifier could not name gets a
+                            title here, prefilled from the customer's own
+                            words (ADR 063). It heads the contractor's offer. */}
+                        {!t.reviewed && genericTitle(t) && (
+                          <label className="field">
+                            Title
+                            <input
+                              value={
+                                taskTitles[t.id] ?? suggestTitle(t.description)
+                              }
+                              onChange={(e) =>
+                                setTaskTitles({
+                                  ...taskTitles,
+                                  [t.id]: e.target.value,
+                                })
+                              }
+                            />
+                          </label>
+                        )}
                         {!t.reviewed && (
                           <button
                             className="secondary actions"
                             onClick={() =>
                               update((d) => {
-                                d.tasks.find((x) => x.id === t.id)!.reviewed =
-                                  true;
-                                log(
-                                  d,
-                                  "Operator reviewed task; compliance flag retained",
-                                  {
-                                    actor: "Operator",
-                                    requestId: r.id,
-                                    entity: "task",
-                                    entityId: t.id,
-                                    field: "reviewed",
-                                    from: "no",
-                                    to: "yes",
-                                  },
-                                );
+                                reviewTask(d, t.id, taskTitles[t.id]);
                               }, "Review recorded")
                             }
                           >
@@ -3683,6 +3709,16 @@ function App() {
     return () => window.removeEventListener("storage", sync);
   }, []);
   const [compare, setCompare] = useState(false);
+  /* An assessment's "← My bookings" opens the portal as that customer
+     (portalLink, ADR 063). Anything else in the URL is ignored. */
+  const [linkedIn] = useState(() => {
+    const params = new URLSearchParams(window.location.search);
+    const account = params.get("account") || "";
+    return params.get("role") === "Customer" &&
+      accounts.some((a) => a.id === account)
+      ? { initialRole: "Customer" as const, initialCustomer: account }
+      : {};
+  });
   if (!compare)
     return (
       <>
@@ -3692,6 +3728,7 @@ function App() {
           setS={setS}
           theme={theme}
           setTheme={setTheme}
+          {...linkedIn}
           onEnterCompare={() => setCompare(true)}
         />
       </>

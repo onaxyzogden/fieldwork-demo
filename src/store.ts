@@ -96,6 +96,12 @@ export function load(): State {
 export const assessmentLink = (token: string) =>
   `${location.origin}${location.pathname}?view=assessment&t=${encodeURIComponent(token)}`;
 
+/** The customer's own bookings, as that customer: where an assessment's
+ *  "← My bookings" goes back to (ADR 063). Relative, so it needs no window to
+ *  render — the page is a sibling of the app on the same path. */
+export const portalLink = (accountId: string) =>
+  `?role=Customer&account=${encodeURIComponent(accountId)}`;
+
 /**
  * Whether the last write reached the browser.
  *

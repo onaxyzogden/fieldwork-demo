@@ -16,12 +16,14 @@ import {
   type Task,
   type Visit,
   bookVisit,
+  genericTitle,
   log,
   money,
   providers,
   uid,
 } from "./model";
 import { dispatchStatus, replacementOptions } from "./dispatch";
+import { suggestTitle } from "./pmw";
 import { suitableProviders } from "./suitability";
 import { bucket, workIssue } from "./work";
 
@@ -230,21 +232,52 @@ export function decisionQueue(s: State) {
     .map(({ r, d }) => ({ requestId: r.id, decision: d! }));
 }
 
-/** "Scope looks right": every task still waiting for review, reviewed. */
-export function approveScope(s: State, requestId: string) {
-  const pending = requestTasks(s, requestId).filter((t) => !t.reviewed);
-  for (const t of pending) {
-    t.reviewed = true;
-    log(s, "Operator reviewed task; compliance flag retained", {
-      actor: "Operator",
-      requestId,
-      entity: "task",
-      entityId: t.id,
-      field: "reviewed",
-      from: "no",
-      to: "yes",
-    });
+/**
+ * Review one task. A task still carrying the classifier's fallback title gets
+ * a real one on the way through (ADR 063): the operator's, or the first clause
+ * of the customer's own description — the rule walkthrough findings already
+ * use. That title is what the contractor's offer will be headed with.
+ */
+export function reviewTask(s: State, taskId: string, title?: string) {
+  const t = s.tasks.find((x) => x.id === taskId);
+  if (!t || t.reviewed) return false;
+  if (genericTitle(t)) {
+    const named = title?.trim() || suggestTitle(t.description);
+    if (named) {
+      log(s, `Operator named the task · ${named}`, {
+        actor: "Operator",
+        requestId: t.requestId,
+        entity: "task",
+        entityId: t.id,
+        field: "summary",
+        from: t.summary,
+        to: named,
+      });
+      t.summary = named;
+    }
   }
+  t.reviewed = true;
+  log(s, "Operator reviewed task; compliance flag retained", {
+    actor: "Operator",
+    requestId: t.requestId,
+    entity: "task",
+    entityId: t.id,
+    field: "reviewed",
+    from: "no",
+    to: "yes",
+  });
+  return true;
+}
+
+/** "Scope looks right": every task still waiting for review, reviewed, with
+ *  any titles the operator gave by task id. */
+export function approveScope(
+  s: State,
+  requestId: string,
+  titles: Record<string, string> = {},
+) {
+  const pending = requestTasks(s, requestId).filter((t) => !t.reviewed);
+  for (const t of pending) reviewTask(s, t.id, titles[t.id]);
   return pending.length;
 }
 

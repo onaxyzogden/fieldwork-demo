@@ -14,10 +14,12 @@ import {
   type State,
   accountName,
   dateLabel,
+  genericTitle,
   money,
   providers,
   uid,
 } from "./model";
+import { suggestTitle } from "./pmw";
 import { useFieldErrors } from "./fields";
 import { bucket } from "./work";
 import "./onsite.css";
@@ -171,6 +173,9 @@ function Step({
      on the suggestion, one press away. */
   const [adjusting, setAdjusting] = useState(d.kind === "revise");
   const [refused, setRefused] = useState("");
+  /* Titles for unsure tasks the classifier could not name, prefilled from
+     the customer's words (ADR 063). Untouched ones fall back the same way. */
+  const [titles, setTitles] = useState<Record<string, string>>({});
   const { fail, fieldClass, invalid, clear, Message } = useFieldErrors();
 
   /** Run a write; move on only if it went through. */
@@ -238,7 +243,7 @@ function Step({
         : `${unsure.length} tasks were not clear enough to book without a look.`;
     primary = {
       label: "Scope looks right",
-      run: () => act((x) => approveScope(x, requestId) > 0, ""),
+      run: () => act((x) => approveScope(x, requestId, titles) > 0, ""),
     };
     secondary.push({ label: "Adjust", run: open });
   } else if (d.kind === "assign") {
@@ -332,6 +337,17 @@ function Step({
                 "Why this classification?". */}
             {unsure.includes(t.id) && (
               <p className="dq-reason">“{t.description}”</p>
+            )}
+            {unsure.includes(t.id) && genericTitle(t) && (
+              <label className="field dq-title">
+                Title for the job
+                <input
+                  value={titles[t.id] ?? suggestTitle(t.description)}
+                  onChange={(e) =>
+                    setTitles({ ...titles, [t.id]: e.target.value })
+                  }
+                />
+              </label>
             )}
             {unsure.includes(t.id) && t.restricted && (
               <p className="warning">

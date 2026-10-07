@@ -1,5 +1,6 @@
 import { describe, it, expect } from "vitest";
-import { seed, reconcile, providers, type State } from "./model";
+import { genericTitle, seed, reconcile, providers, type State } from "./model";
+import { suggestTitle } from "./pmw";
 import { reoffer, respondToOffer } from "./dispatch";
 import {
   approveScope,
@@ -7,6 +8,7 @@ import {
   issueQuote,
   nextDecision,
   offerVisit,
+  reviewTask,
   suggestPay,
   suggestQuote,
 } from "./decisions";
@@ -59,6 +61,47 @@ describe("the operator's next decision", () => {
     ).toBe(true);
     expect(nextDecision(s, "r4")?.kind).toBe("assign");
     expect(approveScope(s, "r4")).toBe(0);
+  });
+
+  it("names a task the classifier could not, on the way through review", () => {
+    const s = seed();
+    const t = tasksOf(s, "r6")[0];
+    expect(genericTitle(t)).toBe(true);
+    approveScope(s, "r6");
+    expect(t.summary).toBe(suggestTitle(t.description));
+    expect(genericTitle(t)).toBe(false);
+    expect(
+      s.events.some(
+        (e) =>
+          e.entityId === t.id && e.field === "summary" && e.to === t.summary,
+      ),
+    ).toBe(true);
+  });
+
+  it("uses the operator's title, and the suggestion when it is emptied", () => {
+    const s = seed();
+    const [t] = tasksOf(s, "r6");
+    expect(reviewTask(s, t.id, "  Ceiling tiles  ")).toBe(true);
+    expect(t.summary).toBe("Ceiling tiles");
+    expect(reviewTask(s, t.id, "Again")).toBe(false); // already reviewed
+    // The queue passes the operator's titles through approveScope.
+    const t2 = seed();
+    const [six] = tasksOf(t2, "r6");
+    approveScope(t2, "r6", { [six.id]: "Replace corridor ceiling tiles" });
+    expect(six.summary).toBe("Replace corridor ceiling tiles");
+    const [r4] = tasksOf(s, "r4"); // restricted: a generic title too
+    approveScope(s, "r4", { [r4.id]: "   " });
+    expect(r4.summary).toBe(suggestTitle(r4.description));
+  });
+
+  it("leaves a title the classifier did give alone", () => {
+    const s = seed();
+    const t = tasksOf(s, "r2")[0];
+    const named = t.summary;
+    t.reviewed = false;
+    approveScope(s, "r2", { [t.id]: "Something else" });
+    expect(t.summary).toBe(named);
+    expect(t.reviewed).toBe(true);
   });
 
   it("says plainly when no contractor can take every task", () => {

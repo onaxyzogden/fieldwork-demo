@@ -612,3 +612,45 @@ ADR 062.
   tab-width and shrink-wrap probes are at 0, the console crawl is clean, and
   the ADR 061 customer crawl finds no demo wording. Chromium only, per
   ADR 052.
+
+# Quick wins (batch 1) — 2026-10-07
+
+ADR 063.
+
+- **Tests:**
+  - `countdown.test.ts`: days, hours and minutes; under an hour; rounding a
+    part-minute up; null once passed.
+  - `decisions.test.ts`: fallback titles named on review, from the
+    suggestion or the operator's title, with an emptied title falling back;
+    an ordinary title untouched; titles passed through `approveScope`.
+  - `payments.test.ts`: `readyToPay` before approval, after approval, on
+    completion with no, some and all visits finished, a cancelled visit, and
+    once paid.
+  - `pmw.test.ts`: long titles cut at a joining word, or at a word when
+    none fits.
+  - 16 guards were broken on purpose, and each break fails a test.
+- **Browser walk:** 390px and 1280px in both themes, with no console errors.
+  - Sarah opens her assessment from My bookings in the same tab, and
+    "← My bookings" brings her back as Sarah; an unknown account in the URL
+    is ignored.
+  - In the operator queue, "Check the scope" prefills "Replace four damaged
+    ceiling tiles in the second-floor"; edited, it is saved; the restricted
+    task is renamed by default, and Elias's offer is headed with the new
+    title.
+  - Countdowns: "Expires in 2 h · …" on the offer and in the queue, "Starts
+    in 1 day · …" on the job card, "· expires in 2 h" on the operator's
+    card; at 25 minutes left, both turn the warning colour.
+  - A pay-on-completion quote has no "Pay now" after approval and says
+    payment is due on completion; once the visit is finished, "Pay now"
+    appears.
+- **Layout:** no overflow at 320px or 360px on the customer's record, the
+  assessment page or the queue's scope screen. The only element past the
+  edge is the demo bar's "Side by side", which scrolls inside that bar and
+  is unchanged.
+- **Repo checks:** 460 tests, the build, `design:check`, `catalogue:check`
+  and `status:check` pass. New files are prettier-clean, and touched files
+  carry no new drift.
+- **Sweeps:** the narrow-layout probes are unchanged at 0 / 30 / 14 / 0, the
+  tab-width and shrink-wrap probes are at 0, the console crawl is clean, and
+  the ADR 061 customer crawl finds no demo wording. Chromium only, per
+  ADR 052.

@@ -24,7 +24,7 @@ import {
 } from "./pmw";
 import { forgetPaymentMethod, storePaymentMethod } from "./payments";
 import { FindingStep, ReviewStep, WhoStep } from "./AssessmentSteps";
-import { KEY, load, commit } from "./store";
+import { KEY, load, commit, portalLink } from "./store";
 import { SaveWarning } from "./NotificationUI";
 import AssessmentPrint from "./AssessmentPrint";
 import PropertyRecord from "./PropertyRecord";
@@ -236,9 +236,19 @@ export default function Assessment({
                 {property?.address}, {property?.city}
               </small>
             </div>
-            <button className="text-button" onClick={() => window.print()}>
-              <Printer size={16} /> Print
-            </button>
+            <span className="row">
+              {property && (
+                <a
+                  className="text-button"
+                  href={portalLink(property.accountId)}
+                >
+                  ← My bookings
+                </a>
+              )}
+              <button className="text-button" onClick={() => window.print()}>
+                <Printer size={16} /> Print
+              </button>
+            </span>
           </header>
           {org && (!approverId || choosing) ? (
             <WhoStep
@@ -323,9 +333,19 @@ export default function Assessment({
               <strong className="brand-mini">PMW</strong>
               <small>Property Maintenance Walkthrough</small>
             </div>
-            <button className="text-button" onClick={() => window.print()}>
-              <Printer size={16} /> Print / Save PDF
-            </button>
+            <span className="row">
+              {property && (
+                <a
+                  className="text-button"
+                  href={portalLink(property.accountId)}
+                >
+                  ← My bookings
+                </a>
+              )}
+              <button className="text-button" onClick={() => window.print()}>
+                <Printer size={16} /> Print / Save PDF
+              </button>
+            </span>
           </div>
           <span className="eyebrow">ASSESSMENT {w.assessmentId}</span>
           <h1>
@@ -440,7 +460,7 @@ export default function Assessment({
             <summary>
               <strong>This property's maintenance record</strong>
             </summary>
-            <PropertyRecord s={s} propertyId={property.id} />
+            <PropertyRecord s={s} propertyId={property.id} current={w.id} />
           </details>
         )}
       </main>

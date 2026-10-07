@@ -14,6 +14,7 @@ import {
   capturePayment,
   forgetPaymentMethod,
   outstandingFor,
+  readyToPay,
   refundPayment,
   storePaymentMethod,
 } from "./payments";
@@ -203,5 +204,50 @@ describe("what lets a visit be confirmed", () => {
     expect(s.requests.find((x) => x.id === r.id)!.status).toBe(
       "Awaiting Payment",
     );
+  });
+});
+
+describe("when the customer is asked to pay (ADR 063)", () => {
+  it("asks after approval, unless payment is on completion", () => {
+    const s = seed();
+    const { q } = approved(s);
+    expect(readyToPay(s, q)).toBe(true);
+    q.status = "Sent";
+    expect(readyToPay(s, q)).toBe(false);
+  });
+  it("on completion means once every visit is finished, and not before", () => {
+    const s = seed();
+    const { r, q } = approved(s);
+    q.payOnCompletion = true;
+    expect(readyToPay(s, q)).toBe(false); // no visit yet
+    const visit = (id: string) => ({
+      id,
+      requestId: r.id,
+      taskIds: [],
+      providerId: "marcus",
+      start: new Date(s.clock).toISOString(),
+      duration: 60,
+      status: "Confirmed",
+      travel: 8,
+    });
+    s.visits.push(visit("v1"), visit("v2"));
+    expect(readyToPay(s, q)).toBe(false);
+    const done = { finishedAt: new Date(s.clock).toISOString(), outcomes: {} };
+    s.visits.find((v) => v.id === "v1")!.execution = done;
+    expect(readyToPay(s, q)).toBe(false); // one of two finished
+    s.visits.find((v) => v.id === "v2")!.status = "Cancelled";
+    expect(readyToPay(s, q)).toBe(true); // a cancelled visit is not owed
+  });
+  it("stops asking once it is paid", () => {
+    const s = seed();
+    const { q } = approved(s);
+    s.payments.push({
+      id: "p",
+      quoteId: q.id,
+      status: "Paid",
+      amount: 400,
+      reference: "r",
+    });
+    expect(readyToPay(s, q)).toBe(false);
   });
 });

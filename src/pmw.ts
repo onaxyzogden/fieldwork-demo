@@ -265,6 +265,10 @@ export function roomsFor(s: State, propertyId: string) {
  * sentence-cased, cut at a word boundary near 60 characters. Only a
  * suggestion — the pricing step shows it in an editable box. A full stop
  * ends a clause only before a space or the end, so "1.5 m" survives.
+ *
+ * Too long, it ends before the last joining word that leaves a real title
+ * ("Replace electrical wiring", not "…and check a breaker that keeps"), and
+ * only otherwise at the last whole word (ADR 063).
  */
 export function suggestTitle(note: string) {
   const first = note
@@ -272,8 +276,16 @@ export function suggestTitle(note: string) {
     .split(/[.!?;](?=\s|$)|\n|,\s/)[0]
     .trim();
   if (!first) return "";
+  const head = first.slice(0, 60);
+  const joins = [...head.matchAll(/\s(?:and|but|that|which|with|so|while)\s/gi)]
+    .map((m) => m.index!)
+    .filter((i) => i >= 15);
   const cut =
-    first.length <= 60 ? first : first.slice(0, 60).replace(/\s+\S*$/, "");
+    first.length <= 60
+      ? first
+      : joins.length
+        ? head.slice(0, joins[joins.length - 1])
+        : head.replace(/\s+\S*$/, "");
   return cut.charAt(0).toUpperCase() + cut.slice(1);
 }
 

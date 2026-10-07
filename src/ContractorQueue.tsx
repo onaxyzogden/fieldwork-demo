@@ -5,6 +5,7 @@ import { type State, accountName, dateLabel, money } from "./model";
 import { markOfferSeen, offerSeen } from "./notifications";
 import { contractorQueue } from "./roleQueues";
 import { AllCaughtUp, QueueLayer, useOneAtATime } from "./QueueLayer";
+import { When } from "./When";
 
 /**
  * The contractor's offers, one per screen (ADR 062): the job and the pay, then
@@ -108,7 +109,11 @@ function Offer({
         {money(a.pay)} <small>CAD · your pay</small>
       </p>
       <p className="onsite-hint">
-        Offer expires {dateLabel(new Date(a.expiresAt).toISOString())}
+        <When
+          clock={s.clock}
+          at={new Date(a.expiresAt).toISOString()}
+          lead="Expires in"
+        />
       </p>
       <details className="job-details">
         <summary>Details</summary>

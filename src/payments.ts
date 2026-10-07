@@ -6,6 +6,7 @@ import {
   uid,
   type Payment,
   type PaymentMethod,
+  type Quote,
   type State,
 } from "./model";
 
@@ -93,6 +94,23 @@ export function payQuote(s: State, quoteId: string, fail = false) {
     fail ? "Demo payment failed" : "Demo payment received · receipt issued",
   );
   return !fail;
+}
+
+/**
+ * Whether the customer should be offered payment for an approved quote: not
+ * yet paid, and — for a quote paid on completion — the work actually done.
+ * Asking for payment on completion before anything is complete is asking for
+ * it up front (ADR 063).
+ */
+export function readyToPay(s: State, quote: Quote) {
+  if (quote.status !== "Approved") return false;
+  if (s.payments.some((p) => p.quoteId === quote.id && p.status === "Paid"))
+    return false;
+  if (!quote.payOnCompletion) return true;
+  const visits = s.visits.filter(
+    (v) => v.requestId === quote.requestId && v.status !== "Cancelled",
+  );
+  return visits.length > 0 && visits.every((v) => !!v.execution?.finishedAt);
 }
 
 /**

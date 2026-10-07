@@ -604,6 +604,26 @@ describe("capture on site, price later", () => {
     );
     expect(long.length).toBeLessThanOrEqual(60);
     expect(long.endsWith(" ")).toBe(false);
+    // No joining word inside the first 60 characters: the last whole word.
+    expect(long).toBe(
+      "The flashing along the whole north side of the roof has",
+    );
+    // Too long ends at a joining word, not mid-clause (ADR 063)…
+    expect(
+      suggestTitle(
+        "Replace electrical wiring and check a breaker that keeps tripping",
+      ),
+    ).toBe("Replace electrical wiring and check a breaker");
+    // …unless that would leave too little to be a title.
+    expect(
+      suggestTitle(
+        "Fix it and then also look at every other thing in the basement please",
+      ),
+    ).toBe("Fix it and then also look at every other thing in the");
+    // Short enough, a joining word stays.
+    expect(suggestTitle("Patch and paint the hallway wall")).toBe(
+      "Patch and paint the hallway wall",
+    );
     expect("The flashing along the whole north side of the roof has").toBe(
       long,
     );

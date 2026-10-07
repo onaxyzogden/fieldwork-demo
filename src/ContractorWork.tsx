@@ -22,6 +22,8 @@ import { storablePhotos, unreadableMessage } from "./photos";
 import { MessageThread } from "./NotificationUI";
 import { markOfferSeen, offerSeen } from "./notifications";
 import JobMode from "./JobMode";
+import { When } from "./When";
+import { countdown } from "./countdown";
 import ContractorQueue from "./ContractorQueue";
 import { Glance, GlanceLead } from "./Glance";
 import {
@@ -519,7 +521,13 @@ export default function ContractorWork({
         lead={
           nextVisit ? (
             <GlanceLead
-              when={dateLabel(nextVisit.start)}
+              when={(() => {
+                // How long until the next job, then when (ADR 063).
+                const c = countdown(s.clock, nextVisit.start);
+                return c
+                  ? `Starts in ${c.text} · ${dateLabel(nextVisit.start)}`
+                  : dateLabel(nextVisit.start);
+              })()}
               what={
                 s.tasks.find((t) => nextVisit.taskIds.includes(t.id))
                   ?.summary || "Scheduled job"
@@ -610,7 +618,11 @@ export default function ContractorWork({
               </p>
               <h3 className="contractor-pay">Your pay: {money(a.pay)} CAD</h3>
               <p>
-                Offer expires {dateLabel(new Date(a.expiresAt).toISOString())}
+                <When
+                  clock={s.clock}
+                  at={new Date(a.expiresAt).toISOString()}
+                  lead="Expires in"
+                />
               </p>
               {v.taskIds.map((id) => {
                 const t = s.tasks.find((t) => t.id === id)!;
@@ -769,7 +781,7 @@ export default function ContractorWork({
                   </h2>
                   <p>
                     {accountName(r.accountId)} · {r.city} ·{" "}
-                    {dateLabel(v.start)}
+                    <When clock={s.clock} at={v.start} lead="Starts in" />
                   </p>
                   {/* Accepted-but-not-yet-startable visits (planning ahead,
                       before the day-of execution controls unlock) still

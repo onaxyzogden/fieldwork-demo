@@ -1263,3 +1263,54 @@ functions as the portal's own buttons, so the two cannot drift apart:
   the question, so the status never said "Information requested". The glance
   now counts any unanswered question, and the queue asks it first, since it
   is quick and the request comes round again for whatever follows.
+
+## ADR 063: Four quick wins: assessment links, countdowns, real task titles, paying after the work
+
+Accepted. The first of four batches from the UI/UX review, each planned and
+confirmed before it is built.
+
+**The customer can get to their assessment, and back.** The maintenance
+record in My bookings listed a sent assessment as "Awaiting your approval"
+with no way to open it; only the operator's copy had links. The customer's
+copy now shows the status and an **Open assessment** link, in the same tab.
+On the assessment page itself the current assessment has no link to itself.
+The assessment page gains **← My bookings**, to `?role=Customer&account=…`.
+The app reads those two parameters and opens the portal as that customer,
+ignoring an account it does not know. The link is relative, so the page
+still renders without a window.
+
+**Time is said as time left.** `countdown()` gives "2 days", "1 h 40 m" or
+"25 min" against the demo clock, and null once the moment has passed, so
+"Advance clock" moves every countdown. `When` renders it as "Expires in
+1 h 40 m · Wed, Oct 7, 12:03 a.m.", with the date muted and the countdown in
+the warning colour under an hour. It appears on:
+
+- the contractor's offer and its queue screen;
+- each job card and the next job ("Starts in 1 day · …");
+- job mode's arrival screen;
+- the operator's "Offer sent" card ("… · expires in 25 min").
+
+**A reviewed task never keeps a fallback title.** The classifier's two
+fallbacks, "Tell us a little more" and "Electrical / restricted work
+review", are named constants with a `genericTitle()` predicate. They are
+fine as reasons to review, but they headed contractors' offers.
+`reviewTask()` is now the one write for reviewing a task, used by the
+request page's "Mark reviewed" and the queue's "Scope looks right" (through
+`approveScope`). A generic title becomes the operator's, or else
+`suggestTitle()` of the customer's description, and the change is logged.
+Both screens show a **Title** field prefilled with the suggestion.
+
+`suggestTitle()`, shared with walkthrough findings, now ends a long title at
+the last joining word that leaves at least 15 characters ("Replace
+electrical wiring and check a breaker", not "…a breaker that keeps"). Only
+when there is none does it fall back to the last whole word.
+
+**Pay on completion means after the work.** "Pay now" showed straight after
+approval on a pay-on-completion quote. `readyToPay()` now requires an
+approved, unpaid quote and, on completion, every live visit finished; the
+quote card shows the button only then.
+
+**A test that failed every Wednesday and Thursday.** `concurrency.test.ts`
+booked "three days out" at 15:00 UTC, which lands on a weekend from a
+Wednesday or Thursday, so four tests failed on those days on `main` as
+well. The helper now moves to the Monday when that happens.
