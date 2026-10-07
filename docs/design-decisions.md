@@ -1541,3 +1541,78 @@ rather than the whole inbox. `reveal()` scrolls the target into view and
 outlines it for two seconds, one mark at a time. Nothing moves, so reduced
 motion needs no rule of its own. The quote, charge and question cards gained
 anchors for this.
+
+## ADR 067: Contractors set their hours and see what they have earned
+
+Accepted. The first half of the fourth UI/UX batch.
+
+**Hours are the contractor's, and one check applies them.** Every time the
+app proposes or accepts goes through `available()`. That covers:
+
+- the operator's suggestions;
+- the customer's instant picker;
+- the operator's manual time;
+- moving an offer to someone else.
+
+It used to close weekends and everything outside 9–5 for everyone. It now
+asks `withinHours()`, which reads that contractor's own hours:
+
+- **Blocks:** for each day of the week, any of Morning (9–12), Afternoon
+  (1–5) and Evening (5–9). Weekends included.
+- **Days off:** single Toronto dates.
+- **Windows:** neighbouring blocks run together, so Morning and Afternoon
+  make one 9–5 with the lunch hour in it, as before. Morning with Evening is
+  two windows, and a visit must fit one of them with its drive before and
+  its 15-minute wrap-up after.
+- **Default:** a contractor who has never set hours gets Monday to Friday,
+  Morning and Afternoon. That is the old 9–5 exactly, so the seed and every
+  existing test behave as before. `hoursOf()` supplies it, so nothing is
+  backfilled.
+
+`slots()` also tries 5 and 6 p.m., and those times appear only where a
+contractor works evenings.
+
+**The customer is held to what they asked for.** With weekends and evenings
+no longer closed for everyone, the customer's timing is checked on its own:
+
+- "Weekdays · …" excludes Saturday and Sunday.
+- "1–5 PM" and "9 AM–5 PM" must end by 5.
+- A new "Weekdays · 5–9 PM" choice starts at 5 or later.
+- "Flexible" and the instant picker include any evening or weekend a
+  contractor works.
+
+**Changing hours doesn't strand work.** `setAvailability()` saves the hours.
+Then:
+
+- **Open offers the new hours miss are withdrawn** through the ordinary
+  decline, with the reason "Outside my availability". The operator hears
+  about it as any decline, and the auto-reoffer setting applies, so there is
+  no new status.
+- **Accepted jobs not yet started stay booked.** The page lists them as
+  "Outside your new hours", each opening the job, and says to talk to the
+  operator about any they can't make (`outsideHours()`).
+
+**The pages.** The contractor navigation gains Earnings and Availability.
+
+- **Availability:** a week of block pills, days off with inline errors (a
+  past date, a day already off), and Save. Save says what it did, or that
+  nothing changed.
+- **Decline nudge:** declining an offer as "Not available" now shows
+  "Update your availability" on that offer.
+- **Roster:** the operator's Contractors page shows each person's hours in a
+  line, for example "Mon, Wed–Fri 9–5 · Tue 9–9 · Sat 9–12", and their next
+  day off. It is read-only, and nobody, the operator included, can book
+  outside someone's hours.
+
+**Earnings are worked out, not stored.** `earnings()` reads accepted offers
+and their visits, grouped by Toronto week, Monday to Sunday:
+
+- **Earned:** a finished visit at the agreed pay, whatever its outcomes. The
+  contractor went and did what could be done. It falls in the week it was
+  finished.
+- **Upcoming:** accepted, not finished, not cancelled.
+- **This week:** always shown, with its totals at the top of its card.
+- **Payouts:** each week is paid the Friday after it ends. Until then it
+  reads "Payout pending · Fri, Oct 16"; after that, "Paid". The page says
+  payouts are simulated and no money has been sent. They stay apart from the
+  customer's payment, as decision 12 in `docs/decisions.md` requires.

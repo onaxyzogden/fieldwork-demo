@@ -394,7 +394,12 @@ export default function ContractorWork({
   provider,
   update,
   openVisit,
-}: Props & { openVisit?: string }) {
+  openAvailability,
+}: Props & {
+  openVisit?: string;
+  /** Goes to the Availability page (ADR 067). */
+  openAvailability: () => void;
+}) {
   const mine = s.assignments.filter((a) => a.providerId === provider);
   const today = dayKey(s.clock);
   /* What the screen opens to: the thing that actually needs the contractor's
@@ -745,6 +750,16 @@ export default function ContractorWork({
             <p className="note">
               This offer is {a.status.toLowerCase()}. The operator will
               coordinate the next step.
+              {/* "Not available" means the hours were wrong, so the place
+                  to fix them is one tap away (ADR 067). */}
+              {a.declineReason === "Not available" && (
+                <>
+                  {" "}
+                  <button className="text-button" onClick={openAvailability}>
+                    Update your availability
+                  </button>
+                </>
+              )}
             </p>
           )}
         </>

@@ -2,6 +2,7 @@ import { type RefObject } from "react";
 import {
   Bell,
   Briefcase,
+  CalendarClock,
   CalendarDays,
   ChevronRight,
   ClipboardCheck,
@@ -16,6 +17,7 @@ import {
   RotateCcw,
   Settings,
   Sun,
+  Wallet,
   Wrench,
   X,
 } from "lucide-react";
@@ -59,7 +61,11 @@ const NAV: Record<Role, [typeof Plus, string][]> = {
     [Plus, "New request"],
     [CalendarDays, "My bookings"],
   ],
-  Contractor: [[Briefcase, "Your Work"]],
+  Contractor: [
+    [Briefcase, "Your Work"],
+    [Wallet, "Earnings"],
+    [CalendarClock, "Availability"],
+  ],
 };
 
 export function Sidebar({

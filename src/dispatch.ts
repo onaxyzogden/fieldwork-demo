@@ -12,6 +12,9 @@ import {
   accounts,
   migrateAccounts,
   accountName,
+  type Availability,
+  hoursLabel,
+  withinHours,
 } from "./model";
 import { migratePmw } from "./pmw";
 
@@ -321,4 +324,51 @@ export function trip(providerId: string, city: string) {
 export function tripLabel(providerId: string, city: string, minutes: number) {
   const t = trip(providerId, city);
   return `About ${minutes} min${t.km ? ` · ${t.km} km` : ""}${t.from ? ` from ${t.from}` : ""}`;
+}
+
+/* ── A contractor's hours (ADR 067) ──────────────────────────────────────── */
+
+/** The decline reason an offer withdrawn by a change of hours carries. */
+export const OUTSIDE_HOURS = "Outside my availability";
+
+/** Accepted jobs not yet started that the contractor's hours no longer
+ *  cover. They stay booked; the contractor is shown them. */
+export function outsideHours(s: State, providerId: string) {
+  return s.assignments.filter((a) => {
+    const v = s.visits.find((v) => v.id === a.visitId);
+    return (
+      a.providerId === providerId &&
+      a.status === "Accepted" &&
+      !!v &&
+      ["Proposed", "Confirmed"].includes(v.status) &&
+      !withinHours(s, providerId, v.start, v.duration, v.travel)
+    );
+  });
+}
+
+/**
+ * Save a contractor's hours. Open offers the new hours no longer cover are
+ * withdrawn through the ordinary decline, so the operator hears about them
+ * and the auto-reoffer setting applies, exactly as if the contractor had
+ * declined each one; accepted jobs stay booked.
+ */
+export function setAvailability(
+  s: State,
+  providerId: string,
+  av: Availability,
+) {
+  s.availability = { ...s.availability, [providerId]: av };
+  const who = providerName(providerId);
+  log(s, `${who} changed their hours · ${hoursLabel(av)}`, { actor: who });
+  const withdrawn = s.assignments.filter((a) => {
+    const v = s.visits.find((v) => v.id === a.visitId);
+    return (
+      a.providerId === providerId &&
+      !!v &&
+      !withinHours(s, providerId, v.start, v.duration, v.travel) &&
+      /* Only an open offer can be declined; anything else is refused. */
+      respondToOffer(s, a.id, "Declined", OUTSIDE_HOURS)
+    );
+  });
+  return { withdrawn, outside: outsideHours(s, providerId) };
 }

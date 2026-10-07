@@ -444,6 +444,9 @@ export type State = {
   holds?: Hold[];
   /** Additional charges (ADR 065). Backfilled by `migrateDispatch()`. */
   charges?: Charge[];
+  /** Each contractor's working hours, by provider id (ADR 067). Only the
+   *  ones who changed them; `hoursOf()` gives everyone else the default. */
+  availability?: Record<string, Availability>;
   /** Tokenized payment methods. Backfilled by `migrateDispatch()`. */
   paymentMethods?: PaymentMethod[];
   /**
@@ -1667,6 +1670,100 @@ export function localTime(day: string, hour: number) {
   const p = torontoParts(d);
   return new Date(+d + (hour - Number(p.hour)) * 3600000);
 }
+/* ── A contractor's hours (ADR 067) ──────────────────────────────────────── */
+
+export const WEEK = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"] as const;
+export type Weekday = (typeof WEEK)[number];
+export type Block = "Morning" | "Afternoon" | "Evening";
+/** Each block's hours, in minutes after midnight, in the order of the day. */
+export const BLOCKS: [Block, number, number][] = [
+  ["Morning", 9 * 60, 12 * 60],
+  ["Afternoon", 13 * 60, 17 * 60],
+  ["Evening", 17 * 60, 21 * 60],
+];
+/**
+ * When a contractor works: blocks for each day of the week, and single days
+ * off as Toronto dates (YYYY-MM-DD).
+ */
+export type Availability = { days: Record<Weekday, Block[]>; off: string[] };
+/** Weekdays, morning and afternoon: the 9–5 everyone worked before ADR 067. */
+export const defaultAvailability = (): Availability => ({
+  days: Object.fromEntries(
+    WEEK.map((d) => [
+      d,
+      d === "Sat" || d === "Sun" ? [] : ["Morning", "Afternoon"],
+    ]),
+  ) as Availability["days"],
+  off: [],
+});
+export const hoursOf = (s: State, providerId: string) =>
+  s.availability?.[providerId] ?? defaultAvailability();
+/**
+ * A day's working windows, [from, to] in minutes. Neighbouring blocks run
+ * together, so morning and afternoon make one 9–5 with the lunch hour in it,
+ * and a job can run across it, as it always could.
+ */
+export function windows(av: Availability, day: Weekday) {
+  const out: [number, number][] = [];
+  let last = -2;
+  BLOCKS.forEach(([block, from, to], i) => {
+    if (!av.days[day].includes(block)) return;
+    if (i === last + 1) out[out.length - 1][1] = to;
+    else out.push([from, to]);
+    last = i;
+  });
+  return out;
+}
+/**
+ * Whether a visit fits the contractor's hours: not on a day off, and inside
+ * one window with the drive before it and the 15-minute wrap-up after it.
+ */
+export function withinHours(
+  s: State,
+  providerId: string,
+  start: string,
+  duration: number,
+  travel: number,
+) {
+  const p = torontoParts(new Date(start));
+  const av = hoursOf(s, providerId);
+  const mins = Number(p.hour) * 60 + Number(p.minute);
+  return (
+    !av.off.includes(`${p.year}-${p.month}-${p.day}`) &&
+    windows(av, p.weekday as Weekday).some(
+      ([from, to]) => mins - travel >= from && mins + duration + 15 <= to,
+    )
+  );
+}
+/** "9–12", "1–5", "5–9": a window of minutes as clock hours. */
+export const spanLabel = (from: number, to: number) =>
+  [from, to].map((m) => ((m / 60 - 1) % 12) + 1).join("–");
+/** "Mon–Fri", or "Tue, Thu": runs of three or more days are spans. */
+function dayList(days: Weekday[]) {
+  const runs: Weekday[][] = [];
+  for (const d of days) {
+    const run = runs.at(-1);
+    if (run && WEEK.indexOf(d) === WEEK.indexOf(run.at(-1)!) + 1) run.push(d);
+    else runs.push([d]);
+  }
+  return runs
+    .map((r) => (r.length > 2 ? `${r[0]}–${r.at(-1)}` : r.join(", ")))
+    .join(", ");
+}
+/** Hours in a line, days that share them together: "Mon–Fri 9–5 · Sat 9–12". */
+export function hoursLabel(av: Availability) {
+  const groups = new Map<string, Weekday[]>();
+  for (const d of WEEK) {
+    const w = windows(av, d)
+      .map(([from, to]) => spanLabel(from, to))
+      .join(", ");
+    if (w) groups.set(w, [...(groups.get(w) ?? []), d]);
+  }
+  return (
+    [...groups].map(([w, days]) => `${dayList(days)} ${w}`).join(" · ") ||
+    "No hours set"
+  );
+}
 export function available(
   s: State,
   providerId: string,
@@ -1688,13 +1785,22 @@ export function available(
     +d <= s.clock ||
     !providerId ||
     duration < 15 ||
-    ["Sat", "Sun"].includes(p.weekday) ||
-    mins - travel < 9 * 60 ||
-    mins + duration + 15 > 17 * 60
+    !withinHours(s, providerId, start, duration, travel)
   )
     return false;
+  /* What the customer asked for. The contractor's hours used to close
+     weekends and evenings for everyone; now they can be open, so a customer
+     who said weekdays, or a part of the day, is held to it here. */
+  if (timing.startsWith("Weekdays") && ["Sat", "Sun"].includes(p.weekday))
+    return false;
   if (timing.includes("9 AM–12 PM") && mins + duration > 12 * 60) return false;
-  if (timing.includes("1–5 PM") && mins < 13 * 60) return false;
+  if (
+    timing.includes("1–5 PM") &&
+    (mins < 13 * 60 || mins + duration > 17 * 60)
+  )
+    return false;
+  if (timing.includes("9 AM–5 PM") && mins + duration > 17 * 60) return false;
+  if (timing.includes("5–9 PM") && mins < 17 * 60) return false;
   /* The same overlap arithmetic answers both questions, so it is written once
      and asked of booked visits and of live holds in turn. */
   const clashes = (other: { start: string; duration: number }) =>
@@ -1808,7 +1914,7 @@ export function slots(
   const base = new Date(s.clock + 2 * 86400000);
   for (let day = 0; day < 10; day++) {
     const p = torontoParts(new Date(+base + day * 86400000));
-    for (const h of [10, 11, 13, 15]) {
+    for (const h of [10, 11, 13, 15, 17, 18]) {
       const d = localTime(`${p.year}-${p.month}-${p.day}`, h);
       const travel =
         providers.find((p) => p.id === providerId)?.city === city ? 8 : 24;
