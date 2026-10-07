@@ -1616,3 +1616,68 @@ and their visits, grouped by Toronto week, Monday to Sunday:
   reads "Payout pending · Fri, Oct 16"; after that, "Paid". The page says
   payouts are simulated and no money has been sent. They stay apart from the
   customer's payment, as decision 12 in `docs/decisions.md` requires.
+
+## ADR 068: A quieter request page, and a desktop panel beside the queues
+
+Accepted. The second half of the fourth UI/UX batch, and the last of its
+sixteen suggestions.
+
+**The request page shows the decision, then one thing at a time.**
+
+- **Above the tabs:** the summary, the decision card, any delivery warning
+  and the customer-question card. Each needs attention when it is there.
+- **The tabs:** everything else, one at a time.
+  - **Tasks:** task review and splitting into visits.
+  - **Visits:** each visit's card, its conversation and its assignments.
+  - **Notes:** the customer's notes and stated preference.
+  - **History:** the request's trail.
+- **Which tab opens:** Visits once the request has a live visit, Tasks
+  until then (`hasLiveVisit()`). Picking a tab overrides that until another
+  request is chosen.
+- **Counts:** each tab shows its count (Notes has none). On a phone they wrap
+  two by two rather than squeeze.
+- **History moved:** it used to sit in the decision card's More actions and
+  now has its own tab. Decline, booking mode and payments stay in More
+  actions.
+- **Asking the customer is part of scoping.** "Need More Info" is a main
+  button while the request has no live visit. After that it is the first
+  item in More actions, still one tap away.
+- **Fulfilment still takes the whole page.** The "Assign contractor / Do it
+  myself" screen sits outside the tabs, because its rule is to hide
+  everything but itself.
+- **Jumps land on the right tab.**
+  - "Review tasks", in the decision card and on the fulfilment screen,
+    switches to Tasks and scrolls there.
+  - A visit or message notice switches to Visits before it scrolls and marks
+    its target (ADR 066).
+- **The operator can read a visit's conversation.** Message notices have
+  always gone to the operator, but no operator screen showed the thread, so
+  such a notice opened onto nothing. The visit card on the Visits tab now
+  carries it, where the notice lands.
+
+**A panel beside the queues on desktop.** From 1024px, each one-at-a-time
+queue has a read-only panel beside the decision column:
+
+- the operator's decisions;
+- the customer's to-dos;
+- the contractor's offers.
+
+The column keeps its 560px. Below 1024px the panel is not shown, so phones
+are unchanged. `asideFor()` decides what each role sees, and it is never
+more than they see elsewhere:
+
+- **Operator:** the customer, the address, the tasks with photos, the
+  customer's notes, the visit time, and the last five history entries.
+- **Customer:** "Your booking": the address, the tasks with photos and the
+  visit time. The operator's history is never shown.
+- **Contractor offer:**
+  - **Shown:** the city, the offer's own tasks with their answers and
+    photos, and the offer's own time.
+  - **Not shown:** the address and the customer's notes, as on the offer
+    screen.
+  - **No repeat:** the offer's inline Details toggle is hidden on desktop,
+    since the panel already lists the tasks.
+
+A customer's assessment has no request behind it, so it gets no panel.
+`AuditList` is the one way a trail is drawn, in the History tab and in the
+panel.

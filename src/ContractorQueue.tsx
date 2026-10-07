@@ -5,6 +5,7 @@ import { type State, accountName, dateLabel, money } from "./model";
 import { markOfferSeen, offerSeen } from "./notifications";
 import { contractorQueue } from "./roleQueues";
 import { AllCaughtUp, QueueLayer, useOneAtATime } from "./QueueLayer";
+import QueueAside from "./QueueAside";
 import { When } from "./When";
 
 /**
@@ -34,12 +35,25 @@ export default function ContractorQueue({
 }) {
   const offers = contractorQueue(s, provider, s.clock);
   const q = useOneAtATime(offers, (id) => offers.includes(id));
+  const v = s.visits.find(
+    (x) => x.id === s.assignments.find((a) => a.id === q.key)?.visitId,
+  );
   return (
     <QueueLayer
       label="Offers"
       position={q.position}
       screen={q.screen}
       close={close}
+      aside={
+        v && (
+          <QueueAside
+            s={s}
+            role="Contractor"
+            requestId={v.requestId}
+            visitId={v.id}
+          />
+        )
+      }
     >
       {q.key ? (
         <Offer

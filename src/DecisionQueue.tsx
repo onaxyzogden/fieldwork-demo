@@ -28,6 +28,7 @@ import { useFieldErrors } from "./fields";
 import FollowUp, { followUpLine } from "./FollowUp";
 import { bucket } from "./work";
 import "./onsite.css";
+import QueueAside from "./QueueAside";
 
 /**
  * The operator's decisions, one request at a time (ADR 059).
@@ -106,41 +107,46 @@ export default function DecisionQueue({
       aria-label="Decisions"
       ref={ref}
     >
-      <div className="onsite-body">
-        <header className="onsite-head">
-          <span>
-            {decision ? `Decision ${seen + 1} of ${seen + left}` : "Decisions"}
-          </span>
-          <button className="text-button" onClick={close}>
-            Close
-          </button>
-        </header>
-        {decision ? (
-          <Step
-            key={`${seen}-${requestId}`}
-            s={s}
-            requestId={requestId}
-            decision={decision}
-            update={update}
-            open={() => open(requestId)}
-            done={() => advance(true)}
-            skip={() => advance(false)}
-          />
-        ) : (
-          <>
-            <h1 tabIndex={-1}>All caught up</h1>
-            <p className="onsite-hint dq-done">
-              <CheckCircle2 size={20} />
-              {handled} decision{handled === 1 ? "" : "s"} handled. Anything new
-              will show on Home.
-            </p>
-            <div className="onsite-bar">
-              <button className="primary full" onClick={close}>
-                Back to Home
-              </button>
-            </div>
-          </>
-        )}
+      <div className="onsite-frame">
+        <div className="onsite-body">
+          <header className="onsite-head">
+            <span>
+              {decision
+                ? `Decision ${seen + 1} of ${seen + left}`
+                : "Decisions"}
+            </span>
+            <button className="text-button" onClick={close}>
+              Close
+            </button>
+          </header>
+          {decision ? (
+            <Step
+              key={`${seen}-${requestId}`}
+              s={s}
+              requestId={requestId}
+              decision={decision}
+              update={update}
+              open={() => open(requestId)}
+              done={() => advance(true)}
+              skip={() => advance(false)}
+            />
+          ) : (
+            <>
+              <h1 tabIndex={-1}>All caught up</h1>
+              <p className="onsite-hint dq-done">
+                <CheckCircle2 size={20} />
+                {handled} decision{handled === 1 ? "" : "s"} handled. Anything
+                new will show on Home.
+              </p>
+              <div className="onsite-bar">
+                <button className="primary full" onClick={close}>
+                  Back to Home
+                </button>
+              </div>
+            </>
+          )}
+        </div>
+        {decision && <QueueAside s={s} role="Operator" requestId={requestId} />}
       </div>
     </div>
   );

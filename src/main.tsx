@@ -3,6 +3,8 @@ import Blueprint from "./Blueprint";
 import ContractorWork, { JobWork } from "./ContractorWork";
 import Availability from "./Availability";
 import Earnings from "./Earnings";
+import { AuditList } from "./QueueAside";
+import { hasLiveVisit } from "./aside";
 import { OperatorHome, OperatorToday } from "./OperatorWork";
 import Walkthroughs from "./Walkthroughs";
 import Assessment from "./Assessment";
@@ -116,7 +118,6 @@ import {
   auditFor,
   secured,
   methodFor,
-  isChange,
   materialsResponsibilities,
   type MaterialsResponsibility,
   accountName,
@@ -470,6 +471,9 @@ function Workspace({
     "self",
   );
   const [fulfillment, setFulfillment] = useState(false);
+  /* The request page's tab (ADR 068). Empty follows the request's state,
+     until the operator picks one. */
+  const [requestTab, setRequestTab] = useState("");
   const [showRequestQueue, setShowRequestQueue] = useState(false);
   React.useEffect(() => {
     if (fulfillment)
@@ -705,6 +709,9 @@ function Workspace({
     if (role === "Contractor") openContractorJob(n.visitId);
     else {
       choose(n.requestId);
+      /* Visit cards and their conversations live on the Visits tab
+         (ADR 068). */
+      if (target === "visit" || target === "messages") setRequestTab("Visits");
       setExpanded(true);
       setPage(role === "Operator" ? "Requests" : "My bookings");
     }
@@ -729,6 +736,19 @@ function Workspace({
     (t) => getIssue(t.description).availability === "Referral only",
   );
   const visits = s.visits.filter((v) => v.requestId === r.id);
+  const liveVisits = visits.filter((v) => v.status !== "Cancelled");
+  /* Once anything is booked the visits matter most; until then the tasks. */
+  const booked = hasLiveVisit(s, r.id);
+  const tab = requestTab || (booked ? "Visits" : "Tasks");
+  /** The Tasks tab, scrolled to: where scope is reviewed and visits split. */
+  const showTasks = () => {
+    setRequestTab("Tasks");
+    setTimeout(() =>
+      document
+        .getElementById("review-tasks")
+        ?.scrollIntoView({ block: "start" }),
+    );
+  };
   const quote = s.quotes.find(
     (q) => q.requestId === r.id && q.status !== "Superseded",
   );
@@ -835,6 +855,7 @@ function Workspace({
     setCustomer(req.accountId);
     setSelected([]);
     setFulfillment(false);
+    setRequestTab("");
     setSlot("");
     setOverride("");
     setStep(0);
@@ -1101,6 +1122,11 @@ function Workspace({
           </div>
           {v.execution?.finishedAt && <p className="note">{finishedNote(v)}</p>}
         </>
+      )}
+      {/* The operator reads and answers the visit's conversation here, where
+          a message notice opens (ADR 068). */}
+      {role === "Operator" && (
+        <MessageThread s={s} visit={v} sender="Operator" update={update} />
       )}
       {/* Inside a day, a new time is ours to arrange (ADR 064): the
           customer is told when we will call, here and in their inbox. */}
@@ -1468,6 +1494,14 @@ function Workspace({
     let body = "";
     let actions: React.ReactNode = null;
     let extra: React.ReactNode = null;
+    const ask = (className: string) => (
+      <button
+        className={className}
+        onClick={() => setModal("Request information")}
+      >
+        {r.operatorNote ? "Ask something else" : "Need More Info"}
+      </button>
+    );
     let closed = false;
     /* The follow-up's own decision (ADR 065): unfinished work or a late
        arrival, before anything else on a live request. */
@@ -1637,14 +1671,7 @@ function Workspace({
       title = "Scope needs review";
       body = `${unreviewed.length} task${plural(unreviewed.length)} still need${unreviewed.length === 1 ? "s" : ""} your review before this job can be assigned.`;
       actions = (
-        <button
-          className="primary"
-          onClick={() =>
-            document
-              .getElementById("review-tasks")
-              ?.scrollIntoView({ block: "start" })
-          }
-        >
+        <button className="primary" onClick={showTasks}>
           Review tasks <ArrowRight size={16} />
         </button>
       );
@@ -1786,14 +1813,12 @@ function Workspace({
         {!closed && (
           <div className="row actions wrap op-decision-actions">
             {actions}
-            <button
-              className="secondary"
-              onClick={() => setModal("Request information")}
-            >
-              {r.operatorNote ? "Ask something else" : "Need More Info"}
-            </button>
+            {/* Asking is part of scoping; once booked it is the
+                exception, so it steps back into More actions (ADR 068). */}
+            {!booked && ask("secondary")}
             <details>
               <summary>More actions</summary>
+              {booked && ask("text-button")}
               <button
                 className="text-button"
                 onClick={() => setModal("Decline request")}
@@ -1956,31 +1981,6 @@ function Workspace({
                 )}
               </section>
             )}
-            {/* A log nothing renders is ADR 034 again. Changes first, because
-                "who changed this price" is the question the narrative could
-                not answer; the narrative stays underneath it. */}
-            <details className="note">
-              <summary>History ({trail.length})</summary>
-              {trail.length === 0 ? (
-                <p>Nothing recorded against this request yet.</p>
-              ) : (
-                <ul className="audit">
-                  {trail.map((e) => (
-                    <li key={e.id}>
-                      <span>{dateLabel(e.at)}</span>{" "}
-                      {isChange(e) ? (
-                        <>
-                          <strong>{e.actor}</strong> changed {e.field}
-                          {e.from ? ` from ${e.from}` : ""} to {e.to}
-                        </>
-                      ) : (
-                        e.text
-                      )}
-                    </li>
-                  ))}
-                </ul>
-              )}
-            </details>
           </div>
         )}
       </section>
@@ -2292,250 +2292,356 @@ function Workspace({
                       )}
                     </section>
                   )}
-                  <section className="card panel operator-notes">
-                    <h3>Notes from customer</h3>
-                    <p>
-                      {r.notes ||
-                        "No additional access or parking notes supplied."}
-                    </p>
-                    {!!r.preferredSlots?.length || r.timingConstraints ? (
-                      <>
-                        <h3>Stated preference</h3>
-                        <p>
-                          {r.preferredSlots
-                            ?.map(
-                              (p) =>
-                                `${dayLabel(p.date)}${p.times.length ? ` (${p.times.join(", ")})` : ""}`,
-                            )
-                            .join(" · ") || "No specific day"}
-                          {r.timingConstraints
-                            ? ` — ${r.timingConstraints}`
-                            : ""}
-                        </p>
-                      </>
-                    ) : null}
-                  </section>
-                  <section className="card panel" id="review-tasks">
-                    <div className="panel-title">
-                      <h3>
-                        Tasks <span className="count">{tasks.length}</span>
-                      </h3>
-                      <small>Select tasks to group into a separate visit</small>
+                  {/* Everything but the decision, one part at a time (ADR 068).
+                      The part that matters opens first: the tasks until the
+                      work is booked, then its visits. */}
+                  <div className="request-tabs">
+                    <div
+                      className="segmented"
+                      role="group"
+                      aria-label="Request details"
+                    >
+                      {(
+                        [
+                          ["Tasks", tasks.length],
+                          ["Visits", liveVisits.length],
+                          ["Notes"],
+                          ["History", trail.length],
+                        ] as [string, number?][]
+                      ).map(([name, n]) => (
+                        <button
+                          key={name}
+                          className={tab === name ? "chosen" : ""}
+                          aria-pressed={tab === name}
+                          onClick={() => setRequestTab(name)}
+                        >
+                          {name}
+                          {n !== undefined && (
+                            <span className="count">{n}</span>
+                          )}
+                        </button>
+                      ))}
                     </div>
-                    {tasks.map((t) => (
-                      <details className="task-review" key={t.id}>
-                        <summary>
-                          <span className="task-number">
-                            {tasks.indexOf(t) + 1}
-                          </span>{" "}
-                          {t.summary} · {t.duration} min
-                          {!t.reviewed ? " · Needs review" : ""}
-                        </summary>
-                        <div className="row between">
-                          <label className="row">
-                            <input
-                              type="checkbox"
-                              checked={selected.includes(t.id)}
-                              onChange={(e) =>
-                                setSelected(
-                                  e.target.checked
-                                    ? [...selected, t.id]
-                                    : selected.filter((x) => x !== t.id),
-                                )
-                              }
-                            />
-                            <strong>{t.summary}</strong>
-                          </label>
-                          <span className="badge">{t.duration} min</span>
+                    {tab === "Tasks" && (
+                      <section className="card panel" id="review-tasks">
+                        <div className="panel-title">
+                          <h3>
+                            Tasks <span className="count">{tasks.length}</span>
+                          </h3>
+                          <small>
+                            Select tasks to group into a separate visit
+                          </small>
                         </div>
-                        <p>“{t.description}”</p>
-                        <TaskAnswers task={t} />
-                        {t.restricted && (
-                          <p className="warning">
-                            <AlertCircle size={16} /> Potential regulated work ·
-                            operator review and eligible specialist required
-                          </p>
-                        )}
-                        {/* Set where the scope is decided. "Materials
-                            required" as a visit outcome is a stall until
-                            somebody has said whose materials they are. */}
-                        <label className="field">
-                          Materials
-                          <select
-                            value={t.materials || "To be confirmed"}
-                            onChange={(e) =>
-                              update((d) => {
-                                const task = d.tasks.find((x) => x.id === t.id)!;
-                                const was = task.materials;
-                                task.materials = e.target
-                                  .value as MaterialsResponsibility;
-                                log(d, `Materials set for ${t.summary}`, {
-                                  actor: "Operator",
-                                  requestId: r.id,
-                                  entity: "task",
-                                  entityId: t.id,
-                                  field: "materials",
-                                  ...(was ? { from: was } : {}),
-                                  to: task.materials,
-                                });
-                              }, "Materials responsibility set")
-                            }
-                          >
-                            {materialsResponsibilities.map((m) => (
-                              <option key={m} value={m}>
-                                {m}
-                              </option>
-                            ))}
-                          </select>
-                        </label>
-                        {taskPhotos(t)}
-                        {/* A task the classifier could not name gets a
-                            title here, prefilled from the customer's own
-                            words (ADR 063). It heads the contractor's offer. */}
-                        {!t.reviewed && genericTitle(t) && (
-                          <label className="field">
-                            Title
-                            <input
-                              value={
-                                taskTitles[t.id] ?? suggestTitle(t.description)
-                              }
-                              onChange={(e) =>
-                                setTaskTitles({
-                                  ...taskTitles,
-                                  [t.id]: e.target.value,
-                                })
-                              }
-                            />
-                          </label>
-                        )}
-                        {!t.reviewed && (
-                          <button
-                            className="secondary actions"
-                            onClick={() =>
-                              update((d) => {
-                                reviewTask(d, t.id, taskTitles[t.id]);
-                              }, "Review recorded")
-                            }
-                          >
-                            Mark reviewed
-                          </button>
-                        )}
-                        {/* Explainability and scope authoring stay reachable
-                            but out of the triage path. */}
-                        <details className="note">
-                          <summary>Why this classification?</summary>
-                          <div className="reason">
-                            <ShieldCheck size={16} />
-                            <span>
-                              {t.reason}
-                              <small>
-                                Confidence {Math.round(t.confidence * 100)}% ·{" "}
-                                {t.category}
-                              </small>
-                            </span>
-                          </div>
-                        </details>
-                        <details className="note">
-                          <summary>Adjust scope</summary>
-                          <p>
-                            Reclassifying to restricted work clears the review
-                            flag and returns this request to Needs Review.
-                          </p>
-                          <div className="row wrap actions">
-                            <label className="mini-field">
-                              Classification
+                        {tasks.map((t) => (
+                          <details className="task-review" key={t.id}>
+                            <summary>
+                              <span className="task-number">
+                                {tasks.indexOf(t) + 1}
+                              </span>{" "}
+                              {t.summary} · {t.duration} min
+                              {!t.reviewed ? " · Needs review" : ""}
+                            </summary>
+                            <div className="row between">
+                              <label className="row">
+                                <input
+                                  type="checkbox"
+                                  checked={selected.includes(t.id)}
+                                  onChange={(e) =>
+                                    setSelected(
+                                      e.target.checked
+                                        ? [...selected, t.id]
+                                        : selected.filter((x) => x !== t.id),
+                                    )
+                                  }
+                                />
+                                <strong>{t.summary}</strong>
+                              </label>
+                              <span className="badge">{t.duration} min</span>
+                            </div>
+                            <p>“{t.description}”</p>
+                            <TaskAnswers task={t} />
+                            {t.restricted && (
+                              <p className="warning">
+                                <AlertCircle size={16} /> Potential regulated
+                                work · operator review and eligible specialist
+                                required
+                              </p>
+                            )}
+                            {/* Set where the scope is decided. "Materials
+                                  required" as a visit outcome is a stall until
+                                  somebody has said whose materials they are. */}
+                            <label className="field">
+                              Materials
                               <select
-                                aria-label={"Classification for " + t.summary}
-                                value={t.category}
+                                value={t.materials || "To be confirmed"}
                                 onChange={(e) =>
                                   update((d) => {
                                     const task = d.tasks.find(
                                       (x) => x.id === t.id,
                                     )!;
-                                    log(
-                                      d,
-                                      `Classification corrected: ${task.category} → ${e.target.value} · original: ${task.description}`,
-                                    );
-                                    task.category = e.target.value;
-                                    task.restricted =
-                                      task.restricted ||
-                                      e.target.value.includes("Electrical");
-                                    task.reviewed = !task.restricted;
-                                  }, "Correction recorded")
+                                    const was = task.materials;
+                                    task.materials = e.target
+                                      .value as MaterialsResponsibility;
+                                    log(d, `Materials set for ${t.summary}`, {
+                                      actor: "Operator",
+                                      requestId: r.id,
+                                      entity: "task",
+                                      entityId: t.id,
+                                      field: "materials",
+                                      ...(was ? { from: was } : {}),
+                                      to: task.materials,
+                                    });
+                                  }, "Materials responsibility set")
                                 }
                               >
-                                <option>{t.category}</option>
-                                {[
-                                  "Handyman / Doors / Adjustment",
-                                  "Handyman / Walls / Drywall",
-                                  "Installation / Shelving",
-                                  "Assembly / Furniture",
-                                  "Electrical / Restricted work",
-                                ]
-                                  .filter((x) => x !== t.category)
-                                  .map((x) => (
-                                    <option key={x}>{x}</option>
-                                  ))}
+                                {materialsResponsibilities.map((m) => (
+                                  <option key={m} value={m}>
+                                    {m}
+                                  </option>
+                                ))}
                               </select>
                             </label>
-                            <label
-                              className={fieldClass(
-                                "duration-" + t.id,
-                                "mini-field",
-                              )}
-                            >
-                              Duration (min)
-                              <input
-                                type="number"
-                                min="15"
-                                max="480"
-                                value={t.duration}
-                                {...invalid("duration-" + t.id)}
-                                onChange={(e) => {
-                                  if (
-                                    visits.some(
-                                      (v) =>
-                                        v.status !== "Cancelled" &&
-                                        v.taskIds.includes(t.id),
-                                    )
-                                  )
-                                    return invalidate(
-                                      "duration-" + t.id,
-                                      "Remove the visit before changing this duration, so availability can be recalculated.",
-                                    );
-                                  clear("duration-" + t.id);
-                                  patchTask(t.id, {
-                                    duration: Math.max(
-                                      15,
-                                      Number(e.target.value),
-                                    ),
-                                  });
-                                }}
-                              />
-                              <Message field={"duration-" + t.id} />
-                            </label>
-                            <button
-                              className="text-button"
-                              onClick={() => {
-                                setSelected([t.id]);
-                                setModal("Split task");
-                              }}
-                            >
-                              Split task
-                            </button>
-                          </div>
-                        </details>
-                      </details>
-                    ))}
-                    {selected.length > 1 && (
-                      <button
-                        className="secondary"
-                        onClick={() => setModal("Merge tasks")}
-                      >
-                        Merge selected task descriptions
-                      </button>
+                            {taskPhotos(t)}
+                            {/* A task the classifier could not name gets a
+                                  title here, prefilled from the customer's own
+                                  words (ADR 063). It heads the contractor's offer. */}
+                            {!t.reviewed && genericTitle(t) && (
+                              <label className="field">
+                                Title
+                                <input
+                                  value={
+                                    taskTitles[t.id] ??
+                                    suggestTitle(t.description)
+                                  }
+                                  onChange={(e) =>
+                                    setTaskTitles({
+                                      ...taskTitles,
+                                      [t.id]: e.target.value,
+                                    })
+                                  }
+                                />
+                              </label>
+                            )}
+                            {!t.reviewed && (
+                              <button
+                                className="secondary actions"
+                                onClick={() =>
+                                  update((d) => {
+                                    reviewTask(d, t.id, taskTitles[t.id]);
+                                  }, "Review recorded")
+                                }
+                              >
+                                Mark reviewed
+                              </button>
+                            )}
+                            {/* Explainability and scope authoring stay reachable
+                                  but out of the triage path. */}
+                            <details className="note">
+                              <summary>Why this classification?</summary>
+                              <div className="reason">
+                                <ShieldCheck size={16} />
+                                <span>
+                                  {t.reason}
+                                  <small>
+                                    Confidence {Math.round(t.confidence * 100)}%
+                                    · {t.category}
+                                  </small>
+                                </span>
+                              </div>
+                            </details>
+                            <details className="note">
+                              <summary>Adjust scope</summary>
+                              <p>
+                                Reclassifying to restricted work clears the
+                                review flag and returns this request to Needs
+                                Review.
+                              </p>
+                              <div className="row wrap actions">
+                                <label className="mini-field">
+                                  Classification
+                                  <select
+                                    aria-label={
+                                      "Classification for " + t.summary
+                                    }
+                                    value={t.category}
+                                    onChange={(e) =>
+                                      update((d) => {
+                                        const task = d.tasks.find(
+                                          (x) => x.id === t.id,
+                                        )!;
+                                        log(
+                                          d,
+                                          `Classification corrected: ${task.category} → ${e.target.value} · original: ${task.description}`,
+                                        );
+                                        task.category = e.target.value;
+                                        task.restricted =
+                                          task.restricted ||
+                                          e.target.value.includes("Electrical");
+                                        task.reviewed = !task.restricted;
+                                      }, "Correction recorded")
+                                    }
+                                  >
+                                    <option>{t.category}</option>
+                                    {[
+                                      "Handyman / Doors / Adjustment",
+                                      "Handyman / Walls / Drywall",
+                                      "Installation / Shelving",
+                                      "Assembly / Furniture",
+                                      "Electrical / Restricted work",
+                                    ]
+                                      .filter((x) => x !== t.category)
+                                      .map((x) => (
+                                        <option key={x}>{x}</option>
+                                      ))}
+                                  </select>
+                                </label>
+                                <label
+                                  className={fieldClass(
+                                    "duration-" + t.id,
+                                    "mini-field",
+                                  )}
+                                >
+                                  Duration (min)
+                                  <input
+                                    type="number"
+                                    min="15"
+                                    max="480"
+                                    value={t.duration}
+                                    {...invalid("duration-" + t.id)}
+                                    onChange={(e) => {
+                                      if (
+                                        visits.some(
+                                          (v) =>
+                                            v.status !== "Cancelled" &&
+                                            v.taskIds.includes(t.id),
+                                        )
+                                      )
+                                        return invalidate(
+                                          "duration-" + t.id,
+                                          "Remove the visit before changing this duration, so availability can be recalculated.",
+                                        );
+                                      clear("duration-" + t.id);
+                                      patchTask(t.id, {
+                                        duration: Math.max(
+                                          15,
+                                          Number(e.target.value),
+                                        ),
+                                      });
+                                    }}
+                                  />
+                                  <Message field={"duration-" + t.id} />
+                                </label>
+                                <button
+                                  className="text-button"
+                                  onClick={() => {
+                                    setSelected([t.id]);
+                                    setModal("Split task");
+                                  }}
+                                >
+                                  Split task
+                                </button>
+                              </div>
+                            </details>
+                          </details>
+                        ))}
+                        {selected.length > 1 && (
+                          <button
+                            className="secondary"
+                            onClick={() => setModal("Merge tasks")}
+                          >
+                            Merge selected task descriptions
+                          </button>
+                        )}
+                      </section>
                     )}
-                  </section>
+                    {tab === "Visits" && (
+                      <section className="card panel" aria-label="Visits">
+                        {liveVisits.length === 0 && (
+                          <p>
+                            No visits yet. Booked and offered visits show here.
+                          </p>
+                        )}
+                        {visits
+                          .filter((v) => v.status !== "Cancelled")
+                          .map((v) => (
+                            <div key={v.id}>
+                              {visitCard(v)}
+                              {s.assignments
+                                .filter((a) => a.visitId === v.id)
+                                .map((a) => (
+                                  <div className="assignment-row" key={a.id}>
+                                    <span>
+                                      {
+                                        providers.find(
+                                          (p) => p.id === a.providerId,
+                                        )?.name
+                                      }{" "}
+                                      ·{" "}
+                                      {a.providerId === "yousef"
+                                        ? "Self-assigned"
+                                        : money(a.pay)}
+                                    </span>
+                                    {badge(a.status)}
+                                    {a.status === "Offered" && (
+                                      <button
+                                        className="text-button"
+                                        onClick={() => {
+                                          setContractor(a.providerId);
+                                          setRole("Contractor");
+                                          setPage("Your Work");
+                                        }}
+                                      >
+                                        Open contractor view{" "}
+                                        <ArrowUpRight size={16} />
+                                      </button>
+                                    )}
+                                  </div>
+                                ))}
+                              <button
+                                className="text-button"
+                                onClick={() => cancelVisit(v)}
+                              >
+                                Remove visit / regroup tasks
+                              </button>
+                            </div>
+                          ))}
+                      </section>
+                    )}
+                    {tab === "Notes" && (
+                      <section className="card panel operator-notes">
+                        <h3>Notes from customer</h3>
+                        <p>
+                          {r.notes ||
+                            "No additional access or parking notes supplied."}
+                        </p>
+                        {!!r.preferredSlots?.length || r.timingConstraints ? (
+                          <>
+                            <h3>Stated preference</h3>
+                            <p>
+                              {r.preferredSlots
+                                ?.map(
+                                  (p) =>
+                                    `${dayLabel(p.date)}${p.times.length ? ` (${p.times.join(", ")})` : ""}`,
+                                )
+                                .join(" · ") || "No specific day"}
+                              {r.timingConstraints
+                                ? ` — ${r.timingConstraints}`
+                                : ""}
+                            </p>
+                          </>
+                        ) : null}
+                      </section>
+                    )}
+                    {tab === "History" && (
+                      <section className="card panel" aria-label="History">
+                        {trail.length === 0 ? (
+                          <p>Nothing recorded against this request yet.</p>
+                        ) : (
+                          <AuditList trail={trail} />
+                        )}
+                      </section>
+                    )}
+                  </div>
                   {fulfillment && (
                     <>
                       {" "}
@@ -2640,9 +2746,7 @@ function Workspace({
                               className="secondary"
                               onClick={() => {
                                 setFulfillment(false);
-                                document
-                                  .getElementById("review-tasks")
-                                  ?.scrollIntoView({ block: "start" });
+                                showTasks();
                               }}
                             >
                               Review tasks / split visit
@@ -2819,66 +2923,6 @@ function Workspace({
                         </button>
                       </section>
                     </>
-                  )}
-                  {visits.filter((v) => v.status !== "Cancelled").length >
-                    0 && (
-                    /* Audit trail, not a decision surface: reassignment lives
-                       in the decision card, so no Reassign button here. */
-                    <details className="card panel operator-history">
-                      <summary>
-                        Visits &amp; assignment history{" "}
-                        <span className="count">
-                          {
-                            visits.filter((v) => v.status !== "Cancelled")
-                              .length
-                          }
-                        </span>
-                      </summary>
-                      {visits
-                        .filter((v) => v.status !== "Cancelled")
-                        .map((v) => (
-                          <div key={v.id}>
-                            {visitCard(v)}
-                            {s.assignments
-                              .filter((a) => a.visitId === v.id)
-                              .map((a) => (
-                                <div className="assignment-row" key={a.id}>
-                                  <span>
-                                    {
-                                      providers.find(
-                                        (p) => p.id === a.providerId,
-                                      )?.name
-                                    }{" "}
-                                    ·{" "}
-                                    {a.providerId === "yousef"
-                                      ? "Self-assigned"
-                                      : money(a.pay)}
-                                  </span>
-                                  {badge(a.status)}
-                                  {a.status === "Offered" && (
-                                    <button
-                                      className="text-button"
-                                      onClick={() => {
-                                        setContractor(a.providerId);
-                                        setRole("Contractor");
-                                        setPage("Your Work");
-                                      }}
-                                    >
-                                      Open contractor view{" "}
-                                      <ArrowUpRight size={16} />
-                                    </button>
-                                  )}
-                                </div>
-                              ))}
-                            <button
-                              className="text-button"
-                              onClick={() => cancelVisit(v)}
-                            >
-                              Remove visit / regroup tasks
-                            </button>
-                          </div>
-                        ))}
-                    </details>
                   )}
                 </div>
               </div>

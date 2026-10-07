@@ -64,7 +64,20 @@
 .op-decision-actions > details {
   flex-basis: 100%;
 }
-.operator-history summary .count {
+.request-tabs {
+  display: grid;
+  gap: var(--space-4);
+}
+/* Four tabs with counts do not fit a phone's width on one line; they wrap
+   two by two rather than squeeze. */
+.request-tabs .segmented {
+  flex-wrap: wrap;
+  gap: var(--space-1);
+}
+.request-tabs .segmented button {
+  flex: 1 1 6rem;
+}
+.request-tabs .segmented .count {
   margin-left: var(--space-2);
 }
 .mobile-request-browser {

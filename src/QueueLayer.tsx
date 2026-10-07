@@ -57,12 +57,15 @@ export function QueueLayer({
   position,
   screen,
   close,
+  aside,
   children,
 }: {
   label: string;
   position: string;
   screen: string;
   close: () => void;
+  /** Read-only context beside the item on desktop (ADR 068). */
+  aside?: ReactNode;
   children: ReactNode;
 }) {
   const ref = useRef<HTMLDivElement>(null);
@@ -85,14 +88,17 @@ export function QueueLayer({
       aria-label={label}
       ref={ref}
     >
-      <div className="onsite-body">
-        <header className="onsite-head">
-          <span>{position || label}</span>
-          <button className="text-button" onClick={close}>
-            Close
-          </button>
-        </header>
-        {children}
+      <div className="onsite-frame">
+        <div className="onsite-body">
+          <header className="onsite-head">
+            <span>{position || label}</span>
+            <button className="text-button" onClick={close}>
+              Close
+            </button>
+          </header>
+          {children}
+        </div>
+        {aside}
       </div>
     </div>
   );

@@ -11,6 +11,64 @@
   background: var(--bg);
   color: var(--text);
 }
+/* The queues' frame (ADR 068): the one column, and on desktop a read-only
+   panel beside it. A single-line flex row, so the column still stretches to
+   the full height and its action bar still sits at the bottom. */
+.onsite-frame {
+  display: flex;
+  justify-content: center;
+  gap: var(--space-6);
+  min-height: 100%;
+}
+/* The row centres the column; its own auto margins would push the panel
+   to the window's edge. */
+.onsite-frame > .onsite-body {
+  margin: 0;
+}
+.onsite-aside {
+  display: none;
+}
+@media (min-width: 1024px) {
+  .onsite-aside {
+    display: block;
+    flex: none;
+    align-self: flex-start;
+    position: sticky;
+    top: 0;
+    width: 360px;
+    max-height: 100vh;
+    overflow-y: auto;
+    margin-top: var(--space-12);
+    padding: var(--space-5);
+    border: 1px solid var(--line);
+    border-radius: var(--radius-lg);
+    background: var(--panel);
+  }
+  /* The panel already lists the offer's tasks; the column does not repeat
+     them behind a Details toggle. */
+  .onsite-frame:has(.onsite-aside) .job-details {
+    display: none;
+  }
+}
+.onsite-aside h2 {
+  font-size: var(--text-h3);
+}
+.onsite-aside h3 {
+  margin-top: var(--space-4);
+  font-size: var(--text-label);
+  color: var(--ink-muted);
+}
+.aside-tasks {
+  list-style: none;
+  padding: 0;
+  margin: var(--space-2) 0 0;
+  display: grid;
+  gap: var(--space-3);
+}
+.aside-tasks .work-photos img {
+  width: 64px;
+  height: 64px;
+}
 .onsite-body {
   display: flex;
   flex-direction: column;
