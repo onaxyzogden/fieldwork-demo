@@ -44,7 +44,7 @@ An interactive prototype of a handyman services platform. It has three roles, Cu
 - ADR 077 step 6 (`useWorkspaceState()`) is live on `main` via PR #51 (2026-10-08).
 - ADR 077 step 7 (each role's helpers into its own file) is live on `main` via PR #52 (2026-10-08).
 - ADR 078 (a chunk per role) is live on `main` via PR #53 (2026-10-08).
-- A platform-wide UX audit ran on 2026-10-08, after ADR 078: 8 P1s, 15 P2s and 15 P3s across the three roles and the shell, The P1s are fixed in ADR 079 (branch `claude/adr-079`). The P2s and P3s are open. See [[platform-ux-audit-2026-10]].
+- A platform-wide UX audit ran on 2026-10-08, after ADR 078: 8 P1s, 15 P2s and 15 P3s across the three roles and the shell. The P1s are fixed in ADR 079, which is PR #55 (2026-10-08). The P2s and P3s are open. See [[platform-ux-audit-2026-10]].
 - Local dev uses Vite on 5173 and the preview build on 4173 (`.claude/launch.json`, untracked).
 
 ## Connections

@@ -13,6 +13,7 @@ type: log
   - The role switch has `aria-pressed`, in a group labelled "Viewing as".
 - **Found:** importing `useSwapFocus` from `QueueLayer` pulled the layer into the first load (+1.1 kB gzipped), so it is its own module (+0.3 kB). Prettier reformats unrelated lines in `Shell.tsx`, `Walkthroughs.tsx` and `workspace.test.tsx`, so those were edited by hand.
 - **Verified:** 588 tests (10 new, each failing without its fix). `tsc` and the build pass, and the stylesheet is byte-identical. A keyboard pass on `vite preview` found no focus drop to `<body>` in the queues, Reset, the contractor's Decline, Availability or intake.
+- **PR:** #55 (`claude/adr-079`), against `main`, not stacked. Auto-merge is off.
 - **Next:** the audit's P2s, starting with the Declined quote's own status and the toasts.
 - **Pages touched:** [[platform-ux-audit-2026-10]], [[fieldwork]], [[one-at-a-time]], [[index]].
 
