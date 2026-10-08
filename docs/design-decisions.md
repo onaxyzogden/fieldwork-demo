@@ -1854,3 +1854,42 @@ it is announced as well as coloured.
 `.text-button` now has a minimum of 44 × 44 px and side padding of
 `--space-3`. Left-aligned links sit 12 px further in as a result. The demo
 bar's buttons are exempt: that bar is prototype chrome, at a fixed height.
+
+## ADR 074: Load what most visits never open when it's opened
+
+Accepted. The build shipped one 602 kB script (174 kB gzipped), over Vite's
+500 kB warning. Every visit downloaded every screen, including the developer
+blueprint and the customer's assessment page, which most visits never see.
+
+**Four screens load on demand.** They are the blueprint (`?view=blueprint`),
+the assessment link (`?view=assessment`), the operator's Walkthroughs and the
+customer's New request. `lazyScreen()` in `Recovery.tsx` imports each one the
+first time it is opened. These four are split, and the three role workspaces
+are not, because each of these is already its own module that only
+`main.tsx` imports. The workspaces live inside `App`, share its state, and
+the operator's home imports the contractor's `JobWork`, so splitting them
+means a refactor first. That refactor is not done here.
+
+**React gets its own file.** `react`, `react-dom` and `scheduler` go into a
+`vendor` chunk. It changes far less often than the app, so a returning
+browser keeps it across deploys.
+
+**A screen that fails to load says so, and offers a reload.** A deploy
+replaces every hashed file. So a tab left open across one asks for a chunk
+that is gone. The app's own boundary would read that as broken saved data and
+offer a reset, which is the wrong fix and a destructive one. Load failures
+are tagged at the import and caught around the screen with "This page didn't
+load" and a Reload button. The sidebar stays usable, and other errors still
+reach the outer boundary. While a screen loads, a quiet "Loading…" line
+stands in.
+
+| | Before | After |
+|---|---|---|
+| App script | 602 kB (174 kB gz) | 305 kB (84 kB gz) |
+| React (vendor) | (included) | 194 kB (61 kB gz) |
+| On demand | — | Blueprint 37, Walkthroughs 29, Assessment 22, New request 18 kB |
+
+A first load is now 499 kB (145 kB gzipped), and the build gives no warning.
+The limit was not raised. Most of the drop comes from the vendor split. The
+four screens are about 105 kB together, and the workspaces are still the bulk
+of the app script.

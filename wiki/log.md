@@ -3,6 +3,20 @@ title: "Wiki Log"
 type: log
 ---
 
+## [2026-10-07] session | ADR 074: splitting the bundle
+
+- **Completed:**
+  - Blueprint, Assessment, Walkthroughs and CustomerIntake load on demand via `lazyScreen()`.
+  - React goes in a vendor chunk.
+  - A chunk that fails to load shows a reload card instead of the destructive reset screen.
+- **Result:** the app script went from 602 kB to 305 kB (174 to 84 kB gzipped). A first load is 499 kB (145 kB gzipped), with no build warning.
+- **Verified:**
+  - 555 tests and a clean build.
+  - On `vite preview`, each route fetches its own chunk only when opened.
+  - With the Walkthroughs chunk hidden, the page shows the reload card, and Reload recovers once the file is back.
+- **Deferred:** splitting the role workspaces out of `App`, and per-screen CSS.
+- **Pages touched:** [[fieldwork]], [[index]].
+
 ## [2026-10-07] session | Customer audit close-out, operator scheduler, wiki created
 
 - **Completed:**

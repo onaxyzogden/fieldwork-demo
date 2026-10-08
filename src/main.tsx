@@ -1,13 +1,10 @@
 import { suitableProviders } from "./suitability";
-import Blueprint from "./Blueprint";
 import ContractorWork, { JobWork } from "./ContractorWork";
 import Availability from "./Availability";
 import Earnings from "./EarningsPanel";
 import { AuditList } from "./QueueAside";
 import { hasLiveVisit } from "./aside";
 import { OperatorHome, OperatorToday } from "./OperatorWork";
-import Walkthroughs from "./Walkthroughs";
-import Assessment from "./Assessment";
 import PropertyRecord from "./PropertyRecord";
 import {
   bucket,
@@ -45,7 +42,6 @@ import {
   customerStatusText,
   customerVisitText,
 } from "./customerText";
-import CustomerIntake from "./CustomerIntake";
 import FollowUp, { followUpLine } from "./FollowUp";
 import { validAddress, dayLabel, taskLabel } from "./intake";
 import {
@@ -190,8 +186,15 @@ import {
   reoffer,
 } from "./dispatch";
 import { KEY, load, save, commit, freshDemo } from "./store";
-import { Boundary } from "./Recovery";
+import { Boundary, lazyScreen } from "./Recovery";
 import { SaveWarning } from "./NotificationUI";
+
+/* Loaded when first opened, not with the app (ADR 074). */
+const Blueprint = lazyScreen(() => import("./Blueprint"));
+const Assessment = lazyScreen(() => import("./Assessment"));
+const Walkthroughs = lazyScreen(() => import("./Walkthroughs"));
+const CustomerIntake = lazyScreen(() => import("./CustomerIntake"));
+
 /**
  * Submit-type actions stay enabled and validate on click.
  *
