@@ -1,5 +1,12 @@
 import { describe, it, expect } from "vitest";
-import { seed, classify, reconcile, instantEligible, type Task } from "./model";
+import {
+  seed,
+  classify,
+  reconcile,
+  instantEligible,
+  holdSlot,
+  type Task,
+} from "./model";
 import { getIssue, answerKey, inferredAnswers } from "./clarification";
 import {
   entryTasks,
@@ -107,6 +114,22 @@ describe("three-screen intake", () => {
       travel: first.travel,
       status: "Confirmed",
     });
+    expect(intakeOptions(s, r).some((o) => o.start === first.start)).toBe(
+      false,
+    );
+  });
+  it("keeps offering the slot this request is holding (ADR 069)", () => {
+    const s = seed(),
+      r = s.requests[0];
+    r.postalCode = "L6J 4S7";
+    fill(s.tasks[0]);
+    const first = intakeOptions(s, r)[0];
+    holdSlot(s, { requestId: r.id, ...first });
+    expect(intakeOptions(s, r).some((o) => o.start === first.start)).toBe(
+      true,
+    );
+    holdSlot(s, { ...first, requestId: "someone-else" });
+    s.holds = s.holds!.filter((h) => h.requestId !== r.id);
     expect(intakeOptions(s, r).some((o) => o.start === first.start)).toBe(
       false,
     );

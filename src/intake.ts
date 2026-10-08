@@ -94,7 +94,7 @@ export function intakeOptions(s: State, r: Request) {
     )
     .map((p) => ({
       providerId: p.id,
-      options: slots(s, p.id, duration, r.city, undefined, "", 12),
+      options: slots(s, p.id, duration, r.city, undefined, "", 12, r.id),
     }))
     .filter((p) => p.options.length)
     .sort(

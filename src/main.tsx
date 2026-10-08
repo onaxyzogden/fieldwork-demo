@@ -105,6 +105,7 @@ import {
   dateLabel,
   log,
   slots,
+  releaseHold,
   available,
   eligible,
   scopeMatch,
@@ -3595,6 +3596,7 @@ function Workspace({
                           undefined,
                           "",
                           12,
+                          r.id,
                         ).some((o) => o.start === slot);
                       if (!available)
                         return invalidate(
@@ -3643,6 +3645,7 @@ function Workspace({
                           amount: 129,
                           reference: uid(),
                         });
+                        releaseHold(d, r.id);
                         log(
                           d,
                           "Instant booking confirmed · demo receipt issued",
