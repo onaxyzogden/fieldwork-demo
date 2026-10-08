@@ -1775,3 +1775,82 @@ page and in the queue. An unanswered question now leads the status line:
   hidden there. The intro says to pick one of them.
 - Request to Book's days now start two days out, where `slots()` starts,
   so the customer is not invited to wish for today or tomorrow.
+
+## ADR 071: A request's own hold does not hide its own time from the operator
+
+Accepted. ADR 069 fixed this for the customer's intake; the operator's side
+had the same gap.
+
+**What went wrong.** A customer who picks a time in Request to Book holds it
+for ten minutes, and submitting does not give the hold back. Every search the
+operator makes for a free time then asked without saying which request it was
+for, so the customer's own hold blocked the customer's own time:
+
+- the recommended appointments and each provider's "First fitting time";
+- the "Override proposed time" box, which ignored the time without a word;
+- the decision queue's suggested offer, which proposed a different time.
+
+Creating the visit already passed the request, so the time the screen would
+not offer was one the write would have accepted.
+
+**The rule.** A request never blocks itself. `suitableProviders` takes the
+request asking, as `slots()` and `available()` already do, and every
+operator-side search passes it. Another customer's live hold still blocks the
+time, and a test holds it to that.
+
+The hold itself stays after submission: it keeps the time the customer chose
+from going to someone else while the operator schedules. Offering that time
+first, rather than only allowing it, is left for a later change.
+
+## ADR 072: The customer's chosen time comes first
+
+Accepted. ADR 071 let the operator book the time a customer chose; this
+offers it.
+
+**Why.** A Request to Book customer picks a time with a provider, and that
+choice is kept on the request (`preferredSlot`) and held for them. The
+operator was still shown times by best route alone, so the customer's choice
+came first only by coincidence, and the operator could not tell which time it
+was.
+
+**The rule.** `chosenStart` gives the customer's time while it still fits:
+the same amount of work, and the time free for that provider, the request's
+own hold aside. If it does not fit, nothing changes and best route decides,
+with no message, because a time the customer can no longer have is not one
+to explain to the operator.
+
+- The scheduler selects the provider the customer chose with, if that time
+  still fits them, instead of the best-route provider. A provider the operator
+  picks by hand is never replaced.
+- The chosen time is first in "Recommended appointments", selected by default,
+  and labelled "Customer’s choice" rather than "Best route fit". "Why this
+  time?" says the customer chose it.
+- The decision queue's suggested offer follows the same order: the customer's
+  provider at their time, then anyone free at their time, then best route.
+- Splitting the job changes the amount of work, so the chosen time stops
+  applying to either part.
+
+## ADR 073: Who you are, where you are, and room to tap
+
+Accepted. These are the customer audit's three P3 findings. Each is small;
+they are taken together because each one is about the shell telling the
+truth.
+
+**The avatar names the account.** Every customer was shown as "SM", with the
+name "Customer portal", so Sarah Lin and Daniel Brooks saw the same identity.
+`identity()` now takes the customer account being viewed. The initials are the
+first letters of its first two words (SL, NP), and the profile line uses the
+account's name.
+
+**One home label per role.** The customer's home was reached as "Home" from
+the account picker, a first load and a direct portal link, and as "My
+bookings" from everywhere else. So the breadcrumb switched between the two,
+and on "Home" no sidebar item was marked. `homeOf(role)` was in the demo bar
+and now lives in the shell. Every way in uses it, so the customer is always on
+"My bookings". The marked sidebar item also carries `aria-current="page"`, so
+it is announced as well as coloured.
+
+**44 px text buttons.** Skip, Close and Decline were 27–36 px across. Every
+`.text-button` now has a minimum of 44 × 44 px and side padding of
+`--space-3`. Left-aligned links sit 12 px further in as a result. The demo
+bar's buttons are exempt: that bar is prototype chrome, at a fixed height.

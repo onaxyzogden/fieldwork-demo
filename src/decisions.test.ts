@@ -1,5 +1,13 @@
 import { describe, it, expect } from "vitest";
-import { genericTitle, seed, reconcile, providers, type State } from "./model";
+import {
+  genericTitle,
+  holdSlot,
+  seed,
+  slots,
+  reconcile,
+  providers,
+  type State,
+} from "./model";
 import { suggestTitle } from "./pmw";
 import { reoffer, respondToOffer } from "./dispatch";
 import {
@@ -312,5 +320,89 @@ describe("the operator's next decision", () => {
     reconcile(s);
     expect(nextDecision(s, "r2")?.kind).toBe("assign");
     expect(decisionQueue(s).map((q) => q.requestId)).not.toContain("r2");
+  });
+});
+
+describe("a request's own hold (ADR 071)", () => {
+  /** Hold r2's suggested time, for r2 itself or for another request. */
+  function held(by: string) {
+    const s = seed();
+    const d = nextDecision(s, "r2");
+    if (d?.kind !== "assign" || !d.offer) throw new Error("expected an offer");
+    holdSlot(s, {
+      requestId: by,
+      providerId: d.offer.providerId,
+      start: d.offer.start,
+      duration: d.duration,
+    });
+    const after = nextDecision(s, "r2");
+    if (after?.kind !== "assign") throw new Error("expected an assign");
+    return { before: d.offer.start, after: after.offer?.start };
+  }
+
+  it("does not hide the time its own customer chose", () => {
+    const { before, after } = held("r2");
+    expect(after).toBe(before);
+  });
+
+  it("still gives way to another customer's hold", () => {
+    const { before, after } = held("someone-else");
+    expect(after).not.toBe(before);
+  });
+});
+
+describe("the customer's chosen time (ADR 072)", () => {
+  /** r2 with a chosen time that is not its best-route time, on another
+      day, so that holding one leaves the other free. */
+  function chose() {
+    const s = seed();
+    const d = nextDecision(s, "r2");
+    if (d?.kind !== "assign" || !d.offer) throw new Error("expected an offer");
+    const r = s.requests.find((x) => x.id === "r2")!;
+    const best = +new Date(d.offer.start);
+    const second = slots(
+      s,
+      d.offer.providerId,
+      d.duration,
+      r.city,
+      undefined,
+      r.timing,
+      60,
+      r.id,
+    ).find((o) => Math.abs(+new Date(o.start) - best) > 86400000 / 2)!.start;
+    r.preferredSlot = {
+      start: second,
+      providerId: d.offer.providerId,
+      duration: d.duration,
+      signature: "",
+    };
+    return { s, r, best: d.offer.start, second };
+  }
+  const offered = (s: State) => {
+    const d = nextDecision(s, "r2");
+    return d?.kind === "assign" ? d.offer?.start : undefined;
+  };
+
+  it("is offered first while it still fits", () => {
+    const { s, best, second } = chose();
+    expect(second).not.toBe(best);
+    expect(offered(s)).toBe(second);
+  });
+
+  it("gives way to best route once someone else holds it", () => {
+    const { s, r, best, second } = chose();
+    holdSlot(s, {
+      requestId: "someone-else",
+      providerId: r.preferredSlot!.providerId,
+      start: second,
+      duration: r.preferredSlot!.duration,
+    });
+    expect(offered(s)).toBe(best);
+  });
+
+  it("does not apply to a different amount of work", () => {
+    const { s, r, best } = chose();
+    r.preferredSlot!.duration += 30;
+    expect(offered(s)).toBe(best);
   });
 });

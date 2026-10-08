@@ -1941,6 +1941,25 @@ export function slots(
   }
   return out.sort((a, b) => b.score - a.score).slice(0, limit);
 }
+/**
+ * The time the customer chose at intake, while it still fits this provider and
+ * this much work (ADR 072). Different work (the job was split) or a time since
+ * taken gives nothing, and scheduling falls back to best route. The request's
+ * own hold is no obstacle (ADR 071).
+ */
+export function chosenStart(
+  s: State,
+  r: Request,
+  providerId: string,
+  duration: number,
+) {
+  const c = r.preferredSlot;
+  return c &&
+    c.duration === duration &&
+    available(s, providerId, duration, r.city, c.start, undefined, r.timing, r.id)
+    ? c.start
+    : undefined;
+}
 export function scopeMatch(providerId: string, tasks: Task[]) {
   const p = providers.find((p) => p.id === providerId);
   const active = tasks.filter((t) => !t.mergedInto);

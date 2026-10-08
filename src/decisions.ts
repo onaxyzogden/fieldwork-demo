@@ -18,6 +18,7 @@ import {
   type Task,
   type Visit,
   bookVisit,
+  chosenStart,
   genericTitle,
   log,
   methodFor,
@@ -252,9 +253,23 @@ export function nextDecision(s: State, requestId: string): Decision | null {
   if (loose.length) {
     const duration = loose.reduce((n, t) => n + t.duration, 0);
     const pick = (self: boolean): Offer | undefined => {
-      const c = suitableProviders(s, loose, r.city, r.timing, self).find(
-        (c) => c.appointments.length,
-      );
+      const all = suitableProviders(s, loose, r.city, r.timing, self, r.id);
+      /* The customer's chosen time first: with the provider they chose it
+         with, else with anyone free then (ADR 072). */
+      const at = (id: string) => chosenStart(s, r, id, duration);
+      const chosen =
+        all.find(
+          (c) =>
+            c.provider.id === r.preferredSlot?.providerId && at(c.provider.id),
+        ) ?? all.find((c) => at(c.provider.id));
+      if (chosen)
+        return {
+          providerId: chosen.provider.id,
+          start: at(chosen.provider.id)!,
+          travel: chosen.provider.city === r.city ? 8 : 24,
+          pay: suggestPay(chosen.provider.id, duration),
+        };
+      const c = all.find((c) => c.appointments.length);
       if (!c) return undefined;
       const slot = c.appointments[0];
       return {
@@ -792,7 +807,7 @@ export function returnOptions(
     .filter((v) => v.requestId === r.id && v.execution?.finishedAt)
     .find((v) => v.taskIds.some((id) => taskIds.includes(id)))?.providerId;
   const free = (self: boolean) =>
-    suitableProviders(s, tasks, r.city, r.timing, self).filter(
+    suitableProviders(s, tasks, r.city, r.timing, self, r.id).filter(
       (c) => c.appointments.length,
     );
   const others = free(false);

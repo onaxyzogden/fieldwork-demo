@@ -106,6 +106,7 @@ import {
   dateLabel,
   log,
   slots,
+  chosenStart,
   releaseHold,
   available,
   eligible,
@@ -141,7 +142,7 @@ import {
   refundPayment,
 } from "./payments";
 import { storablePhoto, unreadableMessage } from "./photos";
-import { Sidebar, DemoBar, Topbar, DemoSettings } from "./Shell";
+import { Sidebar, DemoBar, Topbar, DemoSettings, homeOf } from "./Shell";
 import { useFieldErrors } from "./fields";
 import "@fontsource/dm-sans/400.css";
 import "@fontsource/dm-sans/500.css";
@@ -456,7 +457,7 @@ function Workspace({
   React.useEffect(() => {
     save(s);
   }, []);
-  const [page, setPage] = useState("Home");
+  const [page, setPage] = useState(homeOf(initialRole));
   const [active, setActive] = useState("r2");
   const [expanded, setExpanded] = useState(true);
   const [payError, setPayError] = useState(false);
@@ -767,6 +768,7 @@ function Workspace({
     r.city,
     r.timing,
     fulfillmentKind === "self",
+    r.id,
   );
   const match = scopeMatch(provider, scopeTasks);
   const scopeSignature = JSON.stringify([
@@ -788,7 +790,14 @@ function Workspace({
     const stillFits = candidates.find((c) => c.provider.id === provider);
     if (!stillFits) {
       setProvider(
-        candidates.find((c) => c.appointments.length)?.provider.id ||
+        /* The provider the customer chose their time with, while that time
+           still fits (ADR 072); otherwise the best route, as before. */
+        candidates.find(
+          (c) =>
+            c.provider.id === r.preferredSlot?.providerId &&
+            chosenStart(s, r, c.provider.id, duration),
+        )?.provider.id ||
+          candidates.find((c) => c.appointments.length)?.provider.id ||
           candidates[0]?.provider.id ||
           "",
       );
@@ -818,19 +827,43 @@ function Workspace({
       setOverride("");
     }
   }, [scopeSignature]);
-  const recommended = eligible(
+  const fits = eligible(
     provider,
     tasks.filter((t) => !selected.length || selected.includes(t.id)),
-  )
-    ? slots(s, provider, duration, r.city, undefined, r.timing)
+  );
+  /* The customer's chosen time comes first while it still fits; best route
+     fills the rest (ADR 072). */
+  const chosenTime = fits ? chosenStart(s, r, provider, duration) : undefined;
+  const routed = fits
+    ? slots(s, provider, duration, r.city, undefined, r.timing, 3, r.id)
     : [];
+  const recommended = chosenTime
+    ? [
+        {
+          start: chosenTime,
+          travel:
+            providers.find((p) => p.id === provider)?.city === r.city ? 8 : 24,
+          score: 0,
+        },
+        ...routed.filter((o) => o.start !== chosenTime),
+      ]
+    : routed;
   const opts =
     override &&
     eligible(
       provider,
       tasks.filter((t) => !selected.length || selected.includes(t.id)),
     ) &&
-    available(s, provider, duration, r.city, override, undefined, r.timing, r.id)
+    available(
+      s,
+      provider,
+      duration,
+      r.city,
+      override,
+      undefined,
+      r.timing,
+      r.id,
+    )
       ? [
           {
             start: override,
@@ -942,7 +975,9 @@ function Workspace({
         "slot",
         "That time was taken while you were choosing. Pick another appointment.",
       );
-    notify(provider === "yousef" ? "Visit created" : "Offer sent to contractor");
+    notify(
+      provider === "yousef" ? "Visit created" : "Offer sent to contractor",
+    );
     setSelected([]);
   };
   const beginReassign = (v: Visit, self = false) => {
@@ -2003,6 +2038,7 @@ function Workspace({
         setOpen={setSidebar}
         idPrefix={idPrefix}
         contractor={contractor}
+        customer={customer}
         setModal={setModal}
         startOrResumeRequest={startOrResumeRequest}
       />
@@ -2023,6 +2059,7 @@ function Workspace({
           setOpen={setSidebar}
           idPrefix={idPrefix}
           contractor={contractor}
+          customer={customer}
           theme={theme}
           setTheme={setTheme}
           setModal={setModal}
@@ -2683,49 +2720,61 @@ function Workspace({
                         <Message field="tasks" />
                         <Message field="provider" />
                         <div className="provider-options">
-                          {candidates.map((c) => (
-                            <button
-                              key={c.provider.id}
-                              aria-pressed={provider === c.provider.id}
-                              className={
-                                "provider-card " +
-                                (provider === c.provider.id ? "selected" : "")
-                              }
-                              onClick={() => {
-                                clear("provider");
-                                clear("pay");
-                                setProvider(c.provider.id);
-                                // Each contractor's own rate, not the last one's.
-                                setPayTouched(false);
-                                setSlot("");
-                                setOverride("");
-                              }}
-                            >
-                              <div className="avatar">
-                                {c.provider.initials}
-                              </div>
-                              <div>
-                                <strong>{c.provider.name}</strong>
-                                <small>
-                                  {c.provider.city} · {money(c.provider.rate)}
-                                  /hr
-                                </small>
-                                <small>
-                                  {c.match.checks
-                                    .map((x) => x.title)
-                                    .join(" · ")}
-                                </small>
-                                <small>
-                                  {c.appointments.length
-                                    ? `First fitting time: ${dateLabel(c.appointments[0].start)} · ${c.appointments[0].travel} min simulated travel`
-                                    : "No fitting time found"}
-                                </small>
-                              </div>
-                              {provider === c.provider.id && (
-                                <Check size={16} />
-                              )}
-                            </button>
-                          ))}
+                          {candidates.map((c) => {
+                            const theirs = chosenStart(
+                              s,
+                              r,
+                              c.provider.id,
+                              duration,
+                            );
+                            return (
+                              <button
+                                key={c.provider.id}
+                                aria-pressed={provider === c.provider.id}
+                                className={
+                                  "provider-card " +
+                                  (provider === c.provider.id ? "selected" : "")
+                                }
+                                onClick={() => {
+                                  clear("provider");
+                                  clear("pay");
+                                  setProvider(c.provider.id);
+                                  // Each contractor's own rate, not the last one's.
+                                  setPayTouched(false);
+                                  setSlot("");
+                                  setOverride("");
+                                }}
+                              >
+                                <div className="avatar">
+                                  {c.provider.initials}
+                                </div>
+                                <div>
+                                  <strong>{c.provider.name}</strong>
+                                  <small>
+                                    {c.provider.city} · {money(c.provider.rate)}
+                                    /hr
+                                  </small>
+                                  <small>
+                                    {c.match.checks
+                                      .map((x) => x.title)
+                                      .join(" · ")}
+                                  </small>
+                                  <small>
+                                    {/* Agrees with the list below, which puts
+                                      the customer's time first (ADR 072). */}
+                                    {theirs
+                                      ? `Customer’s choice: ${dateLabel(theirs)} · ${c.provider.city === r.city ? 8 : 24} min simulated travel`
+                                      : c.appointments.length
+                                        ? `First fitting time: ${dateLabel(c.appointments[0].start)} · ${c.appointments[0].travel} min simulated travel`
+                                        : "No fitting time found"}
+                                  </small>
+                                </div>
+                                {provider === c.provider.id && (
+                                  <Check size={16} />
+                                )}
+                              </button>
+                            );
+                          })}
                         </div>
                         {!candidates.length && (
                           <div className="warning">
@@ -2798,8 +2847,16 @@ function Workspace({
                                 setSlot(o.start);
                               }}
                             >
-                              {i === 0 && (
-                                <span className="eyebrow">BEST ROUTE FIT</span>
+                              {o.start === chosenTime ? (
+                                <span className="eyebrow">
+                                  CUSTOMER’S CHOICE
+                                </span>
+                              ) : (
+                                i === 0 && (
+                                  <span className="eyebrow">
+                                    BEST ROUTE FIT
+                                  </span>
+                                )
                               )}
                               <strong>{dateLabel(o.start)}</strong>
                               <small>
@@ -2816,6 +2873,8 @@ function Workspace({
                           <details className="note">
                             <summary>Why this time?</summary>
                             <p>
+                              {(slot || opts[0]?.start) === chosenTime &&
+                                "The customer chose this time when they booked. "}
                               {duration} minutes of work fits this provider’s
                               weekday working hours. Simulated travel allowance:{" "}
                               {opts.find(
@@ -2849,6 +2908,7 @@ function Workspace({
                                   x.toISOString(),
                                   undefined,
                                   r.timing,
+                                  r.id,
                                 )
                               ) {
                                 setOverride(x.toISOString());
@@ -3049,7 +3109,7 @@ function Workspace({
                       const own = s.requests.find((x) => x.accountId === c.id);
                       if (own) setActive(own.id);
                       setStep(0);
-                      setPage("Home");
+                      setPage("My bookings");
                     }}
                   >
                     {c.name}
@@ -3548,13 +3608,7 @@ function Workspace({
                   setActive("r2");
                   setCustomer("c2");
                   setStep(0);
-                  setPage(
-                    role === "Operator"
-                      ? "Home"
-                      : role === "Customer"
-                        ? "My bookings"
-                        : "Your Work",
-                  );
+                  setPage(homeOf(role));
                   setModal("");
                   notify("All five scenarios reset");
                 }}
@@ -4153,7 +4207,12 @@ function pickView() {
        and always reads light, and setting it after mount flashes the dark
        palette's text onto a light page. */
     document.documentElement.dataset.theme = "light";
-    return <Assessment token={params.get("t") || ""} legacyId={params.get("id") || ""} />;
+    return (
+      <Assessment
+        token={params.get("t") || ""}
+        legacyId={params.get("id") || ""}
+      />
+    );
   }
   return <App />;
 }
