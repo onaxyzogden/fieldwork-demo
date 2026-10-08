@@ -42,7 +42,7 @@ An interactive prototype of a handyman services platform. It has three roles, Cu
 - ADR 077 (breaking up `Workspace`) is in three stacked branches:
   - `claude/workspace-split`: PR #47, to `main`;
   - `claude/operator-pages`: PR #48, stacked on #47;
-  - `claude/operator-requests`: Requests, local and not yet pushed.
+  - `claude/operator-requests`: PR #49, stacked on #48.
 
   Merge them in that order, retargeting each PR to `main` once the one before it has merged.
 - Local dev uses Vite on 5173 and the preview build on 4173 (`.claude/launch.json`, untracked).
