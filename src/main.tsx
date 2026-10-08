@@ -106,6 +106,7 @@ import {
   dateLabel,
   log,
   slots,
+  chosenStart,
   releaseHold,
   available,
   eligible,
@@ -789,7 +790,14 @@ function Workspace({
     const stillFits = candidates.find((c) => c.provider.id === provider);
     if (!stillFits) {
       setProvider(
-        candidates.find((c) => c.appointments.length)?.provider.id ||
+        /* The provider the customer chose their time with, while that time
+           still fits (ADR 072); otherwise the best route, as before. */
+        candidates.find(
+          (c) =>
+            c.provider.id === r.preferredSlot?.providerId &&
+            chosenStart(s, r, c.provider.id, duration),
+        )?.provider.id ||
+          candidates.find((c) => c.appointments.length)?.provider.id ||
           candidates[0]?.provider.id ||
           "",
       );
@@ -819,12 +827,27 @@ function Workspace({
       setOverride("");
     }
   }, [scopeSignature]);
-  const recommended = eligible(
+  const fits = eligible(
     provider,
     tasks.filter((t) => !selected.length || selected.includes(t.id)),
-  )
+  );
+  /* The customer's chosen time comes first while it still fits; best route
+     fills the rest (ADR 072). */
+  const chosenTime = fits ? chosenStart(s, r, provider, duration) : undefined;
+  const routed = fits
     ? slots(s, provider, duration, r.city, undefined, r.timing, 3, r.id)
     : [];
+  const recommended = chosenTime
+    ? [
+        {
+          start: chosenTime,
+          travel:
+            providers.find((p) => p.id === provider)?.city === r.city ? 8 : 24,
+          score: 0,
+        },
+        ...routed.filter((o) => o.start !== chosenTime),
+      ]
+    : routed;
   const opts =
     override &&
     eligible(
@@ -2799,8 +2822,16 @@ function Workspace({
                                 setSlot(o.start);
                               }}
                             >
-                              {i === 0 && (
-                                <span className="eyebrow">BEST ROUTE FIT</span>
+                              {o.start === chosenTime ? (
+                                <span className="eyebrow">
+                                  CUSTOMER’S CHOICE
+                                </span>
+                              ) : (
+                                i === 0 && (
+                                  <span className="eyebrow">
+                                    BEST ROUTE FIT
+                                  </span>
+                                )
                               )}
                               <strong>{dateLabel(o.start)}</strong>
                               <small>
@@ -2817,6 +2848,8 @@ function Workspace({
                           <details className="note">
                             <summary>Why this time?</summary>
                             <p>
+                              {(slot || opts[0]?.start) === chosenTime &&
+                                "The customer chose this time when they booked. "}
                               {duration} minutes of work fits this provider’s
                               weekday working hours. Simulated travel allowance:{" "}
                               {opts.find(

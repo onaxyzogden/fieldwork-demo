@@ -1801,3 +1801,31 @@ time, and a test holds it to that.
 The hold itself stays after submission: it keeps the time the customer chose
 from going to someone else while the operator schedules. Offering that time
 first, rather than only allowing it, is left for a later change.
+
+## ADR 072: The customer's chosen time comes first
+
+Accepted. ADR 071 let the operator book the time a customer chose; this
+offers it.
+
+**Why.** A Request to Book customer picks a time with a provider, and that
+choice is kept on the request (`preferredSlot`) and held for them. The
+operator was still shown times by best route alone, so the customer's choice
+came first only by coincidence, and the operator could not tell which time it
+was.
+
+**The rule.** `chosenStart` gives the customer's time while it still fits:
+the same amount of work, and the time free for that provider, the request's
+own hold aside. If it does not fit, nothing changes and best route decides,
+with no message, because a time the customer can no longer have is not one
+to explain to the operator.
+
+- The scheduler selects the provider the customer chose with, if that time
+  still fits them, instead of the best-route provider. A provider the operator
+  picks by hand is never replaced.
+- The chosen time is first in "Recommended appointments", selected by default,
+  and labelled "Customer’s choice" rather than "Best route fit". "Why this
+  time?" says the customer chose it.
+- The decision queue's suggested offer follows the same order: the customer's
+  provider at their time, then anyone free at their time, then best route.
+- Splitting the job changes the amount of work, so the chosen time stops
+  applying to either part.
