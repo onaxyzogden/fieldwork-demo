@@ -1829,3 +1829,28 @@ to explain to the operator.
   provider at their time, then anyone free at their time, then best route.
 - Splitting the job changes the amount of work, so the chosen time stops
   applying to either part.
+
+## ADR 073: Who you are, where you are, and room to tap
+
+Accepted. These are the customer audit's three P3 findings. Each is small;
+they are taken together because each one is about the shell telling the
+truth.
+
+**The avatar names the account.** Every customer was shown as "SM", with the
+name "Customer portal", so Sarah Lin and Daniel Brooks saw the same identity.
+`identity()` now takes the customer account being viewed. The initials are the
+first letters of its first two words (SL, NP), and the profile line uses the
+account's name.
+
+**One home label per role.** The customer's home was reached as "Home" from
+the account picker, a first load and a direct portal link, and as "My
+bookings" from everywhere else. So the breadcrumb switched between the two,
+and on "Home" no sidebar item was marked. `homeOf(role)` was in the demo bar
+and now lives in the shell. Every way in uses it, so the customer is always on
+"My bookings". The marked sidebar item also carries `aria-current="page"`, so
+it is announced as well as coloured.
+
+**44 px text buttons.** Skip, Close and Decline were 27–36 px across. Every
+`.text-button` now has a minimum of 44 × 44 px and side padding of
+`--space-3`. Left-aligned links sit 12 px further in as a result. The demo
+bar's buttons are exempt: that bar is prototype chrome, at a fixed height.

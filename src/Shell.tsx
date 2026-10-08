@@ -21,7 +21,7 @@ import {
   Wrench,
   X,
 } from "lucide-react";
-import { type State, providers } from "./model";
+import { type State, accountName, providers } from "./model";
 
 /**
  * The chrome every role shares: the navigation drawer, the prototype banner
@@ -37,17 +37,35 @@ import { type State, providers } from "./model";
 
 export type Role = "Customer" | "Operator" | "Contractor";
 
-/** Who the avatar and the profile line are describing. The operator and the
- *  customer are fixed personas; the contractor is whoever is being viewed as. */
-export const identity = (role: Role, contractor: string) =>
+/** "Sarah Lin" is SL, "Northline Property Management" is NP. */
+export const initialsOf = (name: string) =>
+  name
+    .split(/\s+/)
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((w) => w[0].toUpperCase())
+    .join("");
+
+/** Who the avatar and the profile line are describing. The operator is a
+ *  fixed persona; the customer is the account being viewed (ADR 073), and the
+ *  contractor is whoever is being viewed as. */
+export const identity = (role: Role, contractor: string, customer: string) =>
   role === "Operator"
     ? { initials: "YH", name: "Yousef Haddad" }
     : role === "Customer"
-      ? { initials: "SM", name: "Customer portal" }
+      ? {
+          initials: initialsOf(accountName(customer)),
+          name: accountName(customer),
+        }
       : {
           initials: providers.find((p) => p.id === contractor)?.initials,
           name: providers.find((p) => p.id === contractor)?.name,
         };
+
+/** Each role's one home page, so the breadcrumb and the sidebar always name
+ *  the same place (ADR 073). */
+export const homeOf = (r: Role) =>
+  r === "Operator" ? "Home" : r === "Customer" ? "My bookings" : "Your Work";
 
 const NAV: Record<Role, [typeof Plus, string][]> = {
   Operator: [
@@ -77,6 +95,7 @@ export function Sidebar({
   setOpen,
   idPrefix,
   contractor,
+  customer,
   setModal,
   startOrResumeRequest,
 }: {
@@ -88,10 +107,11 @@ export function Sidebar({
   setOpen: (v: boolean) => void;
   idPrefix: string;
   contractor: string;
+  customer: string;
   setModal: (m: string) => void;
   startOrResumeRequest: () => void;
 }) {
-  const me = identity(role, contractor);
+  const me = identity(role, contractor, customer);
   return (
     <>
       {open && (
@@ -136,6 +156,7 @@ export function Sidebar({
             <button
               key={label}
               className={page === label ? "active" : ""}
+              aria-current={page === label ? "page" : undefined}
               onClick={() => {
                 if (label === "New request") startOrResumeRequest();
                 else setPage(label);
@@ -194,9 +215,7 @@ export function DemoBar({
   onEnterCompare?: () => void;
   onExitCompare?: () => void;
 }) {
-  /** Each role lands on its own home, not on whatever the last role was. */
-  const homeOf = (r: Role) =>
-    r === "Operator" ? "Home" : r === "Customer" ? "My bookings" : "Your Work";
+  /* Each role lands on its own home, not on whatever the last role was. */
   return (
     <div className="demo-bar">
       <span>
@@ -245,6 +264,7 @@ export function Topbar({
   setOpen,
   idPrefix,
   contractor,
+  customer,
   theme,
   setTheme,
   setModal,
@@ -258,6 +278,7 @@ export function Topbar({
   setOpen: (v: boolean) => void;
   idPrefix: string;
   contractor: string;
+  customer: string;
   theme: "light" | "dark";
   setTheme: (t: "light" | "dark") => void;
   setModal: (m: string) => void;
@@ -308,7 +329,7 @@ export function Topbar({
           {!!unread && <span className="notification-count">{unread}</span>}
         </button>
         <div className="avatar small">
-          {identity(role, contractor).initials}
+          {identity(role, contractor, customer).initials}
         </div>
       </div>
     </header>

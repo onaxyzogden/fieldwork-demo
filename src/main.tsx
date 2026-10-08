@@ -142,7 +142,7 @@ import {
   refundPayment,
 } from "./payments";
 import { storablePhoto, unreadableMessage } from "./photos";
-import { Sidebar, DemoBar, Topbar, DemoSettings } from "./Shell";
+import { Sidebar, DemoBar, Topbar, DemoSettings, homeOf } from "./Shell";
 import { useFieldErrors } from "./fields";
 import "@fontsource/dm-sans/400.css";
 import "@fontsource/dm-sans/500.css";
@@ -457,7 +457,7 @@ function Workspace({
   React.useEffect(() => {
     save(s);
   }, []);
-  const [page, setPage] = useState("Home");
+  const [page, setPage] = useState(homeOf(initialRole));
   const [active, setActive] = useState("r2");
   const [expanded, setExpanded] = useState(true);
   const [payError, setPayError] = useState(false);
@@ -2027,6 +2027,7 @@ function Workspace({
         setOpen={setSidebar}
         idPrefix={idPrefix}
         contractor={contractor}
+        customer={customer}
         setModal={setModal}
         startOrResumeRequest={startOrResumeRequest}
       />
@@ -2047,6 +2048,7 @@ function Workspace({
           setOpen={setSidebar}
           idPrefix={idPrefix}
           contractor={contractor}
+          customer={customer}
           theme={theme}
           setTheme={setTheme}
           setModal={setModal}
@@ -3084,7 +3086,7 @@ function Workspace({
                       const own = s.requests.find((x) => x.accountId === c.id);
                       if (own) setActive(own.id);
                       setStep(0);
-                      setPage("Home");
+                      setPage("My bookings");
                     }}
                   >
                     {c.name}
@@ -3583,13 +3585,7 @@ function Workspace({
                   setActive("r2");
                   setCustomer("c2");
                   setStep(0);
-                  setPage(
-                    role === "Operator"
-                      ? "Home"
-                      : role === "Customer"
-                        ? "My bookings"
-                        : "Your Work",
-                  );
+                  setPage(homeOf(role));
                   setModal("");
                   notify("All five scenarios reset");
                 }}
