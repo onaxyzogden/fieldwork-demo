@@ -23,8 +23,8 @@ An interactive prototype of a handyman services platform. It has three roles, Cu
 ## Architecture / Structure
 - `src/main.tsx` is only the entry: CSS, `pickView()` and `createRoot`.
 - `src/Workspace.tsx` holds `Workspace` and `App`. `Workspace` is the shell: the chrome, the modals and the toasts, about 850 lines. ADR 077 broke it up one role at a time.
-- `src/useWorkspaceState.tsx` holds `useWorkspaceState()`, all the workspace's state, effects and helpers (about 1,830 lines). It returns the context `api` and the names the shell reads.
-- `src/CustomerWorkspace.tsx`, `src/ContractorWorkspace.tsx` and `src/OperatorWorkspace.tsx` are the extracted role workspaces. `OperatorWorkspace` switches on `page`, and renders `src/OperatorRequests.tsx` (about 960 lines) for Requests. They read from `useWorkspace()` (`src/workspaceContext.ts`), whose `WorkspaceApi` type lists only what extracted components read.
+- `src/useWorkspaceState.tsx` holds `useWorkspaceState()`, the workspace's state, effects and the helpers more than one place reads (about 740 lines). It returns the context `api` and the names the shell reads. Helpers only one role reads live in that role's file.
+- `src/CustomerWorkspace.tsx`, `src/ContractorWorkspace.tsx` and `src/OperatorWorkspace.tsx` are the extracted role workspaces. `OperatorWorkspace` switches on `page`, and renders `src/OperatorRequests.tsx` (about 1,690 lines, with its helpers) for Requests. They read from `useWorkspace()` (`src/workspaceContext.ts`), whose `WorkspaceApi` type lists only what extracted components read.
 - `src/RequestFields.tsx` holds `NoteReply`, `TaskAnswers` and `ClarificationFields`, which several workspaces share.
 - The CSS order follows the import order. After any extraction, check that the built stylesheet is byte-identical (ADR 077).
 - `src/Shell.tsx` is the shared chrome: the sidebar, demo bar, topbar, `identity()` and `homeOf()`.
@@ -41,7 +41,8 @@ An interactive prototype of a handyman services platform. It has three roles, Cu
 - PR #45 (wiki and ADR 074) merged on 2026-10-08.
 - PR #46 (ADR 075 and ADR 076) merged on 2026-10-08.
 - ADR 077 (breaking up `Workspace`): every role's pages are out, live on `main` via PR #47 (2026-10-08) and PR #50 (2026-10-08). #48 and #49 merged into their stacked bases rather than `main`, and #50 carried them over. Next time, open each branch against `main` instead of stacking.
-- ADR 077 step 6 (`useWorkspaceState()`) is PR #51, opened against `main` on 2026-10-08.
+- ADR 077 step 6 (`useWorkspaceState()`) is live on `main` via PR #51 (2026-10-08).
+- ADR 077 step 7 (each role's helpers into its own file) is PR #52 (`claude/role-helpers`), open against `main`.
 - Local dev uses Vite on 5173 and the preview build on 4173 (`.claude/launch.json`, untracked).
 
 ## Connections
@@ -51,10 +52,11 @@ An interactive prototype of a handyman services platform. It has three roles, Cu
 - [[2026-10-07-wiki-in-repo]]: why this wiki is here.
 
 ## Open Questions
-- Splitting the role workspaces would save each role's first load 11–17% gzipped (ADR 075). That is now under way (ADR 077). Every role's pages are out of `Workspace`, and its state is in `useWorkspaceState()`. Next comes moving the role-specific helpers into the role files, then a lazy chunk per role.
+- Splitting the role workspaces would save each role's first load 11–17% gzipped (ADR 075). That is now under way (ADR 077). Every role's pages and helpers are out of `Workspace` and the hook, which keeps only the shared state. Next comes a lazy chunk per role.
 - Bundle-size work is parked (ADR 074–076). The catalogue and the per-role CSS were measured at 6% and 2% of the first load (ADR 076).
 
 ## History
+- 2026-10-08: each role's helpers moved verbatim out of `useWorkspaceState()` into its own file (ADR 077, step 7): 19 into `OperatorRequests.tsx`, 11 into `CustomerWorkspace.tsx`, and `RouteMap` into `OperatorWorkspace.tsx`. The hook went from about 1,830 to 740 lines. 578 tests pass unchanged, and the stylesheet is byte-identical.
 - 2026-10-08: `Workspace`'s state, effects and helpers moved verbatim into `useWorkspaceState()` (ADR 077, step 6). `Workspace` went from about 2,530 to 850 lines. 578 tests pass unchanged, and the stylesheet is byte-identical.
 - 2026-10-08: the operator's Requests page moved into `OperatorRequests.tsx` (ADR 077). `WorkspaceApi` gained 43 names, and five screen tests were added first. 578 tests pass, and the stylesheet is byte-identical.
 - 2026-10-08: the operator's Home, More, Walkthroughs, Today, Contractors and Activity pages moved into `OperatorWorkspace.tsx` (ADR 077). Three screen tests were added first. 573 tests pass, and the stylesheet is byte-identical.

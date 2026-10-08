@@ -1,8 +1,12 @@
 import PropertyRecord from "./PropertyRecord";
 import { bucket } from "./work";
 import CustomerQueue from "./CustomerQueue";
-import { customerTodoLabel } from "./roleQueues";
-import { customerProgressText } from "./customerText";
+import { customerTodoLabel, customerQueue } from "./roleQueues";
+import {
+  customerProgressText,
+  customerQuoteText,
+  customerStatusText,
+} from "./customerText";
 import { dayLabel, taskLabel } from "./intake";
 import {
   ArrowRight,
@@ -11,6 +15,7 @@ import {
   CalendarDays,
   ChevronDown,
   Wrench,
+  Check,
 } from "lucide-react";
 import {
   type Request,
@@ -24,41 +29,50 @@ import {
   genericTitle,
   quoted,
   confirmed,
+  approveQuote,
+  declineQuote,
+  workPayment,
 } from "./model";
 import { LATE_CANCEL_TEXT } from "./notifications";
 import { Glance, GlanceLead } from "./GlanceCard";
-import { glanceDate, visitDayLine, visitDayState } from "./glance";
+import {
+  glanceDate,
+  visitDayLine,
+  visitDayState,
+  customerGlance,
+  todaysVisits,
+} from "./glance";
 import { lazyScreen } from "./Recovery";
 import { NoteReply, TaskAnswers, ClarificationFields } from "./RequestFields";
 import { useWorkspace } from "./workspaceContext";
+import { approveCharge, declineCharge } from "./decisions";
+import { readyToPay } from "./payments";
 
 /* Loaded when first opened, not with the app (ADR 074). */
 const CustomerIntake = lazyScreen(() => import("./CustomerIntake"));
 
 export function CustomerWorkspace() {
   const {
-    chargePanel,
+    Message,
+    badge,
+    badgeTone,
+    booked,
+    completion,
     customer,
-    customerAtAGlance,
-    customerBadge,
-    customerNext,
-    customerProperties,
-    customerToday,
-    customerTodoList,
-    customerTodos,
     expanded,
     fail,
     idPrefix,
+    invalidate,
     notify,
-    openFirst,
-    openRequestRow,
     ownRequests,
     page,
+    pay,
+    photo,
     quote,
-    quotePanel,
     r,
     reveal,
     reviewing,
+    role,
     s,
     setActive,
     setCustomer,
@@ -75,6 +89,189 @@ export function CustomerWorkspace() {
     visitCard,
     visits,
   } = useWorkspace();
+  /* The signed-in customer's own requests. A draft only counts once it carries
+     something — an address, a description or a photo. */
+  /* Only properties that have actually been walked: an empty history is not
+     worth a collapsed panel telling the customer there is nothing in it. */
+  const customerProperties = s.properties.filter(
+    (p) =>
+      p.accountId === customer &&
+      s.walkthroughs.some((w) => w.propertyId === p.id),
+  );
+  const customerAtAGlance = customerGlance(s, customer, +s.clock);
+  const customerTodoList = customerQueue(s, customer, s.clock);
+  const customerTodos = customerTodoList.length;
+  const customerNext = customerAtAGlance.next;
+  /* Open a request's row in the accordion below and bring it into view. The
+     row is already on this screen, so this expands rather than navigates. */
+  const customerToday = todaysVisits(
+    s,
+    s.clock,
+    (v) => s.requests.find((x) => x.id === v.requestId)?.accountId === customer,
+  );
+  const openRequestRow = (id: string) => {
+    setActive(id);
+    setExpanded(true);
+    requestAnimationFrame(() =>
+      document
+        .getElementById("request-" + id)
+        ?.closest(".request-accordion-item")
+        ?.scrollIntoView({ block: "center", behavior: "smooth" }),
+    );
+  };
+  /* A count with nothing behind it gets no handler, so the card never offers
+     a button that would do nothing. */
+  const openFirst = (ids: string[]) =>
+    ids.length ? () => openRequestRow(ids[0]) : undefined;
+  /* The customer's own status badge never shows the raw dispatch/operator
+     status string — "Awaiting Provider Acceptance" is jargon to the one
+     person with no stake in that state machine, and it clashed with the
+     plain-language note rendered right below it. Colour still keys off the
+     real status via badgeTone(); only the words change (customerText.ts). */
+  const customerBadge = (status: string) => (
+    <span className={"badge " + badgeTone(status)}>
+      {customerStatusText(status)}
+    </span>
+  );
+  /* An additional charge for a return visit (ADR 065), beside the quote it
+     adds to; approving pays it and books the return visit. */
+  const chargePanel = () => {
+    const c = s.charges?.find(
+      (x) => x.requestId === r.id && x.status === "Sent",
+    );
+    if (!c) return null;
+    const who = providers.find((p) => p.id === c.plan.providerId)?.name;
+    return (
+      <div className="card panel quote" id={idPrefix + "charge"}>
+        <div className="row between">
+          <span className="eyebrow">ADDITIONAL CHARGE</span>
+          <span className={"badge " + badgeTone(c.status)}>
+            {customerQuoteText(c.status)}
+          </span>
+        </div>
+        <h2>
+          {money(c.amount)}
+          <small> CAD</small>
+        </h2>
+        <p>{c.reason}</p>
+        <small>
+          For a return visit{who ? ` with ${who}` : ""} on{" "}
+          {dateLabel(c.plan.start)}, booked once you approve.
+        </small>
+        <div className="row actions">
+          <button
+            className="primary"
+            onClick={() => {
+              let ok = false;
+              update((d) => {
+                ok = approveCharge(d, c.id, fail);
+              });
+              if (ok) notify("Charge approved · return visit booked");
+              else
+                invalidate(
+                  "charge",
+                  "Your payment didn’t go through. Try again, or use another card.",
+                );
+            }}
+          >
+            Approve & pay {money(c.amount)}
+          </button>
+          <button
+            className="text-button"
+            onClick={() =>
+              update((d) => {
+                declineCharge(d, c.id);
+              }, "Charge declined")
+            }
+          >
+            Decline
+          </button>
+        </div>
+        <Message field="charge" />
+      </div>
+    );
+  };
+  const quotePanel = () =>
+    quote ? (
+      <div className="card panel quote" id={idPrefix + "quote"}>
+        <div className="row between">
+          {/* The pricing path is how the operator priced it; to the customer
+              it is a quote, or an estimate when it is a range. */}
+          <span className="eyebrow">
+            {quote.type === "Estimated range" ? "YOUR ESTIMATE" : "YOUR QUOTE"}
+          </span>
+          <span className={"badge " + badgeTone(quote.status)}>
+            {customerQuoteText(quote.status)}
+          </span>
+        </div>
+        <h2>
+          {money(quote.amount)}
+          {quote.type === "Estimated range" ? " – " + money(quote.high) : ""}
+          <small> CAD</small>
+        </h2>
+        <p>
+          {quote.notes ||
+            "Labour and standard materials included. Additional work requires your approval."}
+        </p>
+        <small>
+          {s.payments.some(
+            (p) =>
+              p.quoteId === quote.id && workPayment(p) && p.status === "Paid",
+          )
+            ? "Payment received"
+            : quote.payOnCompletion
+              ? "Payment due on completion"
+              : "Payment due after approval"}
+        </small>
+        {role === "Customer" && quote.status === "Sent" && (
+          <div className="row actions">
+            <button
+              className="primary"
+              onClick={() =>
+                update((d) => {
+                  approveQuote(d, quote.id);
+                  log(d, "Customer approved quote");
+                }, "Quote approved")
+              }
+            >
+              Approve quote <Check size={16} />
+            </button>
+            <button
+              className="secondary"
+              onClick={() =>
+                update((d) => {
+                  declineQuote(d, quote.id);
+                }, "Quote declined")
+              }
+            >
+              Decline
+            </button>
+          </div>
+        )}
+        {/* Pay on completion means after the work, not on approval
+            (readyToPay, ADR 063). */}
+        {role === "Customer" && readyToPay(s, quote) && (
+          <button
+            className="primary actions"
+            onClick={() => setModal("Payment")}
+          >
+            {quote.payOnCompletion ? "Pay now" : "Continue to payment"}{" "}
+            <ArrowRight size={16} />
+          </button>
+        )}
+        {s.payments
+          .filter((p) => p.quoteId === quote.id)
+          .map((p) => (
+            <p key={p.id}>
+              {badge(p.status)}{" "}
+              <small>
+                {/* Receipts taken before ADR 061 carry a "demo_" prefix. */}
+                Receipt {p.reference.replace(/^demo_/, "").toUpperCase()}
+              </small>
+            </p>
+          ))}
+      </div>
+    ) : null;
   return (
     <div className="customer-wrap">
       {/* The prototype has to simulate several people to be testable at

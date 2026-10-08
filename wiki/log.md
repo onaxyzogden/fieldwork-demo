@@ -3,6 +3,21 @@ title: "Wiki Log"
 type: log
 ---
 
+## [2026-10-08] session | ADR 077: each role's helpers move into its own file
+
+- **Completed:**
+  - The helpers only one role reads moved verbatim out of `useWorkspaceState()`: 19 into `OperatorRequests.tsx`, 11 into `CustomerWorkspace.tsx`, and `RouteMap` into `OperatorWorkspace.tsx`. 1,032 lines moved, and a line-by-line check found every one of them unchanged.
+  - The hook went from about 1,830 to 738 lines. `WorkspaceApi` lost 31 names and gained 22.
+  - State stayed in the hook, because moving it would reset it whenever a role or page unmounts. Helpers that other hook code reads stayed too (`openContractorJob`, `candidates`, `scopeTasks`, `patchTask`, `chosenTime`).
+- **Tooling:** the import pruner was rewritten line by line. It keeps comments, side-effect imports and `import type`. A new script, `helpers.py`, moves named declarations with the comments above them, and refuses to move one the hook still reads. The scratchpad's `operator.py` was shadowing Python's `operator` module, and it was renamed.
+- **Verified:**
+  - 578 tests, with no test changes. `tsc` and the build pass.
+  - The CSS is byte-identical after each of the three moves. The JS index is 309.2 kB.
+  - Live on `vite preview`: the route map, a request's decision card, the contractor offer with its candidates and routed times, History, and the customer's home and request card. No console errors.
+- **PR:** #52 (`claude/role-helpers`), against `main`, not stacked. Auto-merge is off.
+- **Next:** a lazy chunk per role.
+- **Pages touched:** [[fieldwork]].
+
 ## [2026-10-08] session | ADR 077: Workspace's state moves into useWorkspaceState()
 
 - **Completed:** the state, effects and helpers (about 1,740 lines) moved verbatim into `useWorkspaceState()` in `useWorkspaceState.tsx`. It returns the `api` and the 46 names the shell reads. `Workspace.tsx` went from about 2,530 to 850 lines.

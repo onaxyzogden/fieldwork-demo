@@ -1,25 +1,14 @@
 /**
  * What `Workspace` shares with the role workspaces it renders (ADR 077).
  *
- * `Workspace` still owns all the state and helpers. As each role or page
- * moves into its own component, the names that component reads are added
- * here, so this type grows into the workspace's real shared API one
- * extraction at a time. Types are the ones `Workspace` declares them with.
+ * `useWorkspaceState()` owns the state and the helpers more than one place
+ * reads. Each role file keeps its own helpers and reads the rest from here,
+ * so this type lists exactly the names the role files read. Types are the
+ * ones the hook declares them with.
  */
 import { createContext, useContext } from "react";
 import type React from "react";
-import type {
-  AuditEntry,
-  Property,
-  Quote,
-  Request,
-  State,
-  Task,
-  Visit,
-  scopeMatch,
-} from "./model";
-import type { CustomerGlance } from "./glance";
-import type { CustomerTodo } from "./roleQueues";
+import type { Quote, Request, State, Task, Visit } from "./model";
 import type { Role } from "./Shell";
 import type { suitableProviders } from "./suitability";
 
@@ -39,66 +28,65 @@ export type WorkspaceApi = {
   /* Operator */
   choose: (id: string) => void;
   setSidebar: Setter<boolean>;
-  RouteMap: () => React.JSX.Element;
 
   /* Operator: Requests */
   Message: ({ field }: { field: string }) => React.JSX.Element | null;
-  assignPay: number;
+  amount: number;
   badge: (status: string) => React.JSX.Element;
-  cancelVisit: (v: Visit) => void;
+  booked: boolean;
   candidates: Candidate[];
   chosenTime: string | undefined;
   clear: (field: string) => void;
-  createVisit: () => boolean | undefined;
-  decisionCard: () => React.JSX.Element;
+  clearAll: () => void;
+  completion: boolean;
   duration: number;
   fieldClass: (field: string, base?: string) => string;
   filter: string;
+  fits: boolean;
   fulfillment: boolean;
   fulfillmentKind: "self" | "contractor";
   invalid: (field: string) => { "aria-invalid": true | undefined };
   invalidate: (field: string, message: string) => boolean;
-  liveVisits: Visit[];
-  match: ReturnType<typeof scopeMatch>;
-  opts: Candidate["appointments"];
+  lateFee: number | null;
+  override: string;
   patchTask: (id: string, p: Partial<Task>) => void;
+  pay: number;
+  payTouched: boolean;
   provider: string;
-  requestStatus: (id: string) => string;
+  quoteTouched: boolean;
+  quoteType: string;
   scopeTasks: Task[];
   search: string;
   selected: string[];
+  setCompletion: Setter<boolean>;
   setFilter: Setter<string>;
   setFulfillment: Setter<boolean>;
+  setFulfillmentKind: Setter<"self" | "contractor">;
+  setLateFee: Setter<number | null>;
   setOverride: Setter<string>;
   setPay: Setter<number>;
   setPayTouched: Setter<boolean>;
   setProvider: Setter<string>;
+  setQuoteAmount: Setter<number>;
+  setQuoteTouched: Setter<boolean>;
+  setQuoteType: Setter<string>;
   setRequestTab: Setter<string>;
+  setReschedule: Setter<string>;
   setRole: Setter<Role>;
   setSearch: Setter<string>;
   setSelected: Setter<string[]>;
   setShowRequestQueue: Setter<boolean>;
   setTaskTitles: Setter<Record<string, string>>;
   showRequestQueue: boolean;
-  showTasks: () => void;
   slot: string;
   tab: string;
   taskTitles: Record<string, string>;
-  trail: AuditEntry[];
+  toast: string;
 
   /* Customer */
   customer: string;
   setCustomer: Setter<string>;
-  customerAtAGlance: CustomerGlance;
-  customerBadge: (status: string) => React.JSX.Element;
-  customerNext: { visit: Visit; address: string; requestId: string } | null;
-  customerProperties: Property[];
-  customerToday: Visit[];
-  customerTodoList: CustomerTodo[];
-  customerTodos: number;
   ownRequests: Request[];
-  openRequestRow: (id: string) => void;
-  openFirst: (ids: string[]) => (() => void) | undefined;
   startOrResumeRequest: () => void;
   reveal: (id: string) => number;
   r: Request;
@@ -113,10 +101,11 @@ export type WorkspaceApi = {
   fail: boolean;
   setSlot: Setter<string>;
   setStep: Setter<number>;
-  chargePanel: () => React.JSX.Element | null;
-  quotePanel: () => React.JSX.Element | null;
   taskPhotos: (t: Task) => React.JSX.Element;
   visitCard: (v: Visit) => React.JSX.Element;
+  badgeTone: (status: string) => "green" | "red" | "";
+  photo: (t: Task, file?: File) => Promise<boolean | undefined>;
+  role: Role;
 
   /* Contractor */
   contractor: string;
