@@ -5,6 +5,8 @@ export function suitableProviders(
   city: string,
   timing: string,
   self = false,
+  /** The request asking, whose own hold must not hide its own time. */
+  forRequest?: string,
 ) {
   const duration = tasks
     .filter((t) => !t.mergedInto)
@@ -18,7 +20,16 @@ export function suitableProviders(
     .filter((p) => p.match.eligible)
     .map((p) => ({
       ...p,
-      appointments: slots(s, p.provider.id, duration, city, undefined, timing),
+      appointments: slots(
+        s,
+        p.provider.id,
+        duration,
+        city,
+        undefined,
+        timing,
+        3,
+        forRequest,
+      ),
     }))
     .sort(
       (a, b) =>

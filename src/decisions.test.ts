@@ -1,5 +1,12 @@
 import { describe, it, expect } from "vitest";
-import { genericTitle, seed, reconcile, providers, type State } from "./model";
+import {
+  genericTitle,
+  holdSlot,
+  seed,
+  reconcile,
+  providers,
+  type State,
+} from "./model";
 import { suggestTitle } from "./pmw";
 import { reoffer, respondToOffer } from "./dispatch";
 import {
@@ -312,5 +319,33 @@ describe("the operator's next decision", () => {
     reconcile(s);
     expect(nextDecision(s, "r2")?.kind).toBe("assign");
     expect(decisionQueue(s).map((q) => q.requestId)).not.toContain("r2");
+  });
+});
+
+describe("a request's own hold (ADR 071)", () => {
+  /** Hold r2's suggested time, for r2 itself or for another request. */
+  function held(by: string) {
+    const s = seed();
+    const d = nextDecision(s, "r2");
+    if (d?.kind !== "assign" || !d.offer) throw new Error("expected an offer");
+    holdSlot(s, {
+      requestId: by,
+      providerId: d.offer.providerId,
+      start: d.offer.start,
+      duration: d.duration,
+    });
+    const after = nextDecision(s, "r2");
+    if (after?.kind !== "assign") throw new Error("expected an assign");
+    return { before: d.offer.start, after: after.offer?.start };
+  }
+
+  it("does not hide the time its own customer chose", () => {
+    const { before, after } = held("r2");
+    expect(after).toBe(before);
+  });
+
+  it("still gives way to another customer's hold", () => {
+    const { before, after } = held("someone-else");
+    expect(after).not.toBe(before);
   });
 });

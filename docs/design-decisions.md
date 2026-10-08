@@ -1775,3 +1775,29 @@ page and in the queue. An unanswered question now leads the status line:
   hidden there. The intro says to pick one of them.
 - Request to Book's days now start two days out, where `slots()` starts,
   so the customer is not invited to wish for today or tomorrow.
+
+## ADR 071: A request's own hold does not hide its own time from the operator
+
+Accepted. ADR 069 fixed this for the customer's intake; the operator's side
+had the same gap.
+
+**What went wrong.** A customer who picks a time in Request to Book holds it
+for ten minutes, and submitting does not give the hold back. Every search the
+operator makes for a free time then asked without saying which request it was
+for, so the customer's own hold blocked the customer's own time:
+
+- the recommended appointments and each provider's "First fitting time";
+- the "Override proposed time" box, which ignored the time without a word;
+- the decision queue's suggested offer, which proposed a different time.
+
+Creating the visit already passed the request, so the time the screen would
+not offer was one the write would have accepted.
+
+**The rule.** A request never blocks itself. `suitableProviders` takes the
+request asking, as `slots()` and `available()` already do, and every
+operator-side search passes it. Another customer's live hold still blocks the
+time, and a test holds it to that.
+
+The hold itself stays after submission: it keeps the time the customer chose
+from going to someone else while the operator schedules. Offering that time
+first, rather than only allowing it, is left for a later change.

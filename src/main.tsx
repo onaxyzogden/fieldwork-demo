@@ -767,6 +767,7 @@ function Workspace({
     r.city,
     r.timing,
     fulfillmentKind === "self",
+    r.id,
   );
   const match = scopeMatch(provider, scopeTasks);
   const scopeSignature = JSON.stringify([
@@ -822,7 +823,7 @@ function Workspace({
     provider,
     tasks.filter((t) => !selected.length || selected.includes(t.id)),
   )
-    ? slots(s, provider, duration, r.city, undefined, r.timing)
+    ? slots(s, provider, duration, r.city, undefined, r.timing, 3, r.id)
     : [];
   const opts =
     override &&
@@ -2849,6 +2850,7 @@ function Workspace({
                                   x.toISOString(),
                                   undefined,
                                   r.timing,
+                                  r.id,
                                 )
                               ) {
                                 setOverride(x.toISOString());
