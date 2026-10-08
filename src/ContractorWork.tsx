@@ -25,7 +25,7 @@ import JobMode from "./JobMode";
 import { When } from "./When";
 import { countdown } from "./countdown";
 import ContractorQueue from "./ContractorQueue";
-import { Glance, GlanceLead } from "./Glance";
+import { Glance, GlanceLead } from "./GlanceCard";
 import {
   contractorGlance,
   glanceDate,

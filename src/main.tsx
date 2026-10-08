@@ -2,7 +2,7 @@ import { suitableProviders } from "./suitability";
 import Blueprint from "./Blueprint";
 import ContractorWork, { JobWork } from "./ContractorWork";
 import Availability from "./Availability";
-import Earnings from "./Earnings";
+import Earnings from "./EarningsPanel";
 import { AuditList } from "./QueueAside";
 import { hasLiveVisit } from "./aside";
 import { OperatorHome, OperatorToday } from "./OperatorWork";
@@ -171,7 +171,7 @@ import {
   unreachable,
 } from "./notifications";
 import { NotificationInbox, MessageThread } from "./NotificationUI";
-import { Glance, GlanceLead } from "./Glance";
+import { Glance, GlanceLead } from "./GlanceCard";
 import {
   customerGlance,
   glanceDate,
