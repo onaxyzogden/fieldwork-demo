@@ -1893,3 +1893,74 @@ A first load is now 499 kB (145 kB gzipped), and the build gives no warning.
 The limit was not raised. Most of the drop comes from the vendor split. The
 four screens are about 105 kB together, and the workspaces are still the bulk
 of the app script.
+
+## ADR 075: The role workspaces stay inline, for now
+
+Accepted. ADR 074 left the three role workspaces inside `Workspace` in
+`main.tsx`. This ADR measured what splitting them would save before doing it.
+
+**What a split would save.** These figures are for each role's first load
+(today 499 kB, 145 kB gzipped). They come from rollup's per-module sizes,
+scaled to the minified chunk.
+
+| First load | Saved | Gzipped |
+|---|---|---|
+| Operator (the default) | 57 kB | about 16 kB (11%) |
+| Contractor | 65 kB | about 18 kB (12%) |
+| Customer (portal link) | 92 kB | about 25 kB (17%) |
+
+`decisions.ts` and `FollowUp` stay shared whatever happens, because the
+customer's queue and the shared request panels use them. The cost is moving
+about 1,900 lines of JSX out of a component whose roughly 40 pieces of state
+and 50 helpers all three roles share. Most of that move would be checked by
+hand, since the tests cover the model, not the screens. A prefetch on idle
+would then download the rest anyway, so the gain is time to first paint,
+not bytes. That isn't worth it yet, so the workspaces stay inline.
+
+**One part of it is kept.** `JobWork`, the job checklist, photos, outcomes
+and finish sheet, moves out of `ContractorWork.tsx` into `JobWork.tsx`, along
+with the `Sheet` dialog it uses. The operator runs the job too when they do
+the work themselves. Importing it from the contractor's workspace tied the
+operator's home to that whole module for no reason, so the move is worth
+making on its own.
+
+**When to revisit.** Revisit if `Workspace` is broken up for its own sake,
+for example to make the screens testable. The split then comes almost for
+free. Also revisit if first-load time on a phone becomes a complaint. The
+60 kB intake catalogue (`catalogue.generated.json`) is the next candidate to
+look at.
+
+## ADR 076: The catalogue and the stylesheet stay in the first load
+
+Accepted. ADR 075 named the intake catalogue as the next size candidate, and
+per-screen CSS was deferred from ADR 074. Both were measured against today's
+first load (499 kB, 145 kB gzipped), and neither is worth the code.
+
+| Candidate | Raw | Gzipped | Best case saved |
+|---|---|---|---|
+| Intake catalogue (`catalogue.generated.json`, 81 issues) | 76 kB | 9.5 kB | about 6% |
+| App stylesheet (Blueprint's is already separate) | 105 kB | 27.5 kB | about 3 kB (2%) |
+
+**The catalogue isn't intake data.** It is how every request is classified.
+Several things run synchronously on every render and read the catalogue:
+`getIssue()` gives a request its title, its review policy and whether it is
+referral only; `needsClarificationReview()`; and `questionAnswers()` labels
+the customer's answers. They are called in `model.ts`, in `main.tsx`, in
+every queue, and in `JobWork` and `JobMode`. Loading the catalogue on demand
+would mean making classification async across the app. The other way is to
+store the matched issue and its question labels on each request when it is
+created, and then load the catalogue only in New request. That is a change
+to the saved state, made to save 9.5 kB.
+
+**The stylesheet is shared.** `assessment.css` is used by the queues,
+PropertyRecord and Walkthroughs. `onsite.css` is used by QueueLayer and
+DecisionQueue. The only CSS tied to one role is the three
+`*-concept.css` sheets, at 1.3 to 1.7 kB gzipped each. They could only load
+separately if the roles had their own chunks, and ADR 075 kept the roles
+inline.
+
+**When to revisit.** For the catalogue: if it grows past about 30 kB
+gzipped, or if requests start storing their classification anyway, for
+example so that a catalogue edit doesn't reclassify old requests. For the
+CSS: if the role workspaces get their own chunks, since each role's sheet
+can then go with its chunk. Until then, work on bundle size is parked.

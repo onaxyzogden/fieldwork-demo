@@ -3,6 +3,25 @@ title: "Wiki Log"
 type: log
 ---
 
+## [2026-10-08] session | ADR 076: catalogue and CSS stay in the first load
+
+- **Measured:**
+  - The intake catalogue is 76 kB raw and 9.5 kB gzipped. It is about 6% of the first load, and it is read synchronously by `getIssue()` everywhere.
+  - The app CSS is 105 kB raw and 27.5 kB gzipped, and it is shared. The per-role sheets are about 3 kB gzipped in total.
+- **Decision:** no-go on both (ADR 076). Bundle-size work is parked.
+- **Note:** PR #45 merged before ADR 075 was pushed to its branch. ADR 075 and ADR 076 need a new PR.
+- **Pages touched:** [[fieldwork]], [[index]].
+
+## [2026-10-08] session | ADR 075: the role-workspace split, measured and declined
+
+- **Completed:**
+  - `JobWork` and `Sheet` moved from `ContractorWork.tsx` into `JobWork.tsx`, so `OperatorWork` no longer imports the contractor's module.
+  - Measured what splitting the role workspaces would save each role's first load: operator −16 kB gzipped, contractor −18 kB gzipped, customer −25 kB gzipped.
+- **Decision:** no-go on the full split (ADR 075). The operator chose the recommended option, because moving about 1,900 shared-state lines wasn't worth an 11–17% first-paint gain.
+- **Verified:** 555 tests, `tsc` and a clean build.
+- **Deferred:** splitting the role workspaces (revisit when `Workspace` is broken up for testability), and the 60 kB intake catalogue.
+- **Pages touched:** [[fieldwork]], [[index]].
+
 ## [2026-10-07] session | ADR 074: splitting the bundle
 
 - **Completed:**

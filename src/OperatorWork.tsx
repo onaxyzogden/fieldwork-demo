@@ -27,7 +27,7 @@ import {
 import { Glance } from "./GlanceCard";
 import { glanceDate, todaysVisits, visitDayState } from "./glance";
 import { requestDispatch } from "./dispatch";
-import { JobWork } from "./ContractorWork";
+import { JobWork } from "./JobWork";
 import DecisionQueue from "./DecisionQueue";
 import { decisionQueue, heldFor, unfinished } from "./decisions";
 type Props = {
