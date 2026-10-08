@@ -3,14 +3,12 @@ import { suitableProviders } from "./suitability";
 import { ContractorWorkspace } from "./ContractorWorkspace";
 import { AuditList } from "./QueueAside";
 import { hasLiveVisit } from "./aside";
-import { OperatorHome, OperatorToday } from "./OperatorWork";
 import {
   bucket,
   callBackDue,
   feeUndecided,
   workIssue,
   workStatus,
-  dayKey,
 } from "./work";
 import { customerQueue } from "./roleQueues";
 import {
@@ -89,8 +87,6 @@ import {
   primaryContact,
   timeLabel,
   confirmed,
-  hoursLabel,
-  hoursOf,
 } from "./model";
 import {
   authorizationDue,
@@ -122,14 +118,11 @@ import {
   reoffer,
 } from "./dispatch";
 import { KEY, load, save, commit, freshDemo } from "./store";
-import { lazyScreen } from "./Recovery";
 import { SaveWarning } from "./NotificationUI";
 import { TaskAnswers } from "./RequestFields";
 import { WorkspaceContext, type WorkspaceApi } from "./workspaceContext";
+import { OperatorWorkspace } from "./OperatorWorkspace";
 import { CustomerWorkspace } from "./CustomerWorkspace";
-
-/* Loaded when first opened, not with the app (ADR 074). */
-const Walkthroughs = lazyScreen(() => import("./Walkthroughs"));
 
 export type Role = "Customer" | "Operator" | "Contractor";
 export function Workspace({
@@ -1736,7 +1729,9 @@ export function Workspace({
   };
   /* What the extracted role workspaces read (ADR 077). */
   const api: WorkspaceApi = {
+    RouteMap,
     chargePanel,
+    choose,
     contractor,
     contractorVisit,
     customer,
@@ -1769,6 +1764,7 @@ export function Workspace({
     setModal,
     setPage,
     setReviewing,
+    setSidebar,
     setSlot,
     setStep,
     startOrResumeRequest,
@@ -1850,40 +1846,6 @@ export function Workspace({
               : undefined
           }
         >
-          {role === "Operator" && page === "Home" && (
-            <OperatorHome
-              s={s}
-              open={(id) => {
-                choose(id);
-                setPage("Requests");
-              }}
-              update={update}
-              today={() => setPage("Today")}
-            />
-          )}
-          {role === "Operator" && page === "More" && (
-            <section className="card panel">
-              <h1>More</h1>
-              {["Contractors", "Activity"].map((x) => (
-                <button
-                  className="queue-item"
-                  key={x}
-                  onClick={() => setPage(x)}
-                >
-                  {x} →
-                </button>
-              ))}
-              <button
-                className="queue-item"
-                onClick={() => {
-                  setSidebar(false);
-                  setModal("Demo settings");
-                }}
-              >
-                Demo settings →
-              </button>
-            </section>
-          )}
           {role === "Operator" && page === "Requests" && (
             <>
               <div
@@ -2745,103 +2707,8 @@ export function Workspace({
               </div>
             </>
           )}
-          {role === "Operator" && page === "Walkthroughs" && (
-            <Walkthroughs
-              s={s}
-              update={update}
-              notify={notify}
-              openRequest={(id) => {
-                choose(id);
-                setPage("Requests");
-              }}
-            />
-          )}
-          {role === "Operator" && page === "Today" && (
-            <OperatorToday
-              s={s}
-              mapView={<RouteMap />}
-              update={update}
-              open={(id) => {
-                choose(id);
-                setPage("Requests");
-              }}
-            />
-          )}
-          {role === "Operator" && page === "Contractors" && (
-            <>
-              <div className="heading">
-                <div>
-                  <div className="eyebrow">YOUR TRUSTED NETWORK</div>
-                  <h1>Good people. Great work.</h1>
-                  <p>
-                    Invite-only roster · hours set by each contractor ·
-                    illustrative eligibility
-                  </p>
-                </div>
-              </div>
-              <div className="roster">
-                {providers.map((p) => (
-                  <section className="card panel" key={p.id}>
-                    <div className="avatar large">{p.initials}</div>
-                    <h2>{p.name}</h2>
-                    <p>{p.role}</p>
-                    <p>
-                      <MapPin size={16} />
-                      {p.city} · Halton / GTA
-                    </p>
-                    <p>{p.skills}</p>
-                    <h3>
-                      {money(p.rate)}
-                      <small> / hour</small>
-                    </h3>
-                    {/* Their own hours, as they set them (ADR 067). */}
-                    <span className="badge green">
-                      Active · {hoursLabel(hoursOf(s, p.id))}
-                    </span>
-                    {hoursOf(s, p.id).off.some((d) => d >= dayKey(s.clock)) && (
-                      <p>
-                        Next day off:{" "}
-                        {dayLabel(
-                          hoursOf(s, p.id).off.find(
-                            (d) => d >= dayKey(s.clock),
-                          )!,
-                        )}
-                      </p>
-                    )}
-                    <p>
-                      {p.eligible
-                        ? "Restricted work eligibility marked by operator; credentials not verified by software."
-                        : "General handyman scope only."}
-                    </p>
-                  </section>
-                ))}
-              </div>
-            </>
-          )}
-          {role === "Operator" && page === "Activity" && (
-            <>
-              <div className="heading">
-                <div>
-                  <h1>Activity history</h1>
-                  <p>
-                    A shared record of decisions and simulated notifications.
-                  </p>
-                </div>
-              </div>
-              <section className="card panel">
-                {s.events.map((e) => (
-                  <div className="event" key={e.id}>
-                    <span className="event-dot" />
-                    <div>
-                      <strong>{e.text}</strong>
-                      <small>{dateLabel(e.at)}</small>
-                    </div>
-                  </div>
-                ))}
-              </section>
-            </>
-          )}
           <WorkspaceContext.Provider value={api}>
+            {role === "Operator" && <OperatorWorkspace />}
             {role === "Customer" && <CustomerWorkspace />}
             {role === "Contractor" && <ContractorWorkspace />}
           </WorkspaceContext.Provider>

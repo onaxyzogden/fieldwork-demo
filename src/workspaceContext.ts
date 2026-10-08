@@ -24,6 +24,11 @@ export type WorkspaceApi = {
   setModal: Setter<string>;
   idPrefix: string;
 
+  /* Operator */
+  choose: (id: string) => void;
+  setSidebar: Setter<boolean>;
+  RouteMap: () => React.JSX.Element;
+
   /* Customer */
   customer: string;
   setCustomer: Setter<string>;
