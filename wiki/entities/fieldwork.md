@@ -14,10 +14,10 @@ An interactive prototype of a handyman services platform. It has three roles, Cu
 ## Key Facts
 - **Stack:** React 19, Vite, TypeScript, vitest, lucide-react. There is no backend. State is kept in localStorage under `fieldwork-demo-v1`.
 - **Gates:**
-  - `npm test` runs the catalogue and status checks, then vitest: 588 tests as of 2026-10-08, 33 of them screen tests in jsdom (`workspace.test.tsx`).
+  - `npm test` runs the catalogue and status checks, then vitest: 604 tests as of 2026-10-08, 48 of them screen tests in jsdom (`workspace.test.tsx`).
   - `npm run build` runs `design:check`, `catalogue:check`, `status:check`, `tsc` and then `vite build`.
 - **Deploy:** merging to `main` runs GitHub Actions, which publishes to Pages at j.ogden.ag. The repository is public.
-- **Decisions:** ADR 001–079 are in `docs/design-decisions.md`. Business calls are in `docs/decisions.md`.
+- **Decisions:** ADR 001–080 are in `docs/design-decisions.md`. Business calls are in `docs/decisions.md`.
 - **Line endings:** most files are CRLF. Scripted edits must keep CRLF. Prettier rewrites to LF, so restore CRLF after running it.
 
 ## Architecture / Structure
@@ -44,7 +44,7 @@ An interactive prototype of a handyman services platform. It has three roles, Cu
 - ADR 077 step 6 (`useWorkspaceState()`) is live on `main` via PR #51 (2026-10-08).
 - ADR 077 step 7 (each role's helpers into its own file) is live on `main` via PR #52 (2026-10-08).
 - ADR 078 (a chunk per role) is live on `main` via PR #53 (2026-10-08).
-- A platform-wide UX audit ran on 2026-10-08, after ADR 078: 8 P1s, 15 P2s and 15 P3s across the three roles and the shell, The P1s are fixed in ADR 079 (branch `claude/adr-079`). The P2s and P3s are open. See [[platform-ux-audit-2026-10]].
+- A platform-wide UX audit ran on 2026-10-08, after ADR 078: 8 P1s, 15 P2s and 15 P3s across the three roles and the shell, The P1s are fixed in ADR 079, and the P2s in ADR 080 (branch `claude/adr-080`). The P3s are open. See [[platform-ux-audit-2026-10]].
 - Local dev uses Vite on 5173 and the preview build on 4173 (`.claude/launch.json`, untracked).
 
 ## Connections
@@ -55,11 +55,12 @@ An interactive prototype of a handyman services platform. It has three roles, Cu
 - [[2026-10-07-wiki-in-repo]]: why this wiki is here.
 
 ## Open Questions
-- The platform UX audit's P2s and P3s are open. Next is honest state and announcements: toast tone, an always-mounted live region and a cleared timer. An undo for the operator's Offer is open too. A Declined quote needs its own customer status, because the reconciler shows it as "Quote ready".
+- The platform UX audit's P3s are open, as is an undo for the operator's Offer. Instant Book's price is still a fixed $129.
 - ADR 077 is complete, and each role is its own chunk (ADR 078). The operator, the default, saves only 5% of its first load, because most of the role code is the operator's. Splitting `OperatorRequests` off from the operator's home is the next size candidate, if first load ever matters.
 - Bundle-size work is parked (ADR 074–076). The catalogue and the per-role CSS were measured at 6% and 2% of the first load (ADR 076).
 
 ## History
+- 2026-10-08: the platform audit's P2s fixed (ADR 080). Toasts have an error tone in an always-mounted alert region and one cleared timer, and clear on a switch of who is viewed. A declined quote reads "Quote declined · we’re revising it" to the customer. The contractor's glance, Accepted badge, photo removal (with Undo) and Availability draft (`sessionStorage`) are fixed. The operator's counts agree, "← All requests" goes back to the list, a chosen request takes focus, More is current under it, and the queue says "Sent: Offer to …". Instant Book confirms and focuses the booking, and intake's missing task is said inline. 16 tests were added (604), with one new CSS rule.
 - 2026-10-08: the platform audit's 8 P1s fixed (ADR 079). `DecisionQueue` moved onto `QueueLayer`. Focus falls back to `main h1`, follows every button swap (`useSwapFocus`), and goes to each intake step's h1. Quote and charge Decline, Availability's withdrawals and Reset confirm, and Remove finding has an inline Undo. The role switch has `aria-pressed`. 10 screen tests were added (588 tests), the stylesheet is byte-identical, and the first load grew 0.3 kB gzipped.
 - 2026-10-08: a report-mode UX audit of the whole platform (no source changes). The customer fixes from ADR 069, 070 and 073 all hold. See [[platform-ux-audit-2026-10]].
 - 2026-10-08: each role loads as its own chunk (ADR 078). First loads went down 5% (operator), 13% (customer) and 11% (contractor), gzipped. The other roles are preloaded when idle, and the stylesheet is byte-identical. ADR 077 is complete.

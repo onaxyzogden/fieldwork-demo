@@ -29,11 +29,12 @@ import {
   preferenceSignature,
 } from "./intake";
 import { savedAddresses } from "./pmw";
+import type { WorkspaceApi } from "./workspaceContext";
 type Props = {
   s: State;
   r: Request;
-  update: (fn: (d: State) => void, msg?: string) => void;
-  notify: (text: string) => void;
+  update: WorkspaceApi["update"];
+  notify: WorkspaceApi["notify"];
   photos: (t: Task) => React.ReactNode;
   questions: (
     t: Task,
@@ -286,11 +287,12 @@ export default function CustomerIntake({
       d.tasks.find((x) => x.id === t.id)!.entryStage = stage;
       d.requests.find((x) => x.id === r.id)!.editingTaskId = t.id;
     });
+  /** Opens the empty task, or a new one, and returns its id. */
   const add = () => {
     const empty = all.find((t) => !t.description.trim());
     if (empty) {
       open(empty);
-      return;
+      return empty.id;
     }
     const id = uid();
     update((d) => {
@@ -305,6 +307,7 @@ export default function CustomerIntake({
       });
       d.requests.find((x) => x.id === r.id)!.editingTaskId = id;
     });
+    return id;
   };
   const remove = (t: Task) => {
     setRemoved({
@@ -344,12 +347,20 @@ export default function CustomerIntake({
     const photoOnly = all.find((t) => !t.description.trim() && t.photos.length);
     if (photoOnly) {
       open(photoOnly);
-      notify("Describe the task for these photos before continuing.");
+      notify("Describe the task for these photos before continuing.", "error");
       return;
     }
+    /* Said beside the task it is missing from, where focus goes, not in a
+       toast that would be gone before it was read (ADR 080). */
     if (!tasks.length) {
-      notify("Add a task before continuing.");
-      if (!all.length) add();
+      const id = add();
+      setDescriptionErrors((x) => ({
+        ...x,
+        [id]: "Add a task before continuing.",
+      }));
+      requestAnimationFrame(() =>
+        document.getElementById("task-description-" + id)?.focus(),
+      );
       return;
     }
     const unfinished = tasks.find(
@@ -363,7 +374,7 @@ export default function CustomerIntake({
         d.tasks.find((t) => t.id === unfinished.id)!.entryStage = "details";
         d.requests.find((x) => x.id === r.id)!.editingTaskId = unfinished.id;
       });
-      notify("Finish these details before choosing a time.");
+      notify("Finish these details before choosing a time.", "error");
       return;
     }
     update((d) => {
@@ -380,6 +391,7 @@ export default function CustomerIntake({
     if (!validAddress(r)) {
       notify(
         "Enter a street address, municipality, and valid Canadian postal code.",
+        "error",
       );
       return;
     }
@@ -388,7 +400,7 @@ export default function CustomerIntake({
       return;
     }
     if (selected && !selectionValid) {
-      notify("That time no longer fits. Choose another preference.");
+      notify("That time no longer fits. Choose another preference.", "error");
       return;
     }
     update((d) => {

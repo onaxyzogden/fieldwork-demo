@@ -62,7 +62,8 @@ export type ContractorGlance = {
   offers: number;
   today: number;
   upcoming: number;
-  /** The next accepted job, today's or later. Null when there is none. */
+  /** The next accepted job, today's or later, that is not already finished.
+   *  Null when there is none. */
   next: { visit: Visit; assignment: Assignment } | null;
 };
 
@@ -73,7 +74,10 @@ export function contractorGlance(
 ): ContractorGlance {
   const of = (tab: ContractorTab) => tabWork(s, providerId, tab, clock);
   const accepted = [...of("Today"), ...of("Upcoming")];
-  const first = accepted[0];
+  /* Today's tab keeps a job finished this morning; it is not next (ADR 080). */
+  const first = accepted.find(
+    (a) => !s.visits.find((v) => v.id === a.visitId)?.execution?.finishedAt,
+  );
   return {
     offers: of("Offers").length,
     today: of("Today").length,

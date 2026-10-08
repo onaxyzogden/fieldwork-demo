@@ -255,6 +255,14 @@
   border-color: var(--success);
   box-shadow: var(--shadow-md);
 }
+/* A failure reads as one in either theme (ADR 080). */
+.toasts .toast.error {
+  border-color: var(--danger);
+  color: var(--text);
+}
+.toasts .toast.error svg {
+  color: var(--danger);
+}
 :root[data-theme="light"] .dispatch-setting {
   background: var(--panel);
   border-color: var(--accent-text);

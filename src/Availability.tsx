@@ -1,4 +1,4 @@
-import { Fragment, useState } from "react";
+import { Fragment, useEffect, useState } from "react";
 import {
   type Availability as Hours,
   type State,
@@ -33,6 +33,31 @@ const DAY_NAMES: Record<Weekday, string> = {
   Sun: "Sunday",
 };
 
+/* Unsaved hours outlive a trip to another page (ADR 080). The draft is kept
+   for this browser tab only, with the saved hours it was made from, so it is
+   dropped once those change under it. */
+const draftKey = (provider: string) => "fieldwork.hoursDraft." + provider;
+function readDraft(provider: string, base: string): Hours | undefined {
+  try {
+    const d = JSON.parse(sessionStorage.getItem(draftKey(provider)) || "null");
+    return d?.base === base ? d.hours : undefined;
+  } catch {
+    return undefined;
+  }
+}
+function writeDraft(provider: string, base: string, hours?: Hours) {
+  try {
+    if (hours)
+      sessionStorage.setItem(
+        draftKey(provider),
+        JSON.stringify({ base, hours }),
+      );
+    else sessionStorage.removeItem(draftKey(provider));
+  } catch {
+    /* Without storage the draft lasts as long as the page, as before. */
+  }
+}
+
 export default function Availability({
   s,
   update,
@@ -46,7 +71,15 @@ export default function Availability({
   openJob: (visitId: string) => void;
 }) {
   const saved = hoursOf(s, provider);
-  const [hours, setHours] = useState<Hours>(() => structuredClone(saved));
+  const base = JSON.stringify(saved);
+  const [hours, setHours] = useState<Hours>(
+    () => readDraft(provider, base) ?? structuredClone(saved),
+  );
+  const dirty = JSON.stringify(hours) !== base;
+  useEffect(
+    () => writeDraft(provider, base, dirty ? hours : undefined),
+    [provider, base, dirty, hours],
+  );
   const [day, setDay] = useState("");
   const [result, setResult] = useState("");
   /* Offers a save would withdraw, waiting on a yes (ADR 079); 0 when none. */
@@ -79,8 +112,7 @@ export default function Availability({
     setResult("");
   };
   const save = (sure = false) => {
-    if (JSON.stringify(hours) === JSON.stringify(saved))
-      return setResult("Nothing has changed.");
+    if (!dirty) return setResult("Nothing has changed.");
     /* Withdrawing offers can't be taken back, so a save that would says so
        first: a dry run on a copy counts them. */
     const would = setAvailability(structuredClone(s), provider, hours).withdrawn
@@ -221,13 +253,20 @@ export default function Availability({
           </button>
         </fieldset>
       ) : (
-        <button
-          ref={swap.trigger}
-          className="primary full"
-          onClick={() => save()}
-        >
-          Save hours
-        </button>
+        <>
+          {dirty && (
+            <p className="muted">
+              Unsaved changes. Offers follow your saved hours until you save.
+            </p>
+          )}
+          <button
+            ref={swap.trigger}
+            className="primary full"
+            onClick={() => save()}
+          >
+            Save hours
+          </button>
+        </>
       )}
       {result && (
         <p className="hours-result" role="status">

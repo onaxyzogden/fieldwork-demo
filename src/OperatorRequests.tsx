@@ -56,6 +56,7 @@ import { useWorkspace } from "./workspaceContext";
 import { countdown } from "./countdown";
 import FollowUp, { followUpLine } from "./FollowUp";
 import React from "react";
+import { flushSync } from "react-dom";
 import {
   authorizationDue,
   authorizePayment,
@@ -144,7 +145,42 @@ export function OperatorRequests() {
     visitCard,
     visits,
   } = useWorkspace();
+  /* A request chosen from the list takes focus at its heading, and "All
+     requests" hands it back to the search (ADR 080). */
+  const detailHeading = React.useRef<HTMLHeadingElement>(null);
+  const searchBox = React.useRef<HTMLInputElement>(null);
+  const browseButton = React.useRef<HTMLButtonElement>(null);
+  const focusDetail = React.useRef(false);
+  /* On a narrow screen the list sits above the request, so the request's
+     card is scrolled up to meet the reader rather than left below the fold. */
+  const showDetail = () => {
+    const h = detailHeading.current;
+    if (!h) return;
+    const b = browseButton.current;
+    if (b && getComputedStyle(b).display !== "none")
+      h.closest("section")?.scrollIntoView?.({ block: "start" });
+    h.focus({ preventScroll: true });
+  };
+  React.useEffect(() => {
+    if (!focusDetail.current) return;
+    focusDetail.current = false;
+    showDetail();
+  }, [r.id]);
   const trail = auditFor(s, r.id);
+  const shown = s.requests.filter(
+    (q) =>
+      (filter === "All requests" || bucket(s, q.id) === filter) &&
+      (
+        q.name +
+        q.city +
+        s.tasks
+          .filter((t) => t.requestId === q.id)
+          .map((t) => t.description)
+          .join()
+      )
+        .toLowerCase()
+        .includes(search.toLowerCase()),
+  );
   const payMethod = (s.paymentMethods ?? []).find(
     (m) => m.accountId === r.accountId,
   );
@@ -290,6 +326,7 @@ export function OperatorRequests() {
     if (self && !choice)
       return notify(
         "Yousef cannot currently cover this visit's scope and availability. Review the tasks or choose another eligible provider.",
+        "error",
       );
     setReschedule(v.id);
     setProvider(choice?.provider.id || "");
@@ -840,14 +877,18 @@ export function OperatorRequests() {
                       <button
                         className="text-button"
                         onClick={() =>
-                          update((d) => {
-                            const held = d.payments.find(
-                              (p) =>
-                                p.quoteId === quote.id &&
-                                p.status === "Authorized",
-                            );
-                            if (held) capturePayment(d, held.id, true);
-                          }, "Capture failed (simulated)")
+                          update(
+                            (d) => {
+                              const held = d.payments.find(
+                                (p) =>
+                                  p.quoteId === quote.id &&
+                                  p.status === "Authorized",
+                              );
+                              if (held) capturePayment(d, held.id, true);
+                            },
+                            "Capture failed (simulated)",
+                            "error",
+                          )
                         }
                       >
                         Simulate a failed capture
@@ -904,7 +945,10 @@ export function OperatorRequests() {
           <h1>Service requests</h1>
           <p>The right work. The right person. The right time.</p>
         </div>
-        <span className="badge">{s.requests.length} requests</span>
+        {/* Counts the list as filtered, so it matches what is shown. */}
+        <span className="badge">
+          {shown.length} request{shown.length === 1 ? "" : "s"}
+        </span>
       </div>
       <div
         className={
@@ -914,6 +958,7 @@ export function OperatorRequests() {
       >
         {!fulfillment && (
           <button
+            ref={browseButton}
             className="secondary mobile-request-browser"
             aria-expanded={showRequestQueue}
             onClick={() => setShowRequestQueue(!showRequestQueue)}
@@ -927,6 +972,7 @@ export function OperatorRequests() {
           <label className="search">
             <Search size={16} />
             <input
+              ref={searchBox}
               placeholder="Search requests…"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
@@ -948,51 +994,45 @@ export function OperatorRequests() {
               <option key={x}>{x}</option>
             ))}
           </select>
-          {s.requests
-            .filter(
-              (q) =>
-                (filter === "All requests" || bucket(s, q.id) === filter) &&
-                (
-                  q.name +
-                  q.city +
-                  s.tasks
-                    .filter((t) => t.requestId === q.id)
-                    .map((t) => t.description)
-                    .join()
-                )
-                  .toLowerCase()
-                  .includes(search.toLowerCase()),
-            )
-            .map((q) => (
-              <button
-                key={q.id}
-                className={"queue-item " + (q.id === r.id ? "selected" : "")}
-                onClick={() => choose(q.id)}
-              >
-                <div className="row between">
-                  <strong>{q.name}</strong>
-                  <small>{q.id.toUpperCase()}</small>
-                </div>
-                <p>
-                  <span>
-                    <MapPin size={16} />
-                    {q.city} ·{" "}
-                    {
-                      s.tasks.filter(
-                        (t) => t.requestId === q.id && !t.mergedInto,
-                      ).length
-                    }{" "}
-                    tasks
-                  </span>
-                  {badge(requestStatus(q.id))}
-                </p>
-              </button>
-            ))}
+          {shown.map((q) => (
+            <button
+              key={q.id}
+              className={"queue-item " + (q.id === r.id ? "selected" : "")}
+              onClick={() => {
+                if (q.id === r.id) showDetail();
+                else focusDetail.current = true;
+                choose(q.id);
+              }}
+            >
+              <div className="row between">
+                <strong>{q.name}</strong>
+                <small>{q.id.toUpperCase()}</small>
+              </div>
+              <p>
+                <span>
+                  <MapPin size={16} />
+                  {q.city} ·{" "}
+                  {
+                    s.tasks.filter((t) => t.requestId === q.id && !t.mergedInto)
+                      .length
+                  }{" "}
+                  tasks
+                </span>
+                {badge(requestStatus(q.id))}
+              </p>
+            </button>
+          ))}
         </section>
         <div className="detail">
           <div className="operator-detail-header">
-            <button className="secondary" onClick={() => setPage("Home")}>
-              ← Back to Home
+            <button
+              className="secondary"
+              onClick={() => {
+                flushSync(() => setShowRequestQueue(true));
+                searchBox.current?.focus();
+              }}
+            >
+              ← All requests
             </button>
             <strong>Request Details</strong>
           </div>
@@ -1002,7 +1042,9 @@ export function OperatorRequests() {
                 <span className="eyebrow">
                   SERVICE REQUEST / {r.id.toUpperCase()}
                 </span>
-                <h2>{r.address || r.name}</h2>
+                <h2 ref={detailHeading} tabIndex={-1}>
+                  {r.address || r.name}
+                </h2>
                 <p>
                   <MapPin size={16} /> {r.city} · {r.name}
                 </p>
@@ -1621,6 +1663,7 @@ export function OperatorRequests() {
                       } else
                         notify(
                           "That time conflicts with working hours, preferences, or an existing visit.",
+                          "error",
                         );
                     }}
                   />

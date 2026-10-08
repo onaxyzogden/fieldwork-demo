@@ -15,11 +15,15 @@ import type { suitableProviders } from "./suitability";
 type Setter<T> = React.Dispatch<React.SetStateAction<T>>;
 type Candidate = ReturnType<typeof suitableProviders>[number];
 
+/** A toast that reports a failure is an alert, and stays up longer
+ *  (ADR 080). Anything else is a status. */
+export type Tone = "error";
+
 export type WorkspaceApi = {
   /* Shared */
   s: State;
-  update: (fn: (d: State) => void, msg?: string) => void;
-  notify: (text: string) => void;
+  update: (fn: (d: State) => void, msg?: string, tone?: Tone) => void;
+  notify: (text: string, tone?: Tone) => void;
   page: string;
   setPage: Setter<string>;
   setModal: Setter<string>;

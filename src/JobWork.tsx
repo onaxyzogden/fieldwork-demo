@@ -76,13 +76,24 @@ export function JobWork({
     x = v.execution,
     r = s.requests.find((r) => r.id === v.requestId)!;
   const allowed = canWork(s, v, provider);
+  /* Accepted, but the customer has yet to confirm: the visit is still
+     Proposed, which is the operator's word for it, not the contractor's
+     (ADR 080). */
+  const awaiting =
+    v.status === "Proposed" &&
+    s.assignments.some(
+      (a) =>
+        a.visitId === v.id &&
+        a.providerId === provider &&
+        a.status === "Accepted",
+    );
   const act = (action: "way" | "start" | "finish") =>
     update((d) => {
       execute(d, v.id, provider, action);
     });
   return (
     <section className="card panel work-detail">
-      <span className="badge">{workStatus(v)}</span>
+      <span className="badge">{awaiting ? "Accepted" : workStatus(v)}</span>
       <h2>
         {s.tasks.find((t) => v.taskIds.includes(t.id))?.summary}
         {v.taskIds.length > 1 && ` + ${v.taskIds.length - 1} tasks`}
@@ -129,8 +140,9 @@ export function JobWork({
       )}
       {!allowed && !x?.finishedAt && (
         <p className="note">
-          Work controls become available after assignment acceptance and
-          customer confirmation.
+          {awaiting
+            ? "Work controls open once the customer confirms the booking."
+            : "Work controls become available after assignment acceptance and customer confirmation."}
         </p>
       )}
       <h3>{v.taskIds.length} tasks in this visit</h3>
