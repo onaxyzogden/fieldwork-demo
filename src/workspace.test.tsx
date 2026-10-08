@@ -105,6 +105,29 @@ describe("Operator workspace", () => {
     expect(h1().textContent).toBe("More");
     expect(screen.getByRole("button", { name: "Activity →" })).toBeTruthy();
   });
+
+  it("lists the contractors from More", () => {
+    open("Operator");
+    go(/^More/);
+    fireEvent.click(screen.getByRole("button", { name: "Contractors →" }));
+    expect(h1().textContent).toBe("Good people. Great work.");
+    for (const name of ["Marcus Chen", "Nina Patel"])
+      expect(screen.getByRole("heading", { name })).toBeTruthy();
+  });
+
+  it("shows the activity history from More", () => {
+    open("Operator");
+    go(/^More/);
+    fireEvent.click(screen.getByRole("button", { name: "Activity →" }));
+    expect(h1().textContent).toBe("Activity history");
+  });
+
+  it("opens Demo settings from More", () => {
+    open("Operator");
+    go(/^More/);
+    fireEvent.click(screen.getByRole("button", { name: "Demo settings →" }));
+    expect(screen.getByRole("heading", { name: /Demo settings/ })).toBeTruthy();
+  });
 });
 
 describe("Customer workspace", () => {
