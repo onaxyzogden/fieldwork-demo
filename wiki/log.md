@@ -13,6 +13,7 @@ type: log
   - 578 tests, with no test changes. `tsc` and the build pass.
   - The CSS is byte-identical. The JS index is 309.3 kB (+1.3 kB).
   - Live on `vite preview`: Requests and a request's detail, the Decline modal, the theme toggle, all three roles, compare mode, the sidebar toggle and the decision queue. No console errors.
+- **PR:** #51 (`claude/workspace-state`), against `main`, not stacked. Auto-merge is off.
 - **Next:** move the role-specific helpers into the role files, then a lazy chunk per role.
 - **Pages touched:** [[fieldwork]].
 
