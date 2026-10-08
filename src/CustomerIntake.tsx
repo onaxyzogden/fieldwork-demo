@@ -150,6 +150,15 @@ export default function CustomerIntake({
     if (screen === "address" && saved.length === 1 && !r.address && !typing)
       pick(saved[0]);
   }, [screen]);
+  /* A new step replaces the one focus was in, so its heading takes focus
+     (ADR 079); not on first open, where the page's own focus applies. A
+     task editor opening below still takes it from here. */
+  const heading = useRef<HTMLHeadingElement>(null);
+  const opened = useRef(false);
+  useEffect(() => {
+    if (opened.current) heading.current?.focus();
+    opened.current = true;
+  }, [screen]);
   const patchTask = (id: string, patch: Partial<Task>) =>
     update((d) =>
       Object.assign(
@@ -481,7 +490,9 @@ export default function CustomerIntake({
       {screen === "address" && (
         <>
           <header className="customer-heading">
-            <h1>Where should we come?</h1>
+            <h1 ref={heading} tabIndex={-1}>
+              Where should we come?
+            </h1>
             <p>One address for everything on your list.</p>
           </header>
           {picking && (
@@ -679,7 +690,9 @@ export default function CustomerIntake({
       {screen === "tasks" && (
         <>
           <header className="customer-heading">
-            <h1>What do you need taken care of?</h1>
+            <h1 ref={heading} tabIndex={-1}>
+              What do you need taken care of?
+            </h1>
             <p>
               Add each task separately. Be as detailed as you like — photos help
               a lot.
@@ -872,7 +885,9 @@ export default function CustomerIntake({
       {screen === "booking" && (
         <>
           <header className="customer-heading">
-            <h1>When works for you?</h1>
+            <h1 ref={heading} tabIndex={-1}>
+              When works for you?
+            </h1>
             <p>
               {instant
                 ? "Pick one of the appointments below."

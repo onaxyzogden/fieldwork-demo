@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useState } from "react";
 import { AlertCircle, CheckCircle2 } from "lucide-react";
 import { questionAnswers } from "./clarification";
 import { reoffer } from "./dispatch";
@@ -29,6 +29,7 @@ import FollowUp, { followUpLine } from "./FollowUp";
 import { bucket } from "./work";
 import "./onsite.css";
 import QueueAside from "./QueueAside";
+import { QueueLayer, useOneAtATime } from "./QueueLayer";
 
 /**
  * The operator's decisions, one request at a time (ADR 059).
@@ -59,96 +60,58 @@ export default function DecisionQueue({
   open: (id: string) => void;
   close: () => void;
 }) {
-  const ref = useRef<HTMLDivElement>(null);
-  const [order, setOrder] = useState(() =>
-    decisionQueue(s).map((q) => q.requestId),
-  );
-  const [at, setAt] = useState(0);
-  const [seen, setSeen] = useState(0);
-  const [handled, setHandled] = useState(0);
-
   /* Live, not frozen: what a request needs is read again on every screen, so
      an offer accepted in another tab, or a reply from the customer, is never
      shown as a decision that no longer exists. */
   const live = (id: string) =>
     bucket(s, id) === "Needs Action" ? nextDecision(s, id) : null;
-  let cur = at;
-  while (cur < order.length && !live(order[cur])) cur++;
-  const requestId = order[cur];
+  /* The shared layer (ADR 079): the same order, requeue and modal rules as
+     the customer's and contractor's queues. */
+  const q = useOneAtATime(
+    decisionQueue(s).map((x) => x.requestId),
+    (id) => Boolean(live(id)),
+  );
+  const requestId = q.key;
   const decision = requestId ? live(requestId) : null;
-  const left = order.slice(cur).filter((id) => live(id)).length;
-
-  useEffect(() => {
-    const previous = document.body.style.overflow;
-    document.body.style.overflow = "hidden";
-    return () => {
-      document.body.style.overflow = previous;
-    };
-  }, []);
-  useEffect(() => {
-    ref.current?.scrollTo({ top: 0 });
-    ref.current?.querySelector<HTMLElement>("h1")?.focus();
-  }, [cur, seen]);
-
-  const advance = (acted: boolean) => {
-    if (acted) {
-      setOrder([...order, requestId]);
-      setHandled(handled + 1);
-    }
-    setSeen(seen + 1);
-    setAt(cur + 1);
-  };
 
   return (
-    <div
-      className="onsite"
-      role="dialog"
-      aria-modal="true"
-      aria-label="Decisions"
-      ref={ref}
+    <QueueLayer
+      label="Decisions"
+      position={decision ? `Decision ${q.position}` : ""}
+      screen={q.screen}
+      close={close}
+      aside={
+        decision &&
+        requestId && <QueueAside s={s} role="Operator" requestId={requestId} />
+      }
     >
-      <div className="onsite-frame">
-        <div className="onsite-body">
-          <header className="onsite-head">
-            <span>
-              {decision
-                ? `Decision ${seen + 1} of ${seen + left}`
-                : "Decisions"}
-            </span>
-            <button className="text-button" onClick={close}>
-              Close
+      {decision && requestId ? (
+        <Step
+          key={q.screen}
+          s={s}
+          requestId={requestId}
+          decision={decision}
+          update={update}
+          open={() => open(requestId)}
+          done={() => q.advance(true)}
+          skip={() => q.advance(false)}
+        />
+      ) : (
+        <>
+          <h1 tabIndex={-1}>All caught up</h1>
+          <p className="onsite-hint dq-done">
+            <CheckCircle2 size={20} />
+            {q.handled} decision{q.handled === 1 ? "" : "s"} handled. Anything
+            new will show on Home.
+          </p>
+          <div className="onsite-bar">
+            <button className="primary full" onClick={close}>
+              Back to Home
             </button>
-          </header>
-          {decision ? (
-            <Step
-              key={`${seen}-${requestId}`}
-              s={s}
-              requestId={requestId}
-              decision={decision}
-              update={update}
-              open={() => open(requestId)}
-              done={() => advance(true)}
-              skip={() => advance(false)}
-            />
-          ) : (
-            <>
-              <h1 tabIndex={-1}>All caught up</h1>
-              <p className="onsite-hint dq-done">
-                <CheckCircle2 size={20} />
-                {handled} decision{handled === 1 ? "" : "s"} handled. Anything
-                new will show on Home.
-              </p>
-              <div className="onsite-bar">
-                <button className="primary full" onClick={close}>
-                  Back to Home
-                </button>
-              </div>
-            </>
-          )}
-        </div>
-        {decision && <QueueAside s={s} role="Operator" requestId={requestId} />}
-      </div>
-    </div>
+          </div>
+        </>
+      )}
+    </QueueLayer>
   );
 }
 

@@ -13,6 +13,7 @@ import {
 import { outsideHours, setAvailability } from "./dispatch";
 import { dayLabel } from "./intake";
 import { useFieldErrors } from "./fields";
+import { useSwapFocus } from "./useSwapFocus";
 import { dayKey } from "./work";
 
 /**
@@ -48,6 +49,9 @@ export default function Availability({
   const [hours, setHours] = useState<Hours>(() => structuredClone(saved));
   const [day, setDay] = useState("");
   const [result, setResult] = useState("");
+  /* Offers a save would withdraw, waiting on a yes (ADR 079); 0 when none. */
+  const [withdrawing, setWithdrawing] = useState(0);
+  const swap = useSwapFocus(withdrawing > 0);
   const { fail, clear, fieldClass, invalid, Message } = useFieldErrors();
   const today = dayKey(s.clock);
   const outside = outsideHours(s, provider);
@@ -65,6 +69,7 @@ export default function Availability({
       },
     });
     setResult("");
+    setWithdrawing(0);
   };
   const addDay = () => {
     if (!(day >= today)) return fail("off", "Pick a date from today on.");
@@ -73,9 +78,18 @@ export default function Availability({
     setDay("");
     setResult("");
   };
-  const save = () => {
+  const save = (sure = false) => {
     if (JSON.stringify(hours) === JSON.stringify(saved))
       return setResult("Nothing has changed.");
+    /* Withdrawing offers can't be taken back, so a save that would says so
+       first: a dry run on a copy counts them. */
+    const would = setAvailability(structuredClone(s), provider, hours).withdrawn
+      .length;
+    if (would && !sure) {
+      setResult("");
+      return setWithdrawing(would);
+    }
+    setWithdrawing(0);
     let withdrawn = 0;
     update((d) => {
       withdrawn = setAvailability(d, provider, hours).withdrawn.length;
@@ -187,9 +201,34 @@ export default function Availability({
           <p className="muted">No days off coming up.</p>
         )}
       </section>
-      <button className="primary full" onClick={save}>
-        Save hours
-      </button>
+      {withdrawing > 0 ? (
+        <fieldset className="job-outcomes" ref={swap.picker}>
+          <legend>
+            Saving withdraws {withdrawing} offer{withdrawing === 1 ? "" : "s"}{" "}
+            and sends {withdrawing === 1 ? "it" : "them"} back to the operator.
+          </legend>
+          <div>
+            <button className="primary" onClick={() => save(true)}>
+              Save and withdraw
+            </button>
+          </div>
+          <button
+            className="text-button"
+            data-focus
+            onClick={() => setWithdrawing(0)}
+          >
+            Keep editing
+          </button>
+        </fieldset>
+      ) : (
+        <button
+          ref={swap.trigger}
+          className="primary full"
+          onClick={() => save()}
+        >
+          Save hours
+        </button>
+      )}
       {result && (
         <p className="hours-result" role="status">
           {result}

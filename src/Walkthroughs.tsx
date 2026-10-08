@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Glance, GlanceLead } from "./GlanceCard";
 import { glanceDate, walkthroughGlance } from "./glance";
 import {
@@ -449,6 +449,16 @@ function WalkthroughDetail({
   const property = s.properties.find((p) => p.id === w.propertyId);
   const totals = assessmentTotals(s, w.id);
   const findings = findingsFor(s, w.id);
+  /* A removed finding can be put back where it was (ADR 079), as intake's
+     tasks can. Focus goes to Undo, since the card it was in is gone. */
+  const [removed, setRemoved] = useState<{
+    finding: Finding;
+    index: number;
+  } | null>(null);
+  const undo = useRef<HTMLButtonElement>(null);
+  useEffect(() => {
+    if (removed) undo.current?.focus();
+  }, [removed]);
   const draft = w.status === "Draft";
   /* What earlier visits to this property left unresolved. Only while this one
      is still a draft: carrying into a sent assessment would change what the
@@ -525,13 +535,45 @@ function WalkthroughDetail({
           editable={draft}
           patch={patch}
           attach={attach}
-          remove={() =>
+          remove={() => {
+            setRemoved({
+              finding: structuredClone(f),
+              index: s.findings.findIndex((x) => x.id === f.id),
+            });
             update((d) => {
               d.findings = d.findings.filter((x) => x.id !== f.id);
-            }, "Finding removed")
-          }
+            });
+          }}
         />
       ))}
+      {removed && (
+        <div role="status" className="note">
+          Finding removed.{" "}
+          <button
+            ref={undo}
+            className="text-button"
+            onClick={() => {
+              const { finding, index } = removed;
+              update((d) => {
+                d.findings.splice(
+                  Math.min(index, d.findings.length),
+                  0,
+                  finding,
+                );
+              });
+              setRemoved(null);
+              requestAnimationFrame(() =>
+                document
+                  .getElementById("finding-" + finding.id)
+                  ?.querySelector<HTMLElement>("summary")
+                  ?.focus(),
+              );
+            }}
+          >
+            Undo
+          </button>
+        </div>
+      )}
 
       {draft && (
         <button
@@ -847,7 +889,11 @@ function FindingCard({
   const [photoRejected, setPhotoRejected] = useState(false);
   const number = String(f.number).padStart(2, "0");
   return (
-    <details className="card panel work-task" open={editable}>
+    <details
+      id={"finding-" + f.id}
+      className="card panel work-task"
+      open={editable}
+    >
       <summary>
         <strong>
           {number} · {f.title || "Untitled finding"}

@@ -121,7 +121,17 @@ export function QueueLayer({
       document.removeEventListener("keydown", key);
       document.body.style.overflow = previous;
       for (const sibling of muted) sibling.inert = false;
-      if (back?.isConnected) back.focus();
+      /* The button that opened the layer may be gone by now (the last
+         thing waiting was handled), so focus falls back to the page's
+         heading rather than to nothing (ADR 079). */
+      if (back?.isConnected && back !== document.body) back.focus();
+      else {
+        const h1 = document.querySelector<HTMLElement>("main h1");
+        if (h1) {
+          h1.tabIndex = -1;
+          h1.focus();
+        }
+      }
     };
   }, []);
   useEffect(() => {

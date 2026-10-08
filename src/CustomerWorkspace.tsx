@@ -1,6 +1,8 @@
 import PropertyRecord from "./PropertyRecord";
 import { bucket } from "./work";
-import CustomerQueue from "./CustomerQueue";
+import { useState, type ReactNode } from "react";
+import CustomerQueue, { QUOTE_REASONS } from "./CustomerQueue";
+import { useSwapFocus } from "./useSwapFocus";
 import { customerTodoLabel, customerQueue } from "./roleQueues";
 import {
   customerProgressText,
@@ -50,6 +52,63 @@ import { readyToPay } from "./payments";
 
 /* Loaded when first opened, not with the app (ADR 074). */
 const CustomerIntake = lazyScreen(() => import("./CustomerIntake"));
+
+/**
+ * A card's actions, where Decline takes a second step rather than one tap
+ * (ADR 079): it swaps the row for `prompt` and its `choices`, with `cancel`
+ * to come back. Focus follows the swap both ways.
+ */
+function DeclineStep({
+  approve,
+  declineClass,
+  prompt,
+  choices,
+  cancel,
+  safe,
+  choose,
+}: {
+  approve: ReactNode;
+  declineClass: string;
+  prompt: string;
+  choices: string[];
+  cancel: string;
+  /** Put focus on `cancel`, not the first choice, when choosing is final. */
+  safe?: boolean;
+  choose: (choice: string) => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const swap = useSwapFocus(open);
+  return open ? (
+    <fieldset className="job-outcomes actions" ref={swap.picker}>
+      <legend>{prompt}</legend>
+      <div>
+        {choices.map((c) => (
+          <button key={c} className="secondary" onClick={() => choose(c)}>
+            {c}
+          </button>
+        ))}
+      </div>
+      <button
+        className="text-button"
+        data-focus={safe || undefined}
+        onClick={() => setOpen(false)}
+      >
+        {cancel}
+      </button>
+    </fieldset>
+  ) : (
+    <div className="row actions">
+      {approve}
+      <button
+        ref={swap.trigger}
+        className={declineClass}
+        onClick={() => setOpen(true)}
+      >
+        Decline
+      </button>
+    </div>
+  );
+}
 
 export function CustomerWorkspace() {
   const {
@@ -141,6 +200,12 @@ export function CustomerWorkspace() {
     );
     if (!c) return null;
     const who = providers.find((p) => p.id === c.plan.providerId)?.name;
+    /* Declining removes this card; focus goes to the quote's beside it. */
+    const land = () =>
+      document
+        .getElementById(idPrefix + "quote")
+        ?.querySelector<HTMLElement>("h2")
+        ?.focus();
     return (
       <div className="card panel quote" id={idPrefix + "charge"}>
         <div className="row between">
@@ -158,35 +223,38 @@ export function CustomerWorkspace() {
           For a return visit{who ? ` with ${who}` : ""} on{" "}
           {dateLabel(c.plan.start)}, booked once you approve.
         </small>
-        <div className="row actions">
-          <button
-            className="primary"
-            onClick={() => {
-              let ok = false;
-              update((d) => {
-                ok = approveCharge(d, c.id, fail);
-              });
-              if (ok) notify("Charge approved · return visit booked");
-              else
-                invalidate(
-                  "charge",
-                  "Your payment didn’t go through. Try again, or use another card.",
-                );
-            }}
-          >
-            Approve & pay {money(c.amount)}
-          </button>
-          <button
-            className="text-button"
-            onClick={() =>
-              update((d) => {
-                declineCharge(d, c.id);
-              }, "Charge declined")
-            }
-          >
-            Decline
-          </button>
-        </div>
+        <DeclineStep
+          approve={
+            <button
+              className="primary"
+              onClick={() => {
+                let ok = false;
+                update((d) => {
+                  ok = approveCharge(d, c.id, fail);
+                });
+                if (ok) notify("Charge approved · return visit booked");
+                else
+                  invalidate(
+                    "charge",
+                    "Your payment didn’t go through. Try again, or use another card.",
+                  );
+              }}
+            >
+              Approve & pay {money(c.amount)}
+            </button>
+          }
+          declineClass="text-button"
+          prompt={`Decline this ${money(c.amount)} charge? The return visit won’t be booked.`}
+          choices={["Decline charge"]}
+          cancel="Keep it"
+          safe
+          choose={() => {
+            land();
+            update((d) => {
+              declineCharge(d, c.id);
+            }, "Charge declined");
+          }}
+        />
         <Message field="charge" />
       </div>
     );
@@ -204,7 +272,7 @@ export function CustomerWorkspace() {
             {customerQuoteText(quote.status)}
           </span>
         </div>
-        <h2>
+        <h2 tabIndex={-1}>
           {money(quote.amount)}
           {quote.type === "Estimated range" ? " – " + money(quote.high) : ""}
           <small> CAD</small>
@@ -224,29 +292,39 @@ export function CustomerWorkspace() {
               : "Payment due after approval"}
         </small>
         {role === "Customer" && quote.status === "Sent" && (
-          <div className="row actions">
-            <button
-              className="primary"
-              onClick={() =>
-                update((d) => {
-                  approveQuote(d, quote.id);
-                  log(d, "Customer approved quote");
-                }, "Quote approved")
-              }
-            >
-              Approve quote <Check size={16} />
-            </button>
-            <button
-              className="secondary"
-              onClick={() =>
-                update((d) => {
-                  declineQuote(d, quote.id);
-                }, "Quote declined")
-              }
-            >
-              Decline
-            </button>
-          </div>
+          <DeclineStep
+            approve={
+              <button
+                className="primary"
+                onClick={() =>
+                  update((d) => {
+                    approveQuote(d, quote.id);
+                    log(d, "Customer approved quote");
+                  }, "Quote approved")
+                }
+              >
+                Approve quote <Check size={16} />
+              </button>
+            }
+            declineClass="secondary"
+            prompt="Why not? This helps us revise it."
+            choices={[...QUOTE_REASONS, "No reason"]}
+            cancel="Back"
+            choose={(why) => {
+              /* The buttons go; the card's heading stays. */
+              document
+                .getElementById(idPrefix + "quote")
+                ?.querySelector<HTMLElement>("h2")
+                ?.focus();
+              update((d) => {
+                declineQuote(
+                  d,
+                  quote.id,
+                  why === "No reason" ? undefined : why,
+                );
+              }, "Quote declined");
+            }}
+          />
         )}
         {/* Pay on completion means after the work, not on approval
             (readyToPay, ADR 063). */}
