@@ -13,6 +13,7 @@ import {
   cleanup,
   fireEvent,
   within,
+  waitFor,
 } from "@testing-library/react";
 import { Workspace, type Role } from "./Workspace";
 import { freshDemo } from "./store";
@@ -45,6 +46,20 @@ beforeAll(() => {
   /* Nor scrolling: the fulfillment panel scrolls itself into view. */
   Element.prototype.scrollIntoView ??= function () {};
 });
+/* Each role loads as its own chunk (ADR 078). Load all three once, so every
+   test renders its role at once, as a returning visit does. The first import
+   is transformed on demand, which can take seconds when the suite runs in
+   parallel. */
+beforeAll(async () => {
+  for (const role of ["Operator", "Customer", "Contractor"] as Role[]) {
+    render(<Harness role={role} />);
+    await waitFor(() => expect(screen.queryByText("Loading…")).toBeNull(), {
+      timeout: 20_000,
+    });
+    cleanup();
+  }
+  localStorage.clear();
+}, 60_000);
 afterEach(() => {
   cleanup();
   localStorage.clear();

@@ -1,5 +1,8 @@
-/* First, as ContractorWork was, so onsite.css keeps its place ahead of work.css. */
-import { ContractorWorkspace } from "./ContractorWorkspace";
+/* First, the two sheets the role workspaces brought in when they were
+   imported here, in that order. The roles now load on demand, and this
+   keeps the CSS in the first load and its cascade unchanged (ADR 078). */
+import "./onsite.css";
+import "./work.css";
 /* Then the state, whose imports keep the order Workspace had (ADR 077). */
 import { useWorkspaceState } from "./useWorkspaceState";
 import { cancelBooking, lateFor, rescheduleVisit } from "./decisions";
@@ -39,8 +42,20 @@ import { replacementOptions, reoffer } from "./dispatch";
 import { KEY, load, save, freshDemo } from "./store";
 import { SaveWarning } from "./NotificationUI";
 import { WorkspaceContext } from "./workspaceContext";
-import { OperatorWorkspace } from "./OperatorWorkspace";
-import { CustomerWorkspace } from "./CustomerWorkspace";
+import { lazyScreen } from "./Recovery";
+
+/* Each role loads as its own chunk, the first time it is shown (ADR 078). */
+const loadOperator = () =>
+  import("./OperatorWorkspace").then((m) => ({ default: m.OperatorWorkspace }));
+const loadCustomer = () =>
+  import("./CustomerWorkspace").then((m) => ({ default: m.CustomerWorkspace }));
+const loadContractor = () =>
+  import("./ContractorWorkspace").then((m) => ({
+    default: m.ContractorWorkspace,
+  }));
+const OperatorWorkspace = lazyScreen(loadOperator);
+const CustomerWorkspace = lazyScreen(loadCustomer);
+const ContractorWorkspace = lazyScreen(loadContractor);
 
 export type Role = "Customer" | "Operator" | "Contractor";
 export function Workspace({
@@ -120,6 +135,25 @@ export function Workspace({
     initialCustomer,
     compareMode,
   });
+  /* Once the first role is on screen, fetch the other two while the browser
+     is idle, so switching roles in the demo bar doesn't wait (ADR 078). */
+  React.useEffect(() => {
+    const prefetch = () => {
+      for (const Screen of [
+        OperatorWorkspace,
+        CustomerWorkspace,
+        ContractorWorkspace,
+      ]) {
+        Screen.preload();
+      }
+    };
+    if ("requestIdleCallback" in window) {
+      const id = window.requestIdleCallback(prefetch, { timeout: 5000 });
+      return () => window.cancelIdleCallback(id);
+    }
+    const id = setTimeout(prefetch, 2000);
+    return () => clearTimeout(id);
+  }, []);
   return (
     <div
       className={"app" + (compareMode ? " compare-column" : "")}
