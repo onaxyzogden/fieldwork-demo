@@ -3,6 +3,26 @@ title: "Wiki Log"
 type: log
 ---
 
+## [2026-10-08] session | ADR 080: the platform audit's P2s
+
+- **Decided:**
+  - The Offer gets a "Sent:" record, not an Undo, because an offer notifies and holds.
+  - A declined quote gets customer wording only, with no new status.
+  - The Availability draft lives in `sessionStorage`, with the saved hours it was made from.
+  - On a narrow screen, a chosen request scrolls to the top, instantly.
+- **Completed:**
+  - Toast tone, mounted status and alert regions, one cleared timer, and a clear on role switch.
+  - The sidebar name and counts, "← All requests", focus on the chosen request, and More as current.
+  - The queue's "Sent:" line, the glance's next job, the Accepted badge, photo removal with Undo, and the Availability draft.
+  - The declined-quote wording, the Instant Book confirmation and focus, and the inline missing-task error.
+- **Found:**
+  - A quote payment's "Payment received" toast was being cleared straight after it was set.
+  - Two test fixtures needed `reconcile`, or the reconciler reverted their hand-set state.
+  - Live, the seeded draft offers only Request to Book, so the Instant Book confirmation was checked by its screen test alone.
+- **Verified:** 604 tests (16 new, each failing without its fix). `tsc` and the build pass, and the CSS gained one rule. Live on `vite preview`: intake's inline error and focus, Availability's draft across pages, and no console errors.
+- **Next:** the audit's P3s, and an undo for the operator's Offer.
+- **Pages touched:** [[platform-ux-audit-2026-10]], [[fieldwork]], [[index]].
+
 ## [2026-10-08] session | ADR 079: the platform audit's P1s
 
 - **Decided:** confirm declines and withdrawals, undo removals. There is no snapshot undo, because restoring one would retract notifications and holds already sent.
