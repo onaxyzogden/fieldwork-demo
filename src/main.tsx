@@ -854,7 +854,16 @@ function Workspace({
       provider,
       tasks.filter((t) => !selected.length || selected.includes(t.id)),
     ) &&
-    available(s, provider, duration, r.city, override, undefined, r.timing, r.id)
+    available(
+      s,
+      provider,
+      duration,
+      r.city,
+      override,
+      undefined,
+      r.timing,
+      r.id,
+    )
       ? [
           {
             start: override,
@@ -966,7 +975,9 @@ function Workspace({
         "slot",
         "That time was taken while you were choosing. Pick another appointment.",
       );
-    notify(provider === "yousef" ? "Visit created" : "Offer sent to contractor");
+    notify(
+      provider === "yousef" ? "Visit created" : "Offer sent to contractor",
+    );
     setSelected([]);
   };
   const beginReassign = (v: Visit, self = false) => {
@@ -2709,49 +2720,61 @@ function Workspace({
                         <Message field="tasks" />
                         <Message field="provider" />
                         <div className="provider-options">
-                          {candidates.map((c) => (
-                            <button
-                              key={c.provider.id}
-                              aria-pressed={provider === c.provider.id}
-                              className={
-                                "provider-card " +
-                                (provider === c.provider.id ? "selected" : "")
-                              }
-                              onClick={() => {
-                                clear("provider");
-                                clear("pay");
-                                setProvider(c.provider.id);
-                                // Each contractor's own rate, not the last one's.
-                                setPayTouched(false);
-                                setSlot("");
-                                setOverride("");
-                              }}
-                            >
-                              <div className="avatar">
-                                {c.provider.initials}
-                              </div>
-                              <div>
-                                <strong>{c.provider.name}</strong>
-                                <small>
-                                  {c.provider.city} · {money(c.provider.rate)}
-                                  /hr
-                                </small>
-                                <small>
-                                  {c.match.checks
-                                    .map((x) => x.title)
-                                    .join(" · ")}
-                                </small>
-                                <small>
-                                  {c.appointments.length
-                                    ? `First fitting time: ${dateLabel(c.appointments[0].start)} · ${c.appointments[0].travel} min simulated travel`
-                                    : "No fitting time found"}
-                                </small>
-                              </div>
-                              {provider === c.provider.id && (
-                                <Check size={16} />
-                              )}
-                            </button>
-                          ))}
+                          {candidates.map((c) => {
+                            const theirs = chosenStart(
+                              s,
+                              r,
+                              c.provider.id,
+                              duration,
+                            );
+                            return (
+                              <button
+                                key={c.provider.id}
+                                aria-pressed={provider === c.provider.id}
+                                className={
+                                  "provider-card " +
+                                  (provider === c.provider.id ? "selected" : "")
+                                }
+                                onClick={() => {
+                                  clear("provider");
+                                  clear("pay");
+                                  setProvider(c.provider.id);
+                                  // Each contractor's own rate, not the last one's.
+                                  setPayTouched(false);
+                                  setSlot("");
+                                  setOverride("");
+                                }}
+                              >
+                                <div className="avatar">
+                                  {c.provider.initials}
+                                </div>
+                                <div>
+                                  <strong>{c.provider.name}</strong>
+                                  <small>
+                                    {c.provider.city} · {money(c.provider.rate)}
+                                    /hr
+                                  </small>
+                                  <small>
+                                    {c.match.checks
+                                      .map((x) => x.title)
+                                      .join(" · ")}
+                                  </small>
+                                  <small>
+                                    {/* Agrees with the list below, which puts
+                                      the customer's time first (ADR 072). */}
+                                    {theirs
+                                      ? `Customer’s choice: ${dateLabel(theirs)} · ${c.provider.city === r.city ? 8 : 24} min simulated travel`
+                                      : c.appointments.length
+                                        ? `First fitting time: ${dateLabel(c.appointments[0].start)} · ${c.appointments[0].travel} min simulated travel`
+                                        : "No fitting time found"}
+                                  </small>
+                                </div>
+                                {provider === c.provider.id && (
+                                  <Check size={16} />
+                                )}
+                              </button>
+                            );
+                          })}
                         </div>
                         {!candidates.length && (
                           <div className="warning">
@@ -4184,7 +4207,12 @@ function pickView() {
        and always reads light, and setting it after mount flashes the dark
        palette's text onto a light page. */
     document.documentElement.dataset.theme = "light";
-    return <Assessment token={params.get("t") || ""} legacyId={params.get("id") || ""} />;
+    return (
+      <Assessment
+        token={params.get("t") || ""}
+        legacyId={params.get("id") || ""}
+      />
+    );
   }
   return <App />;
 }
