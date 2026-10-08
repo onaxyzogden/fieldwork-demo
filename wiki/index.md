@@ -32,6 +32,7 @@ A catalog of every wiki page. Read this first at the start of each session. Conv
 | Page | Summary |
 |---|---|
 | [[customer-ux-audit-2026-10]] | 12 findings, P0–P3, all fixed across ADR 069, 070 and 073 |
+| [[platform-ux-audit-2026-10]] | Every role plus the shell: 8 P1s (focus loss, destructive actions with no friction, the role switch's state), none fixed yet |
 
 ## Synthesis
 
