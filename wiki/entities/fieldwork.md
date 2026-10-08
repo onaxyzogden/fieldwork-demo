@@ -22,7 +22,8 @@ An interactive prototype of a handyman services platform. It has three roles, Cu
 
 ## Architecture / Structure
 - `src/main.tsx` is only the entry: CSS, `pickView()` and `createRoot`.
-- `src/Workspace.tsx` holds `Workspace` and `App`. It owns all the workspace state and helpers, the modals and the chrome, but no role's pages any more. It is about 2,530 lines. ADR 077 breaks it up one role at a time.
+- `src/Workspace.tsx` holds `Workspace` and `App`. `Workspace` is the shell: the chrome, the modals and the toasts, about 850 lines. ADR 077 broke it up one role at a time.
+- `src/useWorkspaceState.tsx` holds `useWorkspaceState()`, all the workspace's state, effects and helpers (about 1,830 lines). It returns the context `api` and the names the shell reads.
 - `src/CustomerWorkspace.tsx`, `src/ContractorWorkspace.tsx` and `src/OperatorWorkspace.tsx` are the extracted role workspaces. `OperatorWorkspace` switches on `page`, and renders `src/OperatorRequests.tsx` (about 960 lines) for Requests. They read from `useWorkspace()` (`src/workspaceContext.ts`), whose `WorkspaceApi` type lists only what extracted components read.
 - `src/RequestFields.tsx` holds `NoteReply`, `TaskAnswers` and `ClarificationFields`, which several workspaces share.
 - The CSS order follows the import order. After any extraction, check that the built stylesheet is byte-identical (ADR 077).
@@ -49,10 +50,11 @@ An interactive prototype of a handyman services platform. It has three roles, Cu
 - [[2026-10-07-wiki-in-repo]]: why this wiki is here.
 
 ## Open Questions
-- Splitting the role workspaces would save each role's first load 11–17% gzipped (ADR 075). That is now under way (ADR 077). Every role's pages are out of `Workspace`, Requests included. Next comes a `useWorkspaceState()` hook, then a lazy chunk per role.
+- Splitting the role workspaces would save each role's first load 11–17% gzipped (ADR 075). That is now under way (ADR 077). Every role's pages are out of `Workspace`, and its state is in `useWorkspaceState()`. Next comes moving the role-specific helpers into the role files, then a lazy chunk per role.
 - Bundle-size work is parked (ADR 074–076). The catalogue and the per-role CSS were measured at 6% and 2% of the first load (ADR 076).
 
 ## History
+- 2026-10-08: `Workspace`'s state, effects and helpers moved verbatim into `useWorkspaceState()` (ADR 077, step 6). `Workspace` went from about 2,530 to 850 lines. 578 tests pass unchanged, and the stylesheet is byte-identical.
 - 2026-10-08: the operator's Requests page moved into `OperatorRequests.tsx` (ADR 077). `WorkspaceApi` gained 43 names, and five screen tests were added first. 578 tests pass, and the stylesheet is byte-identical.
 - 2026-10-08: the operator's Home, More, Walkthroughs, Today, Contractors and Activity pages moved into `OperatorWorkspace.tsx` (ADR 077). Three screen tests were added first. 573 tests pass, and the stylesheet is byte-identical.
 - 2026-10-08: ADR 077 started breaking up `Workspace`:

@@ -1992,6 +1992,11 @@ behaviour at all.
    small-screen request list, Offer to a contractor and back, Do it myself,
    and Decline's confirmation. `Workspace` no longer renders any role's
    page inline.
+6. The state, effects and helpers moved, verbatim, into
+   `useWorkspaceState()` (`useWorkspaceState.tsx`, about 1,830 lines). It
+   returns the `api` and the 46 names `Workspace`'s own chrome, modals and
+   toasts read. `Workspace` is now its shell, about 850 lines. The tests
+   didn't change.
 
 | Block | Lines | Names it reads from `Workspace` |
 |---|---|---|
@@ -2004,8 +2009,8 @@ behaviour at all.
 `WorkspaceContext` through `useWorkspace()`. `WorkspaceApi` in
 `workspaceContext.ts` lists only the names an extracted component reads,
 with the types `Workspace` declares them with. Those types were generated
-with the TypeScript compiler, not typed by hand. `Workspace` still owns all
-the state. The type grows with each extraction, until it is the workspace's
+with the TypeScript compiler, not typed by hand. `useWorkspaceState()`
+owns all the state, and `Workspace` provides what it builds. The type grows with each extraction, until it is the workspace's
 real shared API. For now the provider wraps only the role components, so the
 rest of the return keeps its indentation and the diff stays readable.
 `OperatorWorkspace` sits inside the same provider, in the slot of
@@ -2026,8 +2031,10 @@ first import of each module. Removing `ContractorWork` from `Workspace`'s
 imports moved `work.css` ahead of `onsite.css`. The rules were the same, but
 the cascade wasn't. `ContractorWorkspace` is now imported where
 `ContractorWork` was, and the built stylesheet is byte-identical. Check it
-on every extraction.
+on every extraction. `useWorkspaceState` is imported right after it,
+because the hook took over most of `Workspace`'s imports in the same order.
 
 **What remains, in order.**
-- The state and helpers, into a `useWorkspaceState()` hook.
-- Then a `lazyScreen` per role, which is the ADR 075 split, now nearly free.
+- Move the helpers only one role uses (the customer's panels, the
+  operator's Requests helpers) out of the hook and into that role's files.
+- Then a `lazyScreen` per role, which is the ADR 075 split.
