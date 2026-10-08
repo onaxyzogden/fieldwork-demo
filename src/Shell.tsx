@@ -23,6 +23,7 @@ import {
 } from "lucide-react";
 import { type State, accountName, providers } from "./model";
 import { useSwapFocus } from "./useSwapFocus";
+import { bucket } from "./work";
 
 /**
  * The chrome every role shares: the navigation drawer, the prototype banner
@@ -87,6 +88,13 @@ const NAV: Record<Role, [typeof Plus, string][]> = {
   ],
 };
 
+/** Pages reached from a nav item rather than in it, so the item they sit
+ *  under stays marked as current (ADR 080). */
+const UNDER: Record<string, string> = {
+  Contractors: "More",
+  Activity: "More",
+};
+
 export function Sidebar({
   s,
   role,
@@ -143,36 +151,48 @@ export function Sidebar({
           </span>
           fieldwork<span className="brand-dot">.</span>
         </a>
+        {/* The workspace is the operator's; anyone else sees their own name
+            here, as the profile below does (ADR 080). */}
         <div className="workspace">
-          <div className="avatar amber">YH</div>
+          <div className="avatar amber">{me.initials}</div>
           <div>
-            <strong>Yousef’s workspace</strong>
+            <strong>
+              {role === "Operator" ? "Yousef’s workspace" : me.name}
+            </strong>
             <small>Halton &amp; Greater Toronto</small>
           </div>
           <span className="online" />
         </div>
         <span className="nav-caption">WORKSPACE</span>
         <nav>
-          {NAV[role].map(([Icon, label]) => (
-            <button
-              key={label}
-              className={page === label ? "active" : ""}
-              aria-current={page === label ? "page" : undefined}
-              onClick={() => {
-                if (label === "New request") startOrResumeRequest();
-                else setPage(label);
-                setOpen(false);
-              }}
-            >
-              <Icon size={24} />
-              {label}
-              {label === "Requests" && (
-                <span className="nav-count">
-                  {s.requests.filter((r) => r.status !== "Draft").length}
-                </span>
-              )}
-            </button>
-          ))}
+          {NAV[role].map(([Icon, label]) => {
+            const here = (UNDER[page] || page) === label;
+            return (
+              <button
+                key={label}
+                className={here ? "active" : ""}
+                aria-current={here ? "page" : undefined}
+                onClick={() => {
+                  if (label === "New request") startOrResumeRequest();
+                  else setPage(label);
+                  setOpen(false);
+                }}
+              >
+                <Icon size={24} />
+                {label}
+                {/* The same count as Home's Needs Action (ADR 080). */}
+                {label === "Requests" && (
+                  <span className="nav-count">
+                    {
+                      s.requests.filter(
+                        (r) => bucket(s, r.id) === "Needs Action",
+                      ).length
+                    }
+                  </span>
+                )}
+              </button>
+            );
+          })}
         </nav>
         <div className="sidebar-bottom">
           <div className="service-zone">

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { AlertCircle, CheckCircle2 } from "lucide-react";
 import { questionAnswers } from "./clarification";
 import { reoffer } from "./dispatch";
@@ -73,6 +73,15 @@ export default function DecisionQueue({
   );
   const requestId = q.key;
   const decision = requestId ? live(requestId) : null;
+  /* What the last screen did, said on the next one, since the screen it was
+     done on is gone (ADR 080). */
+  const [last, setLast] = useState("");
+  const said = last && (
+    <p className="onsite-hint dq-done" role="status">
+      <CheckCircle2 size={20} />
+      {last}
+    </p>
+  );
 
   return (
     <QueueLayer
@@ -85,6 +94,7 @@ export default function DecisionQueue({
         requestId && <QueueAside s={s} role="Operator" requestId={requestId} />
       }
     >
+      {said}
       {decision && requestId ? (
         <Step
           key={q.screen}
@@ -93,8 +103,14 @@ export default function DecisionQueue({
           decision={decision}
           update={update}
           open={() => open(requestId)}
-          done={() => q.advance(true)}
-          skip={() => q.advance(false)}
+          done={(what) => {
+            setLast(what);
+            q.advance(true);
+          }}
+          skip={() => {
+            setLast("");
+            q.advance(false);
+          }}
         />
       ) : (
         <>
@@ -131,7 +147,8 @@ function Step({
   decision: Decision;
   update: Update;
   open: () => void;
-  done: () => void;
+  /** Move on, saying what was done. */
+  done: (what: string) => void;
   skip: () => void;
 }) {
   const r = s.requests.find((x) => x.id === requestId)!;
@@ -154,13 +171,25 @@ function Step({
   const [titles, setTitles] = useState<Record<string, string>>({});
   const { fail, fieldClass, invalid, clear, Message } = useFieldErrors();
 
+  /** The button last pressed, for the next screen to say what was done. */
+  const pressed = useRef("");
+  const press = (b: { label: string; run: () => void }) => {
+    pressed.current = b.label;
+    b.run();
+  };
   /** Run a write; move on only if it went through. */
   const act = (write: (x: State) => boolean, refusal: string) => {
     let ok = false;
     update((x) => {
       ok = write(x);
     });
-    if (ok) done();
+    if (ok)
+      done(
+        pressed.current &&
+          (/^(Re-o|O)ffer to |quote · /.test(pressed.current)
+            ? "Sent: "
+            : "Done: ") + pressed.current,
+      );
     else setRefused(refusal);
   };
 
@@ -184,7 +213,7 @@ function Step({
           update={update}
           requestId={requestId}
           d={d}
-          done={done}
+          done={() => done("")}
           layout="queue"
           secondary={[
             { label: "Open request", run: open },
@@ -455,12 +484,16 @@ function Step({
         </span>
       )}
       <div className="onsite-bar">
-        <button className="primary full" onClick={primary.run}>
+        <button className="primary full" onClick={() => press(primary)}>
           {primary.label}
         </button>
         <div className="row job-secondary">
           {secondary.map((b) => (
-            <button key={b.label} className="text-button" onClick={b.run}>
+            <button
+              key={b.label}
+              className="text-button"
+              onClick={() => press(b)}
+            >
               {b.label}
             </button>
           ))}

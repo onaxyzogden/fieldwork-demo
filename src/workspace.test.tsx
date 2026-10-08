@@ -5,7 +5,7 @@
  * one role at a time without changing it. They query by role and visible
  * text, not markup, and avoid anything that depends on today's date.
  */
-import { describe, it, expect, afterEach, beforeAll } from "vitest";
+import { describe, it, expect, afterEach, beforeAll, vi } from "vitest";
 import React, { useState } from "react";
 import {
   render,
@@ -14,12 +14,20 @@ import {
   fireEvent,
   within,
   waitFor,
+  act,
 } from "@testing-library/react";
 import { Workspace, type Role } from "./Workspace";
 import { freshDemo } from "./store";
-import { providers, type State } from "./model";
+import {
+  approveQuote,
+  declineQuote,
+  providers,
+  reconcile,
+  type State,
+} from "./model";
 import { issueQuote } from "./decisions";
 import { addFinding, createWalkthrough } from "./pmw";
+import { bucket } from "./work";
 
 function Harness({
   role,
@@ -77,6 +85,7 @@ beforeAll(async () => {
 afterEach(() => {
   cleanup();
   localStorage.clear();
+  sessionStorage.clear();
 });
 
 const open = (role: Role, init?: (s: State) => void) =>
@@ -566,5 +575,257 @@ describe("Focus and friction (ADR 079)", () => {
       within(group).getByRole("button", { name }).getAttribute("aria-pressed");
     expect(pressed("Operator")).toBe("true");
     expect(pressed("Customer")).toBe("false");
+  });
+});
+
+/* ADR 080: the platform audit's P2s. What the screen says matches what
+   happened, and is said where it can be read. */
+describe("State and wording (ADR 080)", () => {
+  const focused = () => document.activeElement;
+  const toasts = () => document.querySelector<HTMLElement>(".toasts")!;
+  /** Customer c2, part way through booking the seeded door adjustment. */
+  const booking = (d: State) => {
+    const r = d.requests.find((x) => x.status === "Draft")!;
+    r.accountId = "c2";
+    r.intakeScreen = "booking";
+    const t = d.tasks.find((x) => x.requestId === r.id)!;
+    t.answers = {
+      "door-adjust:location": "Interior",
+      "door-adjust:symptom": "Rubbing or sticking",
+      "door-adjust:damage": "No visible damage",
+      "door-adjust:count": "1",
+    };
+    t.entryStage = "done";
+  };
+  const instantBook = async () => {
+    go(/^New request/);
+    await screen.findByRole("heading", { name: "Available appointments" });
+    fireEvent.click(document.querySelector(".intake-times button")!);
+    fireEvent.click(screen.getByRole("button", { name: "Book & pay $129" }));
+  };
+  const settings = () =>
+    fireEvent.click(
+      screen.getAllByRole("button", { name: /Demo settings/ })[0],
+    );
+
+  it("keeps the toast region mounted, and an error is an alert", async () => {
+    open("Customer", booking);
+    expect(toasts().getAttribute("role")).toBe("status");
+    settings();
+    fireEvent.click(screen.getByLabelText("Customer payments fail"));
+    fireEvent.click(screen.getByRole("button", { name: "Close dialog" }));
+    await instantBook();
+    fireEvent.click(screen.getByRole("button", { name: /^Pay / }));
+    expect(screen.getByRole("alert").textContent).toMatch(
+      /payment didn’t go through/,
+    );
+  });
+
+  it("keeps a new toast up for its full time", () => {
+    open("Operator");
+    vi.useFakeTimers();
+    try {
+      const reset = () => {
+        settings();
+        fireEvent.click(
+          screen.getByRole("button", { name: /Reset all demo data/ }),
+        );
+        fireEvent.click(
+          screen.getByRole("button", { name: "Reset everything" }),
+        );
+      };
+      reset();
+      act(() => vi.advanceTimersByTime(3000));
+      reset();
+      act(() => vi.advanceTimersByTime(1000));
+      expect(screen.queryByText("All five scenarios reset")).not.toBeNull();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("drops a toast when switching who is being viewed", () => {
+    open("Contractor");
+    fireEvent.click(screen.getByRole("button", { name: "Accept job" }));
+    expect(screen.getByText("Job accepted")).toBeTruthy();
+    fireEvent.click(screen.getByRole("button", { name: "Nina Patel" }));
+    expect(screen.queryByText("Job accepted")).toBeNull();
+  });
+
+  it("names whoever is being viewed in the sidebar", () => {
+    open("Contractor");
+    const me = document.querySelector<HTMLElement>(".sidebar .workspace")!;
+    expect(me.textContent).toContain("Marcus Chen");
+    expect(me.textContent).not.toContain("Yousef");
+  });
+
+  it("counts the same requests in the sidebar, on Home and in the list", () => {
+    const d = freshDemo();
+    const needs = d.requests.filter(
+      (r) => bucket(d, r.id) === "Needs Action",
+    ).length;
+    open("Operator");
+    const nav = sidebar().getByRole("button", {
+      name: /^Requests/,
+      hidden: true,
+    });
+    expect(nav.textContent).toContain(String(needs));
+    go(/^Requests/);
+    const list = within(
+      screen.getByPlaceholderText("Search requests…").closest("section")!,
+    )
+      .getAllByRole("button")
+      .filter((b) => b.classList.contains("queue-item"));
+    expect(
+      screen.getByText(/^\d+ requests?$/).textContent,
+    ).toBe(`${list.length} request${list.length === 1 ? "" : "s"}`);
+  });
+
+  it("marks More as current on the pages under it", () => {
+    open("Operator");
+    go(/^More/);
+    fireEvent.click(screen.getByRole("button", { name: "Contractors →" }));
+    expect(
+      sidebar()
+        .getByRole("button", { name: /^More/, hidden: true })
+        .getAttribute("aria-current"),
+    ).toBe("page");
+  });
+
+  it("goes back to the request list, not Home", () => {
+    open("Operator");
+    go(/^Requests/);
+    fireEvent.click(screen.getByRole("button", { name: "← All requests" }));
+    expect(h1().textContent).toBe("Service requests");
+    expect(focused()).toBe(screen.getByPlaceholderText("Search requests…"));
+  });
+
+  it("moves focus to the request chosen from the list", () => {
+    open("Operator");
+    go(/^Requests/);
+    fireEvent.click(screen.getByRole("button", { name: /^Priya Nair/ }));
+    expect(focused()).toBe(
+      screen.getByRole("heading", { level: 2, name: "215 New Street" }),
+    );
+  });
+
+  it("says what the decision queue just sent", () => {
+    open("Operator");
+    fireEvent.click(
+      screen.getByRole("button", { name: /Work through \d+ decisions?/ }),
+    );
+    const dialog = screen.getByRole("dialog", { name: "Decisions" });
+    for (let i = 0; i < 6; i++) {
+      const offer = within(dialog).queryByRole("button", {
+        name: /^Offer to /,
+      });
+      if (offer) {
+        const label = offer.textContent!;
+        fireEvent.click(offer);
+        expect(within(dialog).getByText("Sent: " + label)).toBeTruthy();
+        return;
+      }
+      fireEvent.click(within(dialog).getByRole("button", { name: /^Skip/ }));
+    }
+    throw new Error("No offer in the queue");
+  });
+
+  it("says an accepted job is waiting on the customer", () => {
+    open("Contractor");
+    fireEvent.click(screen.getByRole("button", { name: "Accept job" }));
+    const job = document.querySelector<HTMLElement>(".work-detail")!;
+    expect(within(job).queryByText("Proposed")).toBeNull();
+    expect(within(job).getByText("Accepted")).toBeTruthy();
+    expect(job.textContent).toMatch(/customer confirms/);
+  });
+
+  it("can remove a photo taken on site, and undo it", () => {
+    open("Contractor", (d) => {
+      const v = d.visits.find((x) => x.providerId === "marcus")!;
+      d.assignments.find((a) => a.visitId === v.id)!.status = "Accepted";
+      issueQuote(d, v.requestId, {
+        type: "Fixed price",
+        amount: 240,
+        payOnCompletion: true,
+      });
+      approveQuote(d, d.quotes.at(-1)!.id);
+      reconcile(d);
+      expect(v.status).toBe("Confirmed");
+      v.execution = {
+        startedAt: new Date(d.clock).toISOString(),
+        outcomes: {
+          [v.taskIds[0]]: {
+            outcome: "",
+            note: "",
+            before: ["data:image/png;base64,AA=="],
+            after: [],
+          },
+        },
+      };
+    });
+    expect(screen.getByAltText("before photo 1")).toBeTruthy();
+    fireEvent.click(
+      screen.getByRole("button", { name: "Remove before photo 1" }),
+    );
+    expect(screen.queryByAltText("before photo 1")).toBeNull();
+    fireEvent.click(screen.getByRole("button", { name: "Undo" }));
+    expect(screen.getByAltText("before photo 1")).toBeTruthy();
+  });
+
+  it("keeps unsaved hours when leaving Availability and coming back", () => {
+    open("Contractor");
+    go(/^Availability/);
+    const pills = () =>
+      screen
+        .getAllByRole("button", { pressed: true })
+        .filter((b) => b.classList.contains("time-pill"));
+    const before = pills().length;
+    fireEvent.click(pills()[0]);
+    expect(screen.getByText(/^Unsaved changes/)).toBeTruthy();
+    go(/^Earnings/);
+    go(/^Availability/);
+    expect(pills().length).toBe(before - 1);
+    expect(screen.getByText(/^Unsaved changes/)).toBeTruthy();
+  });
+
+  it("says a declined quote is being revised, not that it is ready", () => {
+    open("Customer", (d) => {
+      const r = d.requests.find(
+        (x) => x.accountId === "c2" && x.status !== "Draft",
+      )!;
+      issueQuote(d, r.id, {
+        type: "Fixed price",
+        amount: 240,
+        payOnCompletion: false,
+      });
+      declineQuote(d, d.quotes.at(-1)!.id, "Too expensive");
+      reconcile(d);
+    });
+    go(/^My bookings/);
+    expect(screen.queryByText("Quote ready")).toBeNull();
+    expect(screen.getAllByText(/revising it/).length).toBeGreaterThan(0);
+  });
+
+  it("confirms an Instant Book, and focuses the new booking", async () => {
+    open("Customer", booking);
+    await instantBook();
+    fireEvent.click(screen.getByRole("button", { name: /^Pay / }));
+    expect(toasts().textContent).toMatch(/^Booked and paid · \$129/);
+    await waitFor(() =>
+      expect(focused()?.textContent).toMatch(/^124 Maple Grove Drive/),
+    );
+  });
+
+  it("says a task is missing beside the task, not in a toast", async () => {
+    open("Customer");
+    go(/^New request/);
+    await screen.findByRole("heading", { name: "Where should we come?" });
+    const saved = screen.getByRole("region", { name: "Your addresses" });
+    fireEvent.click(within(saved).getAllByRole("button")[0]);
+    fireEvent.click(screen.getByRole("button", { name: /^Continue/ }));
+    fireEvent.click(screen.getByRole("button", { name: /^Continue/ }));
+    expect(toasts().textContent).toBe("");
+    expect(screen.getByText("Add a task before continuing.")).toBeTruthy();
+    await waitFor(() => expect(focused()?.tagName).toBe("TEXTAREA"));
   });
 });

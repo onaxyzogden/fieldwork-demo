@@ -27,7 +27,11 @@ import { useFieldErrors } from "./fields";
 import { callBackText, inbox, noticeTarget } from "./notifications";
 import { MessageThread } from "./NotificationUI";
 import { save, commit } from "./store";
-import { WorkspaceContext, type WorkspaceApi } from "./workspaceContext";
+import {
+  WorkspaceContext,
+  type Tone,
+  type WorkspaceApi,
+} from "./workspaceContext";
 import type { Role } from "./Shell";
 
 /**
@@ -59,7 +63,7 @@ export function useWorkspaceState({
       localStorage.setItem("fieldwork-theme", theme);
     } catch {}
   }, [theme]);
-  const [role, setRole] = useState<Role>(initialRole);
+  const [role, setRoleNow] = useState<Role>(initialRole);
   const idPrefix = compareMode ? role + "-" : "";
   React.useEffect(() => {
     save(s);
@@ -68,10 +72,37 @@ export function useWorkspaceState({
   const [active, setActive] = useState("r2");
   const [expanded, setExpanded] = useState(true);
   const [payError, setPayError] = useState(false);
-  const [contractor, setContractor] = useState("marcus");
+  const [contractor, setContractorNow] = useState("marcus");
   const [contractorVisit, setContractorVisit] = useState("");
-  const [customer, setCustomer] = useState(initialCustomer);
-  const [toast, setToast] = useState("");
+  const [customer, setCustomerNow] = useState(initialCustomer);
+  /* One toast at a time, on one timer (ADR 080). A new toast clears the old
+     timer, so it is not cut short by the one before it. Errors are alerts and
+     stay up longer, since they are the ones that have to be read. */
+  const [toast, setToastText] = useState("");
+  const [toastTone, setToastTone] = useState<Tone | undefined>();
+  const toastTimer = React.useRef<ReturnType<typeof setTimeout>>(undefined);
+  const setToast = (text: string, tone?: Tone) => {
+    clearTimeout(toastTimer.current);
+    setToastText(text);
+    setToastTone(tone);
+    if (text)
+      toastTimer.current = setTimeout(
+        () => setToastText(""),
+        tone === "error" ? 7000 : 3500,
+      );
+  };
+  React.useEffect(() => () => clearTimeout(toastTimer.current), []);
+  /* A toast is about whoever was being viewed, so switching who that is
+     drops it (ADR 080). */
+  const switching =
+    <T,>(set: React.Dispatch<React.SetStateAction<T>>) =>
+    (v: React.SetStateAction<T>) => {
+      setToast("");
+      set(v);
+    };
+  const setRole = switching(setRoleNow),
+    setContractor = switching(setContractorNow),
+    setCustomer = switching(setCustomerNow);
   const [search, setSearch] = useState("");
   const [filter, setFilter] = useState("Needs Action");
   const [step, setStep] = useState(0);
@@ -179,7 +210,7 @@ export function useWorkspaceState({
     };
   }, [sidebar]);
   const [override, setOverride] = useState("");
-  const update = (fn: (d: State) => void, msg?: string) => {
+  const update = (fn: (d: State) => void, msg?: string, tone?: Tone) => {
     /* commit() writes to localStorage and emits notifications, so it must not
        run inside a React state updater: StrictMode double-invokes those in
        development, which ran every write — and every notification — twice.
@@ -187,10 +218,7 @@ export function useWorkspaceState({
        reads the newest state off disk itself and only falls back to what it
        is given. */
     setS(commit(s, fn));
-    if (msg) {
-      setToast(msg);
-      setTimeout(() => setToast(""), 3500);
-    }
+    if (msg) setToast(msg, tone);
   };
   const recipient =
     role === "Operator"
@@ -384,10 +412,7 @@ export function useWorkspaceState({
   /* The customer's chosen time comes first while it still fits; best route
      fills the rest (ADR 072). */
   const chosenTime = fits ? chosenStart(s, r, provider, duration) : undefined;
-  const notify = (text: string) => {
-    setToast(text);
-    setTimeout(() => setToast(""), 3500);
-  };
+  const notify = (text: string, tone?: Tone) => setToast(text, tone);
   const choose = (id: string) => {
     setShowRequestQueue(false);
     setQuoteTouched(false);
@@ -395,7 +420,7 @@ export function useWorkspaceState({
     setLateFee(null);
     const req = s.requests.find((x) => x.id === id)!;
     setActive(id);
-    setCustomer(req.accountId);
+    setCustomerNow(req.accountId);
     setSelected([]);
     setFulfillment(false);
     setRequestTab("");
@@ -731,6 +756,7 @@ export function useWorkspaceState({
     startOrResumeRequest,
     tasks,
     toast,
+    toastTone,
     update,
     visits,
     workspaceRef,

@@ -9,6 +9,7 @@ import { cancelBooking, lateFor, rescheduleVisit } from "./decisions";
 import { validAddress } from "./intake";
 import React, { useState } from "react";
 import {
+  AlertCircle,
   ArrowRight,
   Check,
   Clock,
@@ -118,12 +119,12 @@ export function Workspace({
     setSelected,
     setSidebar,
     setStep,
-    setToast,
     sidebar,
     slot,
     startOrResumeRequest,
     tasks,
     toast,
+    toastTone,
     update,
     visits,
     workspaceRef,
@@ -239,12 +240,24 @@ export function Workspace({
           </footer>
         </main>
       </div>
-      {toast && (
-        <div className="toast" role="status">
-          <CheckCircle2 size={16} />
-          {toast}
-        </div>
-      )}
+      {/* The regions stay mounted so a screen reader hears the first toast
+          too, and a failure is an alert (ADR 080). */}
+      <div className="toasts" role="status">
+        {toast && toastTone !== "error" && (
+          <div className="toast">
+            <CheckCircle2 size={16} />
+            {toast}
+          </div>
+        )}
+      </div>
+      <div className="toasts" role="alert">
+        {toast && toastTone === "error" && (
+          <div className="toast error">
+            <AlertCircle size={16} />
+            {toast}
+          </div>
+        )}
+      </div>
       {modal && (
         <div className="modal-backdrop" onClick={() => setModal("")}>
           <section
@@ -341,6 +354,7 @@ export function Workspace({
                       if (fail) {
                         notify(
                           "Your payment didn’t go through. Try again, or use another card.",
+                          "error",
                         );
                         return;
                       }
@@ -364,59 +378,73 @@ export function Workspace({
                           "instant-slot",
                           "That slot is no longer available. Close this and choose another time.",
                         );
-                      update((d) => {
-                        const req = d.requests.find((q) => q.id === r.id)!;
-                        req.status = "Submitted";
-                        req.mode = "Instant Book";
-                        const vid = uid(),
-                          qid = uid();
-                        d.visits.push({
-                          id: vid,
-                          requestId: r.id,
-                          taskIds: tasks.map((t) => t.id),
-                          providerId: "yousef",
-                          start: slot,
-                          duration: tasks[0].duration,
-                          status: "Proposed",
-                          travel: 8,
-                        });
-                        d.assignments.push({
-                          id: uid(),
-                          visitId: vid,
-                          providerId: "yousef",
-                          status: "Accepted",
-                          pay: 0,
-                          expiresAt: d.clock,
-                        });
-                        d.quotes.push({
-                          id: qid,
-                          requestId: r.id,
-                          type: "Fixed price",
-                          amount: 129,
-                          high: 129,
-                          status: "Approved",
-                          notes:
-                            "Door adjustment, labour and standard materials.",
-                          payOnCompletion: false,
-                        });
-                        d.payments.push({
-                          id: uid(),
-                          quoteId: qid,
-                          status: "Paid",
-                          amount: 129,
-                          reference: uid(),
-                        });
-                        releaseHold(d, r.id);
-                        log(
-                          d,
-                          "Instant booking confirmed · demo receipt issued",
-                        );
-                      });
+                      update(
+                        (d) => {
+                          const req = d.requests.find((q) => q.id === r.id)!;
+                          req.status = "Submitted";
+                          req.mode = "Instant Book";
+                          const vid = uid(),
+                            qid = uid();
+                          d.visits.push({
+                            id: vid,
+                            requestId: r.id,
+                            taskIds: tasks.map((t) => t.id),
+                            providerId: "yousef",
+                            start: slot,
+                            duration: tasks[0].duration,
+                            status: "Proposed",
+                            travel: 8,
+                          });
+                          d.assignments.push({
+                            id: uid(),
+                            visitId: vid,
+                            providerId: "yousef",
+                            status: "Accepted",
+                            pay: 0,
+                            expiresAt: d.clock,
+                          });
+                          d.quotes.push({
+                            id: qid,
+                            requestId: r.id,
+                            type: "Fixed price",
+                            amount: 129,
+                            high: 129,
+                            status: "Approved",
+                            notes:
+                              "Door adjustment, labour and standard materials.",
+                            payOnCompletion: false,
+                          });
+                          d.payments.push({
+                            id: uid(),
+                            quoteId: qid,
+                            status: "Paid",
+                            amount: 129,
+                            reference: uid(),
+                          });
+                          releaseHold(d, r.id);
+                          log(
+                            d,
+                            "Instant booking confirmed · demo receipt issued",
+                          );
+                        },
+                        `Booked and paid · ${money(129)} · ${dateLabel(slot)}`,
+                      );
                       // Straight back to Home, same as an ordinary submit —
                       // the accordion's own visit card shows the confirmation,
                       // so there is no separate receipt screen to detour
-                      // through here either.
+                      // through here either. The toast says it happened, and
+                      // focus goes to the new booking (ADR 080). The page may
+                      // still be loading, so this waits a few frames for it.
                       setPage("My bookings");
+                      const focusBooking = (tries: number) =>
+                        requestAnimationFrame(() => {
+                          const head = document.querySelector<HTMLElement>(
+                            `[aria-controls="request-${r.id}"]`,
+                          );
+                          if (head) head.focus();
+                          else if (tries) focusBooking(tries - 1);
+                        });
+                      focusBooking(20);
                     } else if (quote) {
                       update(
                         (d) => {
@@ -425,10 +453,10 @@ export function Workspace({
                         fail
                           ? "Your payment didn’t go through. Try again, or use another card."
                           : "Payment received. Thank you.",
+                        fail ? "error" : undefined,
                       );
                       if (fail) return;
                     }
-                    setToast("");
                     setModal("");
                   }}
                 >

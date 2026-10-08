@@ -108,6 +108,20 @@ describe("the contractor's glance", () => {
     expect(contractorGlance(empty, "marcus", empty.clock).next).toBe(null);
   });
 
+  it("does not name a job already finished today as next", () => {
+    const s = seed();
+    s.assignments = [];
+    job(s, "v-done", s.clock, "Accepted", {
+      startedAt: new Date(s.clock).toISOString(),
+      finishedAt: new Date(s.clock).toISOString(),
+      outcomes: {},
+    });
+    job(s, "v-later", s.clock + 2 * DAY, "Accepted");
+    expect(contractorGlance(s, "marcus", s.clock).next?.visit.id).toBe(
+      "v-later",
+    );
+  });
+
   it("gives a contractor with nothing three zeroes rather than failing", () => {
     const s = seed();
     s.assignments = [];

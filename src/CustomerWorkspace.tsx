@@ -7,7 +7,7 @@ import { customerTodoLabel, customerQueue } from "./roleQueues";
 import {
   customerProgressText,
   customerQuoteText,
-  customerStatusText,
+  customerRequestText,
 } from "./customerText";
 import { dayLabel, taskLabel } from "./intake";
 import {
@@ -187,9 +187,9 @@ export function CustomerWorkspace() {
      person with no stake in that state machine, and it clashed with the
      plain-language note rendered right below it. Colour still keys off the
      real status via badgeTone(); only the words change (customerText.ts). */
-  const customerBadge = (status: string) => (
-    <span className={"badge " + badgeTone(status)}>
-      {customerStatusText(status)}
+  const customerBadge = (x: Request) => (
+    <span className={"badge " + badgeTone(x.status)}>
+      {customerRequestText(s, x)}
     </span>
   );
   /* An additional charge for a return visit (ADR 065), beside the quote it
@@ -537,7 +537,7 @@ export function CustomerWorkspace() {
                         {x.city} · {count} {count === 1 ? "task" : "tasks"}
                       </small>
                     </span>
-                    {customerBadge(x.status)}
+                    {customerBadge(x)}
                     <ChevronDown
                       size={20}
                       className={open ? "chevron open" : "chevron"}

@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, type ReactNode } from "react";
-import { Camera, MessageSquare } from "lucide-react";
+import { Camera, MessageSquare, X } from "lucide-react";
 import { questionAnswers } from "./clarification";
 import { type State, type Visit, dateLabel } from "./model";
 import {
@@ -311,6 +311,42 @@ function TaskStep({
       saveOutcome(d, v.id, provider, id, { [kind]: [...current, stored] });
     });
   };
+  /* A photo taken by mistake can be removed, and put back where it was
+     (ADR 080), as a finding can. Focus goes to Undo, since the photo and its
+     button are gone. */
+  type Shot = { kind: "before" | "after"; index: number; src: string };
+  const [removedShot, setRemovedShot] = useState<Shot | null>(null);
+  const undoShot = useRef<HTMLButtonElement>(null);
+  useEffect(() => {
+    if (removedShot) undoShot.current?.focus();
+  }, [removedShot]);
+  const shots = (
+    kind: "before" | "after",
+    change: (current: string[]) => string[],
+  ) =>
+    update((d) => {
+      const current =
+        d.visits.find((x) => x.id === v.id)?.execution?.outcomes[id]?.[kind] ||
+        [];
+      saveOutcome(d, v.id, provider, id, { [kind]: change(current) });
+    });
+  const unshoot = (kind: "before" | "after", index: number) => {
+    const src = o?.[kind][index];
+    if (!src) return;
+    shots(kind, (c) => c.filter((_, j) => j !== index));
+    setRemovedShot({ kind, index, src });
+  };
+  const reshoot = ({ kind, index, src }: Shot) => {
+    shots(kind, (c) => [...c.slice(0, index), src, ...c.slice(index)]);
+    setRemovedShot(null);
+    requestAnimationFrame(() =>
+      document
+        .querySelector<HTMLElement>(
+          `[aria-label="Remove ${kind} photo ${index + 1}"]`,
+        )
+        ?.focus(),
+    );
+  };
   const done = () => {
     save({ outcome: "Completed" });
     advance();
@@ -385,13 +421,34 @@ function TaskStep({
             {!!o?.[kind].length && (
               <div className="photos">
                 {o[kind].map((p, i) => (
-                  <img key={i} src={p} alt={`${kind} photo ${i + 1}`} />
+                  <span key={i} className="onsite-thumb">
+                    <img src={p} alt={`${kind} photo ${i + 1}`} />
+                    <button
+                      className="text-button"
+                      aria-label={`Remove ${kind} photo ${i + 1}`}
+                      onClick={() => unshoot(kind, i)}
+                    >
+                      <X size={16} />
+                    </button>
+                  </span>
                 ))}
               </div>
             )}
           </div>
         ))}
       </div>
+      {removedShot && (
+        <div role="status" className="note">
+          {removedShot.kind === "before" ? "Before" : "After"} photo removed.{" "}
+          <button
+            ref={undoShot}
+            className="text-button"
+            onClick={() => reshoot(removedShot)}
+          >
+            Undo
+          </button>
+        </div>
+      )}
       {rejected && (
         <span className="field-message" role="alert">
           {unreadableMessage}

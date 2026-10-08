@@ -17,6 +17,19 @@ export const customerStatusText = (status: string) =>
     "Information requested": "Waiting on your reply",
   })[status] || status;
 
+/** The customer declined the live quote, and a new one hasn't replaced it.
+ *  The request is still "Awaiting Quote Approval", but nothing is ready for
+ *  them: the operator is revising it (ADR 080). */
+export const quoteDeclined = (s: State, requestId: string) =>
+  s.quotes.find((q) => q.requestId === requestId && q.status !== "Superseded")
+    ?.status === "Declined";
+
+/** A request's badge, which reads the quote as well as the request. */
+export const customerRequestText = (s: State, r: Request) =>
+  r.status === "Awaiting Quote Approval" && quoteDeclined(s, r.id)
+    ? "Quote declined · we’re revising it"
+    : customerStatusText(r.status);
+
 /** "Sent" is the operator's side of a quote; to the customer it awaits them. */
 export const customerQuoteText = (status: string) =>
   ({ Sent: "Awaiting your approval" })[status] || status;
@@ -64,6 +77,8 @@ const accepted = (s: State, requestId: string) =>
 export function customerProgressText(s: State, r: Request): string {
   if (r.operatorNote && !r.customerReply)
     return "We have a question for you. Answer it below so we can keep going.";
+  if (quoteDeclined(s, r.id))
+    return "You declined the quote. We’re revising it and will send you a new one.";
   if (!coordinated(s, r.id))
     return r.status === "Needs Review"
       ? "A coordinator is reviewing your request and will follow up shortly."

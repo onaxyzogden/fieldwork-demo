@@ -2154,3 +2154,76 @@ load grew by 0.3 kB gzipped. There are 588 tests, ten of them new.
 Out of scope, and left for later: the audit's P2s and P3s. These include
 the Declined quote still reading "Quote ready", toast timing, and an undo
 for the operator's Offer.
+
+## ADR 080: What the screen says matches what happened, and is said where it can be read
+
+Accepted. These are fourteen of the fifteen P2 findings of the platform UX
+audit of 2026-10 (`wiki/sources/platform-ux-audit-2026-10.md`). The
+fifteenth, intake focus, was fixed in ADR 079. Each is pinned by a test,
+fifteen of them screen tests in `workspace.test.tsx` ("State and wording
+(ADR 080)") and one in `glance.test.ts`, and each fails without its fix.
+
+**Toasts have a tone and one timer.**
+- `update` and `notify` take an optional tone, `"error"`.
+- Two regions stay mounted, so the first toast is heard too: a
+  `role="status"` one for news, and a `role="alert"` one for failures,
+  which carry an alert icon and a danger border.
+- A new toast clears the old timer, so the one before can't cut it short.
+  Errors stay up for 7 s and news for 3.5 s.
+- Switching role, contractor or customer drops the toast, since it was
+  about whoever was being viewed.
+- The failures sent as errors are: a payment that didn't go through,
+  intake’s missing details, photos and address, a time that no longer fits, a
+  cover or override conflict, and a failed capture.
+
+**Errors that belong to a field are said beside it.** Continuing intake with
+no task opens the empty task and says "Add a task before continuing." under
+its textarea, with focus there. It is not said in a toast.
+
+**The state shown is the state that holds.**
+- A declined quote leaves the request "Awaiting Quote Approval" for the
+  operator. The customer's badge reads "Quote declined · we’re revising
+  it", and the line under it says the same. There is no new status: the
+  wording is derived from the live quote (`customerRequestText`).
+- After Accept, a contractor's job reads "Accepted", and says work opens
+  once the customer confirms. It no longer reads "Proposed", which is the
+  visit's status.
+- The contractor's glance names the next job not yet finished, so a job
+  done earlier today is not "next".
+- The Requests count in the sidebar is the Needs Action bucket, the same
+  number Home shows. The list's own count is the number of rows it shows.
+
+**Each person sees their own name.** The sidebar's workspace block shows the
+contractor's or customer's initials and name. Only the operator's reads
+"Yousef’s workspace".
+
+**The operator's request detail.**
+- "← All requests" goes back to the list, with focus in its search box.
+  It used to go back to Home.
+- Choosing a request moves focus to its heading. On a narrow screen, where
+  the list sits above the detail, the detail also scrolls to the top. The
+  scroll is instant: a smooth one did not move the page reliably.
+- Contractors and Activity mark More as the current page.
+- After an Offer, the decision queue says "Sent: Offer to …". Any other
+  decision says "Done: …". The Offer has no Undo, which is left for later:
+  an offer notifies the contractor and holds the time, as ADR 079 says.
+
+**Nothing is lost silently.**
+- A photo taken on site can be removed (an X on its thumbnail), with an
+  inline "Before photo removed. Undo". Undo puts it back where it was.
+- Unsaved Availability hours survive a trip to another page. They are kept
+  for the browser tab, in `sessionStorage`, with the saved hours they were
+  made from, so they are dropped once those change. While they differ, the
+  page says "Unsaved changes. Offers follow your saved hours until you
+  save."
+- Instant Book's payment ends with a toast, "Booked and paid · $129 ·
+  {time}", and focus on the new booking. A quote payment's "Payment
+  received" toast was being cleared straight after it was set, and now
+  stays.
+
+**What it cost.** The stylesheet gained one rule, for the error toast. The
+removable photo reuses `onsite-thumb`, and the queue's record reuses
+`onsite-hint dq-done`. There are 604 tests, sixteen of them new.
+
+Out of scope, and left for later: an undo for the operator's Offer, Instant
+Book's fixed $129, and the audit's P3s.
