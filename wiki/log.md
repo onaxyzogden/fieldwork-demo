@@ -3,6 +3,20 @@ title: "Wiki Log"
 type: log
 ---
 
+## [2026-10-08] session | ADR 077: the small operator pages leave Workspace
+
+- **Completed:**
+  - Three screen tests pin the operator's Contractors, Activity and Demo settings. They were committed before the move.
+  - `OperatorWorkspace.tsx` now holds Home, More, Walkthroughs, Today, Contractors and Activity, switching on `page`. The lazy `Walkthroughs` moved with them.
+  - `WorkspaceApi` gained `choose`, `setSidebar` and `RouteMap`.
+- **Found:** the import pruner rebuilds the import header and drops any comment inside it. The comment explaining the `ContractorWorkspace` import order was lost and has been put back. Check for this on the next extraction.
+- **Verified:**
+  - 573 tests, and the existing tests are unchanged.
+  - `tsc` and the build pass. The CSS is byte-identical.
+  - A live check on `vite preview` covered all six pages, Demo settings and role switching, with no console errors.
+- **Next:** Requests (861 lines, 59 names, about 45 of them new to `WorkspaceApi`), as `OperatorRequests.tsx`.
+- **Pages touched:** [[fieldwork]].
+
 ## [2026-10-08] session | ADR 077: breaking up Workspace, customer and contractor first
 
 - **Completed:**
