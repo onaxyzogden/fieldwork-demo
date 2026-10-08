@@ -3,6 +3,17 @@ title: "Wiki Log"
 type: log
 ---
 
+## [2026-10-08] session | Platform UX audit (report only)
+
+- **Completed:** a report-mode audit (`ux-engine:ux-auditor`) of every role and the shell, in four phases: Operator, Contractor, a Customer re-check, and cross-cutting. It was run live on `vite preview` with a contrast, name and target-size script, plus a code read. No source changed.
+- **Found:**
+  - 8 P1s, 15 P2s and 15 P3s. See [[platform-ux-audit-2026-10]].
+  - The P1s are focus dropping to `<body>` (the `QueueLayer` fallback, the decline swap, intake steps, and `DecisionQueue`, which isn't on `QueueLayer` at all), one-tap destructive actions (quote and charge Decline, Reset all demo data, Remove finding, Availability's Save withdrawing offers), and the role switch with no `aria-pressed`.
+  - A Declined quote reads "Quote ready" to the customer, because the reconciler maps every unapproved quote to "Awaiting Quote Approval".
+- **Verified:** the 12 fixes from [[customer-ux-audit-2026-10]] all hold. Contrast passes AA in both themes on every screen checked.
+- **Next:** fix the P1s as one ADR batch (079): focus fallback first, then friction on destructive actions, then the role switch.
+- **Pages touched:** [[platform-ux-audit-2026-10]] (new), [[fieldwork]], [[index]].
+
 ## [2026-10-08] session | ADR 078: each role loads as its own chunk
 
 - **Measured first** (JS and CSS, gzipped, following each chunk's static imports): the operator's first load went from 174.6 to 165.8 kB (−5%), the customer's to 152.3 kB (−13%) and the contractor's to 154.8 kB (−11%). The operator only just cleared the 5% go/no-go line, and the operator chose to go ahead.

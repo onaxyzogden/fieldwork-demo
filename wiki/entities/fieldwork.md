@@ -44,19 +44,23 @@ An interactive prototype of a handyman services platform. It has three roles, Cu
 - ADR 077 step 6 (`useWorkspaceState()`) is live on `main` via PR #51 (2026-10-08).
 - ADR 077 step 7 (each role's helpers into its own file) is live on `main` via PR #52 (2026-10-08).
 - ADR 078 (a chunk per role) is live on `main` via PR #53 (2026-10-08).
+- A platform-wide UX audit ran on 2026-10-08, after ADR 078: 8 P1s, 15 P2s and 15 P3s across the three roles and the shell, none fixed yet. See [[platform-ux-audit-2026-10]].
 - Local dev uses Vite on 5173 and the preview build on 4173 (`.claude/launch.json`, untracked).
 
 ## Connections
 - [[one-at-a-time]]: the interaction pattern behind every queue.
 - [[customer-chosen-time]]: how holds and the customer's chosen slot reach the operator.
-- [[customer-ux-audit-2026-10]]: the most recent audit, and where each finding went.
+- [[customer-ux-audit-2026-10]]: the customer audit, and where each finding went.
+- [[platform-ux-audit-2026-10]]: the most recent audit, covering every role. Its findings are open.
 - [[2026-10-07-wiki-in-repo]]: why this wiki is here.
 
 ## Open Questions
+- The platform UX audit's findings are open. The recommended order is: focus always lands somewhere, then friction (undo or confirmation) on destructive actions, then honest state and announcements. A Declined quote needs its own customer status, because the reconciler shows it as "Quote ready".
 - ADR 077 is complete, and each role is its own chunk (ADR 078). The operator, the default, saves only 5% of its first load, because most of the role code is the operator's. Splitting `OperatorRequests` off from the operator's home is the next size candidate, if first load ever matters.
 - Bundle-size work is parked (ADR 074–076). The catalogue and the per-role CSS were measured at 6% and 2% of the first load (ADR 076).
 
 ## History
+- 2026-10-08: a report-mode UX audit of the whole platform (no source changes). The customer fixes from ADR 069, 070 and 073 all hold. See [[platform-ux-audit-2026-10]].
 - 2026-10-08: each role loads as its own chunk (ADR 078). First loads went down 5% (operator), 13% (customer) and 11% (contractor), gzipped. The other roles are preloaded when idle, and the stylesheet is byte-identical. ADR 077 is complete.
 - 2026-10-08: each role's helpers moved verbatim out of `useWorkspaceState()` into its own file (ADR 077, step 7): 19 into `OperatorRequests.tsx`, 11 into `CustomerWorkspace.tsx`, and `RouteMap` into `OperatorWorkspace.tsx`. The hook went from about 1,830 to 740 lines. 578 tests pass unchanged, and the stylesheet is byte-identical.
 - 2026-10-08: `Workspace`'s state, effects and helpers moved verbatim into `useWorkspaceState()` (ADR 077, step 6). `Workspace` went from about 2,530 to 850 lines. 578 tests pass unchanged, and the stylesheet is byte-identical.
