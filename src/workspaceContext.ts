@@ -8,11 +8,23 @@
  */
 import { createContext, useContext } from "react";
 import type React from "react";
-import type { Property, Quote, Request, State, Task, Visit } from "./model";
+import type {
+  AuditEntry,
+  Property,
+  Quote,
+  Request,
+  State,
+  Task,
+  Visit,
+  scopeMatch,
+} from "./model";
 import type { CustomerGlance } from "./glance";
 import type { CustomerTodo } from "./roleQueues";
+import type { Role } from "./Shell";
+import type { suitableProviders } from "./suitability";
 
 type Setter<T> = React.Dispatch<React.SetStateAction<T>>;
+type Candidate = ReturnType<typeof suitableProviders>[number];
 
 export type WorkspaceApi = {
   /* Shared */
@@ -23,6 +35,56 @@ export type WorkspaceApi = {
   setPage: Setter<string>;
   setModal: Setter<string>;
   idPrefix: string;
+
+  /* Operator */
+  choose: (id: string) => void;
+  setSidebar: Setter<boolean>;
+  RouteMap: () => React.JSX.Element;
+
+  /* Operator: Requests */
+  Message: ({ field }: { field: string }) => React.JSX.Element | null;
+  assignPay: number;
+  badge: (status: string) => React.JSX.Element;
+  cancelVisit: (v: Visit) => void;
+  candidates: Candidate[];
+  chosenTime: string | undefined;
+  clear: (field: string) => void;
+  createVisit: () => boolean | undefined;
+  decisionCard: () => React.JSX.Element;
+  duration: number;
+  fieldClass: (field: string, base?: string) => string;
+  filter: string;
+  fulfillment: boolean;
+  fulfillmentKind: "self" | "contractor";
+  invalid: (field: string) => { "aria-invalid": true | undefined };
+  invalidate: (field: string, message: string) => boolean;
+  liveVisits: Visit[];
+  match: ReturnType<typeof scopeMatch>;
+  opts: Candidate["appointments"];
+  patchTask: (id: string, p: Partial<Task>) => void;
+  provider: string;
+  requestStatus: (id: string) => string;
+  scopeTasks: Task[];
+  search: string;
+  selected: string[];
+  setFilter: Setter<string>;
+  setFulfillment: Setter<boolean>;
+  setOverride: Setter<string>;
+  setPay: Setter<number>;
+  setPayTouched: Setter<boolean>;
+  setProvider: Setter<string>;
+  setRequestTab: Setter<string>;
+  setRole: Setter<Role>;
+  setSearch: Setter<string>;
+  setSelected: Setter<string[]>;
+  setShowRequestQueue: Setter<boolean>;
+  setTaskTitles: Setter<Record<string, string>>;
+  showRequestQueue: boolean;
+  showTasks: () => void;
+  slot: string;
+  tab: string;
+  taskTitles: Record<string, string>;
+  trail: AuditEntry[];
 
   /* Customer */
   customer: string;

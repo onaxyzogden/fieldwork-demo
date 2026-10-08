@@ -1983,12 +1983,22 @@ behaviour at all.
    only.
 3. The customer and contractor blocks moved into `CustomerWorkspace.tsx`
    and `ContractorWorkspace.tsx`. The tests didn't change, and they pass.
+4. The operator's six small pages (Home, More, Walkthroughs, Today,
+   Contractors and Activity) moved into `OperatorWorkspace.tsx`, which
+   switches on `page`. The tests for Contractors, Activity and Demo settings
+   were written first, and they passed before the move.
+5. Requests moved into `OperatorRequests.tsx`, and `OperatorWorkspace`
+   renders it. Five tests were written first: search and filter, the
+   small-screen request list, Offer to a contractor and back, Do it myself,
+   and Decline's confirmation. `Workspace` no longer renders any role's
+   page inline.
 
 | Block | Lines | Names it reads from `Workspace` |
 |---|---|---|
 | Contractor | 44 | 8 |
 | Customer | 410 | 37 |
-| Operator Requests page | 861 | not yet measured |
+| Operator's six small pages | 130 | 9 |
+| Operator Requests page | 861 | 58 (43 new) |
 
 **Context, not props.** The extracted components read from
 `WorkspaceContext` through `useWorkspace()`. `WorkspaceApi` in
@@ -1998,6 +2008,13 @@ with the TypeScript compiler, not typed by hand. `Workspace` still owns all
 the state. The type grows with each extraction, until it is the workspace's
 real shared API. For now the provider wraps only the role components, so the
 rest of the return keeps its indentation and the diff stays readable.
+`OperatorWorkspace` sits inside the same provider, in the slot of
+`<main>` where the operator pages used to be, so the DOM doesn't change.
+Where the compiler's type was a long inline object (the candidate
+providers, the scope match, the appointment options), `WorkspaceApi` names
+it with `ReturnType` of the function that builds it. `RouteMap` is a component
+declared inside `Workspace`, so it gets a new identity every render. It goes
+through the context as it is, and fixing that is separate work.
 
 **No import cycles.** `NoteReply`, `TaskAnswers` and `ClarificationFields`
 moved to `RequestFields.tsx`, because both `Workspace` and the customer
@@ -2012,6 +2029,5 @@ the cascade wasn't. `ContractorWorkspace` is now imported where
 on every extraction.
 
 **What remains, in order.**
-- The operator pages, smallest first, then Requests.
 - The state and helpers, into a `useWorkspaceState()` hook.
 - Then a `lazyScreen` per role, which is the ADR 075 split, now nearly free.
