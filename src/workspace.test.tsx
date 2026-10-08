@@ -42,6 +42,8 @@ beforeAll(() => {
   proto.close ??= function (this: HTMLDialogElement) {
     this.removeAttribute("open");
   };
+  /* Nor scrolling: the fulfillment panel scrolls itself into view. */
+  Element.prototype.scrollIntoView ??= function () {};
 });
 afterEach(() => {
   cleanup();
@@ -87,6 +89,92 @@ describe("Operator workspace", () => {
     expect(
       screen.getByRole("heading", { level: 2 }).textContent,
     ).toBe("215 New Street");
+  });
+
+  it("narrows the request list by search and filter", () => {
+    open("Operator");
+    go(/^Requests/);
+    const search = screen.getByPlaceholderText("Search requests…");
+    const list = () =>
+      within(search.closest("section")!)
+        .getAllByRole("button")
+        .map((b) => b.textContent);
+    const all = list().length;
+    fireEvent.change(search, { target: { value: "Priya" } });
+    expect(list()).toHaveLength(1);
+    expect(list()[0]).toMatch(/^Priya Nair/);
+    fireEvent.change(search, { target: { value: "" } });
+    expect(list()).toHaveLength(all);
+    fireEvent.change(
+      screen.getByRole("combobox", { name: "Filter requests" }),
+      {
+        target: { value: "Draft" },
+      },
+    );
+    expect(list().length).toBeLessThan(all);
+  });
+
+  it("opens and closes the request list on small screens", () => {
+    open("Operator");
+    go(/^Requests/);
+    const toggle = screen.getByRole("button", { name: "Browse requests" });
+    expect(toggle.getAttribute("aria-expanded")).toBe("false");
+    fireEvent.click(toggle);
+    expect(
+      screen
+        .getByRole("button", { name: "Close request list" })
+        .getAttribute("aria-expanded"),
+    ).toBe("true");
+  });
+
+  it("offers the job to a contractor, and goes back", () => {
+    open("Operator");
+    go(/^Requests/);
+    fireEvent.click(
+      screen.getByRole("button", { name: "Offer to a contractor" }),
+    );
+    expect(
+      screen.getByRole("heading", { level: 2, name: "Assign Contractor" }),
+    ).toBeTruthy();
+    expect(
+      screen.getByRole("heading", { name: /^Recommended appointments/ }),
+    ).toBeTruthy();
+    expect(
+      screen.queryByRole("button", { name: "Browse requests" }),
+    ).toBeNull();
+    fireEvent.click(screen.getByRole("button", { name: "← Back to request" }));
+    expect(
+      screen.queryByRole("heading", { name: "Assign Contractor" }),
+    ).toBeNull();
+    expect(
+      screen.getByRole("button", { name: "Offer to a contractor" }),
+    ).toBeTruthy();
+  });
+
+  it("schedules the job for the operator", () => {
+    open("Operator");
+    go(/^Requests/);
+    fireEvent.click(screen.getByRole("button", { name: "Do it myself" }));
+    expect(
+      screen.getByRole("heading", { level: 2, name: "Do It Myself" }),
+    ).toBeTruthy();
+  });
+
+  it("asks before declining a request, and can be closed", () => {
+    open("Operator");
+    go(/^Requests/);
+    fireEvent.click(screen.getByRole("button", { name: "Decline request" }));
+    const dialog = screen.getByRole("dialog", { name: "Decline request" });
+    expect(
+      within(dialog).getByText(/cancel its proposed visits\?/),
+    ).toBeTruthy();
+    fireEvent.click(
+      within(dialog).getByRole("button", { name: "Close dialog" }),
+    );
+    expect(screen.queryByRole("dialog")).toBeNull();
+    expect(screen.getByRole("heading", { level: 2 }).textContent).toBe(
+      "38 Lakeshore Road West",
+    );
   });
 
   it("loads Walkthroughs on demand", async () => {

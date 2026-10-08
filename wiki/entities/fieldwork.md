@@ -14,7 +14,7 @@ An interactive prototype of a handyman services platform. It has three roles, Cu
 ## Key Facts
 - **Stack:** React 19, Vite, TypeScript, vitest, lucide-react. There is no backend. State is kept in localStorage under `fieldwork-demo-v1`.
 - **Gates:**
-  - `npm test` runs the catalogue and status checks, then vitest: 573 tests as of 2026-10-08, 18 of them screen tests in jsdom (`workspace.test.tsx`).
+  - `npm test` runs the catalogue and status checks, then vitest: 578 tests as of 2026-10-08, 23 of them screen tests in jsdom (`workspace.test.tsx`).
   - `npm run build` runs `design:check`, `catalogue:check`, `status:check`, `tsc` and then `vite build`.
 - **Deploy:** merging to `main` runs GitHub Actions, which publishes to Pages at j.ogden.ag. The repository is public.
 - **Decisions:** ADR 001–077 are in `docs/design-decisions.md`. Business calls are in `docs/decisions.md`.
@@ -22,8 +22,8 @@ An interactive prototype of a handyman services platform. It has three roles, Cu
 
 ## Architecture / Structure
 - `src/main.tsx` is only the entry: CSS, `pickView()` and `createRoot`.
-- `src/Workspace.tsx` holds `Workspace` and `App`. It owns all the workspace state, and still renders the operator's Requests page inline. It is the largest file, at about 3,370 lines. ADR 077 breaks it up one role at a time.
-- `src/CustomerWorkspace.tsx`, `src/ContractorWorkspace.tsx` and `src/OperatorWorkspace.tsx` (every operator page except Requests) are the extracted role workspaces. They read from `useWorkspace()` (`src/workspaceContext.ts`), whose `WorkspaceApi` type lists only what extracted components read.
+- `src/Workspace.tsx` holds `Workspace` and `App`. It owns all the workspace state and helpers, the modals and the chrome, but no role's pages any more. It is about 2,530 lines. ADR 077 breaks it up one role at a time.
+- `src/CustomerWorkspace.tsx`, `src/ContractorWorkspace.tsx` and `src/OperatorWorkspace.tsx` are the extracted role workspaces. `OperatorWorkspace` switches on `page`, and renders `src/OperatorRequests.tsx` (about 960 lines) for Requests. They read from `useWorkspace()` (`src/workspaceContext.ts`), whose `WorkspaceApi` type lists only what extracted components read.
 - `src/RequestFields.tsx` holds `NoteReply`, `TaskAnswers` and `ClarificationFields`, which several workspaces share.
 - The CSS order follows the import order. After any extraction, check that the built stylesheet is byte-identical (ADR 077).
 - `src/Shell.tsx` is the shared chrome: the sidebar, demo bar, topbar, `identity()` and `homeOf()`.
@@ -39,7 +39,12 @@ An interactive prototype of a handyman services platform. It has three roles, Cu
 - PR #44 (ADR 071–073) merged on 2026-10-08.
 - PR #45 (wiki and ADR 074) merged on 2026-10-08.
 - PR #46 (ADR 075 and ADR 076) merged on 2026-10-08.
-- ADR 077 (breaking up `Workspace`) is on `claude/workspace-split`, and the operator pages are on `claude/operator-pages`, which is stacked on it. Both are local and not yet pushed.
+- ADR 077 (breaking up `Workspace`) is in three stacked branches:
+  - `claude/workspace-split`: PR #47, to `main`;
+  - `claude/operator-pages`: PR #48, stacked on #47;
+  - `claude/operator-requests`: Requests, local and not yet pushed.
+
+  Merge them in that order, retargeting each PR to `main` once the one before it has merged.
 - Local dev uses Vite on 5173 and the preview build on 4173 (`.claude/launch.json`, untracked).
 
 ## Connections
@@ -49,10 +54,11 @@ An interactive prototype of a handyman services platform. It has three roles, Cu
 - [[2026-10-07-wiki-in-repo]]: why this wiki is here.
 
 ## Open Questions
-- Splitting the role workspaces would save each role's first load 11–17% gzipped (ADR 075). That is now under way (ADR 077). The customer and contractor workspaces and the six small operator pages are out. Next comes Requests (861 lines, 59 names), in its own session, then a `useWorkspaceState()` hook, then a lazy chunk per role.
+- Splitting the role workspaces would save each role's first load 11–17% gzipped (ADR 075). That is now under way (ADR 077). Every role's pages are out of `Workspace`, Requests included. Next comes a `useWorkspaceState()` hook, then a lazy chunk per role.
 - Bundle-size work is parked (ADR 074–076). The catalogue and the per-role CSS were measured at 6% and 2% of the first load (ADR 076).
 
 ## History
+- 2026-10-08: the operator's Requests page moved into `OperatorRequests.tsx` (ADR 077). `WorkspaceApi` gained 43 names, and five screen tests were added first. 578 tests pass, and the stylesheet is byte-identical.
 - 2026-10-08: the operator's Home, More, Walkthroughs, Today, Contractors and Activity pages moved into `OperatorWorkspace.tsx` (ADR 077). Three screen tests were added first. 573 tests pass, and the stylesheet is byte-identical.
 - 2026-10-08: ADR 077 started breaking up `Workspace`:
   - It moved out of `main.tsx`.
