@@ -1997,6 +1997,17 @@ behaviour at all.
    returns the `api` and the 46 names `Workspace`'s own chrome, modals and
    toasts read. `Workspace` is now its shell, about 850 lines. The tests
    didn't change.
+7. The helpers only one role reads moved, verbatim, out of the hook and
+   into that role's file: 19 into `OperatorRequests.tsx` (about 750 lines:
+   fulfillment, quotes, payments, the decision card and the trail), 11 into
+   `CustomerWorkspace.tsx` (the at-a-glance values and the quote and charge
+   panels) and `RouteMap` into `OperatorWorkspace.tsx`. The hook went from
+   about 1,830 to 740 lines. State stays in the hook: a role component that
+   owned it would reset it on unmount, and the Requests search, for one,
+   survives a change of page. A helper also stays when other code in the
+   hook reads it, as `openContractorJob`, `candidates` and `scopeTasks` do.
+   `WorkspaceApi` lost 31 names and gained 22, so it lists what the role
+   files read. The tests didn't change.
 
 | Block | Lines | Names it reads from `Workspace` |
 |---|---|---|
@@ -2035,6 +2046,4 @@ on every extraction. `useWorkspaceState` is imported right after it,
 because the hook took over most of `Workspace`'s imports in the same order.
 
 **What remains, in order.**
-- Move the helpers only one role uses (the customer's panels, the
-  operator's Requests helpers) out of the hook and into that role's files.
-- Then a `lazyScreen` per role, which is the ADR 075 split.
+- A `lazyScreen` per role, which is the ADR 075 split.
