@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Glance, GlanceLead } from "./Glance";
+import { Glance, GlanceLead } from "./GlanceCard";
 import { glanceDate, walkthroughGlance } from "./glance";
 import {
   ArrowLeft,

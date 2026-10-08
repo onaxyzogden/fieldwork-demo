@@ -13,7 +13,11 @@ import { freshDemo } from "./store";
 import { customerGlance, tabWork } from "./glance";
 import { payQuote } from "./payments";
 import { issueQuote, nextDecision, offerVisit } from "./decisions";
-import { contractorQueue, customerQueue } from "./roleQueues";
+import {
+  contractorQueue,
+  customerQueue,
+  customerTodoLabel,
+} from "./roleQueues";
 
 const kinds = (s: State, accountId: string) =>
   customerQueue(s, accountId, s.clock).map((t) => t.kind);
@@ -135,6 +139,28 @@ describe("the customer's queue (ADR 062)", () => {
     expect(answerQuestion(s, r.id, "Third")).toBe(false);
     reconcile(s);
     expect(kinds(s, r.accountId)).toEqual([]);
+  });
+});
+
+describe("naming a single to-do (ADR 070)", () => {
+  it("says what it is and where, for each kind", () => {
+    const s = quoted();
+    const address = s.requests.find((r) => r.id === "r3")!.address;
+    const [quote] = customerQueue(s, "c3", s.clock);
+    expect(customerTodoLabel(s, quote)).toBe(
+      `Review your quote for ${address}`,
+    );
+    expect(
+      customerTodoLabel(s, { ...quote, kind: "pay" } as typeof quote),
+    ).toBe(`Pay for ${address}`);
+    expect(
+      customerTodoLabel(s, { key: "r3", kind: "question", requestId: "r3" }),
+    ).toBe(`Answer our question about ${address}`);
+    const demo = freshDemo();
+    const [assessment] = customerQueue(demo, "c1", demo.clock);
+    expect(customerTodoLabel(demo, assessment)).toMatch(
+      /^Review your assessment for \S/,
+    );
   });
 });
 

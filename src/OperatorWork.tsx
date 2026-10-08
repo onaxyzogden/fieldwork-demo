@@ -24,7 +24,7 @@ import {
   workIssue,
   workStatus,
 } from "./work";
-import { Glance } from "./Glance";
+import { Glance } from "./GlanceCard";
 import { glanceDate, todaysVisits, visitDayState } from "./glance";
 import { requestDispatch } from "./dispatch";
 import { JobWork } from "./ContractorWork";

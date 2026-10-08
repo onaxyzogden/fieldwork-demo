@@ -68,6 +68,28 @@ export function customerQueue(
   ];
 }
 
+/**
+ * One to-do named for the button that opens the queue (ADR 070): with a
+ * single thing waiting, the button says what it is rather than counting it.
+ */
+export function customerTodoLabel(s: State, todo: CustomerTodo): string {
+  if (todo.kind === "assessment") {
+    const w = s.walkthroughs.find((x) => x.id === todo.walkthroughId);
+    const address = s.properties.find((p) => p.id === w?.propertyId)?.address;
+    return address
+      ? `Review your assessment for ${address}`
+      : "Review your assessment";
+  }
+  const address = s.requests.find((r) => r.id === todo.requestId)?.address;
+  const where = address ? ` for ${address}` : "";
+  if (todo.kind === "quote") return `Review your quote${where}`;
+  if (todo.kind === "pay") return `Pay${where}`;
+  if (todo.kind === "charge") return `Review an additional charge${where}`;
+  return address
+    ? `Answer our question about ${address}`
+    : "Answer our question";
+}
+
 /** The contractor's offers awaiting an answer, in the Offers tab's order. */
 export const contractorQueue = (s: State, providerId: string, clock: number) =>
   tabWork(s, providerId, "Offers", clock).map((a) => a.id);

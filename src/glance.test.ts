@@ -212,6 +212,26 @@ describe("the customer's glance", () => {
     expect(customerGlance(s, id, s.clock).upcoming).toBe(0);
   });
 
+  it("does not count a proposed, unconfirmed time as upcoming (ADR 070)", () => {
+    const s = seed();
+    const id = account(s);
+    const r = s.requests.find((r) => r.accountId === id)!;
+    s.visits.push({
+      id: "offered",
+      requestId: r.id,
+      taskIds: [],
+      providerId: "marcus",
+      start: new Date(s.clock + DAY).toISOString(),
+      duration: 60,
+      status: "Proposed",
+      travel: 5,
+    });
+    const g = customerGlance(s, id, s.clock);
+    expect(g.upcoming).toBe(0);
+    expect(g.next).toBe(null);
+    expect(g.scheduledIds).not.toContain(r.id);
+  });
+
   it("does not count a visit that has already started today as upcoming", () => {
     const s = seed();
     const id = account(s);

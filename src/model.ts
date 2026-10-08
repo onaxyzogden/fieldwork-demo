@@ -1908,6 +1908,8 @@ export function slots(
   exclude?: string,
   timing = "",
   limit = 3,
+  /** The request asking, whose own hold must not hide its own slot. */
+  forRequest?: string,
 ) {
   if (!providerId) return [];
   const out: { start: string; travel: number; score: number }[] = [];
@@ -1927,6 +1929,7 @@ export function slots(
           d.toISOString(),
           exclude,
           timing,
+          forRequest,
         )
       )
         out.push({

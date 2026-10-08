@@ -2,7 +2,7 @@ import { suitableProviders } from "./suitability";
 import Blueprint from "./Blueprint";
 import ContractorWork, { JobWork } from "./ContractorWork";
 import Availability from "./Availability";
-import Earnings from "./Earnings";
+import Earnings from "./EarningsPanel";
 import { AuditList } from "./QueueAside";
 import { hasLiveVisit } from "./aside";
 import { OperatorHome, OperatorToday } from "./OperatorWork";
@@ -18,7 +18,7 @@ import {
   dayKey,
 } from "./work";
 import CustomerQueue from "./CustomerQueue";
-import { customerQueue } from "./roleQueues";
+import { customerQueue, customerTodoLabel } from "./roleQueues";
 import {
   approveCharge,
   cancelBooking,
@@ -40,13 +40,14 @@ import {
 import { suggestTitle } from "./pmw";
 import { countdown } from "./countdown";
 import {
+  customerProgressText,
   customerQuoteText,
   customerStatusText,
   customerVisitText,
 } from "./customerText";
 import CustomerIntake from "./CustomerIntake";
 import FollowUp, { followUpLine } from "./FollowUp";
-import { validAddress, dayLabel } from "./intake";
+import { validAddress, dayLabel, taskLabel } from "./intake";
 import {
   getIssue,
   matchIssues,
@@ -105,6 +106,7 @@ import {
   dateLabel,
   log,
   slots,
+  releaseHold,
   available,
   eligible,
   scopeMatch,
@@ -124,7 +126,6 @@ import {
   workPayment,
   primaryContact,
   timeLabel,
-  coordinated,
   quoted,
   confirmed,
   hoursLabel,
@@ -171,7 +172,7 @@ import {
   unreachable,
 } from "./notifications";
 import { NotificationInbox, MessageThread } from "./NotificationUI";
-import { Glance, GlanceLead } from "./Glance";
+import { Glance, GlanceLead } from "./GlanceCard";
 import {
   customerGlance,
   glanceDate,
@@ -659,7 +660,8 @@ function Workspace({
         )),
   );
   const customerAtAGlance = customerGlance(s, customer, +s.clock);
-  const customerTodos = customerQueue(s, customer, s.clock).length;
+  const customerTodoList = customerQueue(s, customer, s.clock);
+  const customerTodos = customerTodoList.length;
   const customerNext = customerAtAGlance.next;
   /* Open a request's row in the accordion below and bring it into view. The
      row is already on this screen, so this expands rather than navigates. */
@@ -3162,8 +3164,10 @@ function Workspace({
                       className="primary full"
                       onClick={() => setReviewing(true)}
                     >
-                      Review {customerTodos} thing
-                      {customerTodos === 1 ? "" : "s"} waiting on you
+                      {/* One thing is named, not counted (ADR 070). */}
+                      {customerTodos === 1
+                        ? customerTodoLabel(s, customerTodoList[0])
+                        : `Review ${customerTodos} things waiting on you`}
                     </button>
                   )}
                   {reviewing && (
@@ -3237,8 +3241,12 @@ function Workspace({
                           {!open ? null : (
                             <div id={"request-" + x.id}>
                               {r.status === "Draft" ? (
+                                /* Their own unfinished work, so it gives way
+                                   to whatever is waiting on them (ADR 070). */
                                 <button
-                                  className="primary"
+                                  className={
+                                    customerTodos ? "secondary" : "primary"
+                                  }
                                   onClick={() => {
                                     setPage("New request");
                                     setStep(0);
@@ -3306,22 +3314,10 @@ function Workspace({
                                 "Declined",
                                 "Draft",
                               ].includes(r.status) && (
-                                /* One contextual line, chosen from derived state — not a
-                         log. When a contractor declines, coordinated reverts to
-                         false and this falls back to "matching", which is what
-                         keeps the decline invisible to the customer. Needs Review
-                         is its own message only until coordination catches up —
-                         an operator can still assign a reviewed request, and the
-                         customer should see that progress once it happens. */
+                                /* One contextual line, chosen from derived
+                                   state — not a log (ADR 070). */
                                 <p className="note">
-                                  {r.status === "Needs Review" &&
-                                  !coordinated(s, r.id)
-                                    ? "A coordinator is reviewing your request and will follow up shortly."
-                                    : !coordinated(s, r.id)
-                                      ? "We’re matching your request with a provider."
-                                      : !quoted(s, r.id)
-                                        ? "A provider has been matched. We’re preparing your quote."
-                                        : "Your appointment is not confirmed until provider acceptance, quote approval, and any required payment are complete."}
+                                  {customerProgressText(s, r)}
                                 </p>
                               )}
                               {!!r.preferredSlots?.length ||
@@ -3380,8 +3376,21 @@ function Workspace({
                                     <Wrench size={16} />
                                   </span>
                                   <div className="portal-task-body">
-                                    <h4>{t.summary}</h4>
-                                    <p>{t.description}</p>
+                                    {/* A generic title says nothing; their
+                                        own words do (ADR 070). */}
+                                    {genericTitle(t) ? (
+                                      <>
+                                        <h4>{taskLabel(t)}</h4>
+                                        {taskLabel(t).endsWith("…") && (
+                                          <p>{t.description}</p>
+                                        )}
+                                      </>
+                                    ) : (
+                                      <>
+                                        <h4>{t.summary}</h4>
+                                        <p>{t.description}</p>
+                                      </>
+                                    )}
                                     <TaskAnswers task={t} />
                                     {taskPhotos(t)}
                                   </div>
@@ -3400,7 +3409,15 @@ function Workspace({
                       reviewing what already exists comes first; starting
                       something new is the trailing action. */}
                   <button
-                    className="primary full new-request-trailing"
+                    className={
+                      /* One primary on the page (ADR 070): it gives way to
+                         the review button, and to a draft's Continue, which
+                         this button would only resume anyway. */
+                      (customerTodos ||
+                      ownRequests.some((x) => x.status === "Draft")
+                        ? "secondary"
+                        : "primary") + " full new-request-trailing"
+                    }
                     onClick={startOrResumeRequest}
                   >
                     <Plus size={16} /> New request
@@ -3595,6 +3612,7 @@ function Workspace({
                           undefined,
                           "",
                           12,
+                          r.id,
                         ).some((o) => o.start === slot);
                       if (!available)
                         return invalidate(
@@ -3643,6 +3661,7 @@ function Workspace({
                           amount: 129,
                           reference: uid(),
                         });
+                        releaseHold(d, r.id);
                         log(
                           d,
                           "Instant booking confirmed · demo receipt issued",

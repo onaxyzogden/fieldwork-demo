@@ -102,7 +102,8 @@ export default function CustomerIntake({
   const dialog = useRef<HTMLDialogElement>(null),
     editor = useRef<HTMLTextAreaElement>(null),
     streetRef = useRef<HTMLInputElement>(null),
-    postalRef = useRef<HTMLInputElement>(null);
+    postalRef = useRef<HTMLInputElement>(null),
+    timesRef = useRef<HTMLDivElement>(null);
   const patchRequest = (patch: Partial<Request>) =>
     update((d) =>
       Object.assign(
@@ -159,13 +160,33 @@ export default function CustomerIntake({
   useEffect(() => {
     if (selected && !selectionValid && r.status === "Draft")
       update((d) => {
-        Object.assign(d.requests.find((x) => x.id === r.id)!, {
-          preferredSlot: undefined,
-          timing: "Weekdays · flexible",
-        });
+        Object.assign(
+          d.requests.find((x) => x.id === r.id)!,
+          {
+            preferredSlot: undefined,
+            timing: "Weekdays · flexible",
+          },
+        );
         releaseHold(d, r.id);
       });
   }, [signature, selectionValid, r.status]);
+  /* Continue with an unfinished task opens it (ADR 069); once its details
+     are on screen, mark what is missing and put focus on the first of it,
+     the same way Save answers does, rather than leave focus on nothing. */
+  const [focusUnfinished, setFocusUnfinished] = useState("");
+  useEffect(() => {
+    if (!focusUnfinished) return;
+    setFocusUnfinished("");
+    const t = all.find((x) => x.id === focusUnfinished);
+    if (!t) return;
+    const missing = missingQuestions(t);
+    (missing.length
+      ? document.getElementById(
+          "q-" + t.id + "-" + answerKey(getIssue(t.description), missing[0]),
+        )
+      : document.getElementById("save-answers-" + t.id)
+    )?.focus();
+  }, [focusUnfinished]);
   useEffect(() => {
     if (more) dialog.current?.showModal();
     else dialog.current?.close();
@@ -177,15 +198,18 @@ export default function CustomerIntake({
   }, [r.editingTaskId, screen]);
   const choose = (o: (typeof options)[number]) => {
     update((d) => {
-      Object.assign(d.requests.find((x) => x.id === r.id)!, {
-        preferredSlot: {
-          start: o.start,
-          providerId: o.providerId,
-          duration: o.duration,
-          signature,
+      Object.assign(
+        d.requests.find((x) => x.id === r.id)!,
+        {
+          preferredSlot: {
+            start: o.start,
+            providerId: o.providerId,
+            duration: o.duration,
+            signature,
+          },
+          timing: dateLabel(o.start),
         },
-        timing: dateLabel(o.start),
-      });
+      );
       /* Take the slot while this customer finishes. Without it another
          customer is shown the same time as free right up to the moment their
          booking is refused, which is a worse experience than not offering it. */
@@ -323,6 +347,9 @@ export default function CustomerIntake({
       (t) => t.entryStage !== "done" || missingQuestions(t).length,
     );
     if (unfinished) {
+      if (missingQuestions(unfinished).length)
+        setAnswersAttempted((x) => ({ ...x, [unfinished.id]: true }));
+      setFocusUnfinished(unfinished.id);
       update((d) => {
         d.tasks.find((t) => t.id === unfinished.id)!.entryStage = "details";
         d.requests.find((x) => x.id === r.id)!.editingTaskId = unfinished.id;
@@ -740,7 +767,9 @@ export default function CustomerIntake({
                             patchTask(t.id, { entryStage: "details" });
                           }}
                         >
-                          Continue
+                          {/* Not "Continue": the step's own button below has
+                              that name (ADR 070). */}
+                          Next: details
                         </button>
                       </div>
                     </>
@@ -753,7 +782,11 @@ export default function CustomerIntake({
                         (p) => patchTask(t.id, { ...p, entryStage: "details" }),
                         !!answersAttempted[t.id],
                       )}
-                      <button className="secondary" onClick={() => complete(t)}>
+                      <button
+                        className="secondary"
+                        id={"save-answers-" + t.id}
+                        onClick={() => complete(t)}
+                      >
                         Save answers
                       </button>
                     </>
@@ -841,8 +874,9 @@ export default function CustomerIntake({
           <header className="customer-heading">
             <h1>When works for you?</h1>
             <p>
-              Optional — select any dates and times that work. We’ll do our best
-              to match.
+              {instant
+                ? "Pick one of the appointments below."
+                : "Optional — select any dates and times that work. We’ll do our best to match."}
             </p>
           </header>
           {/* Stated preference. A vertical list of the next 10 days rather than
@@ -850,45 +884,57 @@ export default function CustomerIntake({
               is a wish, not a booking, and submitting with nothing chosen is a
               perfectly good answer. */}
           <section className="customer-timing-section">
-            <h3>Days that suit you</h3>
-            {/* Each row expands in place to its own Morning/Afternoon/Evening
+            {/* Instant Book has real times below, so a wish list beside them
+                does nothing (ADR 070). Request to Book's days start where the
+                bookable times do, two days out: today and tomorrow are never
+                offered, so they are not asked for either. */}
+            {!instant && (
+              <>
+                <h3>Days that suit you</h3>
+                {/* Each row expands in place to its own Morning/Afternoon/Evening
                 toggles the moment it's picked — not a separate summary block
                 collecting every selected day's toggles afterward. */}
-            <div className="date-list">
-              {upcomingDays(s.clock).map((d) => {
-                const slot = r.preferredSlots?.find((p) => p.date === d.date);
-                return (
-                  <div key={d.date}>
-                    <button
-                      className={"date-chip" + (slot ? " selected" : "")}
-                      aria-pressed={!!slot}
-                      onClick={() => togglePreferredDay(d.date)}
-                    >
-                      {d.label}
-                      {slot && <Check size={16} />}
-                    </button>
-                    {slot && (
-                      <div className="time-pills">
-                        {dayParts.map((part) => (
-                          <button
-                            key={part}
-                            className={
-                              "time-pill" +
-                              (slot.times.includes(part) ? " selected" : "")
-                            }
-                            aria-pressed={slot.times.includes(part)}
-                            aria-label={`${part} on ${d.date}`}
-                            onClick={() => togglePreferredTime(d.date, part)}
-                          >
-                            {part}
-                          </button>
-                        ))}
+                <div className="date-list">
+                  {upcomingDays(s.clock + 2 * 86400000).map((d) => {
+                    const slot = r.preferredSlots?.find(
+                      (p) => p.date === d.date,
+                    );
+                    return (
+                      <div key={d.date}>
+                        <button
+                          className={"date-chip" + (slot ? " selected" : "")}
+                          aria-pressed={!!slot}
+                          onClick={() => togglePreferredDay(d.date)}
+                        >
+                          {d.label}
+                          {slot && <Check size={16} />}
+                        </button>
+                        {slot && (
+                          <div className="time-pills">
+                            {dayParts.map((part) => (
+                              <button
+                                key={part}
+                                className={
+                                  "time-pill" +
+                                  (slot.times.includes(part) ? " selected" : "")
+                                }
+                                aria-pressed={slot.times.includes(part)}
+                                aria-label={`${part} on ${d.date}`}
+                                onClick={() =>
+                                  togglePreferredTime(d.date, part)
+                                }
+                              >
+                                {part}
+                              </button>
+                            ))}
+                          </div>
+                        )}
                       </div>
-                    )}
-                  </div>
-                );
-              })}
-            </div>
+                    );
+                  })}
+                </div>
+              </>
+            )}
             <label className="field">
               Timing constraints
               <textarea
@@ -931,7 +977,7 @@ export default function CustomerIntake({
                 )}
                 {options.length > 0 ? (
                   <>
-                    <div className="intake-times">
+                    <div className="intake-times" ref={timesRef}>
                       {options.slice(0, 3).map(slotButton)}
                     </div>
                     {options.length > 3 && (
@@ -1006,10 +1052,23 @@ export default function CustomerIntake({
                 <p>
                   Door adjustment · fixed price <strong>$129 CAD</strong>
                 </p>
+                {/* Beside the button that was pressed, not in the More-times
+                    dialog, which is closed when this is asked (ADR 069). */}
+                {noTime && (
+                  <span className="field-message" role="alert">
+                    Choose an appointment time before booking.
+                  </span>
+                )}
                 <button
                   className="primary full"
                   onClick={() => {
-                    if (!selectionValid) return setNoTime(true);
+                    if (!selectionValid) {
+                      setNoTime(true);
+                      timesRef.current
+                        ?.querySelector<HTMLButtonElement>("button")
+                        ?.focus();
+                      return;
+                    }
                     if (!validAddress(r)) return goto("address");
                     pay(selected!.start);
                   }}
@@ -1042,11 +1101,6 @@ export default function CustomerIntake({
           {instant ? "Available appointments" : "Preferred times—not confirmed"}
         </p>
         <div className="intake-times">{options.map(slotButton)}</div>
-        {noTime && (
-          <span className="field-message" role="alert">
-            Choose an appointment time before booking.
-          </span>
-        )}
       </dialog>
     </div>
   );

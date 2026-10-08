@@ -1681,3 +1681,97 @@ more than they see elsewhere:
 A customer's assessment has no request behind it, so it gets no panel.
 `AuditList` is the one way a trail is drawn, in the History tab and in the
 panel.
+
+## ADR 069: Customer flows that finish, and say why when they don't
+
+Accepted. The four P0/P1 findings of the customer UX audit.
+
+**A request never blocks itself.** Choosing a time takes a hold
+(`holdSlot`), and `available()` already ignored a request's own hold when
+told whose it was. `slots()` never told it, so the customer's own hold hid
+the time they had just chosen:
+
+- the time dropped out of the list, the selection became invalid and was
+  cleared, and Book & pay did nothing;
+- the payment screen re-checked the slot the same way, so even a valid
+  selection was refused as "no longer available".
+
+`slots()` now takes the asking request (`forRequest`), passed by
+`intakeOptions` and by the Instant payment check. Booking releases the hold
+once the visit exists. A test locks it in: a request's own hold keeps its
+time on offer, and someone else's hold still removes it.
+
+**A refusal shows where the button was pressed.** Book & pay with no time
+chosen shows "Choose an appointment time before booking." above the button
+and moves focus to the first time. The message used to live only in the
+More-times dialog, which is closed when it is needed.
+
+**The one-at-a-time queues are real modals** (ADR 062), for the customer
+and the contractor alike, on the sidebar drawer's rules:
+
+- Escape closes;
+- Tab and Shift+Tab stay inside;
+- focus goes back to the button that opened it.
+
+The layer is rendered inside the shell, so the shell cannot be made inert
+as the drawer does. Everything beside the layer is made inert instead,
+level by level up to the shell, which leaves the other columns usable in
+side-by-side mode.
+
+**Continue says which details are missing.** Continue on the tasks step
+with an unfinished task opens it, marks its unanswered questions inline
+("Answer this, or tap Not sure.") and focuses the first, as Save answers
+does. The toast stays, but focus is no longer left on nothing.
+
+**Builds on every filesystem.** `Glance.tsx` and `Earnings.tsx` differed
+from `glance.ts` and `earnings.ts` only by case, so the app would not build
+or run on Windows or macOS. They are now `GlanceCard.tsx` and
+`EarningsPanel.tsx`.
+
+## ADR 070: One thing to press, and words that agree
+
+Accepted. The five P2 findings of the customer UX audit.
+
+**One "Continue" on the tasks step.** The task card's button that moves
+from the description to its questions now reads "Next: details", so the
+step's own Continue is the only one.
+
+**One primary button on the customer home, and it says what it does.**
+
+- With one thing waiting, the button names it: "Review your quote for
+  90 Rebecca Street", "Pay for…", "Answer our question about…",
+  "Review your assessment for…" (`customerTodoLabel`). With more than one,
+  it still counts them.
+- A draft's "Continue request" and the trailing "New request" give way to it
+  and become secondary. A draft is the customer's own unfinished work, not
+  something waiting on them, so it stays out of the count. "New request"
+  is also secondary while a draft exists, because it only resumes that draft.
+
+**The badge and the line under it agree.** The line is chosen by
+`customerProgressText` in `customerText.ts`, next to the badge wording
+(ADR 061).
+
+- "A provider has been matched" used to show as soon as an offer went out,
+  under a "Matching you with a provider" badge. It now waits for an
+  Accepted assignment. Until then the line reads "We’ve asked a provider and
+  are waiting for them to accept."
+- A decline still falls back to the ordinary matching line, so the customer
+  never sees it.
+
+**"Upcoming visits" counts visits that are booked.** A Proposed visit is
+shown as "Awaiting confirmation" on its card, so the glance no longer counts
+it as upcoming or names it as the next visit. Its request stays in "In
+progress". `confirmed()` still lets in a booking whose visit has not been
+reconciled yet, such as Instant Book's.
+
+**No "Tell us a little more" as a job's name.** A task with a generic title
+(`genericTitle`) shows the customer's own description instead, on the home
+page and in the queue. An unanswered question now leads the status line:
+"We have a question for you. Answer it below so we can keep going."
+
+**The days picker only where it does something.**
+
+- Instant Book offers real appointment times, so "Days that suit you" is
+  hidden there. The intro says to pick one of them.
+- Request to Book's days now start two days out, where `slots()` starts,
+  so the customer is not invited to wish for today or tomorrow.
