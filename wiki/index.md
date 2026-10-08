@@ -6,7 +6,7 @@ updated: 2026-10-08
 
 # Wiki Index
 
-A catalog of every wiki page. Read this first at the start of each session. Conventions are in [[SCHEMA]]. Product decisions (ADR 001–078) are in `docs/design-decisions.md`.
+A catalog of every wiki page. Read this first at the start of each session. Conventions are in [[SCHEMA]]. Product decisions (ADR 001–079) are in `docs/design-decisions.md`.
 
 ## Entities
 
@@ -32,7 +32,7 @@ A catalog of every wiki page. Read this first at the start of each session. Conv
 | Page | Summary |
 |---|---|
 | [[customer-ux-audit-2026-10]] | 12 findings, P0–P3, all fixed across ADR 069, 070 and 073 |
-| [[platform-ux-audit-2026-10]] | Every role plus the shell: 8 P1s (focus loss, destructive actions with no friction, the role switch's state), none fixed yet |
+| [[platform-ux-audit-2026-10]] | Every role plus the shell: 8 P1s (focus loss, destructive actions with no friction, the role switch's state), all fixed in ADR 079. P2s and P3s open |
 
 ## Synthesis
 

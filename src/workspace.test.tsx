@@ -17,10 +17,23 @@ import {
 } from "@testing-library/react";
 import { Workspace, type Role } from "./Workspace";
 import { freshDemo } from "./store";
-import type { State } from "./model";
+import { providers, type State } from "./model";
+import { issueQuote } from "./decisions";
+import { addFinding, createWalkthrough } from "./pmw";
 
-function Harness({ role }: { role: Role }) {
-  const [s, setS] = useState<State>(freshDemo);
+function Harness({
+  role,
+  init,
+}: {
+  role: Role;
+  /** Changes to the seeded demo before the first render. */
+  init?: (s: State) => void;
+}) {
+  const [s, setS] = useState<State>(() => {
+    const d = freshDemo();
+    init?.(d);
+    return d;
+  });
   const [theme, setTheme] = useState<"light" | "dark">("dark");
   return (
     <Workspace
@@ -45,6 +58,7 @@ beforeAll(() => {
   };
   /* Nor scrolling: the fulfillment panel scrolls itself into view. */
   Element.prototype.scrollIntoView ??= function () {};
+  Element.prototype.scrollTo ??= function () {};
 });
 /* Each role loads as its own chunk (ADR 078). Load all three once, so every
    test renders its role at once, as a returning visit does. The first import
@@ -65,7 +79,8 @@ afterEach(() => {
   localStorage.clear();
 });
 
-const open = (role: Role) => render(<Harness role={role} />);
+const open = (role: Role, init?: (s: State) => void) =>
+  render(<Harness role={role} init={init} />);
 const sidebar = () =>
   within(screen.getAllByRole("navigation", { hidden: true })[0]);
 const go = (page: RegExp) =>
@@ -336,5 +351,220 @@ describe("Switching roles", () => {
     expect(h1().textContent).toBe("Your Work");
     fireEvent.click(screen.getByRole("button", { name: "Customer" }));
     expect(h1().textContent).toBe("Home, handled.");
+  });
+});
+
+/* ADR 079: the platform audit's P1s. Focus always lands somewhere, and no
+   destructive action happens in one tap. */
+describe("Focus and friction (ADR 079)", () => {
+  const focused = () => document.activeElement;
+  /** Customer c2's own request, with a quote waiting on them. */
+  const quoted = (d: State) => {
+    const r = d.requests.find(
+      (x) => x.accountId === "c2" && x.status !== "Draft",
+    )!;
+    issueQuote(d, r.id, {
+      type: "Fixed price",
+      amount: 240,
+      payOnCompletion: false,
+    });
+  };
+
+  it("closes the decision queue on Escape, with focus left on the page", () => {
+    open("Operator");
+    const trigger = screen.getByRole("button", {
+      name: /Work through \d+ decisions?/,
+    });
+    trigger.focus();
+    fireEvent.click(trigger);
+    expect(screen.getByRole("dialog", { name: "Decisions" })).toBeTruthy();
+    fireEvent.keyDown(document, { key: "Escape" });
+    expect(screen.queryByRole("dialog", { name: "Decisions" })).toBeNull();
+    expect(focused()).not.toBe(document.body);
+  });
+
+  it("makes the page behind the decision queue inert", () => {
+    open("Operator");
+    fireEvent.click(
+      screen.getByRole("button", { name: /Work through \d+ decisions?/ }),
+    );
+    /* jsdom keeps `inert` as a property, not an attribute. */
+    const dialog = screen.getByRole("dialog", { name: "Decisions" });
+    const muted: Element[] = [];
+    for (let n: Element | null = dialog; n?.parentElement; n = n.parentElement)
+      for (const sib of n.parentElement.children)
+        if (sib !== n && (sib as HTMLElement).inert) muted.push(sib);
+    expect(muted.length).toBeGreaterThan(0);
+  });
+
+  it("asks why before the quote card declines, and keeps focus", () => {
+    open("Customer", quoted);
+    go(/^My bookings/);
+    const card = document.querySelector<HTMLElement>(".panel.quote")!;
+    fireEvent.click(within(card).getByRole("button", { name: "Decline" }));
+    expect(screen.queryByText("Quote declined")).toBeNull();
+    expect(focused()).toBe(
+      within(card).getByRole("button", { name: "Too expensive" }),
+    );
+    fireEvent.click(within(card).getByRole("button", { name: "Back" }));
+    expect(focused()).toBe(
+      within(card).getByRole("button", { name: "Decline" }),
+    );
+    fireEvent.click(within(card).getByRole("button", { name: "Decline" }));
+    fireEvent.click(
+      within(card).getByRole("button", { name: "Too expensive" }),
+    );
+    expect(screen.getByText("Quote declined")).toBeTruthy();
+    expect(focused()).not.toBe(document.body);
+  });
+
+  it("confirms before declining an additional charge", () => {
+    open("Customer", (d) => {
+      quoted(d);
+      const q = d.quotes.at(-1)!;
+      d.charges = [
+        ...(d.charges ?? []),
+        {
+          id: "ch-test",
+          requestId: q.requestId,
+          amount: 80,
+          reason: "A second shelf",
+          taskIds: [],
+          status: "Sent",
+          plan: {
+            providerId: providers[0].id,
+            start: new Date(d.clock + 3 * 86400000).toISOString(),
+            travel: 0,
+            duration: 60,
+            pay: 50,
+          },
+          sentAt: new Date(d.clock).toISOString(),
+        },
+      ];
+    });
+    go(/^My bookings/);
+    const card = screen
+      .getByText("ADDITIONAL CHARGE")
+      .closest<HTMLElement>(".panel")!;
+    fireEvent.click(within(card).getByRole("button", { name: "Decline" }));
+    expect(screen.queryByText("Charge declined")).toBeNull();
+    const keep = within(card).getByRole("button", { name: "Keep it" });
+    expect(focused()).toBe(keep);
+    fireEvent.click(keep);
+    fireEvent.click(within(card).getByRole("button", { name: "Decline" }));
+    fireEvent.click(
+      within(card).getByRole("button", { name: "Decline charge" }),
+    );
+    expect(screen.getByText("Charge declined")).toBeTruthy();
+    expect(focused()).not.toBe(document.body);
+  });
+
+  it("moves focus into the queue's decline reasons and back", () => {
+    open("Contractor");
+    fireEvent.click(
+      screen.getByRole("button", { name: /^Review \d+ offers?/ }),
+    );
+    const dialog = screen.getByRole("dialog", { name: "Offers" });
+    const decline = within(dialog).getByRole("button", { name: "Decline" });
+    decline.focus();
+    fireEvent.click(decline);
+    expect(dialog.contains(focused())).toBe(true);
+    expect(focused()?.tagName).toBe("BUTTON");
+    fireEvent.click(within(dialog).getByRole("button", { name: "Back" }));
+    expect(focused()).toBe(
+      within(dialog).getByRole("button", { name: "Decline" }),
+    );
+  });
+
+  it("confirms before resetting the demo", () => {
+    open("Operator");
+    go(/^More/);
+    fireEvent.click(screen.getByRole("button", { name: "Demo settings →" }));
+    fireEvent.click(
+      screen.getByRole("button", { name: /Reset all demo data/ }),
+    );
+    expect(screen.queryByText("All five scenarios reset")).toBeNull();
+    const cancel = screen.getByRole("button", { name: "Cancel" });
+    expect(focused()).toBe(cancel);
+    fireEvent.click(cancel);
+    fireEvent.click(
+      screen.getByRole("button", { name: /Reset all demo data/ }),
+    );
+    fireEvent.click(screen.getByRole("button", { name: "Reset everything" }));
+    expect(screen.getByText("All five scenarios reset")).toBeTruthy();
+  });
+
+  it("can undo removing a finding", async () => {
+    open("Operator", (d) => {
+      const w = createWalkthrough(d, "p1");
+      addFinding(d, w.id, { area: "Hall", title: "Loose handrail" });
+      addFinding(d, w.id, { area: "Kitchen", title: "Dripping tap" });
+    });
+    go(/^Walkthroughs/);
+    await screen.findByRole("heading", { name: "Property walkthroughs" });
+    fireEvent.click(
+      screen
+        .getAllByRole("button")
+        .find(
+          (b) =>
+            b.classList.contains("queue-item") && /Draft/.test(b.textContent!),
+        )!,
+    );
+    const removes = await screen.findAllByRole("button", {
+      name: /Remove finding/,
+    });
+    const before = removes.length;
+    fireEvent.click(removes[0]);
+    expect(
+      screen.queryAllByRole("button", { name: /Remove finding/ }).length,
+    ).toBe(before - 1);
+    fireEvent.click(screen.getByRole("button", { name: "Undo" }));
+    expect(
+      screen.queryAllByRole("button", { name: /Remove finding/ }).length,
+    ).toBe(before);
+  });
+
+  it("moves focus to the next intake step's heading", async () => {
+    open("Customer");
+    go(/^New request/);
+    await screen.findByRole("heading", { name: "Where should we come?" });
+    const saved = screen.getByRole("region", { name: "Your addresses" });
+    fireEvent.click(within(saved).getAllByRole("button")[0]);
+    fireEvent.click(screen.getByRole("button", { name: /^Continue/ }));
+    expect(focused()).toBe(
+      screen.getByRole("heading", { name: "What do you need taken care of?" }),
+    );
+  });
+
+  it("says which offers saving hours will withdraw, before it does", () => {
+    open("Contractor");
+    go(/^Availability/);
+    /* No hours at all: every open offer falls outside them. */
+    for (const on of screen
+      .getAllByRole("button", { pressed: true })
+      .filter((b) => b.classList.contains("time-pill")))
+      fireEvent.click(on);
+    const save = screen.getByRole("button", { name: "Save hours" });
+    fireEvent.click(save);
+    expect(screen.queryByText("Hours saved")).toBeNull();
+    expect(screen.getByText(/^Saving withdraws \d+ offers?/)).toBeTruthy();
+    fireEvent.click(screen.getByRole("button", { name: "Keep editing" }));
+    expect(focused()).toBe(screen.getByRole("button", { name: "Save hours" }));
+    fireEvent.click(screen.getByRole("button", { name: "Save hours" }));
+    expect(focused()).toBe(
+      screen.getByRole("button", { name: "Keep editing" }),
+    );
+    fireEvent.click(screen.getByRole("button", { name: "Save and withdraw" }));
+    expect(screen.getByText("Hours saved")).toBeTruthy();
+    expect(focused()).not.toBe(document.body);
+  });
+
+  it("says which role is being viewed", () => {
+    open("Operator");
+    const group = screen.getByRole("group", { name: "Viewing as" });
+    const pressed = (name: string) =>
+      within(group).getByRole("button", { name }).getAttribute("aria-pressed");
+    expect(pressed("Operator")).toBe("true");
+    expect(pressed("Customer")).toBe("false");
   });
 });

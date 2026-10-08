@@ -14,10 +14,10 @@ An interactive prototype of a handyman services platform. It has three roles, Cu
 ## Key Facts
 - **Stack:** React 19, Vite, TypeScript, vitest, lucide-react. There is no backend. State is kept in localStorage under `fieldwork-demo-v1`.
 - **Gates:**
-  - `npm test` runs the catalogue and status checks, then vitest: 578 tests as of 2026-10-08, 23 of them screen tests in jsdom (`workspace.test.tsx`).
+  - `npm test` runs the catalogue and status checks, then vitest: 588 tests as of 2026-10-08, 33 of them screen tests in jsdom (`workspace.test.tsx`).
   - `npm run build` runs `design:check`, `catalogue:check`, `status:check`, `tsc` and then `vite build`.
 - **Deploy:** merging to `main` runs GitHub Actions, which publishes to Pages at j.ogden.ag. The repository is public.
-- **Decisions:** ADR 001–078 are in `docs/design-decisions.md`. Business calls are in `docs/decisions.md`.
+- **Decisions:** ADR 001–079 are in `docs/design-decisions.md`. Business calls are in `docs/decisions.md`.
 - **Line endings:** most files are CRLF. Scripted edits must keep CRLF. Prettier rewrites to LF, so restore CRLF after running it.
 
 ## Architecture / Structure
@@ -32,7 +32,7 @@ An interactive prototype of a handyman services platform. It has three roles, Cu
 - `src/decisions.ts` builds the operator's decision queue (`nextDecision`) and offers.
 - `src/dispatch.ts` handles declines and reoffers. `src/payments.ts` handles payments.
 - `src/JobWork.tsx` is the job checklist, photos, outcomes and finish sheet, plus `Sheet`. Operator and contractor both use it (ADR 075).
-- The queues are `CustomerQueue.tsx`, `ContractorQueue.tsx` and `DecisionQueue.tsx`, built on `QueueLayer.tsx`. See [[one-at-a-time]].
+- The queues are `CustomerQueue.tsx`, `ContractorQueue.tsx` and `DecisionQueue.tsx`, all built on `QueueLayer.tsx` (the operator's since ADR 079). `src/useSwapFocus.ts` moves focus through a swap of buttons, such as Decline opening its reasons, or a confirmation. It is its own module so the shell doesn't load `QueueLayer`. See [[one-at-a-time]].
 - `src/customerText.ts` is the one place that writes customer-facing status wording.
 
 ## Current Status
@@ -44,22 +44,23 @@ An interactive prototype of a handyman services platform. It has three roles, Cu
 - ADR 077 step 6 (`useWorkspaceState()`) is live on `main` via PR #51 (2026-10-08).
 - ADR 077 step 7 (each role's helpers into its own file) is live on `main` via PR #52 (2026-10-08).
 - ADR 078 (a chunk per role) is live on `main` via PR #53 (2026-10-08).
-- A platform-wide UX audit ran on 2026-10-08, after ADR 078: 8 P1s, 15 P2s and 15 P3s across the three roles and the shell, none fixed yet. See [[platform-ux-audit-2026-10]].
+- A platform-wide UX audit ran on 2026-10-08, after ADR 078: 8 P1s, 15 P2s and 15 P3s across the three roles and the shell, The P1s are fixed in ADR 079 (branch `claude/adr-079`). The P2s and P3s are open. See [[platform-ux-audit-2026-10]].
 - Local dev uses Vite on 5173 and the preview build on 4173 (`.claude/launch.json`, untracked).
 
 ## Connections
 - [[one-at-a-time]]: the interaction pattern behind every queue.
 - [[customer-chosen-time]]: how holds and the customer's chosen slot reach the operator.
 - [[customer-ux-audit-2026-10]]: the customer audit, and where each finding went.
-- [[platform-ux-audit-2026-10]]: the most recent audit, covering every role. Its findings are open.
+- [[platform-ux-audit-2026-10]]: the most recent audit, covering every role. Its P1s are fixed (ADR 079).
 - [[2026-10-07-wiki-in-repo]]: why this wiki is here.
 
 ## Open Questions
-- The platform UX audit's findings are open. The recommended order is: focus always lands somewhere, then friction (undo or confirmation) on destructive actions, then honest state and announcements. A Declined quote needs its own customer status, because the reconciler shows it as "Quote ready".
+- The platform UX audit's P2s and P3s are open. Next is honest state and announcements: toast tone, an always-mounted live region and a cleared timer. An undo for the operator's Offer is open too. A Declined quote needs its own customer status, because the reconciler shows it as "Quote ready".
 - ADR 077 is complete, and each role is its own chunk (ADR 078). The operator, the default, saves only 5% of its first load, because most of the role code is the operator's. Splitting `OperatorRequests` off from the operator's home is the next size candidate, if first load ever matters.
 - Bundle-size work is parked (ADR 074–076). The catalogue and the per-role CSS were measured at 6% and 2% of the first load (ADR 076).
 
 ## History
+- 2026-10-08: the platform audit's 8 P1s fixed (ADR 079). `DecisionQueue` moved onto `QueueLayer`. Focus falls back to `main h1`, follows every button swap (`useSwapFocus`), and goes to each intake step's h1. Quote and charge Decline, Availability's withdrawals and Reset confirm, and Remove finding has an inline Undo. The role switch has `aria-pressed`. 10 screen tests were added (588 tests), the stylesheet is byte-identical, and the first load grew 0.3 kB gzipped.
 - 2026-10-08: a report-mode UX audit of the whole platform (no source changes). The customer fixes from ADR 069, 070 and 073 all hold. See [[platform-ux-audit-2026-10]].
 - 2026-10-08: each role loads as its own chunk (ADR 078). First loads went down 5% (operator), 13% (customer) and 11% (contractor), gzipped. The other roles are preloaded when idle, and the stylesheet is byte-identical. ADR 077 is complete.
 - 2026-10-08: each role's helpers moved verbatim out of `useWorkspaceState()` into its own file (ADR 077, step 7): 19 into `OperatorRequests.tsx`, 11 into `CustomerWorkspace.tsx`, and `RouteMap` into `OperatorWorkspace.tsx`. The hook went from about 1,830 to 740 lines. 578 tests pass unchanged, and the stylesheet is byte-identical.

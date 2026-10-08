@@ -17,6 +17,7 @@ import { findingsFor, findingState } from "./pmw";
 import { assessmentLink } from "./store";
 import { type CustomerTodo, customerQueue } from "./roleQueues";
 import { AllCaughtUp, QueueLayer, useOneAtATime } from "./QueueLayer";
+import { useSwapFocus } from "./useSwapFocus";
 import QueueAside from "./QueueAside";
 
 /**
@@ -26,7 +27,7 @@ import QueueAside from "./QueueAside";
  */
 type Update = (fn: (d: State) => void, msg?: string) => void;
 
-const QUOTE_REASONS = [
+export const QUOTE_REASONS = [
   "Too expensive",
   "Changed my mind",
   "Found someone else",
@@ -101,6 +102,7 @@ function Step({
   skip: () => void;
 }) {
   const [declining, setDeclining] = useState(false);
+  const swap = useSwapFocus(declining);
   const [reply, setReply] = useState("");
   const [error, setError] = useState("");
 
@@ -331,7 +333,7 @@ function Step({
         {declining ? (
           /* One tap declines; the reason is optional and goes to the
              operator revising the price. */
-          <fieldset className="job-outcomes">
+          <fieldset className="job-outcomes" ref={swap.picker}>
             <legend>Why not? This helps us revise it.</legend>
             <div>
               {[...QUOTE_REASONS, "No reason"].map((why) => (
@@ -373,6 +375,7 @@ function Step({
             </button>
             <div className="row job-secondary">
               <button
+                ref={swap.trigger}
                 className="text-button"
                 onClick={() => setDeclining(true)}
               >

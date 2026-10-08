@@ -2099,3 +2099,58 @@ it, so they stay as Rollup made them. They load in parallel with the role.
 **The screen tests load the roles first.** `workspace.test.tsx` renders each
 role once in a `beforeAll` and waits for it. Every test then renders its role
 at once, and no test changed.
+
+## ADR 079: Focus always lands somewhere, and nothing destructive takes one tap
+
+Accepted. These are the eight P1 findings of the platform UX audit of
+2026-10 (`wiki/sources/platform-ux-audit-2026-10.md`). Each is pinned by a
+screen test in `workspace.test.tsx` ("Focus and friction (ADR 079)"), and
+each test fails without its fix.
+
+**The operator's queue is on the shared layer.** `DecisionQueue` had its own
+copy of the one-at-a-time layer (ADR 059), with no Escape, no Tab loop and
+nothing behind it made inert. It now uses `QueueLayer` and `useOneAtATime`,
+like the customer's and contractor's queues (ADR 062). It keeps its own
+wording: "Decision N of M", and an end screen that goes back to Home.
+
+**Focus has somewhere to go.**
+- When a queue closes and the button that opened it is gone (its last
+  item was handled), focus goes to the page's `h1`.
+- In both queues, Decline opens its reasons with focus on the first
+  reason, and Back returns focus to Decline. This uses `useSwapFocus`
+  (`src/useSwapFocus.ts`), shared by every swap below.
+- Each intake step's `h1` takes focus when the step changes, but not when
+  intake first opens. A task editor that opens still takes focus from it.
+
+**Declines and withdrawals confirm; removals undo.**
+- The customer's quote card asks why, as the customer's queue does
+  (`QUOTE_REASONS`, plus "No reason"). Focus stays on the card's heading
+  once the buttons are gone.
+- The additional charge asks "Decline this $N charge?", with "Keep it"
+  focused.
+- Availability counts the offers a save would withdraw, with a dry run of
+  `setAvailability` on a copy of the state. If there are any, it says how
+  many before saving, with "Keep editing" focused.
+- Reset all demo data asks first, with Cancel focused.
+- Remove finding shows "Finding removed. Undo", as intake's tasks do. Undo
+  puts the finding back where it was.
+
+A confirmation fits where the effect reaches someone else: an operator
+revising a quote, a contractor's offer returned for reoffer, or every
+scenario. An undo fits where the effect stays local to a draft. There is no
+general undo from a snapshot. A decline sends notifications and frees
+holds, and restoring a snapshot would retract them, so the people already
+told would see something different from what happened.
+
+**The role switch says which role is showing.** Each role button has
+`aria-pressed`, and the group is labelled "Viewing as".
+
+**What it cost.** The confirmations reuse `job-outcomes`, `secondary` and
+`text-button`, and the built stylesheet is byte-identical. `useSwapFocus` is
+a module of its own: importing it from `QueueLayer` would have pulled the
+whole layer into the first load (+1.1 kB gzipped) to serve Reset. The first
+load grew by 0.3 kB gzipped. There are 588 tests, ten of them new.
+
+Out of scope, and left for later: the audit's P2s and P3s. These include
+the Declined quote still reading "Quote ready", toast timing, and an undo
+for the operator's Offer.

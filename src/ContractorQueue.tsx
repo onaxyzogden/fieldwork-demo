@@ -5,6 +5,7 @@ import { type State, accountName, dateLabel, money } from "./model";
 import { markOfferSeen, offerSeen } from "./notifications";
 import { contractorQueue } from "./roleQueues";
 import { AllCaughtUp, QueueLayer, useOneAtATime } from "./QueueLayer";
+import { useSwapFocus } from "./useSwapFocus";
 import QueueAside from "./QueueAside";
 import { When } from "./When";
 
@@ -98,6 +99,7 @@ function Offer({
       });
   }, [id]);
   const [declining, setDeclining] = useState(false);
+  const swap = useSwapFocus(declining);
   /* respondToOffer refuses only an offer that stopped being one (expired,
      withdrawn); the queue passes over it either way, so it moves on. */
   const answer = (status: "Accepted" | "Declined", reason = "") => {
@@ -153,7 +155,7 @@ function Offer({
       <div className="onsite-bar">
         {declining ? (
           /* One tap declines and moves on; the reason goes to the operator. */
-          <fieldset className="job-outcomes">
+          <fieldset className="job-outcomes" ref={swap.picker}>
             <legend>Why are you declining?</legend>
             <div>
               {[...REASONS, "No reason"].map((why) => (
@@ -179,6 +181,7 @@ function Offer({
             </button>
             <div className="row job-secondary">
               <button
+                ref={swap.trigger}
                 className="text-button"
                 onClick={() => setDeclining(true)}
               >

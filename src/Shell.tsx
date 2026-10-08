@@ -1,4 +1,4 @@
-import { type RefObject } from "react";
+import { type RefObject, useState } from "react";
 import {
   Bell,
   Briefcase,
@@ -22,6 +22,7 @@ import {
   X,
 } from "lucide-react";
 import { type State, accountName, providers } from "./model";
+import { useSwapFocus } from "./useSwapFocus";
 
 /**
  * The chrome every role shares: the navigation drawer, the prototype banner
@@ -224,7 +225,8 @@ export function DemoBar({
           · All data and transactions are simulated
         </span>
       </span>
-      <div className="role-switch">
+      {/* Which role is showing is said, not only shown (ADR 079). */}
+      <div className="role-switch" role="group" aria-label="Viewing as">
         {compareMode ? (
           <>
             <span className="chosen">{role}</span>
@@ -238,6 +240,7 @@ export function DemoBar({
               <button
                 key={x}
                 className={role === x ? "chosen" : ""}
+                aria-pressed={role === x}
                 onClick={() => {
                   setRole(x);
                   setPage(homeOf(x));
@@ -366,6 +369,8 @@ export function DemoSettings({
   onAdvanceClock: () => void;
   onReset: () => void;
 }) {
+  const [resetting, setResetting] = useState(false);
+  const swap = useSwapFocus(resetting);
   const scenarios = [
     "01 Door adjustment",
     "02 Four-task visit",
@@ -435,9 +440,40 @@ export function DemoSettings({
       <button className="secondary full" onClick={onAdvanceClock}>
         Advance clock 3 hours
       </button>
-      <button className="secondary full actions" onClick={onReset}>
-        <RotateCcw size={16} /> Reset all demo data
-      </button>
+      {/* Nothing brings the scenarios back, so this asks first (ADR 079). */}
+      {resetting ? (
+        <fieldset className="job-outcomes actions" ref={swap.picker}>
+          <legend>
+            Reset all five scenarios? This clears everything in this browser.
+          </legend>
+          <div>
+            <button
+              className="secondary"
+              onClick={() => {
+                setResetting(false);
+                onReset();
+              }}
+            >
+              Reset everything
+            </button>
+          </div>
+          <button
+            className="text-button"
+            data-focus
+            onClick={() => setResetting(false)}
+          >
+            Cancel
+          </button>
+        </fieldset>
+      ) : (
+        <button
+          ref={swap.trigger}
+          className="secondary full actions"
+          onClick={() => setResetting(true)}
+        >
+          <RotateCcw size={16} /> Reset all demo data
+        </button>
+      )}
     </>
   );
 }

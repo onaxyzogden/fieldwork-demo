@@ -3,6 +3,19 @@ title: "Wiki Log"
 type: log
 ---
 
+## [2026-10-08] session | ADR 079: the platform audit's P1s
+
+- **Decided:** confirm declines and withdrawals, undo removals. There is no snapshot undo, because restoring one would retract notifications and holds already sent.
+- **Completed:**
+  - `DecisionQueue` moved onto `QueueLayer`, keeping "Decision N of M" and its own end screen.
+  - `QueueLayer` falls back to `main h1` when the opener is gone. `useSwapFocus` (new, `src/useSwapFocus.ts`) moves focus through every button swap. Intake focuses each step's h1.
+  - The customer's quote Decline asks why (`QUOTE_REASONS`), and the charge Decline confirms. Availability dry-runs `setAvailability` and asks before withdrawing. Reset confirms, and Remove finding has an inline Undo.
+  - The role switch has `aria-pressed`, in a group labelled "Viewing as".
+- **Found:** importing `useSwapFocus` from `QueueLayer` pulled the layer into the first load (+1.1 kB gzipped), so it is its own module (+0.3 kB). Prettier reformats unrelated lines in `Shell.tsx`, `Walkthroughs.tsx` and `workspace.test.tsx`, so those were edited by hand.
+- **Verified:** 588 tests (10 new, each failing without its fix). `tsc` and the build pass, and the stylesheet is byte-identical. A keyboard pass on `vite preview` found no focus drop to `<body>` in the queues, Reset, the contractor's Decline, Availability or intake.
+- **Next:** the audit's P2s, starting with the Declined quote's own status and the toasts.
+- **Pages touched:** [[platform-ux-audit-2026-10]], [[fieldwork]], [[one-at-a-time]], [[index]].
+
 ## [2026-10-08] session | Platform UX audit (report only)
 
 - **Completed:** a report-mode audit (`ux-engine:ux-auditor`) of every role and the shell, in four phases: Operator, Contractor, a Customer re-check, and cross-cutting. It was run live on `vite preview` with a contrast, name and target-size script, plus a code read. No source changed.
