@@ -14,6 +14,7 @@ type: log
   - 578 tests, with no test changes. `tsc` and the build pass.
   - The CSS is byte-identical after each of the three moves. The JS index is 309.2 kB.
   - Live on `vite preview`: the route map, a request's decision card, the contractor offer with its candidates and routed times, History, and the customer's home and request card. No console errors.
+- **PR:** #52 (`claude/role-helpers`), against `main`, not stacked. Auto-merge is off.
 - **Next:** a lazy chunk per role.
 - **Pages touched:** [[fieldwork]].
 
