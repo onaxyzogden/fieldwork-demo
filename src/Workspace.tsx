@@ -1,12 +1,9 @@
 import { suitableProviders } from "./suitability";
-import ContractorWork from "./ContractorWork";
-import { JobWork } from "./JobWork";
-import Availability from "./Availability";
-import Earnings from "./EarningsPanel";
+/* Second, as ContractorWork was, so onsite.css keeps its place ahead of work.css. */
+import { ContractorWorkspace } from "./ContractorWorkspace";
 import { AuditList } from "./QueueAside";
 import { hasLiveVisit } from "./aside";
 import { OperatorHome, OperatorToday } from "./OperatorWork";
-import PropertyRecord from "./PropertyRecord";
 import {
   bucket,
   callBackDue,
@@ -15,8 +12,7 @@ import {
   workStatus,
   dayKey,
 } from "./work";
-import CustomerQueue from "./CustomerQueue";
-import { customerQueue, customerTodoLabel } from "./roleQueues";
+import { customerQueue } from "./roleQueues";
 import {
   approveCharge,
   cancelBooking,
@@ -38,63 +34,36 @@ import {
 import { suggestTitle } from "./pmw";
 import { countdown } from "./countdown";
 import {
-  customerProgressText,
   customerQuoteText,
   customerStatusText,
   customerVisitText,
 } from "./customerText";
 import FollowUp, { followUpLine } from "./FollowUp";
-import { validAddress, dayLabel, taskLabel } from "./intake";
-import {
-  getIssue,
-  matchIssues,
-  answerKey,
-  inferredAnswers,
-  questionAnswers,
-  needsClarificationReview,
-  reportedConcern,
-} from "./clarification";
-import React, { useState, useRef } from "react";
+import { validAddress, dayLabel } from "./intake";
+import { getIssue } from "./clarification";
+import React, { useState } from "react";
 import {
   ArrowUpRight,
   ArrowRight,
-  ArrowLeft,
-  Plus,
   Check,
   MapPin,
   Clock,
   CalendarDays,
-  LayoutDashboard,
   ListTodo,
-  Users,
-  Settings,
-  ChevronRight,
-  ChevronDown,
   Search,
   Bell,
-  MoreHorizontal,
-  Wrench,
   X,
   Camera,
-  RotateCcw,
   ShieldCheck,
-  Navigation,
-  Layers,
   CheckCircle2,
   AlertCircle,
-  Briefcase,
   Wallet,
-  Sun,
-  Moon,
-  Menu,
-  ClipboardCheck,
 } from "lucide-react";
 import {
   type State,
   type Task,
   type Request,
   type Visit,
-  seed,
   uid,
   classify,
   providers,
@@ -107,23 +76,18 @@ import {
   available,
   eligible,
   scopeMatch,
-  torontoParts,
   instantEligible,
   accounts,
-  answerQuestion,
   approveQuote,
   genericTitle,
   declineQuote,
   auditFor,
-  secured,
-  methodFor,
   materialsResponsibilities,
   type MaterialsResponsibility,
   accountName,
   workPayment,
   primaryContact,
   timeLabel,
-  quoted,
   confirmed,
   hoursLabel,
   hoursOf,
@@ -140,9 +104,7 @@ import {
 import { storablePhoto, unreadableMessage } from "./photos";
 import { Sidebar, DemoBar, Topbar, DemoSettings, homeOf } from "./Shell";
 import { useFieldErrors } from "./fields";
-
 import {
-  LATE_CANCEL_TEXT,
   callBackText,
   inbox,
   markRead,
@@ -151,16 +113,8 @@ import {
   unreachable,
 } from "./notifications";
 import { NotificationInbox, MessageThread } from "./NotificationUI";
-import { Glance, GlanceLead } from "./GlanceCard";
+import { customerGlance, todaysVisits } from "./glance";
 import {
-  customerGlance,
-  glanceDate,
-  todaysVisits,
-  visitDayLine,
-  visitDayState,
-} from "./glance";
-import {
-  migrateDispatch,
   dispatchStatus,
   requestDispatch,
   replacementOptions,
@@ -170,239 +124,13 @@ import {
 import { KEY, load, save, commit, freshDemo } from "./store";
 import { lazyScreen } from "./Recovery";
 import { SaveWarning } from "./NotificationUI";
+import { TaskAnswers } from "./RequestFields";
+import { WorkspaceContext, type WorkspaceApi } from "./workspaceContext";
+import { CustomerWorkspace } from "./CustomerWorkspace";
 
 /* Loaded when first opened, not with the app (ADR 074). */
 const Walkthroughs = lazyScreen(() => import("./Walkthroughs"));
-const CustomerIntake = lazyScreen(() => import("./CustomerIntake"));
 
-/**
- * Submit-type actions stay enabled and validate on click.
- *
- * A disabled button drops out of tab order, stays silent to screen readers, and
- * fires no pointer events — so any tooltip explaining why it is blocked never
- * reaches the person who needed it, and the greyed label usually fails contrast
- * besides. Instead: always clickable, and on failure mark the blocking field,
- * say why beside it, and move focus there.
- */
-function NoteReply({ onSend }: { onSend: (reply: string) => void }) {
-  const [text, setText] = useState("");
-  const [error, setError] = useState("");
-  const ref = useRef<HTMLTextAreaElement>(null);
-  return (
-    <>
-      <label className={"field" + (error ? " field-error" : "")}>
-        Your reply
-        <textarea
-          ref={ref}
-          value={text}
-          aria-invalid={!!error || undefined}
-          aria-describedby={error ? "note-reply-error" : undefined}
-          placeholder="Add the requested details…"
-          onChange={(e) => {
-            setText(e.target.value);
-            if (error) setError("");
-          }}
-        />
-        {error && (
-          <span className="field-message" id="note-reply-error" role="alert">
-            <AlertCircle size={16} /> {error}
-          </span>
-        )}
-      </label>
-      <button
-        className="secondary"
-        onClick={() => {
-          if (!text.trim()) {
-            setError("Add your reply before sending.");
-            ref.current?.focus();
-            return;
-          }
-          onSend(text.trim());
-          setText("");
-        }}
-      >
-        Send reply
-      </button>
-    </>
-  );
-}
-function TaskAnswers({ task }: { task: Task }) {
-  const rows = questionAnswers(task);
-  const policy = getIssue(task.description);
-  return (
-    <>
-      {policy.availability === "Referral only" && (
-        <p className="warning">
-          Referral only: this service is not bookable through the demo. The
-          operator can review the request and advise on the next step.
-        </p>
-      )}
-      {reportedConcern(task) && (
-        <p className="warning">
-          Reported condition needs operator attention. Review the customer’s
-          answers before scheduling.
-        </p>
-      )}
-      {rows.length > 0 && (
-        <dl className="task-answers">
-          {rows.map((row) => (
-            <div key={row.key}>
-              <dt>
-                {row.label}
-                {row.inferred ? " · From your description" : ""}
-              </dt>
-              <dd>{row.value}</dd>
-            </div>
-          ))}
-        </dl>
-      )}
-    </>
-  );
-}
-function ClarificationFields({
-  task,
-  onChange,
-  attempted,
-}: {
-  task: Task;
-  onChange: (patch: Partial<Task>) => void;
-  attempted?: boolean;
-}) {
-  const issue = getIssue(task.description);
-  const inferred = inferredAnswers(task.description);
-  const setAnswer = (key: string, value: string) => {
-    const answers = { ...task.answers, [key]: value };
-    onChange({
-      issueId: issue.id,
-      answers,
-      ...(issue.id === "tv" && answers["tv:cables"] === "New electrical outlet"
-        ? { restricted: true }
-        : {}),
-      ...(needsClarificationReview({ ...task, answers })
-        ? { reviewed: false }
-        : {}),
-    });
-  };
-  const multiple = matchIssues(task.description).filter(
-    (i) =>
-      i.id !== issue.id &&
-      !(
-        ["outlet", "wiring"].includes(i.id) &&
-        ["outlet", "wiring", "tv"].includes(issue.id)
-      ),
-  );
-  return (
-    <>
-      {issue.availability === "Referral only" && (
-        <p className="warning">
-          We can record this for referral review, but this service is not
-          available for booking through the platform.
-        </p>
-      )}
-      {issue.availability !== "Referral only" &&
-        (task.restricted || issue.review) && (
-          <p className="warning">
-            Yousef will review the scope and arrange the right provider before
-            an appointment is confirmed.
-          </p>
-        )}
-      {multiple.length > 0 && (
-        <p className="note">
-          This may describe more than one problem: {issue.title} and{" "}
-          {multiple.map((i) => i.title).join(", ")}. If these are separate jobs,
-          use Back and add each as its own task.
-        </p>
-      )}
-      {issue.questions.map((q) => {
-        const key = answerKey(issue, q);
-        const answered = !!(task.answers[key] ?? inferred[key])?.trim();
-        const showError = !!attempted && !answered;
-        const field = (
-          <label
-            className={"field" + (showError ? " field-error" : "")}
-            key={key}
-          >
-            {q.label}
-            {key in inferred && !(key in task.answers) && (
-              <small>From your description — please check this answer.</small>
-            )}
-            {q.options ? (
-              <select
-                id={"q-" + task.id + "-" + key}
-                value={task.answers[key] ?? inferred[key] ?? ""}
-                aria-invalid={showError || undefined}
-                onChange={(e) => setAnswer(key, e.target.value)}
-              >
-                <option value="">Choose an answer…</option>
-                {q.options.map((o) => (
-                  <option key={o}>{o}</option>
-                ))}
-              </select>
-            ) : (
-              /* A standalone "Not sure" beside the field, not just placeholder
-                 text suggesting it — the escape hatch stays one tap away
-                 whether or not the question was ever attempted. */
-              <div className="field-with-action">
-                <input
-                  id={"q-" + task.id + "-" + key}
-                  value={task.answers[key] || ""}
-                  placeholder="Add details, or enter Not sure"
-                  aria-invalid={showError || undefined}
-                  onChange={(e) => setAnswer(key, e.target.value)}
-                />
-                <button
-                  type="button"
-                  className="text-button"
-                  onClick={() => setAnswer(key, "Not sure")}
-                >
-                  Not sure
-                </button>
-              </div>
-            )}
-            {showError && (
-              <span className="field-message" role="alert">
-                Answer this, or tap Not sure.
-              </span>
-            )}
-          </label>
-        );
-        return key in inferred && !(key in task.answers) ? (
-          <details className="inferred-answer" key={key}>
-            <summary>{inferred[key]} · From your description · Edit</summary>
-            {field}
-          </details>
-        ) : (
-          field
-        );
-      })}
-      {["sink-drain", "bath-drain", "toilet-block"].includes(issue.id) &&
-        /cleaner|chemical|drano|liquid.plumr/i.test(
-          task.answers[issue.id + ":tried"] || "",
-        ) && (
-          <label className="field">
-            Which product was used, and when?
-            <input
-              value={task.answers[issue.id + ":product"] || ""}
-              onChange={(e) => setAnswer(issue.id + ":product", e.target.value)}
-            />
-          </label>
-        )}
-      <label className="field">
-        Anything else we should know? (optional)
-        <textarea
-          value={task.answers["intake:details"] || ""}
-          onChange={(e) => setAnswer("intake:details", e.target.value)}
-        />
-      </label>
-      {reportedConcern(task) && (
-        <p className="warning">
-          We’ll flag this condition for operator attention. This prototype does
-          not dispatch emergency assistance.
-        </p>
-      )}
-    </>
-  );
-}
 export type Role = "Customer" | "Operator" | "Contractor";
 export function Workspace({
   s,
@@ -2006,6 +1734,50 @@ export function Workspace({
       </section>
     );
   };
+  /* What the extracted role workspaces read (ADR 077). */
+  const api: WorkspaceApi = {
+    chargePanel,
+    contractor,
+    contractorVisit,
+    customer,
+    customerAtAGlance,
+    customerBadge,
+    customerNext,
+    customerProperties,
+    customerToday,
+    customerTodoList,
+    customerTodos,
+    expanded,
+    fail,
+    idPrefix,
+    notify,
+    openContractorJob,
+    openFirst,
+    openRequestRow,
+    ownRequests,
+    page,
+    quote,
+    quotePanel,
+    r,
+    reveal,
+    reviewing,
+    s,
+    setActive,
+    setContractor,
+    setCustomer,
+    setExpanded,
+    setModal,
+    setPage,
+    setReviewing,
+    setSlot,
+    setStep,
+    startOrResumeRequest,
+    taskPhotos,
+    tasks,
+    update,
+    visitCard,
+    visits,
+  };
   return (
     <div
       className={"app" + (compareMode ? " compare-column" : "")}
@@ -3069,460 +2841,10 @@ export function Workspace({
               </section>
             </>
           )}
-          {role === "Customer" && (
-            <div className="customer-wrap">
-              {/* The prototype has to simulate several people to be testable at
-                  all. Tappable pills, the same visual idiom as every other chip
-                  here, rather than a separate control type. The roster is the
-                  customer list itself, so someone with no requests yet is still
-                  selectable — identity does not depend on owning a row. */}
-              <div
-                className="identity-switch"
-                role="group"
-                aria-label="Viewing as"
-              >
-                <span className="eyebrow">VIEWING AS</span>
-                {accounts.map((c) => (
-                  <button
-                    key={c.id}
-                    className="badge"
-                    aria-pressed={customer === c.id}
-                    onClick={() => {
-                      setCustomer(c.id);
-                      const own = s.requests.find((x) => x.accountId === c.id);
-                      if (own) setActive(own.id);
-                      setStep(0);
-                      setPage("My bookings");
-                    }}
-                  >
-                    {c.name}
-                  </button>
-                ))}
-              </div>
-              {page === "New request" ? (
-                <CustomerIntake
-                  key={r.id}
-                  s={s}
-                  r={r}
-                  update={update}
-                  notify={notify}
-                  photos={taskPhotos}
-                  questions={(t, change, attempted) => (
-                    <ClarificationFields
-                      task={t}
-                      onChange={change}
-                      attempted={attempted}
-                    />
-                  )}
-                  pay={(start) => {
-                    setSlot(start);
-                    setModal("Instant payment");
-                  }}
-                  view={() => setPage("My bookings")}
-                />
-              ) : (
-                <>
-                  <div className="heading role-greeting customer-portal-heading">
-                    <div>
-                      <h1>Home, handled.</h1>
-                      <p>Your requests and upcoming visits.</p>
-                    </div>
-                  </div>
-                  {/* Visit day, live (ADR 066): one line per visit today,
-                      opening that visit. */}
-                  {customerToday.length > 0 && (
-                    <section
-                      className="card panel visit-day"
-                      aria-label="Today"
-                    >
-                      {customerToday.map((v) => (
-                        <button
-                          key={v.id}
-                          className={
-                            "visit-day-line" +
-                            (visitDayState(v) === "Running late"
-                              ? " is-late"
-                              : "")
-                          }
-                          onClick={() => {
-                            setActive(v.requestId);
-                            setExpanded(true);
-                            reveal(idPrefix + "visit-" + v.id);
-                          }}
-                        >
-                          <CalendarDays size={20} />
-                          <span>{visitDayLine(v, s.clock)}</span>
-                        </button>
-                      ))}
-                    </section>
-                  )}
-                  {/* Each number opens the first thing it counted, so a
-                      count and what it points at cannot disagree. A bucket
-                      with nothing in it gets no onClick rather than a button
-                      that does nothing — the ADR 034 defect. */}
-                  <Glance
-                    date={glanceDate(+s.clock)}
-                    lead={
-                      customerNext ? (
-                        <GlanceLead
-                          when={dateLabel(customerNext.visit.start)}
-                          what={
-                            providers.find(
-                              (p) => p.id === customerNext.visit.providerId,
-                            )?.name || "Your provider"
-                          }
-                          where={customerNext.address}
-                          onClick={() => openRequestRow(customerNext.requestId)}
-                        />
-                      ) : (
-                        <GlanceLead
-                          when="NEXT VISIT"
-                          what="Nothing scheduled yet."
-                        />
-                      )
-                    }
-                    metrics={[
-                      {
-                        label: "Waiting on you",
-                        value: customerAtAGlance.waiting,
-                        urgent: customerAtAGlance.waiting > 0,
-                        onClick: openFirst(customerAtAGlance.waitingIds),
-                      },
-                      {
-                        label: "Upcoming visits",
-                        value: customerAtAGlance.upcoming,
-                        onClick: openFirst(customerAtAGlance.scheduledIds),
-                      },
-                      {
-                        label: "In progress",
-                        value: customerAtAGlance.inProgress,
-                        onClick: openFirst(customerAtAGlance.inProgressIds),
-                      },
-                    ]}
-                  />
-                  {/* Everything waiting on them, one thing at a time (ADR
-                      062). The number is the glance's own "Waiting on you". */}
-                  {customerTodos > 0 && (
-                    <button
-                      className="primary full"
-                      onClick={() => setReviewing(true)}
-                    >
-                      {/* One thing is named, not counted (ADR 070). */}
-                      {customerTodos === 1
-                        ? customerTodoLabel(s, customerTodoList[0])
-                        : `Review ${customerTodos} things waiting on you`}
-                    </button>
-                  )}
-                  {reviewing && (
-                    <CustomerQueue
-                      s={s}
-                      update={update}
-                      accountId={customer}
-                      failPayment={fail}
-                      close={() => setReviewing(false)}
-                    />
-                  )}
-                  {/* Accordion, not a tab strip into a separate detail screen.
-                      Everything about a request opens inline underneath its own
-                      row, so nothing about it lives on another page. */}
-                  <div className="request-accordion">
-                    {ownRequests.length === 0 && (
-                      <p className="note">
-                        No requests yet. Start one and it will appear here.
-                      </p>
-                    )}
-                    {ownRequests.map((x) => {
-                      const open = r.id === x.id && expanded;
-                      const count = s.tasks.filter(
-                        (t) => t.requestId === x.id && !t.mergedInto,
-                      ).length;
-                      const title =
-                        x.status === "Draft"
-                          ? "Draft · " +
-                            (s.tasks
-                              .find(
-                                (t) =>
-                                  t.requestId === x.id &&
-                                  !t.mergedInto &&
-                                  t.description.trim(),
-                              )
-                              ?.description.slice(0, 60) ||
-                              x.address ||
-                              "Photos added")
-                          : x.address || "Request · " + x.id.toUpperCase();
-                      return (
-                        <section
-                          className="card request-accordion-item"
-                          key={x.id}
-                        >
-                          <button
-                            className="accordion-head"
-                            aria-expanded={open}
-                            aria-controls={"request-" + x.id}
-                            onClick={() => {
-                              if (r.id === x.id) setExpanded(!expanded);
-                              else {
-                                setActive(x.id);
-                                setExpanded(true);
-                              }
-                            }}
-                          >
-                            <span className="accordion-head-text">
-                              <strong>{title}</strong>
-                              <small>
-                                <MapPin size={16} />
-                                {x.city} · {count}{" "}
-                                {count === 1 ? "task" : "tasks"}
-                              </small>
-                            </span>
-                            {customerBadge(x.status)}
-                            <ChevronDown
-                              size={20}
-                              className={open ? "chevron open" : "chevron"}
-                            />
-                          </button>
-                          {!open ? null : (
-                            <div id={"request-" + x.id}>
-                              {r.status === "Draft" ? (
-                                /* Their own unfinished work, so it gives way
-                                   to whatever is waiting on them (ADR 070). */
-                                <button
-                                  className={
-                                    customerTodos ? "secondary" : "primary"
-                                  }
-                                  onClick={() => {
-                                    setPage("New request");
-                                    setStep(0);
-                                  }}
-                                >
-                                  Continue request <ArrowRight size={16} />
-                                </button>
-                              ) : ["Cancelled", "Declined"].includes(
-                                  r.status,
-                                ) ? (
-                                /* A cancelled/declined request is not a
-                                   pipeline paused mid-step — the tracker
-                                   only ever shows forward progress, so it
-                                   has no honest way to represent "stopped."
-                                   Say so directly instead. */
-                                <p className="note">
-                                  {r.lateCancel
-                                    ? r.lateCancel.fee === undefined
-                                      ? LATE_CANCEL_TEXT
-                                      : r.lateCancel.fee
-                                        ? `This request was cancelled less than 24 hours before the visit. Late-cancellation fee: ${money(r.lateCancel.fee)}. Anything else you paid has been refunded.`
-                                        : "This request was cancelled. No late-cancellation fee applies, and anything you paid has been refunded in full."
-                                    : `This request was ${r.status.toLowerCase()}.`}
-                                </p>
-                              ) : (
-                                <div className="status-track">
-                                  {/* Three steps, not four. "Provider coordinated" was
-                            internal handoff the customer could not act on; it
-                            survives as the prose note below, not as a step.
-                            Text only, no icon — colour carries the state. */}
-                                  {[
-                                    {
-                                      label: "Received",
-                                      done: true,
-                                    },
-                                    {
-                                      label: "Quote",
-                                      done: quote?.status === "Approved",
-                                      active: quoted(s, r.id),
-                                    },
-                                    {
-                                      label: "Confirmed",
-                                      done: confirmed(s, r.id),
-                                    },
-                                  ].map((x) => (
-                                    <div
-                                      className={
-                                        "status-step " +
-                                        (x.done
-                                          ? "done"
-                                          : x.active
-                                            ? "active"
-                                            : "")
-                                      }
-                                      key={x.label}
-                                    >
-                                      {x.label}
-                                    </div>
-                                  ))}
-                                </div>
-                              )}
-                              {![
-                                "Confirmed",
-                                "Cancelled",
-                                "Declined",
-                                "Draft",
-                              ].includes(r.status) && (
-                                /* One contextual line, chosen from derived
-                                   state — not a log (ADR 070). */
-                                <p className="note">
-                                  {customerProgressText(s, r)}
-                                </p>
-                              )}
-                              {!!r.preferredSlots?.length ||
-                              r.timingConstraints ? (
-                                /* The customer's own stated preference, always visible to
-                         them and never quietly dropped. */
-                                <p className="note">
-                                  Your preference:{" "}
-                                  {r.preferredSlots
-                                    ?.map(
-                                      (p) =>
-                                        `${dayLabel(p.date)}${p.times.length ? ` (${p.times.join(", ")})` : ""}`,
-                                    )
-                                    .join(" · ") || "no specific day"}
-                                  {r.timingConstraints
-                                    ? ` — ${r.timingConstraints}`
-                                    : ""}
-                                </p>
-                              ) : null}
-                              {r.notes && <p className="note">{r.notes}</p>}
-                              {r.operatorNote && (
-                                /* One question, one reply. Not a thread: see §7.3 — a new
-                         question replaces this pair rather than appending. */
-                                <div
-                                  id={idPrefix + "question"}
-                                  className={
-                                    "card operator-note " +
-                                    (r.customerReply ? "answered" : "waiting")
-                                  }
-                                >
-                                  <span className="eyebrow">
-                                    {r.customerReply
-                                      ? "WE ASKED"
-                                      : "WE HAVE A QUESTION"}
-                                  </span>
-                                  <p>{r.operatorNote}</p>
-                                  {r.customerReply ? (
-                                    <p className="operator-note-reply">
-                                      <strong>Your reply:</strong>{" "}
-                                      {r.customerReply}
-                                    </p>
-                                  ) : (
-                                    <NoteReply
-                                      onSend={(reply) =>
-                                        update((d) => {
-                                          answerQuestion(d, r.id, reply);
-                                        }, "Reply sent")
-                                      }
-                                    />
-                                  )}
-                                </div>
-                              )}
-                              {tasks.map((t) => (
-                                <div className="portal-task" key={t.id}>
-                                  <span className="portal-task-icon">
-                                    <Wrench size={16} />
-                                  </span>
-                                  <div className="portal-task-body">
-                                    {/* A generic title says nothing; their
-                                        own words do (ADR 070). */}
-                                    {genericTitle(t) ? (
-                                      <>
-                                        <h4>{taskLabel(t)}</h4>
-                                        {taskLabel(t).endsWith("…") && (
-                                          <p>{t.description}</p>
-                                        )}
-                                      </>
-                                    ) : (
-                                      <>
-                                        <h4>{t.summary}</h4>
-                                        <p>{t.description}</p>
-                                      </>
-                                    )}
-                                    <TaskAnswers task={t} />
-                                    {taskPhotos(t)}
-                                  </div>
-                                </div>
-                              ))}
-                              {quotePanel()}
-                              {chargePanel()}
-                              {visits.map(visitCard)}
-                            </div>
-                          )}
-                        </section>
-                      );
-                    })}
-                  </div>
-                  {/* The primary action sits after the list, not before it —
-                      reviewing what already exists comes first; starting
-                      something new is the trailing action. */}
-                  <button
-                    className={
-                      /* One primary on the page (ADR 070): it gives way to
-                         the review button, and to a draft's Continue, which
-                         this button would only resume anyway. */
-                      (customerTodos ||
-                      ownRequests.some((x) => x.status === "Draft")
-                        ? "secondary"
-                        : "primary") + " full new-request-trailing"
-                    }
-                    onClick={startOrResumeRequest}
-                  >
-                    <Plus size={16} /> New request
-                  </button>
-                  {/* Collapsed and below the bookings: the walkthrough history
-                      is a reference, not the thing the customer came for. */}
-                  {customerProperties.map((p) => (
-                    <details className="card panel" key={p.id}>
-                      <summary>
-                        <strong>Maintenance record · {p.address}</strong>
-                      </summary>
-                      <PropertyRecord s={s} propertyId={p.id} />
-                    </details>
-                  ))}
-                </>
-              )}
-            </div>
-          )}
-          {role === "Contractor" && (
-            <>
-              {/* Same pill idiom as the customer switcher. Yousef is included:
-                  he takes jobs as well as dispatching them, so he is a real
-                  contractor identity, not just the operator. */}
-              <div
-                className="identity-switch"
-                role="group"
-                aria-label="Viewing as"
-              >
-                <span className="eyebrow">VIEWING AS</span>
-                {providers.map((p) => (
-                  <button
-                    key={p.id}
-                    className="badge"
-                    aria-pressed={contractor === p.id}
-                    onClick={() => setContractor(p.id)}
-                  >
-                    {p.name}
-                  </button>
-                ))}
-              </div>
-              {page === "Earnings" ? (
-                <Earnings key={contractor} s={s} provider={contractor} />
-              ) : page === "Availability" ? (
-                <Availability
-                  key={contractor}
-                  s={s}
-                  update={update}
-                  provider={contractor}
-                  openJob={openContractorJob}
-                />
-              ) : (
-                <ContractorWork
-                  key={contractor}
-                  s={s}
-                  provider={contractor}
-                  openVisit={contractorVisit}
-                  update={update}
-                  openAvailability={() => setPage("Availability")}
-                />
-              )}
-            </>
-          )}
+          <WorkspaceContext.Provider value={api}>
+            {role === "Customer" && <CustomerWorkspace />}
+            {role === "Contractor" && <ContractorWorkspace />}
+          </WorkspaceContext.Provider>
           <footer>
             <span>
               <span className="brand-mini">fieldwork.</span> Home services,
