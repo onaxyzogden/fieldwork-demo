@@ -2,6 +2,7 @@ import {
   Component,
   Suspense,
   lazy,
+  useState,
   type ComponentType,
   type ReactNode,
 } from "react";
@@ -110,12 +111,31 @@ class ChunkError extends Error {}
 export function lazyScreen<P extends object>(
   load: () => Promise<{ default: ComponentType<P> }>,
 ) {
+  /* React suspends a lazy component on its first render even when its chunk
+     is already here, which shows "Loading…" for a frame. Once `preload()` or
+     a render has it, a screen mounted later renders it directly. Each mount
+     picks one way and keeps it, so a mounted screen never swaps its tree. */
+  let loaded: ComponentType<P> | undefined;
+  let pending: Promise<{ default: ComponentType<P> }> | undefined;
+  const loadOnce = () =>
+    (pending ??= load().then(
+      (m) => {
+        loaded = m.default;
+        return m;
+      },
+      (e: unknown) => {
+        pending = undefined;
+        throw e;
+      },
+    ));
   const Screen = lazy(() =>
-    load().catch((e: unknown) => {
+    loadOnce().catch((e: unknown) => {
       throw new ChunkError(e instanceof Error ? e.message : String(e));
     }),
   );
-  return function LazyScreen(props: P) {
+  function LazyScreen(props: P) {
+    const [Ready] = useState(() => loaded);
+    if (Ready) return <Ready {...props} />;
     return (
       <ChunkBoundary>
         <Suspense
@@ -129,7 +149,13 @@ export function lazyScreen<P extends object>(
         </Suspense>
       </ChunkBoundary>
     );
+  }
+  /* Fetches the chunk ahead of time. A failure is left for the screen to
+     report, with a reload, if it is opened. */
+  LazyScreen.preload = () => {
+    loadOnce().catch(() => {});
   };
+  return LazyScreen;
 }
 
 class ChunkBoundary extends Component<

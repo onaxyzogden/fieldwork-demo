@@ -1896,7 +1896,7 @@ of the app script.
 
 ## ADR 075: The role workspaces stay inline, for now
 
-Accepted. ADR 074 left the three role workspaces inside `Workspace` in
+Superseded by ADR 078, which split the roles once ADR 077 had broken `Workspace` up. ADR 074 left the three role workspaces inside `Workspace` in
 `main.tsx`. This ADR measured what splitting them would save before doing it.
 
 **What a split would save.** These figures are for each role's first load
@@ -2045,5 +2045,57 @@ the cascade wasn't. `ContractorWorkspace` is now imported where
 on every extraction. `useWorkspaceState` is imported right after it,
 because the hook took over most of `Workspace`'s imports in the same order.
 
-**What remains, in order.**
-- A `lazyScreen` per role, which is the ADR 075 split.
+**What remains.** Nothing. The last step, a chunk per role, is ADR 078.
+
+## ADR 078: Each role loads as its own chunk
+
+Accepted. ADR 075 measured this split and declined it, because the role
+workspaces shared one component's state. ADR 077 has since moved that state
+into `useWorkspaceState()` and each role into its own file, so the split is
+now a change to `Workspace.tsx`'s imports.
+
+**What a role's first load saves.** These figures are measured on the build,
+following each chunk's static imports. They include JS and CSS, gzipped.
+
+| First load | Before | After | Saved |
+|---|---|---|---|
+| Operator (the default) | 608 kB, 174.6 kB gz | 563 kB, 165.8 kB gz | 8.8 kB gz (5%) |
+| Customer (portal link) | 608 kB, 174.6 kB gz | 517 kB, 152.3 kB gz | 22.3 kB gz (13%) |
+| Contractor | 608 kB, 174.6 kB gz | 527 kB, 154.8 kB gz | 19.8 kB gz (11%) |
+
+The script every role loads went from 309 kB (86 kB gz) to 183 kB (51 kB gz).
+The operator saves least, because most of the role code is the operator's.
+The go/no-go line was 5% for every role, and the operator only just clears
+it. The customer, who arrives from a link on a phone, gains the most.
+
+**Each role is a `lazyScreen`.** `OperatorWorkspace`, `CustomerWorkspace`
+and `ContractorWorkspace` load through `lazyScreen()`, like Walkthroughs. So a
+chunk missing after a deploy shows "This page didn't load" and a Reload, not
+the reset screen. The sidebar and the demo bar stay usable. State stays in
+`useWorkspaceState()`, which is in the first load.
+
+**The other two roles load when the browser is idle.** Once the first role is
+on screen, `Workspace` asks `lazyScreen` to preload the other two. Without
+that, switching roles in the demo bar would wait for a download. As ADR 075
+expected, this saves time to first paint, not bytes. React suspends a lazy
+component on its first render even when its chunk is already loaded, so
+`lazyScreen` remembers a loaded screen and renders it directly when it is
+mounted later. Each mount picks one way and keeps it, so a mounted screen
+never swaps its tree.
+
+**The CSS stays in the first load.** `onsite.css` and `work.css` reached the
+stylesheet through the role modules. Splitting the roles would have moved
+`onsite.css` into a sheet loaded after the main one, and put both later in
+the cascade. `Workspace` now imports both first, where `ContractorWorkspace`
+was imported. The built stylesheet is byte-identical, and has the same hash.
+The per-role CSS was about 3 kB gzipped (ADR 076), not worth a cascade risk.
+
+**Five small shared chunks stay separate.** `JobWork`, `QueueAside`,
+`QueueLayer`, `RequestFields` and `PropertyRecord` are each shared by two
+roles, so Rollup puts each in a chunk of its own, 2 to 7 kB. Grouping them
+with `manualChunks` made the first load import the group, and moved CSS into
+it, so they stay as Rollup made them. They load in parallel with the role.
+
+**The screen tests load the roles first.** `workspace.test.tsx` renders each
+role once in a `beforeAll` and waits for it. Every test then renders its role
+at once, and no test changed.

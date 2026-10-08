@@ -3,6 +3,26 @@ title: "Wiki Log"
 type: log
 ---
 
+## [2026-10-08] session | ADR 078: each role loads as its own chunk
+
+- **Measured first** (JS and CSS, gzipped, following each chunk's static imports): the operator's first load went from 174.6 to 165.8 kB (−5%), the customer's to 152.3 kB (−13%) and the contractor's to 154.8 kB (−11%). The operator only just cleared the 5% go/no-go line, and the operator chose to go ahead.
+- **Completed:**
+  - The three role workspaces load through `lazyScreen()`, and the other two are preloaded when the browser is idle.
+  - `lazyScreen()` gained `preload()`. React 19 suspends a lazy component on its first render even when its chunk is loaded, which flashed "Loading…" on a role switch. A screen that is already loaded now renders directly.
+  - `Workspace.tsx` imports `onsite.css` and `work.css` first, so the stylesheet keeps its order.
+  - `workspace.test.tsx` loads each role once in a `beforeAll`. No test changed.
+- **Found:**
+  - Grouping the five small shared chunks with `manualChunks` made the first load import the group and moved CSS into it. Dropped.
+  - Leaving out `work.css` put it after the fonts in the stylesheet. Both sheets have to be imported first.
+  - The warm-up timed out under the parallel suite at `waitFor`'s default 1 s. It now waits up to 20 s.
+  - `workspace.test.tsx` is CRLF in the working copy (git converts it), though the repository stores it LF.
+- **Verified:**
+  - 578 tests, three full runs in a row. `tsc` and the build pass.
+  - The stylesheet is byte-identical, with the same hash (`index-DPXnl4DP.css`).
+  - Live on `vite preview`: each role's chunk loads first, the others follow when idle, role switches show no "Loading…", and the portal link loads the customer's chunk first. A missing chunk shows "This page didn't load", and Reload recovers.
+- **Next:** none for ADR 077. Bundle size is parked again.
+- **Pages touched:** [[fieldwork]], [[index]].
+
 ## [2026-10-08] session | ADR 077: each role's helpers move into its own file
 
 - **Completed:**
