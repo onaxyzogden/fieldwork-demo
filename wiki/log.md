@@ -3,6 +3,20 @@ title: "Wiki Log"
 type: log
 ---
 
+## [2026-10-08] session | ADR 077: Workspace's state moves into useWorkspaceState()
+
+- **Completed:** the state, effects and helpers (about 1,740 lines) moved verbatim into `useWorkspaceState()` in `useWorkspaceState.tsx`. It returns the `api` and the 46 names the shell reads. `Workspace.tsx` went from about 2,530 to 850 lines.
+- **Found:**
+  - The import pruner turns `import type { X }` into `import type, { X }` (TS1192). It was fixed by hand. Fix the pruner before reusing it.
+  - The hook took `suitableProviders`, `Workspace`'s first import. `ContractorWorkspace` is now first, with `useWorkspaceState` right after it, and the order comment was rewritten to match.
+- **Verified:**
+  - 578 tests, with no test changes. `tsc` and the build pass.
+  - The CSS is byte-identical. The JS index is 309.3 kB (+1.3 kB).
+  - Live on `vite preview`: Requests and a request's detail, the Decline modal, the theme toggle, all three roles, compare mode, the sidebar toggle and the decision queue. No console errors.
+- **PR:** #51 (`claude/workspace-state`), against `main`, not stacked. Auto-merge is off.
+- **Next:** move the role-specific helpers into the role files, then a lazy chunk per role.
+- **Pages touched:** [[fieldwork]].
+
 ## [2026-10-08] session | ADR 077: Requests leaves Workspace
 
 - **Completed:**
