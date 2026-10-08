@@ -3,6 +3,23 @@ title: "Wiki Log"
 type: log
 ---
 
+## [2026-10-08] session | ADR 077: Requests leaves Workspace
+
+- **Completed:**
+  - PRs #47 (`claude/workspace-split`) and #48 (`claude/operator-pages`, stacked) were opened. Neither has auto-merge on.
+  - Five screen tests pin Requests: search and filter, the small-screen list, Offer to a contractor and back, Do it myself, and Decline's confirmation. They were committed before the move. jsdom needed a `scrollIntoView` stub.
+  - `OperatorRequests.tsx` (about 960 lines) holds the page, and `OperatorWorkspace` renders it. `WorkspaceApi` gained 43 names. The long inline types use `ReturnType` of `suitableProviders` and `scopeMatch`.
+  - `Workspace.tsx` went from 3,368 to about 2,530 lines, and renders no role's pages inline.
+- **Found:**
+  - The pruner dropped the import-order comment again, as expected, and it was restored.
+  - `workspace.test.tsx` is LF, not CRLF like the rest of `src`. Keep it LF, and don't run Prettier on the whole file: it reformats the existing tests.
+- **Verified:**
+  - 578 tests, with the existing tests unchanged.
+  - `tsc` and the build pass. The CSS is byte-identical. The JS index is 308.0 kB (+1.3 kB).
+  - Live on `vite preview`: every Requests path and a round trip through the roles, with no new console errors.
+- **Next:** `useWorkspaceState()`, then a lazy chunk per role.
+- **Pages touched:** [[fieldwork]].
+
 ## [2026-10-08] session | ADR 077: the small operator pages leave Workspace
 
 - **Completed:**
