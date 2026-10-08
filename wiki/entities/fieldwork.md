@@ -2,7 +2,7 @@
 title: "Fieldwork"
 type: entity
 created: 2026-10-07
-updated: 2026-10-07
+updated: 2026-10-08
 tags: [project, prototype, react]
 sources: 1
 ---
@@ -33,8 +33,7 @@ An interactive prototype of a handyman services platform. It has three roles, Cu
 ## Current Status
 - The customer UX audit of 2026-10 is fully resolved. See [[customer-ux-audit-2026-10]].
 - PR #44 (ADR 071–073) merged on 2026-10-08.
-- PR #45 (wiki and ADR 074) is open against `main`.
-- ADR 075 is on `claude/role-split`, cut from PR #45's branch.
+- PR #45 (wiki, ADR 074 and ADR 075) is open against `main`.
 - Local dev uses Vite on 5173 and the preview build on 4173 (`.claude/launch.json`, untracked).
 
 ## Connections
