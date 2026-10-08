@@ -17,7 +17,7 @@ An interactive prototype of a handyman services platform. It has three roles, Cu
   - `npm test` runs the catalogue and status checks, then vitest (555 tests as of 2026-10-07).
   - `npm run build` runs `design:check`, `catalogue:check`, `status:check`, `tsc` and then `vite build`.
 - **Deploy:** merging to `main` runs GitHub Actions, which publishes to Pages at j.ogden.ag. The repository is public.
-- **Decisions:** ADR 001–075 are in `docs/design-decisions.md`. Business calls are in `docs/decisions.md`.
+- **Decisions:** ADR 001–076 are in `docs/design-decisions.md`. Business calls are in `docs/decisions.md`.
 - **Line endings:** most files are CRLF. Scripted edits must keep CRLF. Prettier rewrites to LF, so restore CRLF after running it.
 
 ## Architecture / Structure
@@ -33,7 +33,8 @@ An interactive prototype of a handyman services platform. It has three roles, Cu
 ## Current Status
 - The customer UX audit of 2026-10 is fully resolved. See [[customer-ux-audit-2026-10]].
 - PR #44 (ADR 071–073) merged on 2026-10-08.
-- PR #45 (wiki, ADR 074 and ADR 075) is open against `main`.
+- PR #45 (wiki and ADR 074) merged on 2026-10-08.
+- ADR 075 and ADR 076 are on `claude/bundle-split`, waiting for their own PR.
 - Local dev uses Vite on 5173 and the preview build on 4173 (`.claude/launch.json`, untracked).
 
 ## Connections
@@ -44,9 +45,10 @@ An interactive prototype of a handyman services platform. It has three roles, Cu
 
 ## Open Questions
 - Splitting the role workspaces would save each role's first load 11–17% gzipped (ADR 075). The idea is shelved until `Workspace` is broken up for its own reasons.
-- The intake catalogue (`catalogue.generated.json`, 60 kB rendered) is the next size candidate.
+- Bundle-size work is parked (ADR 074–076). The catalogue and the per-role CSS were measured at 6% and 2% of the first load (ADR 076).
 
 ## History
+- 2026-10-08: ADR 076 measured loading the intake catalogue on demand and splitting the CSS per screen, and decided no-go on both. The catalogue is how every request is classified, and the stylesheet is shared.
 - 2026-10-08: ADR 075 measured a role-workspace split and decided no-go. `JobWork` was extracted from `ContractorWork`.
 - 2026-10-07: ADR 074 split the bundle:
   - Blueprint, Assessment, Walkthroughs and New request load on demand via `lazyScreen()` in `Recovery.tsx`.

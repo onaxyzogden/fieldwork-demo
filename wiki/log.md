@@ -3,6 +3,15 @@ title: "Wiki Log"
 type: log
 ---
 
+## [2026-10-08] session | ADR 076: catalogue and CSS stay in the first load
+
+- **Measured:**
+  - The intake catalogue is 76 kB raw and 9.5 kB gzipped. It is about 6% of the first load, and it is read synchronously by `getIssue()` everywhere.
+  - The app CSS is 105 kB raw and 27.5 kB gzipped, and it is shared. The per-role sheets are about 3 kB gzipped in total.
+- **Decision:** no-go on both (ADR 076). Bundle-size work is parked.
+- **Note:** PR #45 merged before ADR 075 was pushed to its branch. ADR 075 and ADR 076 need a new PR.
+- **Pages touched:** [[fieldwork]], [[index]].
+
 ## [2026-10-08] session | ADR 075: the role-workspace split, measured and declined
 
 - **Completed:**
