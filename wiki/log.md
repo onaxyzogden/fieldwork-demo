@@ -20,6 +20,7 @@ type: log
   - 578 tests, three full runs in a row. `tsc` and the build pass.
   - The stylesheet is byte-identical, with the same hash (`index-DPXnl4DP.css`).
   - Live on `vite preview`: each role's chunk loads first, the others follow when idle, role switches show no "Loading…", and the portal link loads the customer's chunk first. A missing chunk shows "This page didn't load", and Reload recovers.
+- **PR:** #53 (`claude/role-chunks`), against `main`, not stacked. Auto-merge is off.
 - **Next:** none for ADR 077. Bundle size is parked again.
 - **Pages touched:** [[fieldwork]], [[index]].
 

@@ -43,7 +43,7 @@ An interactive prototype of a handyman services platform. It has three roles, Cu
 - ADR 077 (breaking up `Workspace`): every role's pages are out, live on `main` via PR #47 (2026-10-08) and PR #50 (2026-10-08). #48 and #49 merged into their stacked bases rather than `main`, and #50 carried them over. Next time, open each branch against `main` instead of stacking.
 - ADR 077 step 6 (`useWorkspaceState()`) is live on `main` via PR #51 (2026-10-08).
 - ADR 077 step 7 (each role's helpers into its own file) is live on `main` via PR #52 (2026-10-08).
-- ADR 078 (a chunk per role) is on `claude/role-chunks`, not yet pushed. It also carries the wiki note that #52 is live.
+- ADR 078 (a chunk per role) is PR #53 (`claude/role-chunks`), against `main`, not stacked. Auto-merge is off. It also carries the wiki note that #52 is live.
 - Local dev uses Vite on 5173 and the preview build on 4173 (`.claude/launch.json`, untracked).
 
 ## Connections
