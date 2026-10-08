@@ -4,12 +4,13 @@ import { dayLabel } from "./intake";
 import { MapPin } from "lucide-react";
 import { providers, money, dateLabel, hoursLabel, hoursOf } from "./model";
 import { lazyScreen } from "./Recovery";
+import { OperatorRequests } from "./OperatorRequests";
 import { useWorkspace } from "./workspaceContext";
 
 /* Loaded when first opened, not with the app (ADR 074). */
 const Walkthroughs = lazyScreen(() => import("./Walkthroughs"));
 
-/** The operator's pages, except Requests, which `Workspace` still renders (ADR 077). */
+/** The operator's pages, one per sidebar entry (ADR 077). */
 export function OperatorWorkspace() {
   const {
     page,
@@ -151,6 +152,8 @@ export function OperatorWorkspace() {
           </section>
         </>
       );
+    case "Requests":
+      return <OperatorRequests />;
     default:
       return null;
   }
