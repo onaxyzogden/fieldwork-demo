@@ -38,7 +38,7 @@ An interactive prototype of a handyman services platform. It has three roles, Cu
 - The customer UX audit of 2026-10 is fully resolved. See [[customer-ux-audit-2026-10]].
 - PR #44 (ADR 071–073) merged on 2026-10-08.
 - PR #45 (wiki and ADR 074) merged on 2026-10-08.
-- ADR 075 and ADR 076 are in PR #46, which is open.
+- PR #46 (ADR 075 and ADR 076) merged on 2026-10-08.
 - ADR 077 (breaking up `Workspace`) is on `claude/workspace-split`, and the operator pages are on `claude/operator-pages`, which is stacked on it. Both are local and not yet pushed.
 - Local dev uses Vite on 5173 and the preview build on 4173 (`.claude/launch.json`, untracked).
 
