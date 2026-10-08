@@ -1,0 +1,23 @@
+---
+title: "Wiki Log"
+type: log
+---
+
+## [2026-10-07] session | Customer audit close-out, operator scheduler, wiki created
+
+- **Completed:**
+  - ADR 069 (P0/P1) and ADR 070 (P2), merged in PR #43.
+  - ADR 071: a request's own hold no longer hides its own time from the operator.
+  - ADR 072: the customer's chosen time comes first in the operator's scheduler and the decision queue.
+  - ADR 073 (P3): the avatar names the account, `homeOf` gives each role one home label, `aria-current` on the sidebar, and text buttons of at least 44 px.
+  - The provider card says "Customer’s choice" when that time leads the list.
+- **PR:** #44 (ADR 071–073 and the card wording) is open.
+- **Verified:**
+  - 555 tests and a clean build.
+  - Live checks on `vite preview` with injected state: holds, the chosen time, avatars SL/DB/NP, the "My bookings" crumb including the direct portal link, and text buttons measured at 375 px.
+- **Decisions:** [[2026-10-07-wiki-in-repo]].
+- **Deferred:**
+  - Decline wasn't seen live (there's no quote in the seed data).
+  - The untracked `.claude/launch.json`.
+  - The bundle-size warning.
+- **Pages touched:** all pages created: [[fieldwork]], [[one-at-a-time]], [[customer-chosen-time]], [[customer-ux-audit-2026-10]], [[2026-10-07-wiki-in-repo]], [[index]], [[SCHEMA]].
