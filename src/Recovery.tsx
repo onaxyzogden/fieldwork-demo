@@ -1,4 +1,10 @@
-import { Component, type ReactNode } from "react";
+import {
+  Component,
+  Suspense,
+  lazy,
+  type ComponentType,
+  type ReactNode,
+} from "react";
 import { KEY } from "./store";
 
 /**
@@ -89,5 +95,74 @@ export class Boundary extends Component<
   render() {
     if (!this.state.error) return this.props.children;
     return <RecoveryScreen detail={this.state.error.message} />;
+  }
+}
+
+/**
+ * Screens most visits never open load on demand (ADR 074). A deploy replaces
+ * every hashed file, so a tab left open across one asks for a chunk that is no
+ * longer there. That is not the saved data's fault, and the boundary above
+ * would offer to reset it, so the failure is tagged where the import happens
+ * and caught here, where the fix is a reload.
+ */
+class ChunkError extends Error {}
+
+export function lazyScreen<P extends object>(
+  load: () => Promise<{ default: ComponentType<P> }>,
+) {
+  const Screen = lazy(() =>
+    load().catch((e: unknown) => {
+      throw new ChunkError(e instanceof Error ? e.message : String(e));
+    }),
+  );
+  return function LazyScreen(props: P) {
+    return (
+      <ChunkBoundary>
+        <Suspense
+          fallback={
+            <p className="muted lazy-loading" role="status">
+              Loading&hellip;
+            </p>
+          }
+        >
+          <Screen {...props} />
+        </Suspense>
+      </ChunkBoundary>
+    );
+  };
+}
+
+class ChunkBoundary extends Component<
+  { children: ReactNode },
+  { error: Error | null }
+> {
+  state: { error: Error | null } = { error: null };
+
+  static getDerivedStateFromError(error: Error) {
+    return { error };
+  }
+
+  render() {
+    const { error } = this.state;
+    if (!error) return this.props.children;
+    /* Anything else is the saved data's problem: hand it to the outer one. */
+    if (!(error instanceof ChunkError)) throw error;
+    return (
+      <div className="recovery">
+        <div className="recovery-card card" role="alert">
+          <span className="eyebrow">FIELDWORK PROTOTYPE</span>
+          <h1>This page didn&rsquo;t load.</h1>
+          <p>
+            The demo may have been updated since this tab was opened. Reloading
+            fetches the latest version; your saved demo data stays as it is.
+          </p>
+          <div className="row actions">
+            <button className="primary" onClick={() => location.reload()}>
+              Reload
+            </button>
+          </div>
+        </div>
+      </div>
+    );
   }
 }
