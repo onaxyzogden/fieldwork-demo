@@ -1893,3 +1893,39 @@ A first load is now 499 kB (145 kB gzipped), and the build gives no warning.
 The limit was not raised. Most of the drop comes from the vendor split. The
 four screens are about 105 kB together, and the workspaces are still the bulk
 of the app script.
+
+## ADR 075: The role workspaces stay inline, for now
+
+Accepted. ADR 074 left the three role workspaces inside `Workspace` in
+`main.tsx`. This ADR measured what splitting them would save before doing it.
+
+**What a split would save.** These figures are for each role's first load
+(today 499 kB, 145 kB gzipped). They come from rollup's per-module sizes,
+scaled to the minified chunk.
+
+| First load | Saved | Gzipped |
+|---|---|---|
+| Operator (the default) | 57 kB | about 16 kB (11%) |
+| Contractor | 65 kB | about 18 kB (12%) |
+| Customer (portal link) | 92 kB | about 25 kB (17%) |
+
+`decisions.ts` and `FollowUp` stay shared whatever happens, because the
+customer's queue and the shared request panels use them. The cost is moving
+about 1,900 lines of JSX out of a component whose roughly 40 pieces of state
+and 50 helpers all three roles share. Most of that move would be checked by
+hand, since the tests cover the model, not the screens. A prefetch on idle
+would then download the rest anyway, so the gain is time to first paint,
+not bytes. That isn't worth it yet, so the workspaces stay inline.
+
+**One part of it is kept.** `JobWork`, the job checklist, photos, outcomes
+and finish sheet, moves out of `ContractorWork.tsx` into `JobWork.tsx`, along
+with the `Sheet` dialog it uses. The operator runs the job too when they do
+the work themselves. Importing it from the contractor's workspace tied the
+operator's home to that whole module for no reason, so the move is worth
+making on its own.
+
+**When to revisit.** Revisit if `Workspace` is broken up for its own sake,
+for example to make the screens testable. The split then comes almost for
+free. Also revisit if first-load time on a phone becomes a complaint. The
+60 kB intake catalogue (`catalogue.generated.json`) is the next candidate to
+look at.

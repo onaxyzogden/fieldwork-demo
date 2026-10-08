@@ -1,5 +1,6 @@
 import { suitableProviders } from "./suitability";
-import ContractorWork, { JobWork } from "./ContractorWork";
+import ContractorWork from "./ContractorWork";
+import { JobWork } from "./JobWork";
 import Availability from "./Availability";
 import Earnings from "./EarningsPanel";
 import { AuditList } from "./QueueAside";

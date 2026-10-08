@@ -3,6 +3,16 @@ title: "Wiki Log"
 type: log
 ---
 
+## [2026-10-08] session | ADR 075: the role-workspace split, measured and declined
+
+- **Completed:**
+  - `JobWork` and `Sheet` moved from `ContractorWork.tsx` into `JobWork.tsx`, so `OperatorWork` no longer imports the contractor's module.
+  - Measured what splitting the role workspaces would save each role's first load: operator −16 kB gzipped, contractor −18 kB gzipped, customer −25 kB gzipped.
+- **Decision:** no-go on the full split (ADR 075). The operator chose the recommended option, because moving about 1,900 shared-state lines wasn't worth an 11–17% first-paint gain.
+- **Verified:** 555 tests, `tsc` and a clean build.
+- **Deferred:** splitting the role workspaces (revisit when `Workspace` is broken up for testability), and the 60 kB intake catalogue.
+- **Pages touched:** [[fieldwork]], [[index]].
+
 ## [2026-10-07] session | ADR 074: splitting the bundle
 
 - **Completed:**

@@ -17,22 +17,24 @@ An interactive prototype of a handyman services platform. It has three roles, Cu
   - `npm test` runs the catalogue and status checks, then vitest (555 tests as of 2026-10-07).
   - `npm run build` runs `design:check`, `catalogue:check`, `status:check`, `tsc` and then `vite build`.
 - **Deploy:** merging to `main` runs GitHub Actions, which publishes to Pages at j.ogden.ag. The repository is public.
-- **Decisions:** ADR 001–074 are in `docs/design-decisions.md`. Business calls are in `docs/decisions.md`.
+- **Decisions:** ADR 001–075 are in `docs/design-decisions.md`. Business calls are in `docs/decisions.md`.
 - **Line endings:** most files are CRLF. Scripted edits must keep CRLF. Prettier rewrites to LF, so restore CRLF after running it.
 
 ## Architecture / Structure
-- `src/main.tsx` holds the role workspaces. It is the largest file.
+- `src/main.tsx` holds the role workspaces, all inline in one `Workspace` component. It is the largest file. ADR 075 measured splitting them and decided not to, for now.
 - `src/Shell.tsx` is the shared chrome: the sidebar, demo bar, topbar, `identity()` and `homeOf()`.
 - `src/model.ts` handles classification, scheduling (`slots`, `available`, holds, `chosenStart`), accounts and lifecycle.
 - `src/decisions.ts` builds the operator's decision queue (`nextDecision`) and offers.
 - `src/dispatch.ts` handles declines and reoffers. `src/payments.ts` handles payments.
+- `src/JobWork.tsx` is the job checklist, photos, outcomes and finish sheet, plus `Sheet`. Operator and contractor both use it (ADR 075).
 - The queues are `CustomerQueue.tsx`, `ContractorQueue.tsx` and `DecisionQueue.tsx`, built on `QueueLayer.tsx`. See [[one-at-a-time]].
 - `src/customerText.ts` is the one place that writes customer-facing status wording.
 
 ## Current Status
 - The customer UX audit of 2026-10 is fully resolved. See [[customer-ux-audit-2026-10]].
-- PR #44 (ADR 071–073 and the provider-card wording) is open as of 2026-10-07 and awaits merge.
-- ADR 074 (the bundle split) is on `claude/bundle-split`, stacked on PR #44.
+- PR #44 (ADR 071–073) merged on 2026-10-08.
+- PR #45 (wiki and ADR 074) is open against `main`.
+- ADR 075 is on `claude/role-split`, cut from PR #45's branch.
 - Local dev uses Vite on 5173 and the preview build on 4173 (`.claude/launch.json`, untracked).
 
 ## Connections
@@ -42,9 +44,11 @@ An interactive prototype of a handyman services platform. It has three roles, Cu
 - [[2026-10-07-wiki-in-repo]]: why this wiki is here.
 
 ## Open Questions
-- The three role workspaces are still inline in `App` (`main.tsx`), and they make up most of the 305 kB app script. Splitting them needs a refactor first: `OperatorWork` imports the contractor's `JobWork`. This is deferred by ADR 074.
+- Splitting the role workspaces would save each role's first load 11–17% gzipped (ADR 075). The idea is shelved until `Workspace` is broken up for its own reasons.
+- The intake catalogue (`catalogue.generated.json`, 60 kB rendered) is the next size candidate.
 
 ## History
+- 2026-10-08: ADR 075 measured a role-workspace split and decided no-go. `JobWork` was extracted from `ContractorWork`.
 - 2026-10-07: ADR 074 split the bundle:
   - Blueprint, Assessment, Walkthroughs and New request load on demand via `lazyScreen()` in `Recovery.tsx`.
   - React goes in a `vendor` chunk.
