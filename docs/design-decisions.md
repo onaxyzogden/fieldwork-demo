@@ -1964,3 +1964,54 @@ gzipped, or if requests start storing their classification anyway, for
 example so that a catalogue edit doesn't reclassify old requests. For the
 CSS: if the role workspaces get their own chunks, since each role's sheet
 can then go with its chunk. Until then, work on bundle size is parked.
+
+## ADR 077: Workspace is broken up one role at a time, behind tests
+
+Accepted. ADR 075 and 076 parked the role split until `Workspace` was broken
+up for its own sake. This is that work. The goal is screens that can be
+tested and files a person can hold in their head. It should change no
+behaviour at all.
+
+**Move, then pin, then cut.** Each step is checked by the step before it.
+
+1. `Workspace` and `App` moved out of `main.tsx` verbatim, into
+   `Workspace.tsx`. `main.tsx` is now only the entry. It imports `Workspace`
+   before the global sheets so the CSS keeps its cascade order.
+2. `workspace.test.tsx` renders the real `Workspace` on the seeded demo in
+   jsdom, and pins what each role sees and can do: 15 tests, by role and
+   visible text, not markup. jsdom and Testing Library are dev dependencies
+   only.
+3. The customer and contractor blocks moved into `CustomerWorkspace.tsx`
+   and `ContractorWorkspace.tsx`. The tests didn't change, and they pass.
+
+| Block | Lines | Names it reads from `Workspace` |
+|---|---|---|
+| Contractor | 44 | 8 |
+| Customer | 410 | 37 |
+| Operator Requests page | 861 | not yet measured |
+
+**Context, not props.** The extracted components read from
+`WorkspaceContext` through `useWorkspace()`. `WorkspaceApi` in
+`workspaceContext.ts` lists only the names an extracted component reads,
+with the types `Workspace` declares them with. Those types were generated
+with the TypeScript compiler, not typed by hand. `Workspace` still owns all
+the state. The type grows with each extraction, until it is the workspace's
+real shared API. For now the provider wraps only the role components, so the
+rest of the return keeps its indentation and the diff stays readable.
+
+**No import cycles.** `NoteReply`, `TaskAnswers` and `ClarificationFields`
+moved to `RequestFields.tsx`, because both `Workspace` and the customer
+workspace use them. The lazy `CustomerIntake` moved into the customer
+workspace, its only user.
+
+**CSS order is part of the behaviour.** Vite orders the stylesheet by the
+first import of each module. Removing `ContractorWork` from `Workspace`'s
+imports moved `work.css` ahead of `onsite.css`. The rules were the same, but
+the cascade wasn't. `ContractorWorkspace` is now imported where
+`ContractorWork` was, and the built stylesheet is byte-identical. Check it
+on every extraction.
+
+**What remains, in order.**
+- The operator pages, smallest first, then Requests.
+- The state and helpers, into a `useWorkspaceState()` hook.
+- Then a `lazyScreen` per role, which is the ADR 075 split, now nearly free.

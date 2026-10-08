@@ -14,14 +14,18 @@ An interactive prototype of a handyman services platform. It has three roles, Cu
 ## Key Facts
 - **Stack:** React 19, Vite, TypeScript, vitest, lucide-react. There is no backend. State is kept in localStorage under `fieldwork-demo-v1`.
 - **Gates:**
-  - `npm test` runs the catalogue and status checks, then vitest (555 tests as of 2026-10-07).
+  - `npm test` runs the catalogue and status checks, then vitest: 570 tests as of 2026-10-08, 15 of them screen tests in jsdom (`workspace.test.tsx`).
   - `npm run build` runs `design:check`, `catalogue:check`, `status:check`, `tsc` and then `vite build`.
 - **Deploy:** merging to `main` runs GitHub Actions, which publishes to Pages at j.ogden.ag. The repository is public.
-- **Decisions:** ADR 001–076 are in `docs/design-decisions.md`. Business calls are in `docs/decisions.md`.
+- **Decisions:** ADR 001–077 are in `docs/design-decisions.md`. Business calls are in `docs/decisions.md`.
 - **Line endings:** most files are CRLF. Scripted edits must keep CRLF. Prettier rewrites to LF, so restore CRLF after running it.
 
 ## Architecture / Structure
-- `src/main.tsx` holds the role workspaces, all inline in one `Workspace` component. It is the largest file. ADR 075 measured splitting them and decided not to, for now.
+- `src/main.tsx` is only the entry: CSS, `pickView()` and `createRoot`.
+- `src/Workspace.tsx` holds `Workspace` and `App`. It owns all the workspace state, and still renders the operator pages inline. It is the largest file, at about 3,500 lines. ADR 077 breaks it up one role at a time.
+- `src/CustomerWorkspace.tsx` and `src/ContractorWorkspace.tsx` are the extracted role workspaces. They read from `useWorkspace()` (`src/workspaceContext.ts`), whose `WorkspaceApi` type lists only what extracted components read.
+- `src/RequestFields.tsx` holds `NoteReply`, `TaskAnswers` and `ClarificationFields`, which several workspaces share.
+- The CSS order follows the import order. After any extraction, check that the built stylesheet is byte-identical (ADR 077).
 - `src/Shell.tsx` is the shared chrome: the sidebar, demo bar, topbar, `identity()` and `homeOf()`.
 - `src/model.ts` handles classification, scheduling (`slots`, `available`, holds, `chosenStart`), accounts and lifecycle.
 - `src/decisions.ts` builds the operator's decision queue (`nextDecision`) and offers.
@@ -34,7 +38,8 @@ An interactive prototype of a handyman services platform. It has three roles, Cu
 - The customer UX audit of 2026-10 is fully resolved. See [[customer-ux-audit-2026-10]].
 - PR #44 (ADR 071–073) merged on 2026-10-08.
 - PR #45 (wiki and ADR 074) merged on 2026-10-08.
-- ADR 075 and ADR 076 are on `claude/bundle-split`, waiting for their own PR.
+- ADR 075 and ADR 076 are in PR #46, which is open.
+- ADR 077 (breaking up `Workspace`) is on `claude/workspace-split`, local and not yet pushed.
 - Local dev uses Vite on 5173 and the preview build on 4173 (`.claude/launch.json`, untracked).
 
 ## Connections
@@ -44,10 +49,14 @@ An interactive prototype of a handyman services platform. It has three roles, Cu
 - [[2026-10-07-wiki-in-repo]]: why this wiki is here.
 
 ## Open Questions
-- Splitting the role workspaces would save each role's first load 11–17% gzipped (ADR 075). The idea is shelved until `Workspace` is broken up for its own reasons.
+- Splitting the role workspaces would save each role's first load 11–17% gzipped (ADR 075). That is now under way (ADR 077). The customer and contractor workspaces are out. Next come the operator pages, then Requests (861 lines), then a `useWorkspaceState()` hook, then a lazy chunk per role.
 - Bundle-size work is parked (ADR 074–076). The catalogue and the per-role CSS were measured at 6% and 2% of the first load (ADR 076).
 
 ## History
+- 2026-10-08: ADR 077 started breaking up `Workspace`:
+  - It moved out of `main.tsx`.
+  - 15 jsdom screen tests now pin each role.
+  - The customer and contractor workspaces moved into their own files behind `WorkspaceContext`, with no test changes and a byte-identical stylesheet.
 - 2026-10-08: ADR 076 measured loading the intake catalogue on demand and splitting the CSS per screen, and decided no-go on both. The catalogue is how every request is classified, and the stylesheet is shared.
 - 2026-10-08: ADR 075 measured a role-workspace split and decided no-go. `JobWork` was extracted from `ContractorWork`.
 - 2026-10-07: ADR 074 split the bundle:

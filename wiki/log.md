@@ -3,6 +3,20 @@ title: "Wiki Log"
 type: log
 ---
 
+## [2026-10-08] session | ADR 077: breaking up Workspace, customer and contractor first
+
+- **Completed:**
+  - `Workspace` and `App` moved verbatim from `main.tsx` into `Workspace.tsx`.
+  - jsdom and Testing Library were added as dev dependencies. `workspace.test.tsx` adds 15 screen tests covering all three roles.
+  - `CustomerWorkspace.tsx` (410 lines) and `ContractorWorkspace.tsx` (44 lines) were extracted. They read from `useWorkspace()`, and the `WorkspaceApi` types were generated with the TypeScript compiler.
+  - The shared helpers moved to `RequestFields.tsx` to avoid an import cycle.
+- **Found:** removing an import from `Workspace` reordered the CSS (`work.css` ended up ahead of `onsite.css`). Fixed by importing `ContractorWorkspace` where `ContractorWork` was. The stylesheet is byte-identical again.
+- **Verified:**
+  - 570 tests, with no test changes. `tsc` and the build pass.
+  - A live check on `vite preview` covered the contractor's Viewing as, Earnings and Availability, and the customer's view-as, New request and Continue request.
+- **Plan change:** the plan assumed the contractor block was about 380 lines. It was 44, so the operator chose to extract Customer as well.
+- **Pages touched:** [[fieldwork]], [[index]].
+
 ## [2026-10-08] session | ADR 076: catalogue and CSS stay in the first load
 
 - **Measured:**
