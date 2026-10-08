@@ -6,6 +6,8 @@
  * waiting for or have to do, in the same words on a badge and in a
  * notification, so the two cannot disagree.
  */
+import { type Request, type State, coordinated, quoted } from "./model";
+
 export const customerStatusText = (status: string) =>
   ({
     "Needs Review": "In review",
@@ -35,3 +37,40 @@ export const customerAssessmentText = (status: string) =>
     Sent: "Awaiting your approval",
     Converted: "Approved",
   })[status] || status;
+
+/** A provider has said yes: an Accepted assignment on a live visit. */
+const accepted = (s: State, requestId: string) =>
+  s.visits.some(
+    (v) =>
+      v.requestId === requestId &&
+      v.status !== "Cancelled" &&
+      s.assignments.some(
+        (a) =>
+          a.visitId === v.id &&
+          a.providerId === v.providerId &&
+          a.status === "Accepted",
+      ),
+  );
+
+/**
+ * The one line under a request's badge, chosen from derived state (ADR 070).
+ *
+ * An unanswered question comes first: it is the one thing here the customer
+ * can do. "Matched" waits for the provider's yes — while an offer is only out,
+ * the line says so, and agrees with "Matching you with a provider" on the
+ * badge. A decline still reverts to the ordinary matching line, so the
+ * customer never sees it.
+ */
+export function customerProgressText(s: State, r: Request): string {
+  if (r.operatorNote && !r.customerReply)
+    return "We have a question for you. Answer it below so we can keep going.";
+  if (!coordinated(s, r.id))
+    return r.status === "Needs Review"
+      ? "A coordinator is reviewing your request and will follow up shortly."
+      : "We’re matching your request with a provider.";
+  if (!quoted(s, r.id))
+    return accepted(s, r.id)
+      ? "A provider has accepted. We’re preparing your quote."
+      : "We’ve asked a provider and are waiting for them to accept.";
+  return "Your appointment is not confirmed until provider acceptance, quote approval, and any required payment are complete.";
+}

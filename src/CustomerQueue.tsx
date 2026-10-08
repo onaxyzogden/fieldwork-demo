@@ -6,11 +6,13 @@ import {
   approveQuote,
   dateLabel,
   declineQuote,
+  genericTitle,
   money,
   providers,
 } from "./model";
 import { approveCharge, declineCharge } from "./decisions";
 import { payQuote } from "./payments";
+import { taskLabel } from "./intake";
 import { findingsFor, findingState } from "./pmw";
 import { assessmentLink } from "./store";
 import { type CustomerTodo, customerQueue } from "./roleQueues";
@@ -165,7 +167,7 @@ function Step({
       <ul className="job-list">
         {tasks.map((t) => (
           <li key={t.id}>
-            <strong>{t.summary}</strong>
+            <strong>{genericTitle(t) ? taskLabel(t) : t.summary}</strong>
           </li>
         ))}
       </ul>

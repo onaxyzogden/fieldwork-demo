@@ -160,10 +160,13 @@ export default function CustomerIntake({
   useEffect(() => {
     if (selected && !selectionValid && r.status === "Draft")
       update((d) => {
-        Object.assign(d.requests.find((x) => x.id === r.id)!, {
-          preferredSlot: undefined,
-          timing: "Weekdays · flexible",
-        });
+        Object.assign(
+          d.requests.find((x) => x.id === r.id)!,
+          {
+            preferredSlot: undefined,
+            timing: "Weekdays · flexible",
+          },
+        );
         releaseHold(d, r.id);
       });
   }, [signature, selectionValid, r.status]);
@@ -195,15 +198,18 @@ export default function CustomerIntake({
   }, [r.editingTaskId, screen]);
   const choose = (o: (typeof options)[number]) => {
     update((d) => {
-      Object.assign(d.requests.find((x) => x.id === r.id)!, {
-        preferredSlot: {
-          start: o.start,
-          providerId: o.providerId,
-          duration: o.duration,
-          signature,
+      Object.assign(
+        d.requests.find((x) => x.id === r.id)!,
+        {
+          preferredSlot: {
+            start: o.start,
+            providerId: o.providerId,
+            duration: o.duration,
+            signature,
+          },
+          timing: dateLabel(o.start),
         },
-        timing: dateLabel(o.start),
-      });
+      );
       /* Take the slot while this customer finishes. Without it another
          customer is shown the same time as free right up to the moment their
          booking is refused, which is a worse experience than not offering it. */
@@ -761,7 +767,9 @@ export default function CustomerIntake({
                             patchTask(t.id, { entryStage: "details" });
                           }}
                         >
-                          Continue
+                          {/* Not "Continue": the step's own button below has
+                              that name (ADR 070). */}
+                          Next: details
                         </button>
                       </div>
                     </>
@@ -866,8 +874,9 @@ export default function CustomerIntake({
           <header className="customer-heading">
             <h1>When works for you?</h1>
             <p>
-              Optional — select any dates and times that work. We’ll do our best
-              to match.
+              {instant
+                ? "Pick one of the appointments below."
+                : "Optional — select any dates and times that work. We’ll do our best to match."}
             </p>
           </header>
           {/* Stated preference. A vertical list of the next 10 days rather than
@@ -875,45 +884,57 @@ export default function CustomerIntake({
               is a wish, not a booking, and submitting with nothing chosen is a
               perfectly good answer. */}
           <section className="customer-timing-section">
-            <h3>Days that suit you</h3>
-            {/* Each row expands in place to its own Morning/Afternoon/Evening
+            {/* Instant Book has real times below, so a wish list beside them
+                does nothing (ADR 070). Request to Book's days start where the
+                bookable times do, two days out: today and tomorrow are never
+                offered, so they are not asked for either. */}
+            {!instant && (
+              <>
+                <h3>Days that suit you</h3>
+                {/* Each row expands in place to its own Morning/Afternoon/Evening
                 toggles the moment it's picked — not a separate summary block
                 collecting every selected day's toggles afterward. */}
-            <div className="date-list">
-              {upcomingDays(s.clock).map((d) => {
-                const slot = r.preferredSlots?.find((p) => p.date === d.date);
-                return (
-                  <div key={d.date}>
-                    <button
-                      className={"date-chip" + (slot ? " selected" : "")}
-                      aria-pressed={!!slot}
-                      onClick={() => togglePreferredDay(d.date)}
-                    >
-                      {d.label}
-                      {slot && <Check size={16} />}
-                    </button>
-                    {slot && (
-                      <div className="time-pills">
-                        {dayParts.map((part) => (
-                          <button
-                            key={part}
-                            className={
-                              "time-pill" +
-                              (slot.times.includes(part) ? " selected" : "")
-                            }
-                            aria-pressed={slot.times.includes(part)}
-                            aria-label={`${part} on ${d.date}`}
-                            onClick={() => togglePreferredTime(d.date, part)}
-                          >
-                            {part}
-                          </button>
-                        ))}
+                <div className="date-list">
+                  {upcomingDays(s.clock + 2 * 86400000).map((d) => {
+                    const slot = r.preferredSlots?.find(
+                      (p) => p.date === d.date,
+                    );
+                    return (
+                      <div key={d.date}>
+                        <button
+                          className={"date-chip" + (slot ? " selected" : "")}
+                          aria-pressed={!!slot}
+                          onClick={() => togglePreferredDay(d.date)}
+                        >
+                          {d.label}
+                          {slot && <Check size={16} />}
+                        </button>
+                        {slot && (
+                          <div className="time-pills">
+                            {dayParts.map((part) => (
+                              <button
+                                key={part}
+                                className={
+                                  "time-pill" +
+                                  (slot.times.includes(part) ? " selected" : "")
+                                }
+                                aria-pressed={slot.times.includes(part)}
+                                aria-label={`${part} on ${d.date}`}
+                                onClick={() =>
+                                  togglePreferredTime(d.date, part)
+                                }
+                              >
+                                {part}
+                              </button>
+                            ))}
+                          </div>
+                        )}
                       </div>
-                    )}
-                  </div>
-                );
-              })}
-            </div>
+                    );
+                  })}
+                </div>
+              </>
+            )}
             <label className="field">
               Timing constraints
               <textarea

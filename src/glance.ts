@@ -12,7 +12,7 @@
  * that happen to agree today.
  */
 import type { Assignment, State, Visit, Walkthrough } from "./model";
-import { providers, timeLabel } from "./model";
+import { confirmed, providers, timeLabel } from "./model";
 import { countdown } from "./countdown";
 import { dayKey, unresolved } from "./work";
 import { findingsFor, findingState, quotable } from "./pmw";
@@ -139,7 +139,12 @@ export function customerGlance(
         ids.has(v.requestId) &&
         v.status !== "Cancelled" &&
         !v.execution?.finishedAt &&
-        +new Date(v.start) >= clock,
+        +new Date(v.start) >= clock &&
+        /* A proposed time is not a visit they have coming (ADR 070): its
+           card reads "Awaiting confirmation", so the count waits too, and the
+           request stays in progress. confirmed() covers a booking whose
+           visit has not been reconciled yet. */
+        (v.status !== "Proposed" || confirmed(s, v.requestId)),
     )
     .sort((a, b) => a.start.localeCompare(b.start));
 
