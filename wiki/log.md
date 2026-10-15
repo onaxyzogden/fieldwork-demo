@@ -3,6 +3,22 @@ title: "Wiki Log"
 type: log
 ---
 
+## [2026-10-15] session | ADR 084: the greeting's clock, Instant Book's price list
+
+- **Decided:**
+  - Instant Book prices come from a table per catalogue job, keyed by category, with DOOR-01 at $129 to start (Yousef's choice). The operator's quote formula, which would have made it $165, was not used.
+  - A job with no price is not eligible for Instant Book.
+  - Splitting `OperatorRequests` into its own chunk waits.
+- **Completed:**
+  - `greetingFor(clock)` with four fixed-instant tests. The screen test passed at 18:25, the hour that used to fail it.
+  - `INSTANT_PRICES` and `instantPrice`, and the five `$129` literals replaced.
+  - 655 tests (7 new), `tsc` and the build pass.
+  - Live check: intake, dialog and toast all show $129, and the recorded quote and payment carry the table's amount and notes. No console errors.
+- **Deferred:**
+  - `OperatorRequests` as its own chunk.
+  - A screen test for the intake's photo-only Continue.
+- **Pages touched:** [[fieldwork]].
+
 ## [2026-10-15] session | ADR 083: Offer withdraw, `FindingReview`, the platform audit's P3s
 
 - **Decided:**

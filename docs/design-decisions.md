@@ -2456,3 +2456,39 @@ Out of scope, and left for later:
 - the greeting test's wall-clock dependency;
 - Instant Book's fixed $129;
 - a screen test for the intake's photo-only Continue.
+
+## ADR 084: The greeting keeps its own time, and Instant Book has a price list
+
+Accepted. This closes two items that ADR 083 left for later, and adds 7
+tests: four in `greeting.test.ts`, two in `model.test.ts`, and one screen
+test in `workspace.test.tsx`.
+
+**The greeting test passes at any hour.**
+- The operator's Home greeting comes from the demo's clock, and `seed()`
+  starts that clock at `Date.now()`. A test expecting "Good morning!" failed
+  every afternoon and evening.
+- The greeting is now a pure `greetingFor(clock)` in `OperatorWork.tsx`. It
+  uses Toronto's hour, with the same cut-offs at 12 and 18.
+- Its unit tests use fixed instants: both sides of each cut-off, and a UTC
+  time that is a different hour in Toronto.
+- The screen test checks the heading against `greetingFor` of the clock it
+  seeded, not against a time of day. Faking `Date.now` would have moved
+  every seeded visit as well.
+
+**Instant Book reads its price from one table.**
+- `INSTANT_PRICES` in `model.ts` gives each catalogue job a label, an
+  amount and the quote's notes. It is keyed by the category the classifier
+  assigns, since a task carries no rule id.
+- It starts with one entry: "Handyman / Doors / Adjustment", at $129.
+- `instantPrice(tasks)` returns the entry when the tasks are eligible.
+- `instantEligible` now requires a priced category in place of
+  `category.includes("Doors")`. Eligibility is unchanged today, and a job
+  with no price can never be offered Instant Book.
+- The intake's label and button, the payment dialog's figure and Pay
+  button, and the quote, payment and toast it records all read the entry.
+  `$129` is no longer written anywhere but the table.
+- The customer sees no change.
+
+Out of scope, and left for later:
+- `OperatorRequests` as its own chunk;
+- a screen test for the intake's photo-only Continue.

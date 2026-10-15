@@ -2015,10 +2015,29 @@ export function scopeMatch(providerId: string, tasks: Task[]) {
 export function eligible(providerId: string, tasks: Task[]) {
   return scopeMatch(providerId, tasks).eligible;
 }
+/**
+ * Instant Book's fixed prices, one per catalogue job, keyed by the category
+ * the classifier gives it (ADR 084). A job with no price here is never
+ * offered Instant Book; it goes through Request to Book and a quote.
+ */
+export const INSTANT_PRICES: Record<
+  string,
+  { label: string; amount: number; notes: string }
+> = {
+  "Handyman / Doors / Adjustment": {
+    label: "Door adjustment",
+    amount: 129,
+    notes: "Door adjustment, labour and standard materials.",
+  },
+};
+/** The fixed price Instant Book charges for these tasks, if it may. */
+export function instantPrice(tasks: Task[]) {
+  return instantEligible(tasks) ? INSTANT_PRICES[tasks[0].category] : undefined;
+}
 export function instantEligible(tasks: Task[]) {
   return (
     tasks.length === 1 &&
-    tasks[0].category.includes("Doors") &&
+    Object.hasOwn(INSTANT_PRICES, tasks[0].category) &&
     tasks[0].reviewed &&
     !needsClarificationReview(tasks[0]) &&
     (!tasks[0].answers["door-adjust:count"] ||

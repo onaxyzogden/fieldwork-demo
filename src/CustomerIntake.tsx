@@ -8,7 +8,8 @@ import {
   type Task,
   uid,
   classify,
-  instantEligible,
+  instantPrice,
+  money,
   dateLabel,
   log,
   holdSlot,
@@ -76,7 +77,8 @@ export default function CustomerIntake({
         o.providerId === selected.providerId &&
         o.duration === selected.duration,
     );
-  const instant = instantEligible(tasks) && options.length > 0;
+  const price = instantPrice(tasks);
+  const instant = !!price && options.length > 0;
   const [removed, setRemoved] = useState<{ task: Task; index: number } | null>(
       null,
     ),
@@ -1099,7 +1101,8 @@ export default function CustomerIntake({
             {instant ? (
               <>
                 <p>
-                  Door adjustment · fixed price <strong>$129 CAD</strong>
+                  {price!.label} · fixed price{" "}
+                  <strong>{money(price!.amount)} CAD</strong>
                 </p>
                 {/* Beside the button that was pressed, not in the More-times
                     dialog, which is closed when this is asked (ADR 069). */}
@@ -1122,7 +1125,7 @@ export default function CustomerIntake({
                     pay(selected!.start);
                   }}
                 >
-                  Book & pay $129
+                  Book & pay {money(price!.amount)}
                 </button>
               </>
             ) : (

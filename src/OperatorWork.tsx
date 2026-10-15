@@ -68,13 +68,7 @@ export function OperatorHome({
   const visits = todaysVisits(s, s.clock, (v) =>
     ["Confirmed", "In Progress", "Completed"].includes(v.status),
   );
-  const hour = Number(torontoParts(new Date(s.clock)).hour);
-  const greeting =
-    hour < 12
-      ? "Good morning!"
-      : hour < 18
-        ? "Good afternoon!"
-        : "Good evening!";
+  const greeting = greetingFor(s.clock);
   const cards = (list: typeof needs) =>
     list.map((r) => {
       const dispatch = requestDispatch(s, r.id);
@@ -342,6 +336,16 @@ export function OperatorHome({
       )}
     </div>
   );
+}
+
+/** The Home heading for the demo's clock, in Toronto time (ADR 084). */
+export function greetingFor(clock: number) {
+  const hour = Number(torontoParts(new Date(clock)).hour);
+  return hour < 12
+    ? "Good morning!"
+    : hour < 18
+      ? "Good afternoon!"
+      : "Good evening!";
 }
 
 export function OperatorToday({
