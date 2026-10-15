@@ -121,7 +121,7 @@ export function OperatorWorkspace() {
           aria-label="Open route view"
           onClick={() => setPage("Today")}
         >
-          <ArrowUpRight size={16} />
+          <ArrowUpRight aria-hidden="true" size={16} />
         </button>
       </div>
     );
@@ -203,7 +203,7 @@ export function OperatorWorkspace() {
                 <h2>{p.name}</h2>
                 <p>{p.role}</p>
                 <p>
-                  <MapPin size={16} />
+                  <MapPin aria-hidden="true" size={16} />
                   {p.city} · Halton / GTA
                 </p>
                 <p>{p.skills}</p>

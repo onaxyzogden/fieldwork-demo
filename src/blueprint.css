@@ -378,10 +378,13 @@
 .bp-muted {
   color: var(--muted);
 }
+/* Beside main rather than in it (ADR 082): main's bottom padding is the gap
+   above it, and its side padding is its margin. */
 .bp-footer {
   padding: var(--space-10) 0;
   border-top: 1px solid var(--line);
-  margin-top: var(--space-10);
+  margin: 0 3vw var(--space-10);
+  max-width: calc(2000px - 6vw);
 }
 .bp-footer p {
   font-size: var(--text-label);
@@ -391,17 +394,6 @@
 .bp-print-overview,
 .bp-print-details {
   display: none;
-}
-.bp-skip {
-  position: absolute;
-  left: 12px;
-  top: -100px;
-  z-index: var(--z-modal);
-  background: var(--panel);
-  padding: var(--space-3);
-}
-.bp-skip:focus {
-  top: 12px;
 }
 @media (max-width: 1000px) {
   .bp-board {
@@ -478,6 +470,9 @@
   }
   .bp main {
     padding: 0 var(--space-4) var(--space-6);
+  }
+  .bp-footer {
+    margin: 0 var(--space-4) var(--space-6);
   }
   .bp-hero {
     grid-template-columns: 1fr;

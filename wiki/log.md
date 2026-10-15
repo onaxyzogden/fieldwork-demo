@@ -3,6 +3,27 @@ title: "Wiki Log"
 type: log
 ---
 
+## [2026-10-15] session | ADR 082: the accessibility audit's minors
+
+- **Decided:**
+  - An error sits after its `<label>`, not in it. A `display: contents` wrapper keeps the layouts, rather than a restyle.
+  - A price stays the quote's focus target as a `<p tabIndex={-1}>`, not a heading.
+  - The intake's photo-only Continue gets an inline error and focus, not a toast.
+  - The icon rule lives in `design:check` and treats `Icon` as a lucide icon, because two icons (sidebar nav, operator status) are held that way and escaped the first pass.
+  - `button.badge` grows about 2 px to reach 32 px; the time pill and the role switch already met it.
+- **Completed:**
+  - All 17 minors; see [[accessibility-audit-2026-10]].
+  - 629 tests (13 new), `tsc`, and the build pass.
+  - Live: the skip link is the first stop and focuses `<main>`; the intake's error describes its field and takes focus; the done check, badges, and both themes look as before; no console errors.
+  - The wiki records ADR 081 as PR #57, merged.
+- **Deferred:**
+  - Removing the unreachable `FindingReview` decision buttons.
+  - The Offer undo.
+  - Instant Book's $129.
+  - The platform audit's P3s.
+  - A test for the intake's photo-only Continue.
+- **Pages touched:** [[accessibility-audit-2026-10]], [[fieldwork]], [[index]].
+
 ## [2026-10-15] session | ADR 081: the accessibility audit's majors
 
 - **Decided:**

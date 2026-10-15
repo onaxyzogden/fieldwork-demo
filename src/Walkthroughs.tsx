@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useId, useRef, useState } from "react";
 import { Glance, GlanceLead } from "./GlanceCard";
 import { glanceDate, walkthroughGlance } from "./glance";
 import {
@@ -128,6 +128,7 @@ function WalkthroughList({
 }) {
   const { fail, clear, fieldClass, invalid, Message } = useFieldErrors();
   const [creating, setCreating] = useState(false);
+  const createId = useId();
   const [propertyId, setPropertyId] = useState(s.properties[0]?.id || "");
   const [mergeNote, setMergeNote] = useState("");
   const duplicates = duplicateProperties(s);
@@ -195,8 +196,13 @@ function WalkthroughList({
             what to approve.
           </p>
         </div>
-        <button className="primary" onClick={() => setCreating(!creating)}>
-          <Plus size={16} /> New walkthrough
+        <button
+          className="primary"
+          aria-expanded={creating}
+          aria-controls={creating ? createId : undefined}
+          onClick={() => setCreating(!creating)}
+        >
+          <Plus aria-hidden="true" size={16} /> New walkthrough
         </button>
       </div>
       {/* Whose move it is, across the whole pipeline. Each number opens the
@@ -248,7 +254,7 @@ function WalkthroughList({
       {duplicates.length > 0 && (
         <section className="card panel">
           <div className="panel-title">
-            <h3>Possible duplicate properties</h3>
+            <h2 className="look-h3">Possible duplicate properties</h2>
           </div>
           <p>
             These records read as the same place. Nothing is merged
@@ -272,7 +278,7 @@ function WalkthroughList({
               </ul>
               {g.crossAccount ? (
                 <p className="warning">
-                  <AlertCircle size={16} /> These are held by different
+                  <AlertCircle aria-hidden="true" size={16} /> These are held by different
                   accounts. Correct the account before merging, or they are two
                   different places.
                 </p>
@@ -315,9 +321,9 @@ function WalkthroughList({
         </section>
       )}
       {creating && (
-        <section className="card panel">
+        <section className="card panel" id={createId}>
           <div className="panel-title">
-            <h3>Start a walkthrough</h3>
+            <h2 className="look-h3">Start a walkthrough</h2>
           </div>
           <label className="field">
             Property
@@ -335,19 +341,21 @@ function WalkthroughList({
           </label>
           {propertyId === "new" && (
             <>
-              <label className={fieldClass("address")}>
-                Street address
-                <input
-                  value={address}
-                  {...invalid("address")}
-                  onChange={(e) => {
-                    clear("address");
-                    setAddress(e.target.value);
-                  }}
-                  placeholder="120 Kerr Street"
-                />
+              <div className={fieldClass("address")}>
+                <label className="field-label">
+                  Street address
+                  <input
+                    value={address}
+                    {...invalid("address")}
+                    onChange={(e) => {
+                      clear("address");
+                      setAddress(e.target.value);
+                    }}
+                    placeholder="120 Kerr Street"
+                  />
+                </label>
                 <Message field="address" />
-              </label>
+              </div>
               <div className="row">
                 <label className="mini-field">
                   City
@@ -377,7 +385,7 @@ function WalkthroughList({
             </>
           )}
           <button className="primary" onClick={start}>
-            Start walkthrough <ArrowRight size={16} />
+            Start walkthrough <ArrowRight aria-hidden="true" size={16} />
           </button>
         </section>
       )}
@@ -395,7 +403,7 @@ function WalkthroughList({
         return (
           <section className="card panel" key={status}>
             <div className="panel-title">
-              <h3>{caption}</h3>
+              <h2 className="look-h3">{caption}</h2>
               <span className="count">{rows.length}</span>
             </div>
             {rows.map((w) => {
@@ -496,7 +504,7 @@ function WalkthroughDetail({
   return (
     <>
       <button className="text-button" onClick={back}>
-        <ArrowLeft size={16} /> All walkthroughs
+        <ArrowLeft aria-hidden="true" size={16} /> All walkthroughs
       </button>
       <div className="heading">
         <div>
@@ -584,13 +592,13 @@ function WalkthroughDetail({
             }, "Finding added")
           }
         >
-          <Plus size={16} /> Add finding
+          <Plus aria-hidden="true" size={16} /> Add finding
         </button>
       )}
       {draft && !!carryable.length && (
         <section className="card panel">
           <div className="panel-title">
-            <h3>Still open from earlier visits</h3>
+            <h2 className="look-h3">Still open from earlier visits</h2>
             <span className="count">{carryable.length}</span>
           </div>
           <p className="note">
@@ -620,7 +628,7 @@ function WalkthroughDetail({
                   }, "Carried into this walkthrough")
                 }
               >
-                Carry forward <ArrowRight size={16} />
+                Carry forward <ArrowRight aria-hidden="true" size={16} />
               </button>
             </div>
           ))}
@@ -681,7 +689,7 @@ function NextStep({
     return (
       <section className="card panel op-decision op-tone-complete">
         <div className="op-decision-head">
-          <h3>Approved work is in the queue</h3>
+          <h2 className="look-h3">Approved work is in the queue</h2>
           <p>
             {totals.approved.length} finding
             {totals.approved.length === 1 ? "" : "s"} became tasks on one
@@ -699,7 +707,7 @@ function NextStep({
         <div className="op-decision-actions">
           {converted && (
             <button className="primary" onClick={() => openRequest(converted)}>
-              Open the request <ArrowRight size={16} />
+              Open the request <ArrowRight aria-hidden="true" size={16} />
             </button>
           )}
         </div>
@@ -710,11 +718,11 @@ function NextStep({
     return (
       <section className="card panel op-decision">
         <div className="op-decision-head">
-          <h3>
+          <h2 className="look-h3">
             {totals.approved.length
               ? `${totals.approved.length} approved · ready to convert`
               : "Waiting on the customer"}
-          </h3>
+          </h2>
           <p>
             {totals.approved.length
               ? `${money(totals.subtotal)} plus ${money2(totals.tax)} tax.`
@@ -735,10 +743,10 @@ function NextStep({
             </button>
           )}
           <button className="secondary" onClick={copy}>
-            <Copy size={16} /> Copy link
+            <Copy aria-hidden="true" size={16} /> Copy link
           </button>
           <button className="text-button" onClick={() => window.open(link)}>
-            <ExternalLink size={16} /> Open as the customer
+            <ExternalLink aria-hidden="true" size={16} /> Open as the customer
           </button>
         </div>
         {totals.approved.length > 0 && leftover > 0 && (
@@ -826,13 +834,13 @@ function NextStep({
   return (
     <section className="card panel op-decision">
       <div className="op-decision-head">
-        <h3>
+        <h2 className="look-h3">
           {!totals.findings.length
             ? "Record what you saw"
             : incomplete
               ? `${incomplete} item${incomplete === 1 ? "" : "s"} to price`
               : "Ready to send"}
-        </h3>
+        </h2>
         <p>
           {!totals.findings.length
             ? "On site: a photo, a few words, the room. Pricing comes after."
@@ -847,7 +855,7 @@ function NextStep({
       <div className="op-decision-actions">
         {!totals.findings.length ? (
           <button className="primary" onClick={() => onSite("capture")}>
-            <Camera size={16} /> Start on site
+            <Camera aria-hidden="true" size={16} /> Start on site
           </button>
         ) : (
           <>
@@ -857,11 +865,11 @@ function NextStep({
               </button>
             ) : (
               <button className="primary" onClick={send}>
-                <Send size={16} /> Send to customer
+                <Send aria-hidden="true" size={16} /> Send to customer
               </button>
             )}
             <button className="secondary" onClick={() => onSite("capture")}>
-              <Camera size={16} /> Continue on site
+              <Camera aria-hidden="true" size={16} /> Continue on site
             </button>
           </>
         )}
@@ -943,7 +951,7 @@ function FindingCard({
             <label
               className={"photo-add" + (photoRejected ? " field-error" : "")}
             >
-              <Camera size={16} /> Add photo
+              <Camera aria-hidden="true" size={16} /> Add photo
               <input
                 type="file"
                 accept="image/*"
@@ -1018,7 +1026,7 @@ function FindingCard({
             />
           </label>
           <button className="text-button" onClick={remove}>
-            <Trash2 size={16} /> Remove finding
+            <Trash2 aria-hidden="true" size={16} /> Remove finding
           </button>
         </>
       ) : (
@@ -1038,7 +1046,7 @@ function FindingCard({
               <strong>{money(f.price || 0)} + applicable tax</strong>
             ) : (
               <span className="badge neutral">
-                <ClipboardCheck size={16} /> Assessment required
+                <ClipboardCheck aria-hidden="true" size={16} /> Assessment required
               </span>
             )}
           </p>

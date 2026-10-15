@@ -113,6 +113,7 @@ function DeclineStep({
 export function CustomerWorkspace() {
   const {
     Message,
+    describedBy,
     badge,
     badgeTone,
     booked,
@@ -200,11 +201,12 @@ export function CustomerWorkspace() {
     );
     if (!c) return null;
     const who = providers.find((p) => p.id === c.plan.providerId)?.name;
-    /* Declining removes this card; focus goes to the quote's beside it. */
+    /* Declining removes this card; focus goes to the quote's price beside
+       it. */
     const land = () =>
       document
         .getElementById(idPrefix + "quote")
-        ?.querySelector<HTMLElement>("h2")
+        ?.querySelector<HTMLElement>(".price-figure")
         ?.focus();
     return (
       <div className="card panel quote" id={idPrefix + "charge"}>
@@ -214,10 +216,10 @@ export function CustomerWorkspace() {
             {customerQuoteText(c.status)}
           </span>
         </div>
-        <h2>
+        <p className="price-figure">
           {money(c.amount)}
           <small> CAD</small>
-        </h2>
+        </p>
         <p>{c.reason}</p>
         <small>
           For a return visit{who ? ` with ${who}` : ""} on{" "}
@@ -227,6 +229,7 @@ export function CustomerWorkspace() {
           approve={
             <button
               className="primary"
+              aria-describedby={describedBy("charge")}
               onClick={() => {
                 let ok = false;
                 update((d) => {
@@ -272,11 +275,11 @@ export function CustomerWorkspace() {
             {customerQuoteText(quote.status)}
           </span>
         </div>
-        <h2 tabIndex={-1}>
+        <p className="price-figure" tabIndex={-1}>
           {money(quote.amount)}
           {quote.type === "Estimated range" ? " – " + money(quote.high) : ""}
           <small> CAD</small>
-        </h2>
+        </p>
         <p>
           {quote.notes ||
             "Labour and standard materials included. Additional work requires your approval."}
@@ -303,7 +306,7 @@ export function CustomerWorkspace() {
                   }, "Quote approved")
                 }
               >
-                Approve quote <Check size={16} />
+                Approve quote <Check aria-hidden="true" size={16} />
               </button>
             }
             declineClass="secondary"
@@ -311,10 +314,10 @@ export function CustomerWorkspace() {
             choices={[...QUOTE_REASONS, "No reason"]}
             cancel="Back"
             choose={(why) => {
-              /* The buttons go; the card's heading stays. */
+              /* The buttons go; the card's price stays. */
               document
                 .getElementById(idPrefix + "quote")
-                ?.querySelector<HTMLElement>("h2")
+                ?.querySelector<HTMLElement>(".price-figure")
                 ?.focus();
               update((d) => {
                 declineQuote(
@@ -334,7 +337,7 @@ export function CustomerWorkspace() {
             onClick={() => setModal("Payment")}
           >
             {quote.payOnCompletion ? "Pay now" : "Continue to payment"}{" "}
-            <ArrowRight size={16} />
+            <ArrowRight aria-hidden="true" size={16} />
           </button>
         )}
         {s.payments
@@ -422,7 +425,7 @@ export function CustomerWorkspace() {
                     reveal(idPrefix + "visit-" + v.id);
                   }}
                 >
-                  <CalendarDays size={20} />
+                  <CalendarDays aria-hidden="true" size={20} />
                   <span>{visitDayLine(v, s.clock)}</span>
                 </button>
               ))}
@@ -533,12 +536,12 @@ export function CustomerWorkspace() {
                     <span className="accordion-head-text">
                       <strong>{title}</strong>
                       <small>
-                        <MapPin size={16} />
+                        <MapPin aria-hidden="true" size={16} />
                         {x.city} · {count} {count === 1 ? "task" : "tasks"}
                       </small>
                     </span>
                     {customerBadge(x)}
-                    <ChevronDown
+                    <ChevronDown aria-hidden="true"
                       size={20}
                       className={open ? "chevron open" : "chevron"}
                     />
@@ -555,7 +558,7 @@ export function CustomerWorkspace() {
                             setStep(0);
                           }}
                         >
-                          Continue request <ArrowRight size={16} />
+                          Continue request <ArrowRight aria-hidden="true" size={16} />
                         </button>
                       ) : ["Cancelled", "Declined"].includes(r.status) ? (
                         /* A cancelled/declined request is not a
@@ -673,21 +676,21 @@ export function CustomerWorkspace() {
                       {tasks.map((t) => (
                         <div className="portal-task" key={t.id}>
                           <span className="portal-task-icon">
-                            <Wrench size={16} />
+                            <Wrench aria-hidden="true" size={16} />
                           </span>
                           <div className="portal-task-body">
                             {/* A generic title says nothing; their
                                 own words do (ADR 070). */}
                             {genericTitle(t) ? (
                               <>
-                                <h4>{taskLabel(t)}</h4>
+                                <h2>{taskLabel(t)}</h2>
                                 {taskLabel(t).endsWith("…") && (
                                   <p>{t.description}</p>
                                 )}
                               </>
                             ) : (
                               <>
-                                <h4>{t.summary}</h4>
+                                <h2>{t.summary}</h2>
                                 <p>{t.description}</p>
                               </>
                             )}
@@ -719,7 +722,7 @@ export function CustomerWorkspace() {
             }
             onClick={startOrResumeRequest}
           >
-            <Plus size={16} /> New request
+            <Plus aria-hidden="true" size={16} /> New request
           </button>
           {/* Collapsed and below the bookings: the walkthrough history
               is a reference, not the thing the customer came for. */}

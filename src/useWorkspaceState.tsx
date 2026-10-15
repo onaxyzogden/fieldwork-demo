@@ -168,6 +168,7 @@ export function useWorkspaceState({
     clearAll,
     fieldClass,
     invalid,
+    describedBy,
     Message,
   } = useFieldErrors();
   React.useEffect(() => {
@@ -517,10 +518,11 @@ export function useWorkspaceState({
         <img key={i} src={p} alt={"Task photo " + (i + 1)} />
       ))}
       <label className="photo-add">
-        <Camera size={16} /> Add photo
+        <Camera aria-hidden="true" size={16} /> Add photo
         <input
           type="file"
           accept="image/*"
+          aria-describedby={describedBy("photo-" + t.id)}
           onChange={(e) => photo(t, e.target.files?.[0])}
         />
       </label>
@@ -562,7 +564,7 @@ export function useWorkspaceState({
     <div className="visit-card" key={v.id} id={idPrefix + "visit-" + v.id}>
       <div className="row between">
         <strong>
-          <CalendarDays size={16} /> {dateLabel(v.start)}
+          <CalendarDays aria-hidden="true" size={16} /> {dateLabel(v.start)}
         </strong>
         {role === "Customer" ? (
           <span className={"badge " + badgeTone(workStatus(v))}>
@@ -638,6 +640,7 @@ export function useWorkspaceState({
   /* What the extracted role workspaces read (ADR 077). */
   const api: WorkspaceApi = {
     Message,
+    describedBy,
     amount,
     badge,
     badgeTone,
@@ -727,6 +730,8 @@ export function useWorkspaceState({
   };
   return {
     Message,
+    describedBy,
+    invalid,
     active,
     api,
     choose,

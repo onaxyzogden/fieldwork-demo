@@ -144,7 +144,11 @@
   position: absolute;
   top: var(--space-1);
   right: var(--space-1);
-  min-height: 0;
+  /* It floats over the photo, so the 32 px floor moves nothing (ADR 082). */
+  display: grid;
+  place-items: center;
+  min-width: 32px;
+  min-height: 32px;
   padding: var(--space-1);
   border-radius: var(--radius-pill);
   background: var(--overlay);

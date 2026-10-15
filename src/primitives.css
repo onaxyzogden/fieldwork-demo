@@ -1042,3 +1042,18 @@
   outline: 2px solid var(--accent);
   outline-offset: 2px;
 }
+/* Past the sidebar and the bars to the page itself: out of sight until it
+   is focused, which is the first Tab on the page (ADR 082). */
+.skip-link {
+  position: absolute;
+  left: 12px;
+  top: -100px;
+  z-index: var(--z-modal);
+  background: var(--panel);
+  color: var(--text);
+  padding: var(--space-3);
+  border-radius: var(--radius-sm);
+}
+.skip-link:focus {
+  top: 12px;
+}

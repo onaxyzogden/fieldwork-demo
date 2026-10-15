@@ -41,7 +41,7 @@ export function NoteReply({ onSend }: { onSend: (reply: string) => void }) {
         />
         {error && (
           <span className="field-message" id="note-reply-error" role="alert">
-            <AlertCircle size={16} /> {error}
+            <AlertCircle aria-hidden="true" size={16} /> {error}
           </span>
         )}
       </label>
@@ -153,20 +153,31 @@ export function ClarificationFields({
         const key = answerKey(issue, q);
         const answered = !!(task.answers[key] ?? inferred[key])?.trim();
         const showError = !!attempted && !answered;
+        const id = "q-" + task.id + "-" + key;
+        const checking = key in inferred && !(key in task.answers);
+        /* The question alone names the field. "Not sure", the hint and the
+           error sit outside the label and describe it instead (ADR 082). */
+        const describedBy =
+          [checking && id + "-hint", showError && id + "-error"]
+            .filter(Boolean)
+            .join(" ") || undefined;
         const field = (
-          <label
+          <div
             className={"field" + (showError ? " field-error" : "")}
             key={key}
           >
-            {q.label}
-            {key in inferred && !(key in task.answers) && (
-              <small>From your description — please check this answer.</small>
+            <label htmlFor={id}>{q.label}</label>
+            {checking && (
+              <small id={id + "-hint"}>
+                From your description — please check this answer.
+              </small>
             )}
             {q.options ? (
               <select
-                id={"q-" + task.id + "-" + key}
+                id={id}
                 value={task.answers[key] ?? inferred[key] ?? ""}
                 aria-invalid={showError || undefined}
+                aria-describedby={describedBy}
                 onChange={(e) => setAnswer(key, e.target.value)}
               >
                 <option value="">Choose an answer…</option>
@@ -180,10 +191,11 @@ export function ClarificationFields({
                  whether or not the question was ever attempted. */
               <div className="field-with-action">
                 <input
-                  id={"q-" + task.id + "-" + key}
+                  id={id}
                   value={task.answers[key] || ""}
                   placeholder="Add details, or enter Not sure"
                   aria-invalid={showError || undefined}
+                  aria-describedby={describedBy}
                   onChange={(e) => setAnswer(key, e.target.value)}
                 />
                 <button
@@ -196,13 +208,13 @@ export function ClarificationFields({
               </div>
             )}
             {showError && (
-              <span className="field-message" role="alert">
+              <span className="field-message" id={id + "-error"} role="alert">
                 Answer this, or tap Not sure.
               </span>
             )}
-          </label>
+          </div>
         );
-        return key in inferred && !(key in task.answers) ? (
+        return checking ? (
           <details className="inferred-answer" key={key}>
             <summary>{inferred[key]} · From your description · Edit</summary>
             {field}

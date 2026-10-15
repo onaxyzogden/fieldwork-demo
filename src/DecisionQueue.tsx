@@ -78,7 +78,7 @@ export default function DecisionQueue({
   const [last, setLast] = useState("");
   const said = last && (
     <p className="onsite-hint dq-done" role="status">
-      <CheckCircle2 size={20} />
+      <CheckCircle2 aria-hidden="true" size={20} />
       {last}
     </p>
   );
@@ -116,7 +116,7 @@ export default function DecisionQueue({
         <>
           <h1 tabIndex={-1}>All caught up</h1>
           <p className="onsite-hint dq-done">
-            <CheckCircle2 size={20} />
+            <CheckCircle2 aria-hidden="true" size={20} />
             {q.handled} decision{q.handled === 1 ? "" : "s"} handled. Anything
             new will show on Home.
           </p>
@@ -411,7 +411,7 @@ function Step({
             )}
             {unsure.includes(t.id) && t.restricted && (
               <p className="warning">
-                <AlertCircle size={16} /> Potential regulated work · eligible
+                <AlertCircle aria-hidden="true" size={16} /> Potential regulated work · eligible
                 specialist required
               </p>
             )}
@@ -445,38 +445,42 @@ function Step({
         ))}
       </details>
       {d.kind === "late-cancel" && (
-        <label className={fieldClass("fee")}>
-          Late-cancellation fee (CAD)
-          <input
-            type="number"
-            inputMode="numeric"
-            min={1}
-            value={Number.isFinite(fee) ? fee : ""}
-            {...invalid("fee")}
-            onChange={(e) => {
-              clear("fee");
-              setFee(Number(e.target.value));
-            }}
-          />
+        <div className={fieldClass("fee")}>
+          <label className="field-label">
+            Late-cancellation fee (CAD)
+            <input
+              type="number"
+              inputMode="numeric"
+              min={1}
+              value={Number.isFinite(fee) ? fee : ""}
+              {...invalid("fee")}
+              onChange={(e) => {
+                clear("fee");
+                setFee(Number(e.target.value));
+              }}
+            />
+          </label>
           <Message field="fee" />
-        </label>
+        </div>
       )}
       {quoting && adjusting && (
-        <label className={fieldClass("amount")}>
-          Price
-          <input
-            type="number"
-            inputMode="numeric"
-            min={1}
-            value={Number.isFinite(amount) ? amount : ""}
-            {...invalid("amount")}
-            onChange={(e) => {
-              clear("amount");
-              setAmount(Number(e.target.value));
-            }}
-          />
+        <div className={fieldClass("amount")}>
+          <label className="field-label">
+            Price
+            <input
+              type="number"
+              inputMode="numeric"
+              min={1}
+              value={Number.isFinite(amount) ? amount : ""}
+              {...invalid("amount")}
+              onChange={(e) => {
+                clear("amount");
+                setAmount(Number(e.target.value));
+              }}
+            />
+          </label>
           <Message field="amount" />
-        </label>
+        </div>
       )}
       {refused && (
         <span className="field-message" role="alert">

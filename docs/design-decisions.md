@@ -2293,3 +2293,75 @@ effect out of `QueueLayer`. There are 616 tests, twelve of them new.
 Out of scope, and left for later: the audit's 17 minors, the unreachable
 assessment decision buttons, an undo for the operator's Offer, Instant
 Book's fixed $129, and the platform audit's P3s.
+
+## ADR 082: What a page is made of can be heard, not only seen
+
+Accepted. These are the 17 minor findings of the WCAG 2.1 AA audit of 2026-10
+(`wiki/sources/accessibility-audit-2026-10.md`), after ADR 081 fixed its six
+majors. Each is pinned: thirteen screen tests in `workspace.test.tsx`
+("Accessibility (ADR 082)") and two new rules in `scripts/design-check.mjs`.
+The screens look as they did. Where a tag changed, a class carries the old
+style.
+
+**The outline is the page's (1.3.1, 2.4.1).**
+- A heading is never more than one level below the one before it. The
+  intake's, the walkthroughs', the assessment's and the customer cards'
+  headings move up. `.panel-title h2` is sized as `.panel-title h3` was.
+- A price is not a heading. The quote's and the payment modal's figure is
+  `<p className="price-figure">`, and it is still where focus lands when
+  the quote opens.
+- The sidebar is `<nav aria-label="Pages">`. The workspace's and the
+  Blueprint's footers sit beside `<main>`, not in it.
+- "Skip to content" is the first stop and moves focus to `<main>`. It
+  shares `.skip-link` with the Blueprint's.
+- The brand is a `<span>`. It went nowhere, so it was not a link.
+
+**A field's name is only its label (1.3.1, 3.3.1, 4.1.2).**
+- An error is no longer inside its `<label>`. It sits after it, with an id,
+  and `invalid(field)` points the field's `aria-describedby` at it. A
+  `.field-label` wrapper is `display: contents`, so the layout holds.
+- An error with no field of its own describes what it is about: the
+  provider and slot groups (`role="group"`), the charge, instant-slot and
+  merge buttons, and the photo input. Both split inputs are marked invalid.
+- `Message` is made once per form, so it no longer remounts and
+  re-announces on every render.
+- A request question's "Not sure" and hint are outside its name. The hint
+  and the error describe it.
+- The intake's photo-only Continue puts its error by the task's
+  description and moves focus there, instead of a toast.
+- Street, unit and municipality have `autocomplete`
+  (`address-line1`, `address-line2`, `address-level2`).
+
+**What colour says is said in words too (1.4.1, 1.4.11).**
+- The intake's done check fills with `--success-fill`. Its mark is about
+  8:1 in both themes, up from 2.6:1 in light. `design:check` computes it
+  from the tokens on every build.
+- "Soon" says ", soon", a done intake step says ", done", and the online
+  dot is an image named "Online".
+
+**Disclosures and updates are announced (4.1.2, 4.1.3).**
+- "New walkthrough", Browse requests, Messages and OnSite's earlier
+  visits name what they open with `aria-controls`. Where the panel is
+  conditional, only while it is open.
+- The incoming-update region stays mounted while it is empty, as the
+  toasts' does, so its first update is heard. The Blueprint announces its
+  path's description, not the whole path.
+- "Close navigation" is named without its ×.
+
+**Icons are hidden from a screen reader (1.1.1).** Every lucide icon sits
+beside text or inside a labelled control, so all of them take
+`aria-hidden`. lucide-react 0.468 does not add it. `design:check` fails a
+lucide icon without it, including one held as `Icon`.
+
+**Small targets reach 32 px on desktop (2.5.5, advisory).** `.map-expand`,
+the photo remove button and `button.badge` grow to 32 px; the badge by
+about 2 px. The time pills (36 px) and the role switch (44 px) were already
+there. Phones keep 44 px.
+
+**What it cost.** A `.field-label`, a `.skip-link`, a `.price-figure` and an
+`.incoming-region`, and two build rules. `useFieldErrors` gains
+`describedBy` and `errorId`. There are 629 tests, thirteen of them new.
+
+Out of scope, and left for later: the unreachable assessment decision
+buttons, an undo for the operator's Offer, Instant Book's fixed $129, and
+the platform audit's P3s.

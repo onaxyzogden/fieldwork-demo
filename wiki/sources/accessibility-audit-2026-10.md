@@ -23,7 +23,7 @@ A WCAG 2.1 AA audit of the whole platform, run on the dev server after ADR 080 (
 
 It was not tested with a real screen reader. No source was changed by the audit.
 
-**Result:** 23 findings: 0 critical, 6 major and 17 minor. The worst focus and announcement problems were already fixed by [[platform-ux-audit-2026-10]] (ADR 079–080). What's left is mostly in two places: how controls look (their borders and selected state) and how state is exposed to screen readers. **The 6 majors are fixed in ADR 081** (branch `claude/adr-081`).
+**Result:** 23 findings: 0 critical, 6 major and 17 minor. The worst focus and announcement problems were already fixed by [[platform-ux-audit-2026-10]] (ADR 079–080). What's left is mostly in two places: how controls look (their borders and selected state) and how state is exposed to screen readers. **The 6 majors are fixed in ADR 081** (PR #57, merged), **and the 17 minors in ADR 082**.
 
 ## What passes
 - **Text contrast:** zero text-contrast failures on 16 screens × 2 themes. Muted text in light mode is 6.3:1.
@@ -80,6 +80,14 @@ It was not tested with a real screen reader. No source was changed by the audit.
 - **#4:** `QueueLayer`'s trap became `useModal`, which `JobMode` and `OnSite` now share.
 - **#5:** the toast holds while it is hovered or focused, has a Dismiss button, and an error has no timer.
 - **Found while fixing:** Approve and Not now at `Assessment.tsx:555` can't be reached, because `FindingReview` always renders locked. They got `aria-pressed` anyway; removing them is left for later.
+
+## How the minors were fixed (ADR 082)
+- **Structure:** heading skips moved up (`.panel-title h2` sized as the h3 was); prices are `<p className="price-figure">`; the sidebar is `<nav aria-label="Pages">`; both footers sit beside `<main>`; "Skip to content" (shared `.skip-link`) focuses `<main>`; the brand is a `<span>`.
+- **Names:** each `Message` sits after its `<label>` with an id, and `invalid()` adds `aria-describedby`. A `.field-label` wrapper is `display: contents`, so layouts hold. Errors with no field describe their group or button. "Not sure" and hints are outside the name. The intake's photo-only Continue shows an inline error and focuses the description. Street, unit and municipality have `autocomplete`.
+- **Colour:** the done check fills with `--success-fill` (about 8:1), checked by `design:check`. ", soon", ", done" and an "Online" image name.
+- **Disclosures and live regions:** `aria-controls` on four toggles (only while open where the panel is conditional); the incoming region stays mounted; the Blueprint announces only its description; "Close navigation" is named without the ×.
+- **Icons:** every lucide icon has `aria-hidden`, and `design:check` fails one without it (an `Icon` alias included). The audit's "about 97" was 111.
+- **Targets:** `.map-expand`, photo remove and `button.badge` are 32 px on desktop. The time pill (36 px) and the role switch (44 px) already were.
 
 ## Related
 - [[platform-ux-audit-2026-10]]

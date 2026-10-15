@@ -106,7 +106,7 @@ export default function Blueprint() {
   const path = examples.find((e) => e.id === example)!;
   return (
     <div className="bp">
-      <a className="bp-skip" href="#bp-content">
+      <a className="skip-link bp-skip" href="#bp-content">
         Skip to blueprint
       </a>
       <header className="bp-top">
@@ -116,7 +116,7 @@ export default function Blueprint() {
         <span className="bp-top-label">DEVELOPER HANDOFF</span>
         <div className="bp-top-actions">
           <a href="?" className="secondary">
-            <ArrowLeft size={16} />
+            <ArrowLeft aria-hidden="true" size={16} />
             Back to prototype
           </a>
           <button
@@ -124,10 +124,10 @@ export default function Blueprint() {
             aria-label={`Switch to ${theme === "light" ? "dark" : "light"} mode`}
             onClick={() => setTheme(theme === "light" ? "dark" : "light")}
           >
-            {theme === "light" ? <Moon size={16} /> : <Sun size={16} />}
+            {theme === "light" ? <Moon aria-hidden="true" size={16} /> : <Sun aria-hidden="true" size={16} />}
           </button>
           <button className="primary" onClick={() => window.print()}>
-            <Printer size={16} />
+            <Printer aria-hidden="true" size={16} />
             Print / Save PDF
           </button>
         </div>
@@ -143,7 +143,7 @@ export default function Blueprint() {
             </p>
           </div>
           <aside>
-            <Layers size={24} />
+            <Layers aria-hidden="true" size={24} />
             <strong>Request → Tasks → Visit → Assignment</strong>
             <p>
               Quote and payment stay separate. Acceptance alone is not customer
@@ -199,9 +199,11 @@ export default function Blueprint() {
           </label>
           <a href="#bp-reference">Entity & state reference ↓</a>
         </section>
-        <section className="bp-path" aria-live="polite">
+        {/* Only the words that change are announced, not the path's
+            buttons with them (ADR 082). */}
+        <section className="bp-path">
           <span className="bp-kicker">EXAMPLE · {path.name}</span>
-          <p>{path.text}</p>
+          <p aria-live="polite">{path.text}</p>
           <div>
             {path.steps.map((id, i) => (
               <button
@@ -211,7 +213,7 @@ export default function Blueprint() {
                 onClick={() => selectStage(id)}
               >
                 {stages.find((s) => s.id === id)?.title}
-                {i < path.steps.length - 1 && <ArrowRight size={16} />}
+                {i < path.steps.length - 1 && <ArrowRight aria-hidden="true" size={16} />}
               </button>
             ))}
           </div>
@@ -292,7 +294,7 @@ export default function Blueprint() {
               >
                 <span>0{i + 1}</span>
                 <h2>{s.title}</h2>
-                <ChevronDown size={16} />
+                <ChevronDown aria-hidden="true" size={16} />
               </button>
               {(role === "All roles" ? roles : [role]).map((r) => (
                 <details key={r}>
@@ -424,19 +426,19 @@ export default function Blueprint() {
             </article>
           ))}
         </section>
-        <footer className="bp-footer">
-          <strong>fieldwork.</strong>
-          <p>
-            Developer reference · Verified against prototype sources · September
-            2026
-          </p>
-          <p>
-            Example paths are documentation, not live bookings. This view does
-            not mount the booking app or write to its browser storage.
-          </p>
-          <a href="?">Return to prototype →</a>
-        </footer>
       </main>
+      <footer className="bp-footer">
+        <strong>fieldwork.</strong>
+        <p>
+          Developer reference · Verified against prototype sources · September
+          2026
+        </p>
+        <p>
+          Example paths are documentation, not live bookings. This view does
+          not mount the booking app or write to its browser storage.
+        </p>
+        <a href="?">Return to prototype →</a>
+      </footer>
     </div>
   );
 }

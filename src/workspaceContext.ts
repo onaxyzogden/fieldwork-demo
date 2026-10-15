@@ -49,7 +49,11 @@ export type WorkspaceApi = {
   fits: boolean;
   fulfillment: boolean;
   fulfillmentKind: "self" | "contractor";
-  invalid: (field: string) => { "aria-invalid": true | undefined };
+  invalid: (field: string) => {
+    "aria-invalid": true | undefined;
+    "aria-describedby": string | undefined;
+  };
+  describedBy: (...fields: string[]) => string | undefined;
   invalidate: (field: string, message: string) => boolean;
   lateFee: number | null;
   override: string;

@@ -32,6 +32,37 @@ h3,
 h4 {
   font-size: var(--text-intro);
 }
+/* A heading takes the level its place in the page needs (ADR 082). Where that
+   is not the level it was drawn at, it keeps the look it had. Doubled, to win
+   over sizes set by context, such as .panel h2. */
+h2.look-h3.look-h3 {
+  font-size: var(--text-h3);
+  font-weight: 650;
+  letter-spacing: normal;
+}
+h3.look-h4.look-h4 {
+  font-family: inherit;
+  font-size: var(--text-intro);
+  font-weight: 600;
+  margin: var(--space-5) 0 var(--space-3);
+}
+/* A price is read, not navigated to, so it is not a heading (ADR 082). It
+   keeps the look of the heading it was: an h2 on a card, an h1 in a dialog. */
+.price-figure.price-figure {
+  font-family: Manrope, sans-serif;
+  font-size: var(--text-h2);
+  font-weight: 700;
+  letter-spacing: -0.6px;
+  line-height: 1.5;
+  color: inherit;
+  margin: var(--space-4) 0;
+}
+.modal .price-figure.price-figure {
+  font-size: var(--text-h1);
+  font-weight: 650;
+  letter-spacing: -1.15px;
+  margin: var(--space-6) 0;
+}
 p,
 textarea,
 input,
@@ -77,7 +108,7 @@ footer,
 .visit-card strong,
 .dispatch-setting label,
 .offer-pay h1 small,
-.quote h2 small,
+.price-figure small,
 .payment-method strong {
   font-size: var(--text-label);
   line-height: 1.5;
@@ -179,10 +210,12 @@ footer,
 .detail-meta > span {
   flex: 1 1 12rem;
 }
-.task-review .row.between > label {
+.task-review .row.between > label,
+.task-review .row.between > .mini-field {
   flex: 1 1 14rem;
 }
-.task-review .row.between > label strong {
+.task-review .row.between > label strong,
+.task-review .row.between > .mini-field strong {
   min-width: 0;
 }
 .mini-field input[type="number"] {

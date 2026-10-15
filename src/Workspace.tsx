@@ -83,6 +83,8 @@ export function Workspace({
 }) {
   const {
     Message,
+    describedBy,
+    invalid,
     active,
     api,
     choose,
@@ -163,6 +165,17 @@ export function Workspace({
       data-role={role}
       ref={workspaceRef}
     >
+      {/* Past the sidebar and the bars to the page itself (ADR 082). */}
+      <a
+        className="skip-link"
+        href={"#" + idPrefix + "main"}
+        onClick={(e) => {
+          e.preventDefault();
+          document.getElementById(idPrefix + "main")?.focus();
+        }}
+      >
+        Skip to content
+      </a>
       <Sidebar
         s={s}
         role={role}
@@ -200,29 +213,35 @@ export function Workspace({
           unread={notices.filter((n) => !n.read).length}
           menuTrigger={menuTrigger}
         />
-        {latest && (
-          <div className="incoming-notice" role="status">
-            <Bell size={16} />
-            {/* Opens the update itself, read, rather than the inbox it sits
-                at the top of (ADR 066). */}
-            <button
-              onClick={() => {
-                update((d) => {
-                  markRead(d, latest.id);
-                });
-                openNotice(latest);
-              }}
-            >
-              {latest.text}
-              <small>
-                {role === "Customer"
-                  ? "View update"
-                  : "View update · in-app simulation"}
-              </small>
-            </button>
-          </div>
-        )}
+        {/* Mounted while empty, so the first update is heard too, as the
+            toasts are (ADR 080, ADR 082). */}
+        <div className="incoming-region" role="status">
+          {latest && (
+            <div className="incoming-notice">
+              <Bell aria-hidden="true" size={16} />
+              {/* Opens the update itself, read, rather than the inbox it sits
+                  at the top of (ADR 066). */}
+              <button
+                onClick={() => {
+                  update((d) => {
+                    markRead(d, latest.id);
+                  });
+                  openNotice(latest);
+                }}
+              >
+                {latest.text}
+                <small>
+                  {role === "Customer"
+                    ? "View update"
+                    : "View update · in-app simulation"}
+                </small>
+              </button>
+            </div>
+          )}
+        </div>
         <main
+          id={idPrefix + "main"}
+          tabIndex={-1}
           className={
             role === "Customer" && page === "New request"
               ? "intake-main"
@@ -234,13 +253,14 @@ export function Workspace({
             {role === "Customer" && <CustomerWorkspace />}
             {role === "Contractor" && <ContractorWorkspace />}
           </WorkspaceContext.Provider>
-          <footer>
-            <span>
-              <span className="brand-mini">fieldwork.</span> Home services,
-              coordinated.
-            </span>
-          </footer>
         </main>
+        {/* Beside main, not in it, so it is the page's footer (ADR 082). */}
+        <footer>
+          <span>
+            <span className="brand-mini">fieldwork.</span> Home services,
+            coordinated.
+          </span>
+        </footer>
       </div>
       {/* The regions stay mounted so a screen reader hears the first toast
           too, and a failure is an alert (ADR 080). A toast holds while it is
@@ -258,9 +278,9 @@ export function Workspace({
           {toast && (toastTone === "error") === (region === "alert") && (
             <div className={"toast" + (region === "alert" ? " error" : "")}>
               {region === "alert" ? (
-                <AlertCircle size={16} />
+                <AlertCircle aria-hidden="true" size={16} />
               ) : (
-                <CheckCircle2 size={16} />
+                <CheckCircle2 aria-hidden="true" size={16} />
               )}
               {toast}
               <button
@@ -277,7 +297,7 @@ export function Workspace({
                   }
                 }}
               >
-                <X size={16} />
+                <X aria-hidden="true" size={16} />
               </button>
             </div>
           )}
@@ -299,7 +319,7 @@ export function Workspace({
                 aria-label="Close dialog"
                 onClick={() => setModal("")}
               >
-                <X />
+                <X aria-hidden="true" />
               </button>
             </div>
             {modal === "Demo settings" && (
@@ -354,12 +374,12 @@ export function Workspace({
             {["Instant payment", "Payment"].includes(modal) && (
               <>
                 <div className="payment-method">
-                  <Wallet />
+                  <Wallet aria-hidden="true" />
                   <div>
                     <strong>Visa •••• 4242</strong>
                     <small>Card on file</small>
                   </div>
-                  <Check size={16} />
+                  <Check aria-hidden="true" size={16} />
                 </div>
                 {modal === "Instant payment" && (
                   <>
@@ -367,13 +387,14 @@ export function Workspace({
                     <Message field="instant-slot" />
                   </>
                 )}
-                <h1>
+                <p className="price-figure">
                   {money(
                     modal === "Instant payment" ? 129 : quote?.amount || 0,
                   )}
-                </h1>
+                </p>
                 <button
                   className="primary full actions"
+                  aria-describedby={describedBy("instant-slot")}
                   onClick={() => {
                     if (modal === "Instant payment") {
                       if (fail) {
@@ -489,7 +510,7 @@ export function Workspace({
                   {money(
                     modal === "Instant payment" ? 129 : quote?.amount || 0,
                   )}{" "}
-                  <ArrowRight size={16} />
+                  <ArrowRight aria-hidden="true" size={16} />
                 </button>
               </>
             )}
@@ -544,7 +565,7 @@ export function Workspace({
                                   " minutes"}
                             </small>
                           </div>
-                          {provider === o.provider.id && <Check size={16} />}
+                          {provider === o.provider.id && <Check aria-hidden="true" size={16} />}
                         </button>
                       ))}
                     </div>
@@ -747,6 +768,7 @@ export function Workspace({
                 <Message field="merge" />
                 <button
                   className="primary"
+                  aria-describedby={describedBy("merge")}
                   onClick={() => {
                     if (
                       visits.some(
@@ -834,6 +856,7 @@ export function Workspace({
                   <input
                     name="first"
                     required
+                    {...invalid("split")}
                     defaultValue={
                       tasks.find((t) => t.id === selected[0])?.description
                     }
@@ -844,6 +867,7 @@ export function Workspace({
                   <input
                     name="second"
                     required
+                    {...invalid("split")}
                     placeholder="Describe the separate piece of work"
                   />
                 </label>

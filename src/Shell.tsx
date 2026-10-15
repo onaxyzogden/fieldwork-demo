@@ -140,17 +140,19 @@ export function Sidebar({
         {open && (
           <button
             className="text-button drawer-close"
+            aria-label="Close navigation"
             onClick={() => setOpen(false)}
           >
-            Close navigation ×
+            Close navigation <span aria-hidden="true">×</span>
           </button>
         )}
-        <a className="brand" href="#" onClick={(e) => e.preventDefault()}>
+        {/* A name, not a link: it goes nowhere (ADR 082). */}
+        <span className="brand">
           <span className="brand-icon">
-            <Wrench size={20} />
+            <Wrench aria-hidden="true" size={20} />
           </span>
           fieldwork<span className="brand-dot">.</span>
-        </a>
+        </span>
         {/* The workspace is the operator's; anyone else sees their own name
             here, as the profile below does (ADR 080). */}
         <div className="workspace">
@@ -161,10 +163,10 @@ export function Sidebar({
             </strong>
             <small>Halton &amp; Greater Toronto</small>
           </div>
-          <span className="online" />
+          <span className="online" role="img" aria-label="Online" />
         </div>
         <span className="nav-caption">WORKSPACE</span>
-        <nav>
+        <nav aria-label="Pages">
           {NAV[role].map(([Icon, label]) => {
             const here = (UNDER[page] || page) === label;
             return (
@@ -178,7 +180,7 @@ export function Sidebar({
                   setOpen(false);
                 }}
               >
-                <Icon size={24} />
+                <Icon size={24} aria-hidden="true" />
                 {label}
                 {/* The same count as Home's Needs Action (ADR 080). */}
                 {label === "Requests" && (
@@ -196,7 +198,7 @@ export function Sidebar({
         </nav>
         <div className="sidebar-bottom">
           <div className="service-zone">
-            <span className="online" /> Service area active
+            <span className="online" aria-hidden="true" /> Service area active
             <small>Oakville · Burlington · Milton</small>
           </div>
           <button
@@ -206,7 +208,7 @@ export function Sidebar({
               setModal("Demo settings");
             }}
           >
-            <Settings size={16} /> Demo settings
+            <Settings aria-hidden="true" size={16} /> Demo settings
           </button>
           <div className="profile">
             <div className="avatar">{me.initials}</div>
@@ -251,7 +253,7 @@ export function DemoBar({
           <>
             <span className="chosen">{role}</span>
             <button className="text-button" onClick={onExitCompare}>
-              <X size={16} /> Exit side by side
+              <X aria-hidden="true" size={16} /> Exit side by side
             </button>
           </>
         ) : (
@@ -270,7 +272,7 @@ export function DemoBar({
               </button>
             ))}
             <button className="text-button" onClick={onEnterCompare}>
-              <Layers size={16} /> Side by side
+              <Layers aria-hidden="true" size={16} /> Side by side
             </button>
           </>
         )}
@@ -321,10 +323,10 @@ export function Topbar({
           aria-controls={idPrefix + "workspace-navigation"}
           onClick={() => setOpen(!open)}
         >
-          <Menu />
+          <Menu aria-hidden="true" />
         </button>
         <span>{role}</span>
-        <ChevronRight size={16} />
+        <ChevronRight aria-hidden="true" size={16} />
         <strong>{page}</strong>
       </div>
       <div className="row">
@@ -341,14 +343,14 @@ export function Topbar({
           title={themeLabel}
           onClick={() => setTheme(toDark ? "dark" : "light")}
         >
-          {toDark ? <Moon size={20} /> : <Sun size={20} />}
+          {toDark ? <Moon aria-hidden="true" size={20} /> : <Sun aria-hidden="true" size={20} />}
         </button>
         <button
           className="icon-button"
           aria-label={`View notifications (${unread} unread)`}
           onClick={() => setModal("Notifications")}
         >
-          <Bell size={20} />
+          <Bell aria-hidden="true" size={20} />
           {!!unread && <span className="notification-count">{unread}</span>}
         </button>
         <div className="avatar small">
@@ -492,7 +494,7 @@ export function DemoSettings({
           className="secondary full actions"
           onClick={() => setResetting(true)}
         >
-          <RotateCcw size={16} /> Reset all demo data
+          <RotateCcw aria-hidden="true" size={16} /> Reset all demo data
         </button>
       )}
     </>

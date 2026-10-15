@@ -76,6 +76,7 @@ import { commit } from "./store";
 export function OperatorRequests() {
   const {
     Message,
+    describedBy,
     amount,
     badge,
     booked,
@@ -466,21 +467,23 @@ export function OperatorRequests() {
       } until you decide the fee.`;
       extra = (
         <>
-          <label className={fieldClass("lateFee")}>
-            Late-cancellation fee (CAD)
-            <input
-              type="number"
-              inputMode="numeric"
-              min={1}
-              value={Number.isFinite(fee) ? fee : ""}
-              {...invalid("lateFee")}
-              onChange={(e) => {
-                clear("lateFee");
-                setLateFee(Number(e.target.value));
-              }}
-            />
+          <div className={fieldClass("lateFee")}>
+            <label className="field-label">
+              Late-cancellation fee (CAD)
+              <input
+                type="number"
+                inputMode="numeric"
+                min={1}
+                value={Number.isFinite(fee) ? fee : ""}
+                {...invalid("lateFee")}
+                onChange={(e) => {
+                  clear("lateFee");
+                  setLateFee(Number(e.target.value));
+                }}
+              />
+            </label>
             <Message field="lateFee" />
-          </label>
+          </div>
           <div className="row actions wrap op-decision-actions">
             <button
               className="primary"
@@ -528,7 +531,7 @@ export function OperatorRequests() {
                 setModal("Reschedule");
               }}
             >
-              Reschedule visit <ArrowRight size={16} />
+              Reschedule visit <ArrowRight aria-hidden="true" size={16} />
             </button>
           )}
           <button
@@ -600,7 +603,7 @@ export function OperatorRequests() {
       actions = (
         <>
           <button className="primary" onClick={() => beginReassign(stalled)}>
-            Offer to another contractor <ArrowRight size={16} />
+            Offer to another contractor <ArrowRight aria-hidden="true" size={16} />
           </button>
           <button
             className="secondary"
@@ -615,7 +618,7 @@ export function OperatorRequests() {
       body = `${unreviewed.length} task${plural(unreviewed.length)} still need${unreviewed.length === 1 ? "s" : ""} your review before this job can be assigned.`;
       actions = (
         <button className="primary" onClick={showTasks}>
-          Review tasks <ArrowRight size={16} />
+          Review tasks <ArrowRight aria-hidden="true" size={16} />
         </button>
       );
     } else if (loose.length) {
@@ -633,7 +636,7 @@ export function OperatorRequests() {
               setFulfillment(true);
             }}
           >
-            Offer to a contractor <ArrowRight size={16} />
+            Offer to a contractor <ArrowRight aria-hidden="true" size={16} />
           </button>
           <button
             className="secondary"
@@ -696,7 +699,7 @@ export function OperatorRequests() {
       actions = (
         <>
           <button className="primary" onClick={sendQuote}>
-            Send quote <ArrowUpRight size={16} />
+            Send quote <ArrowUpRight aria-hidden="true" size={16} />
           </button>
           <details>
             <summary>Adjust</summary>
@@ -733,7 +736,7 @@ export function OperatorRequests() {
             <summary>Revise the quote</summary>
             {quoteFields()}
             <button className="secondary actions" onClick={sendQuote}>
-              Send revised quote <ArrowUpRight size={16} />
+              Send revised quote <ArrowUpRight aria-hidden="true" size={16} />
             </button>
           </details>
         );
@@ -745,7 +748,7 @@ export function OperatorRequests() {
       >
         <div className="op-decision-head">
           <span className="op-status-icon">
-            <Icon size={24} />
+            <Icon aria-hidden="true" size={24} />
           </span>
           <div>
             <h3>{title}</h3>
@@ -768,42 +771,44 @@ export function OperatorRequests() {
               >
                 Decline request
               </button>
-              <label className={fieldClass("mode", "mini-field")}>
-                Booking mode
-                <select
-                  value={r.mode}
-                  {...invalid("mode")}
-                  onChange={(e) => {
-                    if (
-                      e.target.value === "Instant Book" &&
-                      !instantEligible(tasks)
-                    )
-                      return invalidate(
-                        "mode",
-                        "This scope requires Request to Book — it contains work that cannot be booked instantly.",
-                      );
-                    clear("mode");
-                    update((d) => {
-                      const req = d.requests.find((q) => q.id === r.id)!;
-                      const was = req.mode;
-                      req.mode = e.target.value;
-                      log(d, "Operator changed booking mode", {
-                        actor: "Operator",
-                        requestId: r.id,
-                        entity: "request",
-                        entityId: r.id,
-                        field: "mode",
-                        from: was,
-                        to: req.mode,
+              <div className={fieldClass("mode", "mini-field")}>
+                <label className="field-label">
+                  Booking mode
+                  <select
+                    value={r.mode}
+                    {...invalid("mode")}
+                    onChange={(e) => {
+                      if (
+                        e.target.value === "Instant Book" &&
+                        !instantEligible(tasks)
+                      )
+                        return invalidate(
+                          "mode",
+                          "This scope requires Request to Book — it contains work that cannot be booked instantly.",
+                        );
+                      clear("mode");
+                      update((d) => {
+                        const req = d.requests.find((q) => q.id === r.id)!;
+                        const was = req.mode;
+                        req.mode = e.target.value;
+                        log(d, "Operator changed booking mode", {
+                          actor: "Operator",
+                          requestId: r.id,
+                          entity: "request",
+                          entityId: r.id,
+                          field: "mode",
+                          from: was,
+                          to: req.mode,
+                        });
                       });
-                    });
-                  }}
-                >
-                  <option>Request to Book</option>
-                  <option>Instant Book</option>
-                </select>
+                    }}
+                  >
+                    <option>Request to Book</option>
+                    <option>Instant Book</option>
+                  </select>
+                </label>
                 <Message field="mode" />
-              </label>
+              </div>
             </details>
             {/* The money side, where the operator can actually act on it.
                 One notice for the whole panel rather than a marker beside each
@@ -922,7 +927,7 @@ export function OperatorRequests() {
                 </div>
                 {owed > 0 && (
                   <p className="warning">
-                    <AlertCircle size={16} /> {money(owed)} outstanding — the
+                    <AlertCircle aria-hidden="true" size={16} /> {money(owed)} outstanding — the
                     work was done and the capture did not go through.
                   </p>
                 )}
@@ -961,16 +966,18 @@ export function OperatorRequests() {
             ref={browseButton}
             className="secondary mobile-request-browser"
             aria-expanded={showRequestQueue}
+            aria-controls={idPrefix + "request-queue"}
             onClick={() => setShowRequestQueue(!showRequestQueue)}
           >
             {showRequestQueue ? "Close request list" : "Browse requests"}
           </button>
         )}
         <section
+          id={idPrefix + "request-queue"}
           className={"panel queue " + (showRequestQueue ? "queue-open" : "")}
         >
           <label className="search">
-            <Search size={16} />
+            <Search aria-hidden="true" size={16} />
             <input
               ref={searchBox}
               placeholder="Search requests…"
@@ -1011,7 +1018,7 @@ export function OperatorRequests() {
               </div>
               <p>
                 <span>
-                  <MapPin size={16} />
+                  <MapPin aria-hidden="true" size={16} />
                   {q.city} ·{" "}
                   {
                     s.tasks.filter((t) => t.requestId === q.id && !t.mergedInto)
@@ -1047,14 +1054,14 @@ export function OperatorRequests() {
                   {r.address || r.name}
                 </h2>
                 <p>
-                  <MapPin size={16} /> {r.city} · {r.name}
+                  <MapPin aria-hidden="true" size={16} /> {r.city} · {r.name}
                 </p>
               </div>
               {badge(requestStatus(r.id))}
             </div>
             <div className="detail-meta">
               <span>
-                <Clock size={16} />
+                <Clock aria-hidden="true" size={16} />
                 {r.timing}
               </span>
               <span>{badge(r.mode)}</span>
@@ -1081,7 +1088,7 @@ export function OperatorRequests() {
               on: reach that person another way (ADR 060). */}
           {unreachable(s, r.id).map((u) => (
             <p className="warning" key={u.name + u.channel}>
-              <AlertCircle size={16} />
+              <AlertCircle aria-hidden="true" size={16} />
               {u.channel === "sms"
                 ? `Couldn’t text ${u.name}: ${u.reason.toLowerCase()}. Call or email them about this request.`
                 : `Couldn’t email ${u.name}: ${u.reason.toLowerCase()}. Call or text them about this request.`}
@@ -1187,7 +1194,7 @@ export function OperatorRequests() {
                     <TaskAnswers task={t} />
                     {t.restricted && (
                       <p className="warning">
-                        <AlertCircle size={16} /> Potential regulated work ·
+                        <AlertCircle aria-hidden="true" size={16} /> Potential regulated work ·
                         operator review and eligible specialist required
                       </p>
                     )}
@@ -1260,7 +1267,7 @@ export function OperatorRequests() {
                     <details className="note">
                       <summary>Why this classification?</summary>
                       <div className="reason">
-                        <ShieldCheck size={16} />
+                        <ShieldCheck aria-hidden="true" size={16} />
                         <span>
                           {t.reason}
                           <small>
@@ -1313,39 +1320,41 @@ export function OperatorRequests() {
                               ))}
                           </select>
                         </label>
-                        <label
+                        <div
                           className={fieldClass(
                             "duration-" + t.id,
                             "mini-field",
                           )}
                         >
-                          Duration (min)
-                          <input
-                            type="number"
-                            min="15"
-                            max="480"
-                            value={t.duration}
-                            {...invalid("duration-" + t.id)}
-                            onChange={(e) => {
-                              if (
-                                visits.some(
-                                  (v) =>
-                                    v.status !== "Cancelled" &&
-                                    v.taskIds.includes(t.id),
+                          <label className="field-label">
+                            Duration (min)
+                            <input
+                              type="number"
+                              min="15"
+                              max="480"
+                              value={t.duration}
+                              {...invalid("duration-" + t.id)}
+                              onChange={(e) => {
+                                if (
+                                  visits.some(
+                                    (v) =>
+                                      v.status !== "Cancelled" &&
+                                      v.taskIds.includes(t.id),
+                                  )
                                 )
-                              )
-                                return invalidate(
-                                  "duration-" + t.id,
-                                  "Remove the visit before changing this duration, so availability can be recalculated.",
-                                );
-                              clear("duration-" + t.id);
-                              patchTask(t.id, {
-                                duration: Math.max(15, Number(e.target.value)),
-                              });
-                            }}
-                          />
+                                  return invalidate(
+                                    "duration-" + t.id,
+                                    "Remove the visit before changing this duration, so availability can be recalculated.",
+                                  );
+                                clear("duration-" + t.id);
+                                patchTask(t.id, {
+                                  duration: Math.max(15, Number(e.target.value)),
+                                });
+                              }}
+                            />
+                          </label>
                           <Message field={"duration-" + t.id} />
-                        </label>
+                        </div>
                         <button
                           className="text-button"
                           onClick={() => {
@@ -1403,7 +1412,7 @@ export function OperatorRequests() {
                                   setPage("Your Work");
                                 }}
                               >
-                                Open contractor view <ArrowUpRight size={16} />
+                                Open contractor view <ArrowUpRight aria-hidden="true" size={16} />
                               </button>
                             )}
                           </div>
@@ -1478,7 +1487,7 @@ export function OperatorRequests() {
                   </span>
                 </div>
                 <div className="fulfillment-request-summary">
-                  <MapPin size={24} />
+                  <MapPin aria-hidden="true" size={24} />
                   <strong>
                     {r.address}, {r.city}
                   </strong>
@@ -1487,7 +1496,14 @@ export function OperatorRequests() {
                 </div>
                 <Message field="tasks" />
                 <Message field="provider" />
-                <div className="provider-options">
+                {/* The messages above have no field of their own, so the
+                    group they are about is described by them (ADR 082). */}
+                <div
+                  className="provider-options"
+                  role="group"
+                  aria-label="Who does the work"
+                  aria-describedby={describedBy("tasks", "provider")}
+                >
                   {candidates.map((c) => {
                     const theirs = chosenStart(s, r, c.provider.id, duration);
                     return (
@@ -1528,7 +1544,7 @@ export function OperatorRequests() {
                                 : "No fitting time found"}
                           </small>
                         </div>
-                        {provider === c.provider.id && <Check size={16} />}
+                        {provider === c.provider.id && <Check aria-hidden="true" size={16} />}
                       </button>
                     );
                   })}
@@ -1581,12 +1597,17 @@ export function OperatorRequests() {
                     <p>Customer price and contractor pay remain separate.</p>
                   </details>
                 )}
-                <h4>
+                <h3 className="look-h4" id={idPrefix + "slots-heading"}>
                   Recommended appointments{" "}
                   <span className="muted">· simulated routing</span>
-                </h4>
+                </h3>
                 <Message field="slot" />
-                <div className="slot-grid">
+                <div
+                  className="slot-grid"
+                  role="group"
+                  aria-labelledby={idPrefix + "slots-heading"}
+                  aria-describedby={describedBy("slot")}
+                >
                   {opts.map((o, i) => (
                     <button
                       key={o.start}
@@ -1671,21 +1692,23 @@ export function OperatorRequests() {
                   />
                 </label>
                 {provider !== "yousef" && (
-                  <label className="mini-field">
-                    Contractor pay (CAD)
-                    <input
-                      type="number"
-                      min="0"
-                      value={assignPay}
-                      {...invalid("pay")}
-                      onChange={(e) => {
-                        clear("pay");
-                        setPayTouched(true);
-                        setPay(Math.max(0, +e.target.value));
-                      }}
-                    />
+                  <div className="mini-field">
+                    <label className="field-label">
+                      Contractor pay (CAD)
+                      <input
+                        type="number"
+                        min="0"
+                        value={assignPay}
+                        {...invalid("pay")}
+                        onChange={(e) => {
+                          clear("pay");
+                          setPayTouched(true);
+                          setPay(Math.max(0, +e.target.value));
+                        }}
+                      />
+                    </label>
                     <Message field="pay" />
-                  </label>
+                  </div>
                 )}
                 <div className="note">
                   <strong>Customer price & confirmation</strong>
@@ -1724,7 +1747,7 @@ export function OperatorRequests() {
                   {provider === "yousef"
                     ? "Create visit"
                     : "Create visit & send offer"}
-                  <ArrowRight size={16} />
+                  <ArrowRight aria-hidden="true" size={16} />
                 </button>
               </section>
             </>

@@ -247,7 +247,7 @@ export default function Assessment({
                 </a>
               )}
               <button className="text-button" onClick={() => window.print()}>
-                <Printer size={16} /> Print
+                <Printer aria-hidden="true" size={16} /> Print
               </button>
             </span>
           </header>
@@ -344,7 +344,7 @@ export default function Assessment({
                 </a>
               )}
               <button className="text-button" onClick={() => window.print()}>
-                <Printer size={16} /> Print / Save PDF
+                <Printer aria-hidden="true" size={16} /> Print / Save PDF
               </button>
             </span>
           </div>
@@ -416,7 +416,7 @@ export default function Assessment({
 
         <section className="card panel assessment-summary">
           <div className="panel-title">
-            <h3>Work summary</h3>
+            <h2 className="look-h3">Work summary</h2>
           </div>
           <table className="assessment-table">
             <tbody>
@@ -447,7 +447,7 @@ export default function Assessment({
         {done && (
           <section className="card panel">
             <div className="panel-title">
-              <h3>Keep this record</h3>
+              <h2 className="look-h3">Keep this record</h2>
             </div>
             <p>
               Create a Fieldwork account to keep this property's history,
@@ -492,9 +492,9 @@ function FindingReview({
   return (
     <section className="card panel finding">
       <div className="panel-title">
-        <h3>
+        <h2 className="look-h3">
           {number} · {f.title || "Untitled finding"}
-        </h3>
+        </h2>
         <span className={"badge " + (f.decision === "Approved" ? "green" : "")}>
           {state}
         </span>
@@ -530,7 +530,7 @@ function FindingReview({
       {far ? (
         <div className="finding-decision">
           <span className="badge neutral">
-            <ClipboardCheck size={16} /> Assessment required before pricing
+            <ClipboardCheck aria-hidden="true" size={16} /> Assessment required before pricing
           </span>
           <p className="note">
             We can see there is an issue here, but not enough to price the
@@ -538,7 +538,7 @@ function FindingReview({
           </p>
           {f.followUpRequestedAt ? (
             <p className="note">
-              <Clock size={16} /> Assessment requested. The operator will follow
+              <Clock aria-hidden="true" size={16} /> Assessment requested. The operator will follow
               up.
             </p>
           ) : (
@@ -561,7 +561,7 @@ function FindingReview({
                 aria-pressed={f.decision === "Approved"}
                 onClick={() => onDecide("Approved")}
               >
-                {f.decision === "Approved" ? <CheckCircle2 size={16} /> : null}{" "}
+                {f.decision === "Approved" ? <CheckCircle2 aria-hidden="true" size={16} /> : null}{" "}
                 Approve
               </button>
               <button

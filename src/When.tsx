@@ -23,6 +23,9 @@ export function When({
         <>
           <span className={c.soon ? "when-soon" : undefined}>
             {lead} {c.text}
+            {/* The warning colour says it to the eye; this says it to the
+                ear (ADR 082). */}
+            {c.soon && <span className="sr-only">, soon</span>}
           </span>
           {" · "}
         </>

@@ -553,9 +553,11 @@ main > .actions,
   color: var(--danger);
   border-color: var(--danger-soft);
 }
+/* 32 px on desktop (ADR 082): two pixels over the plain badge, so the
+   identity row barely moves. Phones take 44 px from responsive.css. */
 button.badge {
   cursor: pointer;
-  min-height: 0;
+  min-height: 32px;
   font-size: var(--text-label);
 }
 .identity-switch {
@@ -603,8 +605,9 @@ button.badge {
   top: 10px;
   display: grid;
   place-items: center;
-  width: 29px;
-  height: 29px;
+  /* 32 px, the desktop floor for a target (ADR 082); 44 px on a phone. */
+  width: 32px;
+  height: 32px;
   background: var(--panel);
   border: 1px solid var(--panel);
   border-radius: var(--radius-sm);
@@ -616,6 +619,17 @@ footer {
   padding: var(--space-8) 0;
   color: var(--muted);
   gap: var(--space-4);
+}
+/* Beside main rather than in it (ADR 082), so it takes main's width and side
+   padding here and in each container rule below. */
+.shell > footer {
+  max-width: 1700px;
+  margin: 0 auto;
+  padding-inline: var(--space-8);
+}
+/* Reached by the skip link; it is not a control, so it draws no ring. */
+main[tabindex="-1"]:focus {
+  outline: none;
 }
 .brand-mini {
   font-weight: 700;
@@ -865,9 +879,6 @@ footer {
   background: var(--gradient-surface);
   border-radius: var(--radius-md);
 }
-.quote h2 {
-  margin: var(--space-4) 0;
-}
 .roster {
   display: grid;
   grid-template-columns: repeat(2, 1fr);
@@ -945,6 +956,13 @@ footer {
 .field input,
 .field select {
   width: 100%;
+}
+/* A field whose message sits after its label, so the message describes the
+   field rather than naming it (ADR 082). The label adds no box of its own, so
+   the text, the control and the message lay out as they did inside it. */
+.field > .field-label,
+.mini-field > .field-label {
+  display: contents;
 }
 .slot-grid.vertical {
   grid-template-columns: 1fr;
@@ -1037,11 +1055,13 @@ footer {
   white-space: nowrap;
   min-width: 0;
 }
+/* The fill is the light one in both themes: the dark-on-light check is what
+   says "done", and on light mode's deep --success it was 2.6:1 (ADR 082). */
 .step-summary-check {
   width: 22px;
   height: 22px;
   border-radius: var(--radius-pill);
-  background: var(--success);
+  background: var(--success-fill);
   color: var(--on-accent);
   display: flex;
   align-items: center;
