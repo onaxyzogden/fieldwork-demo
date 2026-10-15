@@ -45,7 +45,7 @@ An interactive prototype of a handyman services platform. It has three roles, Cu
 - ADR 077 step 7 (each role's helpers into its own file) is live on `main` via PR #52 (2026-10-08).
 - ADR 078 (a chunk per role) is live on `main` via PR #53 (2026-10-08).
 - A platform-wide UX audit ran on 2026-10-08, after ADR 078: 8 P1s, 15 P2s and 15 P3s across the three roles and the shell, The P1s are fixed in ADR 079, and the P2s in ADR 080 (PR #56, merged). The P3s are open. See [[platform-ux-audit-2026-10]].
-- A WCAG 2.1 AA audit ran on 2026-10-14, after ADR 080: 0 critical, 6 major and 17 minor. The majors are fixed in ADR 081 (branch `claude/adr-081`). See [[accessibility-audit-2026-10]].
+- A WCAG 2.1 AA audit ran on 2026-10-14, after ADR 080: 0 critical, 6 major and 17 minor. The majors are fixed in ADR 081 (PR #57, merged) and the minors in ADR 082. See [[accessibility-audit-2026-10]].
 - Local dev uses Vite on 5173 and the preview build on 4173 (`.claude/launch.json`, untracked).
 
 ## Connections
@@ -57,13 +57,14 @@ An interactive prototype of a handyman services platform. It has three roles, Cu
 - [[2026-10-07-wiki-in-repo]]: why this wiki is here.
 
 ## Open Questions
-- The accessibility audit's 17 minors are open. Its 6 majors are fixed (ADR 081).
+- The accessibility audit is closed: its 6 majors are fixed in ADR 081, and its 17 minors in ADR 082.
 - `Assessment.tsx`'s `FindingReview` decision buttons can't be reached, because it always renders locked.
 - The platform UX audit's P3s are open, as is an undo for the operator's Offer. Instant Book's price is still a fixed $129.
 - ADR 077 is complete, and each role is its own chunk (ADR 078). The operator, the default, saves only 5% of its first load, because most of the role code is the operator's. Splitting `OperatorRequests` off from the operator's home is the next size candidate, if first load ever matters.
 - Bundle-size work is parked (ADR 074–076). The catalogue and the per-role CSS were measured at 6% and 2% of the first load (ADR 076).
 
 ## History
+- 2026-10-15: ADR 082 fixes the accessibility audit's 17 minors. Headings no longer skip, prices aren't headings, there is a skip link and a labelled nav, and errors describe their fields instead of being part of their names. Every lucide icon is `aria-hidden`, checked by `design:check` along with the intake's done check. There are 629 tests.
 - 2026-10-15: ADR 081 fixes the accessibility audit's 6 majors. It adds a `--field-border` token (checked at 3:1 by `design:check`), a doubled edge for whatever is chosen, `aria-pressed` and `aria-current` with an ", done" for screen readers, and `useModal`, shared by the queues, `JobMode` and `OnSite`. Toasts hold on hover or focus and can be dismissed, and an error stays until dismissed. There are 616 tests.
 - 2026-10-14: a WCAG 2.1 AA audit of the whole platform (no source changes). Text contrast passes on 16 screens in both themes, and nothing overflows at 320 px. Field borders (1.3:1), colour-only selection, unexposed selected or current state, `JobMode`/`OnSite` dialogs with no trap, and timed toasts are the majors. See [[accessibility-audit-2026-10]].
 - 2026-10-08: the platform audit's P2s fixed (ADR 080). Toasts have an error tone in an always-mounted alert region and one cleared timer, and clear on a switch of who is viewed. A declined quote reads "Quote declined · we’re revising it" to the customer. The contractor's glance, Accepted badge, photo removal (with Undo) and Availability draft (`sessionStorage`) are fixed. The operator's counts agree, "← All requests" goes back to the list, a chosen request takes focus, More is current under it, and the queue says "Sent: Offer to …". Instant Book confirms and focuses the booking, and intake's missing task is said inline. 16 tests were added (604), with one new CSS rule.
