@@ -145,6 +145,17 @@ describe("the customer's assessment", () => {
     expect(screen).not.toContain("Approval &amp; payment");
     expect(screen).not.toContain("Authorized by");
   });
+  it("says in words which steps of its progress are done and which is current", () => {
+    const { s, w, door } = sent();
+    decide(s, door.id, "Approved");
+    convertApproved(s, w.id);
+    reconcile(s);
+    const track = screenOnly(render(s, w.access!.token)).match(
+      /<div class="status-track">.*?<\/div><\/div>(?=<p)/,
+    )![0];
+    expect(track).toMatch(/Review findings<span class="sr-only">, done<\/span>/);
+    expect(track.match(/aria-current="step"/g)).toHaveLength(1);
+  });
 });
 
 describe("the printed assessment is the same record", () => {

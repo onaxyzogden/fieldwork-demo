@@ -13,6 +13,7 @@ import {
 import { storablePhoto, unreadableMessage } from "./photos";
 import { MessageThread } from "./NotificationUI";
 import { When } from "./When";
+import { useModal } from "./useModal";
 import "./onsite.css";
 
 /**
@@ -65,13 +66,9 @@ export default function JobMode({
     ref.current?.scrollTo({ top: 0 });
   };
 
-  useEffect(() => {
-    const previous = document.body.style.overflow;
-    document.body.style.overflow = "hidden";
-    return () => {
-      document.body.style.overflow = previous;
-    };
-  }, []);
+  /* A real modal, as the queues are (ADR 081): Escape does what Close
+     does, and Tab stays inside. */
+  useModal(ref, exit);
   useEffect(() => {
     if (ref.current?.contains(document.activeElement)) return;
     ref.current?.querySelector<HTMLElement>("h1")?.focus();

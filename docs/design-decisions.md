@@ -2227,3 +2227,69 @@ removable photo reuses `onsite-thumb`, and the queue's record reuses
 
 Out of scope, and left for later: an undo for the operator's Offer, Instant
 Book's fixed $129, and the audit's P3s.
+
+## ADR 081: What the eye reads from colour, the keyboard and the ear can reach too
+
+Accepted. These are the six major findings of the WCAG 2.1 AA audit of
+2026-10 (`wiki/sources/accessibility-audit-2026-10.md`). Each is pinned: eleven
+screen tests in `workspace.test.tsx` ("Accessibility (ADR 081)"), one in
+`assessment.test.ts`, and the field-border rule in `scripts/design-check.mjs`.
+Each fails without its fix.
+
+**A field is found by its edge (1.4.11).**
+- A new token, `--field-border`, is `#6b7482` in dark mode and `#878b94` in
+  light mode. That's at least 3.4:1 on the panel and 3.1:1 on the page in
+  both themes. Inputs, selects and textareas use it. They used `--line`,
+  which is 1.3:1.
+- The audit proposed `#8b8f98` for light mode. On the page (`#f7f6f4`) it
+  comes to 3.0:1, right at the line, so it is one step darker.
+- `design:check` computes the contrast from `tokens.css` on every build, and
+  checks that the field rule uses the token. The check began as a vitest
+  test, but vitest stubs CSS, and the tsconfig has no Node types to read
+  the file.
+
+**What is chosen does not rely on hue alone (1.4.1).** A selected time pill,
+date chip, slot, queue item, provider card or "who" card gets a doubled edge
+in `--accent-text` (`--shadow-chosen`, an inset 1px over the border). That
+also sets it apart from hover, which looked the same on slots. The plan was
+a check mark. It was dropped because the 36 px pills and the column-layout
+cards have no room for one without moving their text. The date chip
+already had one.
+
+**State is exposed, not only styled (1.3.1, 4.1.2).**
+- `aria-pressed` is on the slot, the provider card, OnSite's pricing,
+  Approve and Not now, and the scenarios.
+- `aria-current` is on the queue item and on the Blueprint path
+  (`"step"`).
+- The customer's and the assessment's status tracks mark the current step
+  with `aria-current="step"` and weight 600. A done step says ", done" to
+  a screen reader through a global `.sr-only`. That class used to be scoped
+  to the on-site layer.
+- Approve and Not now on the assessment are never reachable, because
+  `FindingReview` always renders locked. Removing them is left for later.
+
+**The job and on-site screens are real modals (2.1.1, 2.4.3).** The queue's
+modal behaviour is now `useModal`, and `QueueLayer`, `JobMode` and `OnSite`
+all use it:
+- Escape does what Close does.
+- Tab wraps inside.
+- Everything beside the layer, up to the shell, is inert.
+- The page behind doesn't scroll.
+- Focus goes back to whatever opened the layer, or to the page's heading
+  if that is gone.
+
+**A toast waits to be read (2.2.1).**
+- Its timer waits while it is pointed at or focused, and starts its 3.5 s
+  over when it is left.
+- Each toast has a Dismiss button, which moves focus to the page's
+  heading.
+- An error has no timer. It stays until it is dismissed or replaced, so the
+  7 s of ADR 080 is gone.
+
+**What it cost.** Two tokens and two rules in the stylesheet, plus the
+`.sr-only` that moved. One new hook, `useModal`, which took the queue's
+effect out of `QueueLayer`. There are 616 tests, twelve of them new.
+
+Out of scope, and left for later: the audit's 17 minors, the unreachable
+assessment decision buttons, an undo for the operator's Offer, Instant
+Book's fixed $129, and the platform audit's P3s.

@@ -94,14 +94,6 @@
   margin: 0;
   font-size: var(--text-h2);
 }
-.onsite .sr-only {
-  position: absolute;
-  width: 1px;
-  height: 1px;
-  overflow: hidden;
-  clip-path: inset(50%);
-  white-space: nowrap;
-}
 .onsite-hint,
 .onsite-room {
   margin: 0;

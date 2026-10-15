@@ -207,6 +207,7 @@ export default function Blueprint() {
               <button
                 key={id + i}
                 className={selected === id ? "chosen" : ""}
+                aria-current={selected === id ? "step" : undefined}
                 onClick={() => selectStage(id)}
               >
                 {stages.find((s) => s.id === id)?.title}

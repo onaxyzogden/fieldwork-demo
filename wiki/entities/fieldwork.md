@@ -44,22 +44,28 @@ An interactive prototype of a handyman services platform. It has three roles, Cu
 - ADR 077 step 6 (`useWorkspaceState()`) is live on `main` via PR #51 (2026-10-08).
 - ADR 077 step 7 (each role's helpers into its own file) is live on `main` via PR #52 (2026-10-08).
 - ADR 078 (a chunk per role) is live on `main` via PR #53 (2026-10-08).
-- A platform-wide UX audit ran on 2026-10-08, after ADR 078: 8 P1s, 15 P2s and 15 P3s across the three roles and the shell, The P1s are fixed in ADR 079, and the P2s in ADR 080 (branch `claude/adr-080`). The P3s are open. See [[platform-ux-audit-2026-10]].
+- A platform-wide UX audit ran on 2026-10-08, after ADR 078: 8 P1s, 15 P2s and 15 P3s across the three roles and the shell, The P1s are fixed in ADR 079, and the P2s in ADR 080 (PR #56, merged). The P3s are open. See [[platform-ux-audit-2026-10]].
+- A WCAG 2.1 AA audit ran on 2026-10-14, after ADR 080: 0 critical, 6 major and 17 minor. The majors are fixed in ADR 081 (branch `claude/adr-081`). See [[accessibility-audit-2026-10]].
 - Local dev uses Vite on 5173 and the preview build on 4173 (`.claude/launch.json`, untracked).
 
 ## Connections
 - [[one-at-a-time]]: the interaction pattern behind every queue.
 - [[customer-chosen-time]]: how holds and the customer's chosen slot reach the operator.
 - [[customer-ux-audit-2026-10]]: the customer audit, and where each finding went.
-- [[platform-ux-audit-2026-10]]: the most recent audit, covering every role. Its P1s are fixed (ADR 079).
+- [[platform-ux-audit-2026-10]]: the platform UX audit, covering every role. Its P1s and P2s are fixed (ADR 079–080).
+- [[accessibility-audit-2026-10]]: the most recent audit, WCAG 2.1 AA across every role and both themes.
 - [[2026-10-07-wiki-in-repo]]: why this wiki is here.
 
 ## Open Questions
+- The accessibility audit's 17 minors are open. Its 6 majors are fixed (ADR 081).
+- `Assessment.tsx`'s `FindingReview` decision buttons can't be reached, because it always renders locked.
 - The platform UX audit's P3s are open, as is an undo for the operator's Offer. Instant Book's price is still a fixed $129.
 - ADR 077 is complete, and each role is its own chunk (ADR 078). The operator, the default, saves only 5% of its first load, because most of the role code is the operator's. Splitting `OperatorRequests` off from the operator's home is the next size candidate, if first load ever matters.
 - Bundle-size work is parked (ADR 074–076). The catalogue and the per-role CSS were measured at 6% and 2% of the first load (ADR 076).
 
 ## History
+- 2026-10-15: ADR 081 fixes the accessibility audit's 6 majors. It adds a `--field-border` token (checked at 3:1 by `design:check`), a doubled edge for whatever is chosen, `aria-pressed` and `aria-current` with an ", done" for screen readers, and `useModal`, shared by the queues, `JobMode` and `OnSite`. Toasts hold on hover or focus and can be dismissed, and an error stays until dismissed. There are 616 tests.
+- 2026-10-14: a WCAG 2.1 AA audit of the whole platform (no source changes). Text contrast passes on 16 screens in both themes, and nothing overflows at 320 px. Field borders (1.3:1), colour-only selection, unexposed selected or current state, `JobMode`/`OnSite` dialogs with no trap, and timed toasts are the majors. See [[accessibility-audit-2026-10]].
 - 2026-10-08: the platform audit's P2s fixed (ADR 080). Toasts have an error tone in an always-mounted alert region and one cleared timer, and clear on a switch of who is viewed. A declined quote reads "Quote declined · we’re revising it" to the customer. The contractor's glance, Accepted badge, photo removal (with Undo) and Availability draft (`sessionStorage`) are fixed. The operator's counts agree, "← All requests" goes back to the list, a chosen request takes focus, More is current under it, and the queue says "Sent: Offer to …". Instant Book confirms and focuses the booking, and intake's missing task is said inline. 16 tests were added (604), with one new CSS rule.
 - 2026-10-08: the platform audit's 8 P1s fixed (ADR 079). `DecisionQueue` moved onto `QueueLayer`. Focus falls back to `main h1`, follows every button swap (`useSwapFocus`), and goes to each intake step's h1. Quote and charge Decline, Availability's withdrawals and Reset confirm, and Remove finding has an inline Undo. The role switch has `aria-pressed`. 10 screen tests were added (588 tests), the stylesheet is byte-identical, and the first load grew 0.3 kB gzipped.
 - 2026-10-08: a report-mode UX audit of the whole platform (no source changes). The customer fixes from ADR 069, 070 and 073 all hold. See [[platform-ux-audit-2026-10]].

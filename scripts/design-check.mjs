@@ -24,6 +24,19 @@ for(const file of files){
   if(/(?:fill|stroke|color|background)(?:=|:)\s*["']#[\da-f]{3,8}/i.test(text))errors.push(`${file}: inline color literal`);
  }
 }
+// Non-text contrast (WCAG 1.4.11, ADR 081): a field is found by its edge, so
+// the border reads at 3:1 against the field and the page in both themes.
+const themes={};
+postcss.parse(fs.readFileSync('src/tokens.css','utf8')).walkRules(r=>{if([':root',':root[data-theme="light"]'].includes(r.selector)){themes[r.selector]??={};r.walkDecls(d=>{themes[r.selector][d.prop]=d.value;});}});
+const luminance=hex=>{const [r,g,b]=[1,3,5].map(i=>{const v=parseInt(hex.slice(i,i+2),16)/255;return v<=0.03928?v/12.92:((v+0.055)/1.055)**2.4;});return 0.2126*r+0.7152*g+0.0722*b;};
+const contrast=(a,b)=>{const [hi,lo]=[luminance(a),luminance(b)].sort((x,y)=>y-x);return (hi+0.05)/(lo+0.05);};
+for(const [root,own] of Object.entries(themes)){
+ const value=p=>own[p]??themes[':root'][p];
+ const border=value('--field-border');
+ if(!/^#[\da-f]{6}$/i.test(border??''))errors.push(`tokens.css: ${root} needs a six-digit --field-border`);
+ else for(const ground of ['--panel','--bg'])if(contrast(border,value(ground))<3)errors.push(`tokens.css: ${root} --field-border is ${contrast(border,value(ground)).toFixed(2)}:1 on ${ground}, under 3:1`);
+}
+if(!/:root\[data-theme\] textarea \{[^}]*border-color: var\(--field-border\)/.test(fs.readFileSync('src/primitives.css','utf8')))errors.push('primitives.css: inputs, selects and textareas take --field-border');
 // These component-local overrides have an explicit fallback in the card primitive.
 definitions.add('--card-surface');definitions.add('--card-border');
 for(const [file,ref] of references)if(!definitions.has(ref))errors.push(`${file}: undefined ${ref}`);

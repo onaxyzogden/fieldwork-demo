@@ -89,6 +89,7 @@ export function Workspace({
     contractor,
     customer,
     fail,
+    holdToast,
     idPrefix,
     invalidate,
     latest,
@@ -119,6 +120,7 @@ export function Workspace({
     setSelected,
     setSidebar,
     setStep,
+    setToast,
     sidebar,
     slot,
     startOrResumeRequest,
@@ -241,23 +243,46 @@ export function Workspace({
         </main>
       </div>
       {/* The regions stay mounted so a screen reader hears the first toast
-          too, and a failure is an alert (ADR 080). */}
-      <div className="toasts" role="status">
-        {toast && toastTone !== "error" && (
-          <div className="toast">
-            <CheckCircle2 size={16} />
-            {toast}
-          </div>
-        )}
-      </div>
-      <div className="toasts" role="alert">
-        {toast && toastTone === "error" && (
-          <div className="toast error">
-            <AlertCircle size={16} />
-            {toast}
-          </div>
-        )}
-      </div>
+          too, and a failure is an alert (ADR 080). A toast holds while it is
+          pointed at or focused, and can be dismissed (ADR 081). */}
+      {(["status", "alert"] as const).map((region) => (
+        <div
+          className="toasts"
+          role={region}
+          key={region}
+          onMouseEnter={() => holdToast(true)}
+          onMouseLeave={() => holdToast(false)}
+          onFocus={() => holdToast(true)}
+          onBlur={() => holdToast(false)}
+        >
+          {toast && (toastTone === "error") === (region === "alert") && (
+            <div className={"toast" + (region === "alert" ? " error" : "")}>
+              {region === "alert" ? (
+                <AlertCircle size={16} />
+              ) : (
+                <CheckCircle2 size={16} />
+              )}
+              {toast}
+              <button
+                className="icon-button"
+                aria-label="Dismiss"
+                onClick={() => {
+                  setToast("");
+                  /* The button goes with the toast, so focus goes to the
+                     page's heading rather than to nothing. */
+                  const h1 = document.querySelector<HTMLElement>("main h1");
+                  if (h1) {
+                    h1.tabIndex = -1;
+                    h1.focus();
+                  }
+                }}
+              >
+                <X size={16} />
+              </button>
+            </div>
+          )}
+        </div>
+      ))}
       {modal && (
         <div className="modal-backdrop" onClick={() => setModal("")}>
           <section
@@ -490,6 +515,7 @@ export function Workspace({
                             "provider-card " +
                             (provider === o.provider.id ? "selected" : "")
                           }
+                          aria-pressed={provider === o.provider.id}
                           onClick={() => {
                             setProvider(o.provider.id);
                             setPay(

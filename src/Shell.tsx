@@ -410,6 +410,7 @@ export function DemoSettings({
           {scenarios.map((x, i) => (
             <button
               className={activeScenario === "r" + (i + 1) ? "selected" : ""}
+              aria-pressed={activeScenario === "r" + (i + 1)}
               key={x}
               onClick={() => onChooseScenario("r" + (i + 1))}
             >
