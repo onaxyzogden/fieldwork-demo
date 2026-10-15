@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { CheckCircle2, ClipboardCheck, Clock, Printer } from "lucide-react";
+import { ClipboardCheck, Clock, Printer } from "lucide-react";
 import {
   type State,
   type Finding,
@@ -395,17 +395,6 @@ export default function Assessment({
             key={f.id}
             s={s}
             finding={f}
-            locked={!!request || w.status === "Converted"}
-            onDecide={(decision) =>
-              update((d) => {
-                if (!decide(d, f.id, decision, approver) && decision === "Approved")
-                  setError(
-                    org && !approverId
-                      ? "Choose who is approving, below."
-                      : "That contact is not authorized to approve work for this account. Ask whoever manages it to grant approval, or choose someone who has it.",
-                  );
-              })
-            }
             onAssessment={() =>
               update((d) => {
                 requestAssessment(d, f.id);
@@ -475,14 +464,10 @@ export default function Assessment({
 function FindingReview({
   s,
   finding: f,
-  locked,
-  onDecide,
   onAssessment,
 }: {
   s: State;
   finding: Finding;
-  locked: boolean;
-  onDecide: (decision: "Approved" | "Not Now") => void;
   onAssessment: () => void;
 }) {
   const number = String(f.number).padStart(2, "0");
@@ -548,31 +533,13 @@ function FindingReview({
           )}
         </div>
       ) : (
+        /* Decisions are made in the one-at-a-time flow above; once it is done,
+           this list is the record, and the badge by the title says what was
+           decided (ADR 083). */
         <div className="finding-decision">
           <strong className="finding-price">
             {money(f.price || 0)} + applicable tax
           </strong>
-          {locked ? (
-            <span className="badge">{state}</span>
-          ) : (
-            <div className="row actions">
-              <button
-                className={f.decision === "Approved" ? "primary" : "secondary"}
-                aria-pressed={f.decision === "Approved"}
-                onClick={() => onDecide("Approved")}
-              >
-                {f.decision === "Approved" ? <CheckCircle2 aria-hidden="true" size={16} /> : null}{" "}
-                Approve
-              </button>
-              <button
-                className={f.decision === "Not Now" ? "chosen" : "text-button"}
-                aria-pressed={f.decision === "Not Now"}
-                onClick={() => onDecide("Not Now")}
-              >
-                Not now
-              </button>
-            </div>
-          )}
         </div>
       )}
     </section>

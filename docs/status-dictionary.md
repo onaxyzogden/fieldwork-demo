@@ -136,6 +136,7 @@ stored state machine, because it records what a *person* did and when.
 | `Declined` | contractor | May trigger a reoffer when the operator has enabled it |
 | `Expired` | `reconcile()` | `expiresAt <= clock`; does **not** auto-reoffer |
 | `Reassigned` | operator | Superseded by a new offer |
+| `Withdrawn` | operator (`withdrawOffer`) | Taken back before an answer (ADR 083). A first offer's visit is cancelled; a replacement offer's visit is put back as the decline or expiry left it. An unread offer notice is removed; a read one gets "Offer withdrawn" |
 
 ## Charge
 

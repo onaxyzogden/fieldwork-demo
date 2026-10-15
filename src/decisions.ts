@@ -459,6 +459,53 @@ export function offerVisit(
   return booked;
 }
 
+/**
+ * Take back an offer the contractor has not answered (ADR 083). The operator's
+ * Undo, for as long as the offer is open: a first offer's visit is cancelled,
+ * which frees the time and the request; a replacement offer puts the visit
+ * back as the decline or expiry left it. Once the contractor has accepted,
+ * this refuses, and the visit is theirs to be cancelled the usual way.
+ * The contractor's unread offer notice is taken back in `deliverUpdates`.
+ */
+export function withdrawOffer(s: State, assignmentId: string) {
+  const a = s.assignments.find((x) => x.id === assignmentId);
+  const v = s.visits.find((x) => x.id === a?.visitId);
+  if (!a || !v || a.status !== "Offered" || v.status !== "Proposed")
+    return false;
+  a.status = "Withdrawn";
+  if (a.previous) {
+    v.providerId = a.previous.providerId;
+    v.start = a.previous.start;
+    v.travel = a.previous.travel;
+    v.status = a.previous.status;
+  } else v.status = "Cancelled";
+  const name = providers.find((p) => p.id === a.providerId)?.name;
+  log(s, `Offer to ${name} withdrawn`, {
+    actor: "Operator",
+    requestId: v.requestId,
+    entity: "assignment",
+    entityId: a.id,
+    field: "status",
+    from: "Offered",
+    to: "Withdrawn",
+  });
+  return true;
+}
+
+/** Cancel one visit and any offer on it; its tasks can be regrouped. */
+export function cancelVisit(s: State, visitId: string) {
+  const v = s.visits.find((x) => x.id === visitId);
+  if (!v) return false;
+  v.status = "Cancelled";
+  s.assignments
+    .filter(
+      (a) => a.visitId === v.id && ["Offered", "Accepted"].includes(a.status),
+    )
+    .forEach((a) => (a.status = "Cancelled"));
+  log(s, "Visit cancelled · tasks available for regrouping");
+  return true;
+}
+
 /** Send, or re-send, the customer's quote — the request page's "Send quote". */
 export function issueQuote(
   s: State,

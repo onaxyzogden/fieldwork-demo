@@ -368,7 +368,7 @@
     gap: var(--space-2);
   }
   .demo-bar {
-    height: 43px;
+    min-height: 43px;
     padding: 0 var(--space-2);
   }
   .demo-bar > span {
@@ -617,6 +617,15 @@ main button,
 @container workspace (max-width: 878px) {
   .slot-grid {
     grid-template-columns: minmax(0, 1fr);
+  }
+}
+/* The demo bar is prototype chrome: 32px chips on a desktop in every role,
+   the Operator's 44px buttons included, so the bar keeps its height (ADR 083).
+   A phone keeps 44px, below. */
+@media (min-width: 601px) {
+  .app .demo-bar .role-switch button,
+  .app .demo-bar .text-button {
+    min-height: 32px;
   }
 }
 /* Touch targets and the frame answer to the window: a 420px column on a

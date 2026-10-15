@@ -1,3 +1,4 @@
+import { plural } from "./plural";
 import { questionAnswers } from "./clarification";
 import { useState, useRef, useEffect, type ReactNode } from "react";
 import { type State, type Visit, dateLabel } from "./model";
@@ -96,7 +97,7 @@ export function JobWork({
       <span className="badge">{awaiting ? "Accepted" : workStatus(v)}</span>
       <h2>
         {s.tasks.find((t) => v.taskIds.includes(t.id))?.summary}
-        {v.taskIds.length > 1 && ` + ${v.taskIds.length - 1} tasks`}
+        {v.taskIds.length > 1 && ` + ${plural(v.taskIds.length - 1, "task")}`}
       </h2>
       <p>
         {r.address}, {r.city}
@@ -145,7 +146,7 @@ export function JobWork({
             : "Work controls become available after assignment acceptance and customer confirmation."}
         </p>
       )}
-      <h3>{v.taskIds.length} tasks in this visit</h3>
+      <h3>{plural(v.taskIds.length, "task")} in this visit</h3>
       {x?.startedAt && (
         <div className="contractor-progress">
           <p>
@@ -348,7 +349,7 @@ export function JobWork({
                     (o) => o.outcome === "Completed",
                   ).length
                 }{" "}
-                of {v.taskIds.length} tasks completed. Unresolved tasks go to
+                of {plural(v.taskIds.length, "task")} completed. Unresolved tasks go to
                 the operator for follow-up.
               </p>
               <button

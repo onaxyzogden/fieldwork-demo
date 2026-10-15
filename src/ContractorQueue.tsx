@@ -16,7 +16,8 @@ import { When } from "./When";
  */
 type Update = (fn: (d: State) => void, msg?: string) => void;
 
-const REASONS = [
+/** Why a contractor declines, one tap each; the Work page uses them too. */
+export const REASONS = [
   "Not available",
   "Too far",
   "Pay doesn’t work",

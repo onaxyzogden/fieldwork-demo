@@ -17,7 +17,7 @@ import {
   act,
 } from "@testing-library/react";
 import { Workspace, type Role } from "./Workspace";
-import { freshDemo } from "./store";
+import { KEY, freshDemo } from "./store";
 import {
   approveQuote,
   declineQuote,
@@ -26,7 +26,15 @@ import {
   type State,
 } from "./model";
 import { issueQuote, nextDecision, offerVisit } from "./decisions";
-import { addFinding, createWalkthrough } from "./pmw";
+import {
+  addFinding,
+  convertApproved,
+  createWalkthrough,
+  decide,
+  sendWalkthrough,
+} from "./pmw";
+import Assessment from "./Assessment";
+import { plural } from "./plural";
 import { respondToOffer } from "./dispatch";
 import Blueprint from "./Blueprint";
 import { bucket } from "./work";
@@ -251,10 +259,11 @@ describe("Operator workspace", () => {
     expect(h1().textContent).toBe("Activity history");
   });
 
-  it("opens Demo settings from More", () => {
+  it("opens Demo settings from the sidebar", () => {
     open("Operator");
-    go(/^More/);
-    fireEvent.click(screen.getByRole("button", { name: "Demo settings →" }));
+    fireEvent.click(
+      screen.getByRole("button", { name: /Demo settings/, hidden: true }),
+    );
     expect(screen.getByRole("heading", { name: /Demo settings/ })).toBeTruthy();
   });
 });
@@ -325,20 +334,19 @@ describe("Contractor workspace", () => {
     expect(screen.getByText("Job accepted")).toBeTruthy();
     expect(screen.queryByRole("button", { name: "Accept job" })).toBeNull();
     expect(
-      screen.getByRole("heading", { name: "1 tasks in this visit" }),
+      screen.getByRole("heading", { name: "1 task in this visit" }),
     ).toBeTruthy();
   });
 
-  it("asks why before declining, and can be cancelled", () => {
+  it("asks why before declining, and can go back", () => {
     open("Contractor");
     fireEvent.click(screen.getByRole("button", { name: "Decline" }));
     expect(
-      screen.getByRole("heading", { name: "Why are you declining?" }),
+      screen.getByRole("group", { name: "Why are you declining?" }),
     ).toBeTruthy();
-    expect(screen.getByRole("button", { name: "Decline job" })).toBeTruthy();
-    fireEvent.click(screen.getByRole("button", { name: "Cancel" }));
+    fireEvent.click(screen.getByRole("button", { name: "Back" }));
     expect(
-      screen.queryByRole("heading", { name: "Why are you declining?" }),
+      screen.queryByRole("group", { name: "Why are you declining?" }),
     ).toBeNull();
     expect(screen.getByRole("button", { name: "Accept job" })).toBeTruthy();
   });
@@ -489,8 +497,9 @@ describe("Focus and friction (ADR 079)", () => {
 
   it("confirms before resetting the demo", () => {
     open("Operator");
-    go(/^More/);
-    fireEvent.click(screen.getByRole("button", { name: "Demo settings →" }));
+    fireEvent.click(
+      screen.getByRole("button", { name: /Demo settings/, hidden: true }),
+    );
     fireEvent.click(
       screen.getByRole("button", { name: /Reset all demo data/ }),
     );
@@ -1306,5 +1315,239 @@ describe("Accessibility (ADR 082)", () => {
     expect(path.getAttribute("aria-live")).toBeNull();
     expect(path.querySelector("p")?.getAttribute("aria-live")).toBe("polite");
     expect(document.querySelector("main .bp-footer")).toBeNull();
+  });
+});
+
+describe("Friction and wording (ADR 083)", () => {
+  /** r2's suggested contractor offer, made before the first render. */
+  const offered = (d: State) => {
+    const take = nextDecision(d, "r2");
+    if (take?.kind !== "assign" || !take.offer) throw new Error("no offer");
+    offerVisit(d, {
+      requestId: "r2",
+      taskIds: take.taskIds,
+      providerId: take.offer.providerId,
+      start: take.offer.start,
+      travel: take.offer.travel,
+      duration: take.duration,
+      pay: take.offer.pay,
+      opKey: "k-083",
+    });
+    reconcile(d);
+  };
+
+  it("takes back an offer from the decision queue", () => {
+    open("Operator");
+    fireEvent.click(
+      screen.getByRole("button", { name: /Work through \d+ decisions?/ }),
+    );
+    const dialog = screen.getByRole("dialog", { name: "Decisions" });
+    for (let i = 0; i < 6; i++) {
+      const offer = within(dialog).queryByRole("button", { name: /^Offer to / });
+      if (offer) {
+        fireEvent.click(offer);
+        fireEvent.click(within(dialog).getByRole("button", { name: /^Undo/ }));
+        expect(within(dialog).getByText(/^Offer to .* withdrawn/)).toBeTruthy();
+        expect(within(dialog).queryByRole("button", { name: /^Undo/ })).toBeNull();
+        return;
+      }
+      fireEvent.click(within(dialog).getByRole("button", { name: /^Skip/ }));
+    }
+    throw new Error("No offer in the queue");
+  });
+
+  it("withdraws an offer from the request page until it is accepted", () => {
+    open("Operator", offered);
+    go(/^Requests/);
+    fireEvent.click(screen.getByRole("button", { name: /^Visits/ }));
+    fireEvent.click(screen.getByRole("button", { name: /^Withdraw offer/ }));
+    expect(screen.getByText(/Offer withdrawn/)).toBeTruthy();
+    expect(screen.queryByRole("button", { name: /^Withdraw offer/ })).toBeNull();
+    cleanup();
+    open("Operator", (d) => {
+      offered(d);
+      respondToOffer(d, d.assignments.at(-1)!.id, "Accepted");
+      reconcile(d);
+    });
+    go(/^Requests/);
+    fireEvent.click(screen.getByRole("button", { name: /^Visits/ }));
+    expect(screen.queryByRole("button", { name: /^Withdraw offer/ })).toBeNull();
+  });
+
+  it("shows a converted assessment's decisions without buttons for them", () => {
+    const s = freshDemo();
+    const w = createWalkthrough(s, "p2");
+    const f = addFinding(s, w.id, {
+      title: "Door rubbing against frame",
+      proposed: "Adjust the sticking door",
+      price: 180,
+    });
+    sendWalkthrough(s, w.id);
+    decide(s, f.id, "Approved");
+    convertApproved(s, w.id);
+    localStorage.setItem(KEY, JSON.stringify(s));
+    render(<Assessment token={w.access!.token} />);
+    for (const name of [/^Approve$/, /^Not now$/])
+      expect(screen.queryByRole("button", { name })).toBeNull();
+    const card = screen
+      .getByRole("heading", { name: /Door rubbing/ })
+      .closest("section")!;
+    expect(card.querySelectorAll(".badge").length).toBe(1);
+  });
+
+  it("calls the operator's bucket Needs Action everywhere", () => {
+    open("Operator");
+    expect(screen.queryByText(/Needs Attention/)).toBeNull();
+    expect(screen.queryByLabelText(/needing attention/)).toBeNull();
+  });
+
+  it("counts in the singular when there is one", () => {
+    expect([plural(1, "task"), plural(2, "task"), plural(0, "photo")]).toEqual([
+      "1 task",
+      "2 tasks",
+      "0 photos",
+    ]);
+    open("Contractor");
+    expect(screen.queryByText(/\b1 tasks\b/)).toBeNull();
+    fireEvent.click(screen.getByRole("button", { name: "Accept job" }));
+    expect(
+      screen.getByRole("heading", { name: "1 task in this visit" }),
+    ).toBeTruthy();
+  });
+
+  it("counts in the singular in the operator's request list", () => {
+    open("Operator");
+    go(/^Requests/);
+    expect(screen.getAllByText(/· 1 task$/).length).toBeGreaterThan(0);
+    expect(screen.queryByText(/\b1 tasks\b/)).toBeNull();
+  });
+
+  it("says nothing about photos when there are none", () => {
+    const none = (d: State) => {
+      for (const t of d.tasks) t.photos = [];
+    };
+    open("Contractor", none);
+    expect(screen.queryByText(/\b0 photos\b/)).toBeNull();
+    cleanup();
+    open("Operator", none);
+    go(/^Requests/);
+    expect(screen.queryByText(/\b0 photos\b/)).toBeNull();
+  });
+
+  it("opens a request from its activity entry", () => {
+    open("Operator", offered);
+    go(/^More/);
+    fireEvent.click(screen.getByRole("button", { name: "Activity →" }));
+    fireEvent.click(
+      within(screen.getByRole("main")).getAllByRole("button", { name: /·/ })[0],
+    );
+    expect(h1().textContent).toBe("Service requests");
+  });
+
+  it("keeps Demo settings in the sidebar only", () => {
+    open("Operator");
+    go(/^More/);
+    expect(screen.queryByRole("button", { name: "Demo settings →" })).toBeNull();
+    expect(
+      screen.getByRole("button", { name: /Demo settings/, hidden: true }),
+    ).toBeTruthy();
+  });
+
+  it("says what the Requests count counts", () => {
+    open("Operator");
+    expect(
+      sidebar().getByRole("button", {
+        name: /^Requests, \d+ needs? action$/,
+        hidden: true,
+      }),
+    ).toBeTruthy();
+  });
+
+  it("declines from the Work page with the queue's one-tap reasons", () => {
+    open("Contractor");
+    fireEvent.click(screen.getByRole("button", { name: "Decline" }));
+    const why = screen.getByRole("group", { name: "Why are you declining?" });
+    expect(screen.queryByRole("combobox")).toBeNull();
+    fireEvent.click(within(why).getByRole("button", { name: "Too far" }));
+    expect(screen.queryByRole("button", { name: "Accept job" })).toBeNull();
+  });
+
+  it("names what each Remove removes", async () => {
+    open("Contractor");
+    go(/^Availability/);
+    fireEvent.change(screen.getByLabelText("Date"), {
+      target: { value: "2099-03-02" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Add day off" }));
+    expect(
+      screen.getByRole("button", { name: /^Remove day off / }),
+    ).toBeTruthy();
+    cleanup();
+    open("Customer", (d) => {
+      const r = d.requests.find((x) => x.status === "Draft")!;
+      r.accountId = "c2";
+      r.intakeScreen = "tasks";
+      const t = d.tasks.find((x) => x.requestId === r.id)!;
+      t.entryStage = "description";
+      d.tasks.push({
+        ...structuredClone(t),
+        id: "t-083",
+        description: "Fix the gate latch",
+      });
+    });
+    go(/^New request/);
+    await screen.findByRole("heading", {
+      name: /What do you need taken care of/,
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Remove task 2" }));
+    expect(
+      screen.getAllByRole("status").map((x) => x.textContent).join(" "),
+    ).toMatch(/Fix the gate latch/);
+  });
+
+  it("puts one primary action on the customer's Home", () => {
+    open("Customer", (d) => {
+      const r = d.requests.find(
+        (x) => x.accountId === "c2" && x.status !== "Draft",
+      )!;
+      issueQuote(d, r.id, {
+        type: "Fixed price",
+        amount: 240,
+        payOnCompletion: false,
+      });
+      reconcile(d);
+    });
+    go(/^My bookings/);
+    if (!document.querySelector(".accordion-head[aria-expanded=true]"))
+      fireEvent.click(document.querySelector(".accordion-head")!);
+    expect(document.querySelectorAll("main button.primary").length).toBe(1);
+  });
+
+  it("does not name the provider before they accept", () => {
+    let name = "";
+    open("Customer", (d) => {
+      const r = d.requests.find(
+        (x) => x.accountId === "c2" && x.status !== "Draft",
+      )!;
+      const take = nextDecision(d, r.id);
+      if (take?.kind !== "assign" || !take.offer) throw new Error("no offer");
+      name = providers.find((p) => p.id === take.offer!.providerId)!.name;
+      offerVisit(d, {
+        requestId: r.id,
+        taskIds: take.taskIds,
+        providerId: take.offer.providerId,
+        start: take.offer.start,
+        travel: take.offer.travel,
+        duration: take.duration,
+        pay: take.offer.pay,
+        opKey: "k-083-k",
+      });
+      reconcile(d);
+    });
+    go(/^My bookings/);
+    if (!document.querySelector(".accordion-head[aria-expanded=true]"))
+      fireEvent.click(document.querySelector(".accordion-head")!);
+    expect(screen.queryByText(new RegExp("^" + name + " ·"))).toBeNull();
+    expect(screen.getByText(/^Your provider ·/)).toBeTruthy();
   });
 });

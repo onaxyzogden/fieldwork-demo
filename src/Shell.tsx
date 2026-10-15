@@ -184,13 +184,13 @@ export function Sidebar({
                 {label}
                 {/* The same count as Home's Needs Action (ADR 080). */}
                 {label === "Requests" && (
-                  <span className="nav-count">
-                    {
+                  <NeedsCount
+                    n={
                       s.requests.filter(
                         (r) => bucket(s, r.id) === "Needs Action",
                       ).length
                     }
-                  </span>
+                  />
                 )}
               </button>
             );
@@ -497,6 +497,20 @@ export function DemoSettings({
           <RotateCcw aria-hidden="true" size={16} /> Reset all demo data
         </button>
       )}
+    </>
+  );
+}
+
+/** The number is for the eye; the name says what it counts (ADR 083). */
+function NeedsCount({ n }: { n: number }) {
+  return (
+    <>
+      <span className="nav-count" aria-hidden="true">
+        {n}
+      </span>
+      <span className="sr-only">
+        , {n} need{n === 1 ? "s" : ""} action
+      </span>
     </>
   );
 }

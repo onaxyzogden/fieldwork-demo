@@ -103,6 +103,7 @@ const offerText = (status: string, name: string, when: string) => ({
       Offered: `New job offer · ${when}`,
       Expired: `Offer expired · ${when}`,
       Reassigned: `Offer withdrawn · ${when}`,
+      Withdrawn: `Offer withdrawn · ${when}`,
       Cancelled: `Job cancelled · ${when}`,
     } as Record<string, string>
   )[status],
@@ -241,10 +242,40 @@ export function deliverUpdates(before: State, after: State) {
     if (old?.status === a.status) continue;
     const v = after.visits.find((v) => v.id === a.visitId);
     if (!v) continue;
+    /* An offer the contractor never opened is taken back whole: the notice
+       goes, and nothing replaces it. One they have read gets "withdrawn",
+       dated as the offer was, since a replacement offer's visit is put back to
+       its earlier time (ADR 083). */
+    if (a.status === "Withdrawn") {
+      const notice = (after.notifications ?? []).find(
+        (n) =>
+          n.assignmentId === a.id &&
+          n.kind === "offer" &&
+          n.recipient === "Contractor:" + a.providerId,
+      );
+      if (notice && !notice.read) {
+        /* The "Visit proposed" that came with it goes too, if unread. */
+        after.notifications = after.notifications!.filter(
+          (n) =>
+            n !== notice &&
+            !(
+              !n.read &&
+              n.kind === "visit" &&
+              n.visitId === v.id &&
+              n.recipient === notice.recipient
+            ),
+        );
+        continue;
+      }
+    }
+    const was =
+      a.status === "Withdrawn"
+        ? before.visits.find((x) => x.id === v.id)?.start || v.start
+        : v.start;
     const text = offerText(
       a.status,
       providers.find((p) => p.id === a.providerId)?.name || a.providerId,
-      dateLabel(v.start),
+      dateLabel(was),
     );
     /* Moving a visit withdraws the accepted offer and makes a new one to the
        same contractor in the same change; "New job offer" says it,
@@ -318,10 +349,21 @@ export function deliverUpdates(before: State, after: State) {
     const old = before.visits.find((x) => x.id === v.id),
       r = after.requests.find((r) => r.id === v.requestId);
     if (!r) continue;
+    /* A withdrawn offer speaks for its visit to the contractor (ADR 083):
+       no "Visit cancelled" beside "Offer withdrawn", and nothing to an earlier
+       contractor whose declined visit is put back. */
+    const withdrawn = after.assignments.some(
+      (a) =>
+        a.visitId === v.id &&
+        a.status === "Withdrawn" &&
+        before.assignments.find((b) => b.id === a.id)?.status !== "Withdrawn",
+    );
     const targets = [
       "Operator",
       "Customer:" + r.accountId,
-      ...(v.providerId === "yousef" ? [] : ["Contractor:" + v.providerId]),
+      ...(v.providerId === "yousef" || withdrawn
+        ? []
+        : ["Contractor:" + v.providerId]),
     ];
     /* Each change in the operator's, the contractor's and the customer's
        words (ADR 061, ADR 064): the operator needs whose visit it is. */

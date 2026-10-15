@@ -99,7 +99,12 @@ export function dispatchStatus(s: State, v: Visit) {
     history.some((a) => a.providerId === v.providerId && a.status === "Offered")
   )
     return "Replacement offer pending";
-  return history.at(-1)?.status === "Expired"
+  /* The last answer, not the last entry: a withdrawn replacement offer puts the
+     visit back where the decline or expiry left it (ADR 083). */
+  const answer = [...history]
+    .reverse()
+    .find((a) => ["Declined", "Expired"].includes(a.status));
+  return answer?.status === "Expired"
     ? "Offer expired · Needs reassignment"
     : "Contractor declined · Needs reassignment";
 }
@@ -207,6 +212,12 @@ export function reoffer(
   )
     return false;
   if (automatic && (start !== v.start || pay !== option.pay)) return false;
+  const previous = {
+    providerId: v.providerId,
+    start: v.start,
+    travel: v.travel,
+    status: v.status,
+  };
   v.providerId = providerId;
   v.start = start;
   v.travel = option.travel;
@@ -218,6 +229,7 @@ export function reoffer(
     status: providerId === "yousef" ? "Accepted" : "Offered",
     pay: providerId === "yousef" ? 0 : pay,
     expiresAt: s.clock + 7200000,
+    previous,
   };
   s.assignments.push(a);
   notification(

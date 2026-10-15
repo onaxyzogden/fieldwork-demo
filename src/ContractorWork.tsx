@@ -1,6 +1,7 @@
+import { plural } from "./plural";
 import { questionAnswers } from "./clarification";
 import { useState, useEffect } from "react";
-import { type Visit, money, dateLabel, accountName } from "./model";
+import { type State, type Visit, money, dateLabel, accountName } from "./model";
 import { dayKey, workStatus } from "./work";
 import { respondToOffer, tripLabel } from "./dispatch";
 import { MessageThread } from "./NotificationUI";
@@ -16,7 +17,9 @@ import {
   tabWork,
   type ContractorTab,
 } from "./glance";
-import { JobWork, Sheet, type Props } from "./JobWork";
+import { JobWork, type Props } from "./JobWork";
+import { REASONS } from "./ContractorQueue";
+import { useSwapFocus } from "./useSwapFocus";
 export default function ContractorWork({
   s,
   provider,
@@ -93,7 +96,7 @@ export default function ContractorWork({
       });
   }, [selected, !!seen, !!seen?.openedAt]);
   const [decline, setDecline] = useState(false);
-  const [reason, setReason] = useState("");
+  const swap = useSwapFocus(decline);
   /* The offers, one at a time (ADR 062). */
   const [reviewing, setReviewing] = useState(false);
   /* Today's job, or one already running whatever its date, opens in job mode:
@@ -123,7 +126,7 @@ export default function ContractorWork({
         .find((v) => v.id === a.visitId)!
         .start.localeCompare(s.visits.find((v) => v.id === b.visitId)!.start),
     )[0];
-  const respond = (status: "Accepted" | "Declined") => {
+  const respond = (status: "Accepted" | "Declined", reason = "") => {
     // respondToOffer() already records declineReason on the assignment
     // draft it mutates — writing it again here was dead duplication.
     update(
@@ -247,7 +250,7 @@ export default function ContractorWork({
                 {accountName(r.accountId)} · {r.city} · {dateLabel(v.start)}
               </p>
               <p>
-                {v.duration} minutes · {v.taskIds.length} tasks
+                {v.duration} minutes · {plural(v.taskIds.length, "task")}
               </p>
               {/* How far it is, beside what it pays (ADR 066). */}
               <p className="muted">
@@ -294,56 +297,47 @@ export default function ContractorWork({
                 sender={provider}
                 update={update}
               />
-              <div className="row actions">
-                <button
-                  className="primary grow contractor-accept"
-                  onClick={() => respond("Accepted")}
-                >
-                  Accept job
-                </button>
-                <button
-                  className="secondary grow"
-                  onClick={() => setDecline(true)}
-                >
-                  Decline
-                </button>
-              </div>
-              {decline && (
-                <Sheet
-                  title="Why are you declining?"
-                  close={() => setDecline(false)}
-                >
-                  <label className="field">
-                    Reason (optional)
-                    <select
-                      value={reason}
-                      onChange={(e) => setReason(e.target.value)}
-                    >
-                      <option value="">Prefer not to say</option>
-                      {[
-                        "Not available",
-                        "Too far",
-                        "Pay doesn’t work",
-                        "Outside my skill set",
-                        "Other",
-                      ].map((x) => (
-                        <option key={x}>{x}</option>
-                      ))}
-                    </select>
-                  </label>
-                  <button
-                    className="primary"
-                    onClick={() => respond("Declined")}
-                  >
-                    Decline job
-                  </button>
+              {decline ? (
+                /* The queue's one-tap reasons, here too (ADR 083): one tap
+                   declines, and the reason goes to the operator. */
+                <fieldset className="job-outcomes" ref={swap.picker}>
+                  <legend>Why are you declining?</legend>
+                  <div>
+                    {[...REASONS, "No reason"].map((why) => (
+                      <button
+                        key={why}
+                        className="secondary"
+                        onClick={() =>
+                          respond("Declined", why === "No reason" ? "" : why)
+                        }
+                      >
+                        {why}
+                      </button>
+                    ))}
+                  </div>
                   <button
                     className="text-button"
                     onClick={() => setDecline(false)}
                   >
-                    Cancel
+                    Back
                   </button>
-                </Sheet>
+                </fieldset>
+              ) : (
+                <div className="row actions">
+                  <button
+                    className="primary grow contractor-accept"
+                    onClick={() => respond("Accepted")}
+                  >
+                    Accept job
+                  </button>
+                  <button
+                    ref={swap.trigger}
+                    className="secondary grow"
+                    onClick={() => setDecline(true)}
+                  >
+                    Decline
+                  </button>
+                </div>
               )}
             </section>
           ) : a.status === "Accepted" && todaysJob(v) ? (
@@ -460,11 +454,8 @@ export default function ContractorWork({
                       ))}
                   </ul>
                   <p>
-                    {v.duration} minutes ·{" "}
-                    {s.tasks
-                      .filter((t) => v.taskIds.includes(t.id))
-                      .reduce((n, t) => n + t.photos.length, 0)}{" "}
-                    photos
+                    {v.duration} minutes
+                    {photoCount(s, v.taskIds)}
                   </p>
                   <h3 className="contractor-pay">Your pay: {money(a.pay)}</h3>
                   <button className="primary" onClick={() => setSelected(a.id)}>
@@ -527,3 +518,11 @@ export default function ContractorWork({
     </div>
   );
 }
+
+/** " · 3 photos", or nothing when there are none (ADR 083). */
+const photoCount = (s: State, taskIds: string[]) => {
+  const n = s.tasks
+    .filter((t) => taskIds.includes(t.id))
+    .reduce((sum, t) => sum + t.photos.length, 0);
+  return n ? ` · ${plural(n, "photo")}` : "";
+};

@@ -148,15 +148,7 @@ export function OperatorWorkspace() {
               {x} →
             </button>
           ))}
-          <button
-            className="queue-item"
-            onClick={() => {
-              setSidebar(false);
-              setModal("Demo settings");
-            }}
-          >
-            Demo settings →
-          </button>
+          {/* Demo settings is in the sidebar, once (ADR 083). */}
         </section>
       );
     case "Walkthroughs":
@@ -243,15 +235,36 @@ export function OperatorWorkspace() {
             </div>
           </div>
           <section className="card panel">
-            {s.events.map((e) => (
-              <div className="event" key={e.id}>
-                <span className="event-dot" />
-                <div>
-                  <strong>{e.text}</strong>
-                  <small>{dateLabel(e.at)}</small>
+            {s.events.map((e) => {
+              const body = (
+                <>
+                  <span className="event-dot" />
+                  <span className="event-body">
+                    <strong>{e.text}</strong>
+                    <small>{dateLabel(e.at)}</small>
+                  </span>
+                </>
+              );
+              /* An entry about a request opens it, as Home's cards do
+                 (ADR 083). */
+              const id = e.requestId;
+              return id && s.requests.some((x) => x.id === id) ? (
+                <button
+                  className="event event-link"
+                  key={e.id}
+                  onClick={() => {
+                    choose(id);
+                    setPage("Requests");
+                  }}
+                >
+                  {body}
+                </button>
+              ) : (
+                <div className="event" key={e.id}>
+                  {body}
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </section>
         </>
       );

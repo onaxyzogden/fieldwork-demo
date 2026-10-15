@@ -3,6 +3,36 @@ title: "Wiki Log"
 type: log
 ---
 
+## [2026-10-15] session | ADR 083: Offer withdraw, `FindingReview`, the platform audit's P3s
+
+- **Decided:**
+  - The Offer's undo is a withdraw, available until the contractor answers, not a timed grace period. Chosen by Yousef as the better long-term option.
+  - An unread offer notice is taken back with its unread "Visit proposed", and nothing is sent. A read one gets "Offer withdrawn". The contractor gets no visit notice for a withdraw, either way. The customer hears the visit change as usual.
+  - A replacement offer keeps the earlier provider, start, travel and status as `previous`, so withdrawing it puts the visit back.
+  - Decline on the Work page uses the queue's one-tap reasons (Yousef's choice).
+  - The demo bar's chips get a 32 px floor on desktop in every role. This corrects ADR 082: it said "already 44 px", which held only on phones and in the Operator view.
+- **Completed:**
+  - `withdrawOffer` and the `Withdrawn` status, listed in the status dictionary.
+  - Undo in the queue and "Withdraw offer" on the request page.
+  - `FindingReview` cleaned up.
+  - Every P3; see [[platform-ux-audit-2026-10]].
+  - 648 tests (19 new), `tsc` and the build pass. The only failure is the greeting test, which depends on the wall clock and fails on main too.
+  - Live checks:
+    - queue Undo, with focus on the line;
+    - request-page Withdraw, with the toast, the request back to Submitted and "1 task" in the list;
+    - Marcus, who had read the offer, shows "Offer withdrawn";
+    - Nina, who hadn't, shows no offer notice;
+    - one-tap Decline, with focus on the first reason;
+    - Activity links open their request;
+    - the demo bar at 1024 px in three roles;
+    - dark theme, with no console errors.
+  - Live checking also found a "1 tasks" in the operator's request list and the contractor's "Visit proposed/cancelled" notices around a withdraw. Both are fixed and tested.
+- **Deferred:**
+  - The greeting test's wall-clock dependency.
+  - Instant Book's $129.
+  - A screen test for the intake's photo-only Continue.
+- **Pages touched:** [[platform-ux-audit-2026-10]], [[fieldwork]], [[index]].
+
 ## [2026-10-15] session | ADR 082: the accessibility audit's minors
 
 - **Decided:**

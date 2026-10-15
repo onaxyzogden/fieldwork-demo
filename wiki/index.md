@@ -1,7 +1,7 @@
 ---
 title: "Wiki Index"
 type: index
-updated: 2026-10-08
+updated: 2026-10-15
 ---
 
 # Wiki Index
@@ -32,7 +32,7 @@ A catalog of every wiki page. Read this first at the start of each session. Conv
 | Page | Summary |
 |---|---|
 | [[customer-ux-audit-2026-10]] | 12 findings, P0–P3, all fixed across ADR 069, 070 and 073 |
-| [[platform-ux-audit-2026-10]] | Every role plus the shell: 8 P1s (focus loss, destructive actions with no friction, the role switch's state), all fixed in ADR 079. P2s fixed in ADR 080. P3s open |
+| [[platform-ux-audit-2026-10]] | Every role plus the shell: 8 P1s (focus loss, destructive actions with no friction, the role switch's state), all fixed in ADR 079. P2s fixed in ADR 080. P3s and the Offer's Undo fixed in ADR 083 |
 | [[accessibility-audit-2026-10]] | WCAG 2.1 AA, every role, both themes: 0 critical, 6 major (field borders, colour-only selection, unexposed state, two dialogs without a trap, toasts that time out), 17 minor. Text contrast and reflow pass. Majors fixed in ADR 081, minors in ADR 082 |
 
 ## Synthesis
