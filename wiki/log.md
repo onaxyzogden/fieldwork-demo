@@ -3,6 +3,17 @@ title: "Wiki Log"
 type: log
 ---
 
+## [2026-10-14] ingest | Accessibility audit (WCAG 2.1 AA)
+
+- **Ran:** `design:accessibility-review` on the entire site. It scanned 16 live screens in both themes and did a keyboard pass, a reflow at 320 px, a CSS token sweep and a TSX semantics sweep.
+- **Found:**
+  - 0 critical, 6 major and 17 minor.
+  - The majors: field borders at 1.31–1.42:1, selection shown by hue only, status track and selection state not exposed, `JobMode` and `OnSite` dialogs with no Escape, trap or inert, and toasts that time out with no pause or dismiss.
+  - Zero text-contrast failures, and no reflow failures.
+- **Not tested:** a real screen reader.
+- **Next:** ADR 081 for the majors, with the plan awaiting approval.
+- **Pages touched:** [[accessibility-audit-2026-10]] (new), [[fieldwork]], [[index]].
+
 ## [2026-10-08] session | ADR 080: the platform audit's P2s
 
 - **Decided:**
