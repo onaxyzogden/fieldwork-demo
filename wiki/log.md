@@ -3,6 +3,29 @@ title: "Wiki Log"
 type: log
 ---
 
+## [2026-10-15] session | ADR 081: the accessibility audit's majors
+
+- **Decided:**
+  - The field border is `#878b94` in light mode, not the proposed `#8b8f98`, which was 3.0:1 on the page.
+  - The chosen state is a doubled edge, not a check mark, because there is no room in the pills or the column cards.
+  - The contrast check lives in `design:check`, not vitest: vitest stubs CSS, and the tsconfig has no Node types.
+  - An error toast has no timer.
+- **Completed:**
+  - `--field-border` and `--shadow-chosen`.
+  - `aria-pressed` and `aria-current` on seven controls, and the status tracks.
+  - A global `.sr-only`.
+  - `useModal`, now shared by `QueueLayer`, `JobMode` and `OnSite`.
+  - Toast hold and Dismiss.
+  - 616 tests (12 new), `tsc`, and the build pass.
+  - Live: the field border measured in both themes, no console errors, and Escape on the queue returns focus to its trigger.
+- **Deferred:**
+  - The 17 minors.
+  - Removing the unreachable `FindingReview` decision buttons.
+  - The Offer undo.
+  - Instant Book's $129.
+  - The platform audit's P3s.
+- **Pages touched:** [[accessibility-audit-2026-10]], [[fieldwork]], [[index]].
+
 ## [2026-10-14] ingest | Accessibility audit (WCAG 2.1 AA)
 
 - **Ran:** `design:accessibility-review` on the entire site. It scanned 16 live screens in both themes and did a keyboard pass, a reflow at 320 px, a CSS token sweep and a TSX semantics sweep.

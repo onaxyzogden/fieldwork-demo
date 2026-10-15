@@ -3,7 +3,7 @@ title: "Accessibility audit (2026-10)"
 type: source
 ingested: 2026-10-14
 created: 2026-10-14
-updated: 2026-10-14
+updated: 2026-10-15
 source_path: "session transcript (design:accessibility-review, entire site)"
 source_type: conversation
 tags: [audit, accessibility, wcag, operator, contractor, customer]
@@ -23,7 +23,7 @@ A WCAG 2.1 AA audit of the whole platform, run on the dev server after ADR 080 (
 
 It was not tested with a real screen reader. No source was changed by the audit.
 
-**Result:** 23 findings: 0 critical, 6 major and 17 minor. The worst focus and announcement problems were already fixed by [[platform-ux-audit-2026-10]] (ADR 079–080). What's left is mostly in two places: how controls look (their borders and selected state) and how state is exposed to screen readers. **The 6 majors are planned as ADR 081.**
+**Result:** 23 findings: 0 critical, 6 major and 17 minor. The worst focus and announcement problems were already fixed by [[platform-ux-audit-2026-10]] (ADR 079–080). What's left is mostly in two places: how controls look (their borders and selected state) and how state is exposed to screen readers. **The 6 majors are fixed in ADR 081** (branch `claude/adr-081`).
 
 ## What passes
 - **Text contrast:** zero text-contrast failures on 16 screens × 2 themes. Muted text in light mode is 6.3:1.
@@ -73,12 +73,13 @@ It was not tested with a real screen reader. No source was changed by the audit.
   - The `incoming-notice` status region mounts together with its first message.
   - "Close navigation ×" reads the × aloud.
 
-## Proposed fixes for the majors
-- **#1:** add a `--field-border` token, about `#8b8f98` in light (3.2:1) and `#6b7482` in dark (3.5:1).
-- **#2:** give `.selected` a non-colour cue.
-- **#3 and #6:** add `aria-pressed` or `aria-current`.
-- **#4:** reuse `QueueLayer`'s trap.
-- **#5:** pause the toast on hover and focus, add a Dismiss button, and keep errors until they're dismissed.
+## How the majors were fixed (ADR 081)
+- **#1:** a `--field-border` token: `#6b7482` in dark and `#878b94` in light. The proposed `#8b8f98` came to 3.0:1 on the light page, so it went one step darker. `design:check` computes the ratio on every build.
+- **#2:** a doubled edge in `--accent-text` (`--shadow-chosen`) on every selected pill, chip, slot, queue item, provider card and "who" card. It is not a check mark: there is no room for one in the 36 px pills or the column cards.
+- **#3 and #6:** `aria-pressed` or `aria-current` on each, and a global `.sr-only` ", done" on the status tracks. The current step is also weight 600.
+- **#4:** `QueueLayer`'s trap became `useModal`, which `JobMode` and `OnSite` now share.
+- **#5:** the toast holds while it is hovered or focused, has a Dismiss button, and an error has no timer.
+- **Found while fixing:** Approve and Not now at `Assessment.tsx:555` can't be reached, because `FindingReview` always renders locked. They got `aria-pressed` anyway; removing them is left for later.
 
 ## Related
 - [[platform-ux-audit-2026-10]]
