@@ -1000,6 +1000,10 @@ footer {
   color: var(--accent-text);
   border-top-color: var(--accent);
 }
+/* Where things stand, told by weight as well as colour (ADR 081). */
+.status-track [aria-current] {
+  font-weight: 600;
+}
 /* Intake: completed steps collapse to a summary row that can be reopened.
    The checkmark sits inside a solid filled circle (not a bare icon) — the
    same treatment for every collapsed step, address and tasks alike. */

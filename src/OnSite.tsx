@@ -23,6 +23,7 @@ import {
 } from "./pmw";
 import { storablePhoto, unreadableMessage } from "./photos";
 import { useFieldErrors } from "./fields";
+import { useModal } from "./useModal";
 import "./onsite.css";
 
 /**
@@ -64,15 +65,10 @@ export default function OnSite({
   const property = s.properties.find((p) => p.id === w.propertyId);
   const ref = useRef<HTMLDivElement>(null);
   const top = () => ref.current?.scrollTo({ top: 0 });
-  /* The overlay is the page while it is open; the document behind it should
-     not scroll underneath a thumb. */
-  useEffect(() => {
-    const previous = document.body.style.overflow;
-    document.body.style.overflow = "hidden";
-    return () => {
-      document.body.style.overflow = previous;
-    };
-  }, []);
+  /* The overlay is the page while it is open: the document behind it does
+     not scroll underneath a thumb, Escape does what Close does, and Tab
+     stays inside (ADR 081). */
+  useModal(ref, exit);
   /* Focus starts inside the layer, on its heading, unless a field has already
      claimed it — the pricing step opens on its price box. */
   useEffect(() => {
@@ -513,12 +509,14 @@ function PriceItem({
       <div className="segmented onsite-pricing">
         <button
           className={f.pricing === "Quoted" ? "chosen" : ""}
+          aria-pressed={f.pricing === "Quoted"}
           onClick={() => patch({ pricing: "Quoted" })}
         >
           Price it
         </button>
         <button
           className={f.pricing === "Quoted" ? "" : "chosen"}
+          aria-pressed={f.pricing !== "Quoted"}
           onClick={() => {
             patch({ pricing: "Further Assessment Required", price: undefined });
             clear("price");

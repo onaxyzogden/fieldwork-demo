@@ -76,20 +76,33 @@ export function useWorkspaceState({
   const [contractorVisit, setContractorVisit] = useState("");
   const [customer, setCustomerNow] = useState(initialCustomer);
   /* One toast at a time, on one timer (ADR 080). A new toast clears the old
-     timer, so it is not cut short by the one before it. Errors are alerts and
-     stay up longer, since they are the ones that have to be read. */
+     timer, so it is not cut short by the one before it. The timer waits while
+     the toast is pointed at or focused, and starts over when it is left. An
+     error is an alert that has to be read, so it has no timer at all: it stays
+     until it is dismissed or replaced (ADR 081). */
   const [toast, setToastText] = useState("");
   const [toastTone, setToastTone] = useState<Tone | undefined>();
   const toastTimer = React.useRef<ReturnType<typeof setTimeout>>(undefined);
-  const setToast = (text: string, tone?: Tone) => {
+  const toastNow = React.useRef<{ text: string; tone?: Tone }>({ text: "" });
+  const toastHeld = React.useRef(false);
+  const timeToast = () => {
     clearTimeout(toastTimer.current);
+    const { text, tone } = toastNow.current;
+    if (text && tone !== "error" && !toastHeld.current)
+      toastTimer.current = setTimeout(() => setToast(""), 3500);
+  };
+  const setToast = (text: string, tone?: Tone) => {
+    toastNow.current = { text, tone };
+    /* A toast that is gone cannot still be pointed at: its leave and blur
+       never come once it is unmounted. */
+    if (!text) toastHeld.current = false;
     setToastText(text);
     setToastTone(tone);
-    if (text)
-      toastTimer.current = setTimeout(
-        () => setToastText(""),
-        tone === "error" ? 7000 : 3500,
-      );
+    timeToast();
+  };
+  const holdToast = (held: boolean) => {
+    toastHeld.current = held;
+    timeToast();
   };
   React.useEffect(() => () => clearTimeout(toastTimer.current), []);
   /* A toast is about whoever was being viewed, so switching who that is
@@ -720,6 +733,7 @@ export function useWorkspaceState({
     contractor,
     customer,
     fail,
+    holdToast,
     idPrefix,
     invalidate,
     latest,

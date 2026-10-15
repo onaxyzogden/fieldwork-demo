@@ -462,7 +462,8 @@
 :root[data-theme] textarea {
   background: var(--panel);
   color: inherit;
-  border-color: var(--line);
+  /* Found by its edge, not by a fill 1.08:1 from the page (ADR 081). */
+  border-color: var(--field-border);
   accent-color: var(--accent);
 }
 :root[data-theme] input::placeholder,
@@ -790,6 +791,17 @@
   background: var(--accent-soft);
   border-color: var(--accent);
   color: var(--accent-text);
+}
+/* What is chosen is told by a doubled edge as well as by colour, so it
+   reads without hue and apart from hover (WCAG 1.4.1, ADR 081). */
+:root[data-theme] .time-pill.selected,
+:root[data-theme] .date-chip.selected,
+:root[data-theme] .slot.selected,
+:root[data-theme] .queue-item.selected,
+:root[data-theme] .provider-card.selected,
+:root[data-theme] .pmw-who button[aria-pressed="true"] {
+  border-color: var(--accent-text);
+  box-shadow: var(--shadow-chosen);
 }
 .op-view-switch span {
   background: var(--danger-fill);

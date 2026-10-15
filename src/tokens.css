@@ -34,6 +34,8 @@ Brand is a refined amber in both themes. Two consequences are deliberate:
   --panel: #1b1f26;
   --surface-raised: #242a33;
   --line: #2e3540;
+  /* A field's edge, 3:1 on the panel and the page (ADR 081). */
+  --field-border: #6b7482;
   --border-strong: #3c4553;
   --muted: #aab2c0;
   --ink-muted: #88919f;
@@ -108,6 +110,7 @@ Brand is a refined amber in both themes. Two consequences are deliberate:
   --panel: #ffffff;
   --surface-raised: #efedea;
   --line: #dcd8d2;
+  --field-border: #878b94;
   --border-strong: #c3beb5;
   --muted: #5c6270;
   --ink-muted: #656a77;
@@ -147,6 +150,7 @@ Brand is a refined amber in both themes. Two consequences are deliberate:
   --shadow-focus: 0 0 0 3px color-mix(in srgb, var(--focus) 35%, transparent);
   --shadow-selected: inset 0 -2px var(--accent);
   --shadow-inset: inset 0 0 0 1px var(--line);
+  --shadow-chosen: inset 0 0 0 1px var(--accent-text);
   --gradient-location:
     repeating-linear-gradient(
       25deg,

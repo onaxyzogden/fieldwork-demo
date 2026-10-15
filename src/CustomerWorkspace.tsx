@@ -577,7 +577,8 @@ export function CustomerWorkspace() {
                           {/* Three steps, not four. "Provider coordinated" was
                     internal handoff the customer could not act on; it
                     survives as the prose note below, not as a step.
-                    Text only, no icon — colour carries the state. */}
+                    Text only, no icon. Colour shows the state, and so do
+                    the words a screen reader hears (ADR 081). */}
                           {[
                             {
                               label: "Received",
@@ -598,9 +599,15 @@ export function CustomerWorkspace() {
                                 "status-step " +
                                 (x.done ? "done" : x.active ? "active" : "")
                               }
+                              aria-current={
+                                !x.done && x.active ? "step" : undefined
+                              }
                               key={x.label}
                             >
                               {x.label}
+                              {x.done && (
+                                <span className="sr-only">, done</span>
+                              )}
                             </div>
                           ))}
                         </div>

@@ -372,9 +372,11 @@ export default function Assessment({
                     "status-step " +
                     (i < step ? "done" : i === step ? "active" : "")
                   }
+                  aria-current={i === step ? "step" : undefined}
                   key={label}
                 >
                   {label}
+                  {i < step && <span className="sr-only">, done</span>}
                 </div>
               ))}
             </div>
@@ -556,6 +558,7 @@ function FindingReview({
             <div className="row actions">
               <button
                 className={f.decision === "Approved" ? "primary" : "secondary"}
+                aria-pressed={f.decision === "Approved"}
                 onClick={() => onDecide("Approved")}
               >
                 {f.decision === "Approved" ? <CheckCircle2 size={16} /> : null}{" "}
@@ -563,6 +566,7 @@ function FindingReview({
               </button>
               <button
                 className={f.decision === "Not Now" ? "chosen" : "text-button"}
+                aria-pressed={f.decision === "Not Now"}
                 onClick={() => onDecide("Not Now")}
               >
                 Not now

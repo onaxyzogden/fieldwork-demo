@@ -998,6 +998,7 @@ export function OperatorRequests() {
             <button
               key={q.id}
               className={"queue-item " + (q.id === r.id ? "selected" : "")}
+              aria-current={q.id === r.id || undefined}
               onClick={() => {
                 if (q.id === r.id) showDetail();
                 else focusDetail.current = true;
@@ -1593,6 +1594,7 @@ export function OperatorRequests() {
                         "slot " +
                         ((slot || opts[0]?.start) === o.start ? "selected" : "")
                       }
+                      aria-pressed={(slot || opts[0]?.start) === o.start}
                       onClick={() => {
                         clear("slot");
                         setSlot(o.start);

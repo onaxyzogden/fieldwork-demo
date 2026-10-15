@@ -25,8 +25,10 @@ import {
   reconcile,
   type State,
 } from "./model";
-import { issueQuote } from "./decisions";
+import { issueQuote, nextDecision, offerVisit } from "./decisions";
 import { addFinding, createWalkthrough } from "./pmw";
+import { respondToOffer } from "./dispatch";
+import Blueprint from "./Blueprint";
 import { bucket } from "./work";
 
 function Harness({
@@ -827,5 +829,263 @@ describe("State and wording (ADR 080)", () => {
     expect(toasts().textContent).toBe("");
     expect(screen.getByText("Add a task before continuing.")).toBeTruthy();
     await waitFor(() => expect(focused()?.tagName).toBe("TEXTAREA"));
+  });
+});
+
+describe("Accessibility (ADR 081)", () => {
+  const focused = () => document.activeElement;
+  const toasts = () => document.querySelector<HTMLElement>(".toasts")!;
+  const focusable = (root: Element) => [
+    ...root.querySelectorAll<HTMLElement>(
+      'a[href], button:not(:disabled), input:not(:disabled), select:not(:disabled), textarea:not(:disabled), [tabindex]:not([tabindex="-1"])',
+    ),
+  ];
+  /** Tab from the last control comes round to the first, and back. */
+  const trapsTab = (dialog: HTMLElement) => {
+    const list = focusable(dialog);
+    list.at(-1)!.focus();
+    fireEvent.keyDown(document, { key: "Tab" });
+    expect(focused()).toBe(list[0]);
+    fireEvent.keyDown(document, { key: "Tab", shiftKey: true });
+    expect(focused()).toBe(list.at(-1));
+  };
+  /** Marcus's confirmed job, started, so it opens on the job screen. */
+  const onTheJob = (d: State) => {
+    const v = d.visits.find((x) => x.providerId === "marcus")!;
+    d.assignments.find((a) => a.visitId === v.id)!.status = "Accepted";
+    issueQuote(d, v.requestId, {
+      type: "Fixed price",
+      amount: 240,
+      payOnCompletion: true,
+    });
+    approveQuote(d, d.quotes.at(-1)!.id);
+    reconcile(d);
+    v.execution = { startedAt: new Date(d.clock).toISOString(), outcomes: {} };
+  };
+  /** A draft walkthrough with one finding still to price. */
+  const unpriced = (d: State) => {
+    d.walkthroughs = d.walkthroughs.filter((x) => x.status !== "Draft");
+    const w = createWalkthrough(d, "p1");
+    addFinding(d, w.id, { area: "Hall", title: "Loose handrail" });
+  };
+  const openDraft = async () => {
+    go(/^Walkthroughs/);
+    await screen.findByRole("heading", { name: "Property walkthroughs" });
+    fireEvent.click(
+      screen
+        .getAllByRole("button")
+        .find(
+          (b) =>
+            b.classList.contains("queue-item") && /Draft/.test(b.textContent!),
+        )!,
+    );
+  };
+
+  it("closes the job screen on Escape, and keeps Tab inside it", () => {
+    open("Contractor", onTheJob);
+    trapsTab(screen.getByRole("dialog", { name: "Job" }));
+    fireEvent.keyDown(document, { key: "Escape" });
+    expect(screen.queryByRole("dialog", { name: "Job" })).toBeNull();
+  });
+
+  it("closes the on-site screen on Escape, and keeps Tab inside it", async () => {
+    open("Operator", unpriced);
+    await openDraft();
+    fireEvent.click(await screen.findByRole("button", { name: /^Price 1 item/ }));
+    const dialog = screen.getByRole("dialog", { name: "Price items" });
+    trapsTab(dialog);
+    fireEvent.keyDown(document, { key: "Escape" });
+    expect(screen.queryByRole("dialog", { name: "Price items" })).toBeNull();
+    expect(focused()).not.toBe(document.body);
+  });
+
+  it("says which way an on-site item is priced", async () => {
+    open("Operator", unpriced);
+    await openDraft();
+    fireEvent.click(await screen.findByRole("button", { name: /^Price 1 item/ }));
+    const price = screen.getByRole("button", { name: "Price it" });
+    const look = screen.getByRole("button", { name: "Needs a closer look" });
+    expect([price, look].map((b) => b.getAttribute("aria-pressed"))).toContain(
+      "true",
+    );
+    fireEvent.click(look);
+    expect(look.getAttribute("aria-pressed")).toBe("true");
+    expect(price.getAttribute("aria-pressed")).toBe("false");
+  });
+
+  it("holds a toast while it is pointed at or focused, and can dismiss it", () => {
+    open("Contractor");
+    vi.useFakeTimers();
+    try {
+      fireEvent.click(screen.getByRole("button", { name: "Accept job" }));
+      fireEvent.mouseEnter(toasts());
+      act(() => vi.advanceTimersByTime(10_000));
+      expect(screen.queryByText("Job accepted")).not.toBeNull();
+      /* Left, it starts its time over rather than vanishing at once. */
+      fireEvent.mouseLeave(toasts());
+      act(() => vi.advanceTimersByTime(2000));
+      expect(screen.queryByText("Job accepted")).not.toBeNull();
+      fireEvent.click(screen.getByRole("button", { name: "Dismiss" }));
+      expect(toasts().textContent).toBe("");
+      expect(document.activeElement).not.toBe(document.body);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("keeps an error up until it is dismissed", async () => {
+    open("Customer", (d) => {
+      const r = d.requests.find((x) => x.status === "Draft")!;
+      r.accountId = "c2";
+      r.intakeScreen = "booking";
+      const t = d.tasks.find((x) => x.requestId === r.id)!;
+      t.answers = {
+        "door-adjust:location": "Interior",
+        "door-adjust:symptom": "Rubbing or sticking",
+        "door-adjust:damage": "No visible damage",
+        "door-adjust:count": "1",
+      };
+      t.entryStage = "done";
+    });
+    fireEvent.click(screen.getAllByRole("button", { name: /Demo settings/ })[0]);
+    fireEvent.click(screen.getByLabelText("Customer payments fail"));
+    fireEvent.click(screen.getByRole("button", { name: "Close dialog" }));
+    go(/^New request/);
+    await screen.findByRole("heading", { name: "Available appointments" });
+    fireEvent.click(document.querySelector(".intake-times button")!);
+    fireEvent.click(screen.getByRole("button", { name: "Book & pay $129" }));
+    vi.useFakeTimers();
+    try {
+      fireEvent.click(screen.getByRole("button", { name: /^Pay / }));
+      act(() => vi.advanceTimersByTime(60_000));
+      expect(screen.getByRole("alert").textContent).toMatch(
+        /payment didn’t go through/,
+      );
+    } finally {
+      vi.useRealTimers();
+    }
+    fireEvent.click(
+      within(screen.getByRole("alert")).getByRole("button", { name: "Dismiss" }),
+    );
+    expect(screen.getByRole("alert").textContent).toBe("");
+  });
+
+  it("marks the chosen request as current in the list", () => {
+    open("Operator");
+    go(/^Requests/);
+    const items = () =>
+      screen
+        .getAllByRole("button")
+        .filter((b) => b.classList.contains("queue-item"));
+    expect(
+      items().filter((b) => b.getAttribute("aria-current") === "true"),
+    ).toHaveLength(1);
+    fireEvent.click(screen.getByRole("button", { name: /^Priya Nair/ }));
+    expect(
+      screen
+        .getByRole("button", { name: /^Priya Nair/ })
+        .getAttribute("aria-current"),
+    ).toBe("true");
+  });
+
+  it("says which appointment is chosen", () => {
+    open("Operator");
+    go(/^Requests/);
+    fireEvent.click(
+      screen.getByRole("button", { name: "Offer to a contractor" }),
+    );
+    const slots = [...document.querySelectorAll<HTMLElement>(".slot-grid .slot")];
+    expect(slots.length).toBeGreaterThan(1);
+    fireEvent.click(slots[1]);
+    expect(slots.map((b) => b.getAttribute("aria-pressed"))).toEqual(
+      slots.map((_, i) => String(i === 1)),
+    );
+  });
+
+  it("says which contractor a reassignment goes to", () => {
+    let name = "";
+    open("Operator", (d) => {
+      const a = d.assignments.find((x) => x.status === "Offered")!;
+      respondToOffer(d, a.id, "Declined");
+      reconcile(d);
+      const v = d.visits.find((x) => x.id === a.visitId)!;
+      name = d.requests.find((r) => r.id === v.requestId)!.name;
+    });
+    go(/^Requests/);
+    fireEvent.click(
+      screen
+        .getAllByRole("button")
+        .find(
+          (b) =>
+            b.classList.contains("queue-item") && b.textContent!.includes(name),
+        )!,
+    );
+    fireEvent.click(
+      screen.getByRole("button", { name: /^Offer to another contractor/ }),
+    );
+    const cards = [
+      ...document.querySelectorAll<HTMLElement>(".provider-options .provider-card"),
+    ];
+    expect(cards.length).toBeGreaterThan(0);
+    fireEvent.click(cards[0]);
+    expect(cards[0].getAttribute("aria-pressed")).toBe("true");
+  });
+
+  it("says which sample scenario is open", () => {
+    open("Operator");
+    fireEvent.click(screen.getAllByRole("button", { name: /Demo settings/ })[0]);
+    const strip = document.querySelector<HTMLElement>(".scenario-strip")!;
+    const buttons = within(strip).getAllByRole("button", { hidden: true });
+    fireEvent.click(buttons[1]);
+    expect(
+      buttons.map((b) => b.getAttribute("aria-pressed")),
+    ).toEqual(buttons.map((_, i) => String(i === 1)));
+  });
+
+  it("marks the chosen stage on the Blueprint's example path", () => {
+    render(<Blueprint />);
+    const path = document.querySelector<HTMLElement>(".bp-path")!;
+    const steps = within(path).getAllByRole("button");
+    fireEvent.click(steps[1]);
+    expect(steps[1].getAttribute("aria-current")).toBe("step");
+    expect(
+      steps.filter((b) => b.getAttribute("aria-current") === "step"),
+    ).toHaveLength(1);
+  });
+
+  it("says in words which booking steps are done and which is current", () => {
+    open("Customer", (d) => {
+      const r = d.requests.find(
+        (x) => x.accountId === "c2" && x.status !== "Draft",
+      )!;
+      /* A quote is the current step once someone has taken the job: the
+         operator takes it here, which is accepted as it is made. */
+      const take = nextDecision(d, r.id);
+      if (take?.kind !== "assign") throw new Error("not an assign decision");
+      offerVisit(d, {
+        requestId: r.id,
+        taskIds: take.taskIds,
+        providerId: take.self!.providerId,
+        start: take.self!.start,
+        travel: take.self!.travel,
+        duration: take.duration,
+        pay: take.self!.pay,
+        opKey: "k-track",
+      });
+      issueQuote(d, r.id, {
+        type: "Fixed price",
+        amount: 240,
+        payOnCompletion: false,
+      });
+      reconcile(d);
+    });
+    go(/^My bookings/);
+    const steps = [...document.querySelectorAll<HTMLElement>(".status-step")];
+    const received = steps.find((x) => x.textContent!.startsWith("Received"))!;
+    expect(received.textContent).toMatch(/done/);
+    const current = steps.filter(
+      (x) => x.getAttribute("aria-current") === "step",
+    );
+    expect(current.map((x) => x.textContent)).toEqual(["Quote"]);
   });
 });
