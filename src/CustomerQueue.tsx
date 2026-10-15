@@ -240,7 +240,7 @@ function Step({
           {dateLabel(c.plan.start)}, booked once you approve.
         </p>
         <div className="payment-method">
-          <Wallet />
+          <Wallet aria-hidden="true" />
           <div>
             <strong>Visa •••• 4242</strong>
             <small>Card on file</small>
@@ -286,7 +286,7 @@ function Step({
         <h1 tabIndex={-1}>Payment due</h1>
         {summary}
         <div className="payment-method">
-          <Wallet />
+          <Wallet aria-hidden="true" />
           <div>
             <strong>Visa •••• 4242</strong>
             <small>Card on file</small>

@@ -345,13 +345,20 @@ export default function CustomerIntake({
   };
   const advance = () => {
     const photoOnly = all.find((t) => !t.description.trim() && t.photos.length);
+    /* Said beside the task it is missing from, where focus goes, not in a
+       toast that would be gone before it was read (ADR 080, and ADR 082 for
+       a task that has photos but no description). */
     if (photoOnly) {
       open(photoOnly);
-      notify("Describe the task for these photos before continuing.", "error");
+      setDescriptionErrors((x) => ({
+        ...x,
+        [photoOnly.id]: "Describe the task for these photos before continuing.",
+      }));
+      requestAnimationFrame(() =>
+        document.getElementById("task-description-" + photoOnly.id)?.focus(),
+      );
       return;
     }
-    /* Said beside the task it is missing from, where focus goes, not in a
-       toast that would be gone before it was read (ADR 080). */
     if (!tasks.length) {
       const id = add();
       setDescriptionErrors((x) => ({
@@ -476,6 +483,7 @@ export default function CustomerIntake({
               aria-current={i === at ? "step" : undefined}
             >
               {label}
+              {i < at && <span className="sr-only">, done</span>}
             </span>
           );
         })}
@@ -487,7 +495,7 @@ export default function CustomerIntake({
         <div className="step-summary">
           <span>
             <span className="step-summary-check">
-              <Check size={16} strokeWidth={3} />
+              <Check aria-hidden="true" size={16} strokeWidth={3} />
             </span>
             <span className="step-summary-text">
               <strong>{r.address}</strong>
@@ -537,7 +545,7 @@ export default function CustomerIntake({
                 onClick={() => typeAnother(false)}
               >
                 <strong>
-                  <Plus size={16} /> A different address
+                  <Plus aria-hidden="true" size={16} /> A different address
                 </strong>
               </button>
               {r.propertyId && (
@@ -558,28 +566,30 @@ export default function CustomerIntake({
                 ← Choose a saved address
               </button>
             )}
-            <label
+            <div
               className={"field" + (addressError.street ? " field-error" : "")}
             >
-              Service address
-              <input
-                ref={streetRef}
-                autoComplete="street-address"
-                value={r.address}
-                aria-invalid={!!addressError.street || undefined}
-                aria-describedby={
-                  addressError.street ? "address-street-error" : undefined
-                }
-                placeholder="Street number and street name"
-                onChange={(e) => {
-                  patchRequest({
-                    address: e.target.value,
-                    propertyId: undefined,
-                  });
-                  if (addressError.street)
-                    setAddressError((x) => ({ ...x, street: undefined }));
-                }}
-              />
+              <label className="field-label">
+                Service address
+                <input
+                  ref={streetRef}
+                  autoComplete="address-line1"
+                  value={r.address}
+                  aria-invalid={!!addressError.street || undefined}
+                  aria-describedby={
+                    addressError.street ? "address-street-error" : undefined
+                  }
+                  placeholder="Street number and street name"
+                  onChange={(e) => {
+                    patchRequest({
+                      address: e.target.value,
+                      propertyId: undefined,
+                    });
+                    if (addressError.street)
+                      setAddressError((x) => ({ ...x, street: undefined }));
+                  }}
+                />
+              </label>
               {addressError.street && (
                 <span
                   className="field-message"
@@ -589,11 +599,12 @@ export default function CustomerIntake({
                   {addressError.street}
                 </span>
               )}
-            </label>
+            </div>
             <div className="address-pair">
               <label className="field">
                 Municipality
                 <select
+                  autoComplete="address-level2"
                   value={r.city}
                   onChange={(e) =>
                     patchRequest({
@@ -607,27 +618,29 @@ export default function CustomerIntake({
                   ))}
                 </select>
               </label>
-              <label
+              <div
                 className={
                   "field" + (addressError.postal ? " field-error" : "")
                 }
               >
-                Postal code
-                <input
-                  ref={postalRef}
-                  autoComplete="postal-code"
-                  value={r.postalCode || ""}
-                  aria-invalid={!!addressError.postal || undefined}
-                  aria-describedby={
-                    addressError.postal ? "address-postal-error" : undefined
-                  }
-                  placeholder="L6J 4S7"
-                  onChange={(e) => {
-                    patchRequest({ postalCode: e.target.value });
-                    if (addressError.postal)
-                      setAddressError((x) => ({ ...x, postal: undefined }));
-                  }}
-                />
+                <label className="field-label">
+                  Postal code
+                  <input
+                    ref={postalRef}
+                    autoComplete="postal-code"
+                    value={r.postalCode || ""}
+                    aria-invalid={!!addressError.postal || undefined}
+                    aria-describedby={
+                      addressError.postal ? "address-postal-error" : undefined
+                    }
+                    placeholder="L6J 4S7"
+                    onChange={(e) => {
+                      patchRequest({ postalCode: e.target.value });
+                      if (addressError.postal)
+                        setAddressError((x) => ({ ...x, postal: undefined }));
+                    }}
+                  />
+                </label>
                 {addressError.postal && (
                   <span
                     className="field-message"
@@ -637,13 +650,14 @@ export default function CustomerIntake({
                     {addressError.postal}
                   </span>
                 )}
-              </label>
+              </div>
             </div>
             <details>
               <summary>Unit and access notes (optional)</summary>
               <label className="field">
                 Unit
                 <input
+                  autoComplete="address-line2"
                   value={r.unit || ""}
                   onChange={(e) => patchRequest({ unit: e.target.value })}
                 />
@@ -658,7 +672,7 @@ export default function CustomerIntake({
             </details>
             {validAddress(r) && (
               <div className="customer-location-preview">
-                <MapPin size={32} />
+                <MapPin aria-hidden="true" size={32} />
                 <strong>
                   {r.address}
                   <br />
@@ -685,7 +699,7 @@ export default function CustomerIntake({
         <div className="step-summary">
           <span>
             <span className="step-summary-check">
-              <Check size={16} strokeWidth={3} />
+              <Check aria-hidden="true" size={16} strokeWidth={3} />
             </span>
             <span className="step-summary-text">
               <strong>
@@ -727,35 +741,37 @@ export default function CustomerIntake({
                 >
                   {(!t.entryStage || t.entryStage === "description") && (
                     <>
-                      <label
-                        className="field"
-                        htmlFor={"task-description-" + t.id}
-                      >
-                        Describe the problem
-                        <textarea
-                          ref={isFocusTarget ? editor : undefined}
-                          id={"task-description-" + t.id}
-                          value={t.description}
-                          placeholder="e.g. Bedroom door is sticking against the frame"
-                          aria-invalid={!!descriptionErrors[t.id] || undefined}
-                          aria-describedby={
-                            descriptionErrors[t.id]
-                              ? "task-description-error-" + t.id
-                              : undefined
-                          }
-                          onChange={(e) => {
-                            if (descriptionErrors[t.id])
-                              setDescriptionErrors((x) => ({
-                                ...x,
-                                [t.id]: "",
-                              }));
-                            patchTask(t.id, {
-                              description: e.target.value,
-                              ...classify(e.target.value),
-                              entryStage: "description",
-                            });
-                          }}
-                        />
+                      <div className="field">
+                        <label
+                          className="field-label"
+                          htmlFor={"task-description-" + t.id}
+                        >
+                          Describe the problem
+                          <textarea
+                            ref={isFocusTarget ? editor : undefined}
+                            id={"task-description-" + t.id}
+                            value={t.description}
+                            placeholder="e.g. Bedroom door is sticking against the frame"
+                            aria-invalid={!!descriptionErrors[t.id] || undefined}
+                            aria-describedby={
+                              descriptionErrors[t.id]
+                                ? "task-description-error-" + t.id
+                                : undefined
+                            }
+                            onChange={(e) => {
+                              if (descriptionErrors[t.id])
+                                setDescriptionErrors((x) => ({
+                                  ...x,
+                                  [t.id]: "",
+                                }));
+                              patchTask(t.id, {
+                                description: e.target.value,
+                                ...classify(e.target.value),
+                                entryStage: "description",
+                              });
+                            }}
+                          />
+                        </label>
                         {descriptionErrors[t.id] && (
                           <span
                             className="field-message"
@@ -765,7 +781,7 @@ export default function CustomerIntake({
                             {descriptionErrors[t.id]}
                           </span>
                         )}
-                      </label>
+                      </div>
                       {photos(t)}
                       <div className="task-card-actions">
                         {all.length > 1 && (
@@ -873,7 +889,7 @@ export default function CustomerIntake({
               </div>
             )}
             <button className="secondary" onClick={add}>
-              <Plus size={16} className="icon-inline" />
+              <Plus aria-hidden="true" size={16} className="icon-inline" />
               Add another task
             </button>
             <small>
@@ -917,7 +933,7 @@ export default function CustomerIntake({
                 offered, so they are not asked for either. */}
             {!instant && (
               <>
-                <h3>Days that suit you</h3>
+                <h2 className="look-h3">Days that suit you</h2>
                 {/* Each row expands in place to its own Morning/Afternoon/Evening
                 toggles the moment it's picked — not a separate summary block
                 collecting every selected day's toggles afterward. */}
@@ -934,7 +950,7 @@ export default function CustomerIntake({
                           onClick={() => togglePreferredDay(d.date)}
                         >
                           {d.label}
-                          {slot && <Check size={16} />}
+                          {slot && <Check aria-hidden="true" size={16} />}
                         </button>
                         {slot && (
                           <div className="time-pills">
@@ -974,7 +990,9 @@ export default function CustomerIntake({
             </label>
           </section>
           <section className="customer-timing-section">
-            <h3>{referral ? "Referral review" : "Available appointments"}</h3>
+            <h2 className="look-h3">
+              {referral ? "Referral review" : "Available appointments"}
+            </h2>
             {referral ? (
               <p className="warning">
                 This includes a service we do not book through the platform.

@@ -189,20 +189,22 @@ export default function Availability({
       <section className="card panel" aria-labelledby="hours-off">
         <h2 id="hours-off">Days off</h2>
         <div className="hours-add">
-          <label className={fieldClass("off")}>
-            Date
-            <input
-              type="date"
-              min={today}
-              value={day}
-              {...invalid("off")}
-              onChange={(e) => {
-                clear("off");
-                setDay(e.target.value);
-              }}
-            />
+          <div className={fieldClass("off")}>
+            <label className="field-label">
+              Date
+              <input
+                type="date"
+                min={today}
+                value={day}
+                {...invalid("off")}
+                onChange={(e) => {
+                  clear("off");
+                  setDay(e.target.value);
+                }}
+              />
+            </label>
             <Message field="off" />
-          </label>
+          </div>
           <button className="secondary" onClick={addDay}>
             Add day off
           </button>

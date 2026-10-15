@@ -1089,3 +1089,222 @@ describe("Accessibility (ADR 081)", () => {
     expect(current.map((x) => x.textContent)).toEqual(["Quote"]);
   });
 });
+
+describe("Accessibility (ADR 082)", () => {
+  /** Each heading is at most one level below the one before it. */
+  const noSkips = () => {
+    const levels = [
+      ...document.querySelectorAll("main h1, main h2, main h3, main h4, main h5, main h6, [role=dialog] h1, [role=dialog] h2, [role=dialog] h3, [role=dialog] h4"),
+    ].map((h) => [Number(h.tagName[1]), h.textContent] as const);
+    const skips = levels.filter(
+      ([n], i) => i > 0 && n > levels[i - 1][0] + 1,
+    );
+    expect(skips).toEqual([]);
+  };
+  const noPriceHeadings = () =>
+    expect(
+      screen
+        .queryAllByRole("heading", { hidden: true })
+        .map((h) => h.textContent)
+        .filter((x) => /\$\d/.test(x!)),
+    ).toEqual([]);
+  /** The customer's first open request, with a quote waiting. */
+  const quoted = (d: State) => {
+    const r = d.requests.find(
+      (x) => x.accountId === "c2" && x.status !== "Draft",
+    )!;
+    issueQuote(d, r.id, {
+      type: "Fixed price",
+      amount: 240,
+      payOnCompletion: false,
+    });
+    reconcile(d);
+  };
+  /** The draft request, on the step that asks about its task. */
+  const details = (d: State) => {
+    const r = d.requests.find((x) => x.status === "Draft")!;
+    r.accountId = "c2";
+    r.intakeScreen = "tasks";
+    const t = d.tasks.find((x) => x.requestId === r.id)!;
+    t.answers = {};
+    t.entryStage = "details";
+    r.editingTaskId = t.id;
+  };
+  const toAddress = async () => {
+    open("Customer");
+    go(/^New request/);
+    await screen.findByRole("heading", { name: "Where should we come?" });
+  };
+  const describedBy = (el: Element) =>
+    (el.getAttribute("aria-describedby") ?? "")
+      .split(" ")
+      .map((id) => document.getElementById(id)?.textContent ?? "")
+      .join(" ");
+
+  it("never skips a heading level", async () => {
+    open("Operator");
+    go(/^Requests/);
+    fireEvent.click(
+      screen.getByRole("button", { name: "Offer to a contractor" }),
+    );
+    noSkips();
+    cleanup();
+    open("Customer", quoted);
+    go(/^My bookings/);
+    noSkips();
+    cleanup();
+    open("Operator");
+    go(/^Walkthroughs/);
+    await screen.findByRole("heading", { name: "Property walkthroughs" });
+    fireEvent.click(screen.getByRole("button", { name: /New walkthrough/ }));
+    noSkips();
+  });
+
+  it("does not make a price a heading", () => {
+    open("Customer", quoted);
+    go(/^My bookings/);
+    expect(screen.getAllByText(/\$240/).length).toBeGreaterThan(0);
+    noPriceHeadings();
+  });
+
+  it("labels the page list, skips to the content, and keeps the footer out of main", () => {
+    open("Operator");
+    expect(
+      screen.getByRole("navigation", { name: "Pages", hidden: true }),
+    ).toBeTruthy();
+    const skip = screen.getByRole("link", { name: "Skip to content" });
+    const main = document.querySelector("main")!;
+    expect(skip.getAttribute("href")).toBe("#" + main.id);
+    expect(main.id).not.toBe("");
+    expect(document.querySelector("footer")).not.toBeNull();
+    expect(main.querySelector("footer")).toBeNull();
+    expect(screen.queryByRole("link", { name: /Fieldwork/ })).toBeNull();
+  });
+
+  it("names the drawer's close button and the online dot cleanly", () => {
+    open("Operator");
+    fireEvent.click(
+      screen.getAllByRole("button", { name: "Open navigation", hidden: true })[0],
+    );
+    expect(
+      screen
+        .getAllByRole("button", { name: "Close navigation", hidden: true })
+        .some((b) => b.classList.contains("drawer-close")),
+    ).toBe(true);
+    expect(
+      screen.getAllByRole("img", { name: "Online", hidden: true }).length,
+    ).toBeGreaterThan(0);
+  });
+
+  it("describes a field by its error, and leaves the error out of its name", async () => {
+    open("Operator");
+    go(/^Walkthroughs/);
+    await screen.findByRole("heading", { name: "Property walkthroughs" });
+    fireEvent.click(screen.getByRole("button", { name: /New walkthrough/ }));
+    fireEvent.change(screen.getByRole("combobox", { name: "Property" }), {
+      target: { value: "new" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: /Start walkthrough/ }));
+    const street = screen.getByRole("textbox", { name: "Street address" });
+    expect(street.getAttribute("aria-invalid")).toBe("true");
+    expect(describedBy(street)).not.toBe("");
+  });
+
+  it("keeps Not sure and its error out of a question's name", async () => {
+    open("Customer", details);
+    go(/^New request/);
+    await screen.findByRole("button", { name: "Save answers" });
+    fireEvent.click(screen.getByRole("button", { name: "Save answers" }));
+    const fields = [
+      ...document.querySelectorAll<HTMLElement>(
+        "input[id^='q-'], select[id^='q-']",
+      ),
+    ];
+    expect(fields.length).toBeGreaterThan(0);
+    for (const f of fields) {
+      const name = screen
+        .getAllByRole(f.tagName === "SELECT" ? "combobox" : "textbox")
+        .find((x) => x === f);
+      expect(name).toBeTruthy();
+      const label = document.querySelector(`label[for='${f.id}']`);
+      expect(label?.textContent).not.toMatch(/Not sure|Answer this/);
+      if (f.getAttribute("aria-invalid") === "true")
+        expect(describedBy(f)).toMatch(/Answer this/);
+    }
+  });
+
+  it("says which address part each field is", async () => {
+    await toAddress();
+    const auto = [...document.querySelectorAll("[autocomplete]")].map((x) =>
+      x.getAttribute("autocomplete"),
+    );
+    expect(auto).toEqual(
+      expect.arrayContaining(["address-line1", "address-line2", "address-level2"]),
+    );
+    expect(auto).not.toContain("street-address");
+  });
+
+  it("says in words which intake steps are done", async () => {
+    await toAddress();
+    fireEvent.click(
+      within(screen.getByRole("region", { name: "Your addresses" })).getAllByRole(
+        "button",
+      )[0],
+    );
+    fireEvent.click(screen.getByRole("button", { name: /^Continue/ }));
+    const steps = document.querySelector(".intake-steps")!;
+    expect(steps.textContent).toMatch(/, done/);
+  });
+
+  it("says a deadline is soon in words, not only in colour", () => {
+    open("Contractor", (d) => {
+      for (const a of d.assignments)
+        if (a.status === "Offered") a.expiresAt = d.clock + 30 * 60_000;
+    });
+    const soon = document.querySelector(".when-soon")!;
+    expect(soon).not.toBeNull();
+    expect(soon.textContent).toMatch(/soon/);
+  });
+
+  it("points each disclosure at what it shows", async () => {
+    open("Operator");
+    go(/^Requests/);
+    const browse = screen.getByRole("button", { name: /Browse requests/ });
+    expect(document.getElementById(browse.getAttribute("aria-controls") ?? "")).not.toBeNull();
+    cleanup();
+    open("Operator");
+    go(/^Walkthroughs/);
+    await screen.findByRole("heading", { name: "Property walkthroughs" });
+    const add = screen.getByRole("button", { name: /New walkthrough/ });
+    expect(add.getAttribute("aria-expanded")).toBe("false");
+    fireEvent.click(add);
+    expect(add.getAttribute("aria-expanded")).toBe("true");
+    expect(document.getElementById(add.getAttribute("aria-controls") ?? "")).not.toBeNull();
+  });
+
+  it("keeps the incoming-update region mounted while it is empty", () => {
+    open("Operator", (d) => {
+      for (const n of d.notifications || []) n.read = true;
+    });
+    expect(document.querySelector(".incoming-notice")).toBeNull();
+    const region = document.querySelector(".incoming-region");
+    expect(region?.getAttribute("role")).toBe("status");
+  });
+
+  it("hides icons from a screen reader", () => {
+    open("Operator");
+    expect(
+      [...document.querySelectorAll("svg.lucide")].filter(
+        (x) => x.getAttribute("aria-hidden") !== "true",
+      ),
+    ).toEqual([]);
+  });
+
+  it("announces only the Blueprint path's description, outside its footer", () => {
+    render(<Blueprint />);
+    const path = document.querySelector(".bp-path")!;
+    expect(path.getAttribute("aria-live")).toBeNull();
+    expect(path.querySelector("p")?.getAttribute("aria-live")).toBe("polite");
+    expect(document.querySelector("main .bp-footer")).toBeNull();
+  });
+});

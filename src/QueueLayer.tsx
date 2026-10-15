@@ -111,7 +111,7 @@ export function AllCaughtUp({
     <>
       <h1 tabIndex={-1}>All caught up</h1>
       <p className="onsite-hint dq-done">
-        <CheckCircle2 size={20} />
+        <CheckCircle2 aria-hidden="true" size={20} />
         {handled} done. Anything new will show here.
       </p>
       <div className="onsite-bar">

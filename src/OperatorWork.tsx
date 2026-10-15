@@ -178,7 +178,7 @@ export function OperatorHome({
           onClick={() => open(r.id)}
         >
           <span className="op-status-icon">
-            <Icon size={24} />
+            <Icon size={24} aria-hidden="true" />
           </span>
           <span className="op-card-copy">
             <span className="op-card-top">
@@ -190,7 +190,7 @@ export function OperatorHome({
             </span>
             <span className="op-card-detail">{detail}</span>
           </span>
-          <ChevronRight size={20} className="op-card-chevron" />
+          <ChevronRight aria-hidden="true" size={20} className="op-card-chevron" />
         </button>
       );
     });
@@ -324,7 +324,7 @@ export function OperatorHome({
         )}
         {view === "attention" && !needs.length && (
           <div className="op-empty">
-            <CheckCircle2 />
+            <CheckCircle2 aria-hidden="true" />
             <h2>You’re all caught up.</h2>
             <p>New requests and issues will appear here.</p>
           </div>
@@ -504,7 +504,7 @@ export function OperatorToday({
         </div>
         <div className="operator-day-totals">
           <div>
-            <Clock3 size={20} />
+            <Clock3 aria-hidden="true" size={20} />
             <strong>
               {Math.round(
                 (visits
@@ -518,7 +518,7 @@ export function OperatorToday({
             <span>Booked work time</span>
           </div>
           <div>
-            <CalendarDays size={20} />
+            <CalendarDays aria-hidden="true" size={20} />
             <strong>{visits.reduce((n, v) => n + v.travel, 0)} min</strong>
             <span>Simulated travel · includes proposed</span>
           </div>

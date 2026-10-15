@@ -94,9 +94,10 @@ export default function JobMode({
         <button
           className="text-button"
           aria-expanded={messages}
+          aria-controls={messages ? "messages-" + v.id : undefined}
           onClick={() => setMessages(!messages)}
         >
-          <MessageSquare size={16} /> Messages
+          <MessageSquare aria-hidden="true" size={16} /> Messages
           {received ? ` · ${received}` : ""}
         </button>
         {/* Always a way out: a running job is where the work screen
@@ -402,7 +403,7 @@ function TaskStep({
                 (rejected === kind ? " field-error" : "")
               }
             >
-              <Camera size={20} />
+              <Camera aria-hidden="true" size={20} />
               {kind === "before" ? "Before" : "After"}
               {o?.[kind].length ? ` · ${o[kind].length}` : ""}
               <input
@@ -425,7 +426,7 @@ function TaskStep({
                       aria-label={`Remove ${kind} photo ${i + 1}`}
                       onClick={() => unshoot(kind, i)}
                     >
-                      <X size={16} />
+                      <X aria-hidden="true" size={16} />
                     </button>
                   </span>
                 ))}

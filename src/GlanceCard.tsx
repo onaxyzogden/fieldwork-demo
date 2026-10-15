@@ -39,13 +39,13 @@ export function Glance({
         <h2>Today at a glance</h2>
         {onDate ? (
           <button className="op-date" onClick={onDate}>
-            <CalendarDays size={16} />
+            <CalendarDays aria-hidden="true" size={16} />
             {date}
-            <ChevronRight size={16} />
+            <ChevronRight aria-hidden="true" size={16} />
           </button>
         ) : (
           <span className="op-date">
-            <CalendarDays size={16} />
+            <CalendarDays aria-hidden="true" size={16} />
             {date}
           </span>
         )}
@@ -100,7 +100,7 @@ export function GlanceLead({
   return onClick ? (
     <button className="op-glance-lead-open" onClick={onClick}>
       {body}
-      <ChevronRight size={16} />
+      <ChevronRight aria-hidden="true" size={16} />
     </button>
   ) : (
     body

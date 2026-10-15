@@ -230,28 +230,30 @@ export default function FollowUp({
                 ))}
               </div>
               {actions[t.taskId] === "close" && (
-                <label className={fieldClass("refund-" + t.taskId)}>
-                  Refund (CAD)
-                  <input
-                    type="number"
-                    inputMode="numeric"
-                    min={0}
-                    value={
-                      Number.isFinite(refunds[t.taskId])
-                        ? refunds[t.taskId]
-                        : ""
-                    }
-                    {...invalid("refund-" + t.taskId)}
-                    onChange={(e) => {
-                      clear("refund-" + t.taskId);
-                      setRefunds({
-                        ...refunds,
-                        [t.taskId]: Number(e.target.value),
-                      });
-                    }}
-                  />
+                <div className={fieldClass("refund-" + t.taskId)}>
+                  <label className="field-label">
+                    Refund (CAD)
+                    <input
+                      type="number"
+                      inputMode="numeric"
+                      min={0}
+                      value={
+                        Number.isFinite(refunds[t.taskId])
+                          ? refunds[t.taskId]
+                          : ""
+                      }
+                      {...invalid("refund-" + t.taskId)}
+                      onChange={(e) => {
+                        clear("refund-" + t.taskId);
+                        setRefunds({
+                          ...refunds,
+                          [t.taskId]: Number(e.target.value),
+                        });
+                      }}
+                    />
+                  </label>
                   <Message field={"refund-" + t.taskId} />
-                </label>
+                </div>
               )}
             </li>
           ))}
@@ -285,21 +287,23 @@ export default function FollowUp({
             </div>
           )}
           {choice && !self && (
-            <label className={fieldClass("pay")}>
-              {name(choice.providerId)}’s pay (CAD)
-              <input
-                type="number"
-                inputMode="numeric"
-                min={0}
-                value={Number.isFinite(offered) ? offered : ""}
-                {...invalid("pay")}
-                onChange={(e) => {
-                  clear("pay");
-                  setPay(Number(e.target.value));
-                }}
-              />
+            <div className={fieldClass("pay")}>
+              <label className="field-label">
+                {name(choice.providerId)}’s pay (CAD)
+                <input
+                  type="number"
+                  inputMode="numeric"
+                  min={0}
+                  value={Number.isFinite(offered) ? offered : ""}
+                  {...invalid("pay")}
+                  onChange={(e) => {
+                    clear("pay");
+                    setPay(Number(e.target.value));
+                  }}
+                />
+              </label>
               <Message field="pay" />
-            </label>
+            </div>
           )}
           {paidCharge ? (
             <p className="onsite-hint">
@@ -324,34 +328,38 @@ export default function FollowUp({
               </label>
               {charging && (
                 <>
-                  <label className={fieldClass("amount")}>
-                    Additional charge (CAD)
-                    <input
-                      type="number"
-                      inputMode="numeric"
-                      min={1}
-                      value={amount || ""}
-                      {...invalid("amount")}
-                      onChange={(e) => {
-                        clear("amount");
-                        setAmount(Number(e.target.value));
-                      }}
-                    />
+                  <div className={fieldClass("amount")}>
+                    <label className="field-label">
+                      Additional charge (CAD)
+                      <input
+                        type="number"
+                        inputMode="numeric"
+                        min={1}
+                        value={amount || ""}
+                        {...invalid("amount")}
+                        onChange={(e) => {
+                          clear("amount");
+                          setAmount(Number(e.target.value));
+                        }}
+                      />
+                    </label>
                     <Message field="amount" />
-                  </label>
-                  <label className={fieldClass("reason")}>
-                    What it is for
-                    <input
-                      value={reason}
-                      placeholder="Replacement hinge and second trip"
-                      {...invalid("reason")}
-                      onChange={(e) => {
-                        clear("reason");
-                        setReason(e.target.value);
-                      }}
-                    />
+                  </div>
+                  <div className={fieldClass("reason")}>
+                    <label className="field-label">
+                      What it is for
+                      <input
+                        value={reason}
+                        placeholder="Replacement hinge and second trip"
+                        {...invalid("reason")}
+                        onChange={(e) => {
+                          clear("reason");
+                          setReason(e.target.value);
+                        }}
+                      />
+                    </label>
                     <Message field="reason" />
-                  </label>
+                  </div>
                   <p className="onsite-hint">
                     The customer approves and pays it first. The return visit is
                     offered once they do.

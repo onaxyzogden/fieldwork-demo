@@ -114,10 +114,14 @@
   flex-direction: column;
   gap: var(--space-1);
 }
-.portal-task-body h4 {
+/* An h2 by its place in the page, drawn as the small title it was
+   (ADR 082). */
+.portal-task-body.portal-task-body h2 {
   margin: 0;
+  font-family: inherit;
   font-size: var(--text-label);
   font-weight: 600;
+  letter-spacing: normal;
 }
 .portal-task-body p {
   margin: 0;
@@ -171,9 +175,6 @@
   margin-left: auto;
   color: var(--accent-text);
 }
-.modal h1 {
-  margin: var(--space-6) 0;
-}
 .toast {
   position: fixed;
   bottom: 27px;
@@ -214,6 +215,9 @@
   main {
     padding: var(--space-8) var(--space-12) 0;
   }
+  .shell > footer {
+    padding-inline: var(--space-12);
+  }
   .route-map svg {
     min-height: 280px;
   }
@@ -240,6 +244,9 @@
 @container workspace (max-width: 878px) {
   main {
     padding: var(--space-5) var(--space-6) 0;
+  }
+  .shell > footer {
+    padding-inline: var(--space-6);
   }
   .requests-layout {
     grid-template-columns: 215px 1fr;
@@ -386,6 +393,9 @@
 @container workspace (max-width: 600px) {
   main {
     padding: var(--space-4) var(--space-4) 0;
+  }
+  .shell > footer {
+    padding-inline: var(--space-4);
   }
   .scenario-strip {
     margin-right: -16px;

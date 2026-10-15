@@ -110,7 +110,7 @@ export function FindingStep({
       {far ? (
         <>
           <p className="note">
-            <ClipboardCheck size={16} /> Assessment required before pricing. We
+            <ClipboardCheck aria-hidden="true" size={16} /> Assessment required before pricing. We
             can see there is an issue here, but not enough to price the repair
             responsibly from a walkthrough.
           </p>
@@ -118,7 +118,7 @@ export function FindingStep({
             {f.followUpRequestedAt ? (
               <>
                 <p className="note">
-                  <Clock size={16} /> Assessment requested. The operator will
+                  <Clock aria-hidden="true" size={16} /> Assessment requested. The operator will
                   follow up.
                 </p>
                 <button className="primary full" onClick={next}>
@@ -306,7 +306,7 @@ export function ReviewStep({
         {card ? (
           <>
             <span>
-              <CreditCard size={16} /> {card.brand} ···· {card.last4}
+              <CreditCard aria-hidden="true" size={16} /> {card.brand} ···· {card.last4}
             </span>
             <button className="text-button" onClick={removeCard}>
               Change
@@ -314,7 +314,7 @@ export function ReviewStep({
           </>
         ) : (
           <button className="secondary full" onClick={addCard}>
-            <CreditCard size={16} /> Add payment method
+            <CreditCard aria-hidden="true" size={16} /> Add payment method
           </button>
         )}
       </div>

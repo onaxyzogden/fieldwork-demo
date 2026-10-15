@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useId, useRef, useState } from "react";
 import { Camera, ChevronDown, ChevronUp, X } from "lucide-react";
 import {
   type Finding,
@@ -172,6 +172,7 @@ function Capture({
   const [empty, setEmpty] = useState(false);
   const [saved, setSaved] = useState("");
   const [showEarlier, setShowEarlier] = useState(false);
+  const earlierId = useId();
 
   const shoot = async (file?: File) => {
     if (!file) return;
@@ -231,13 +232,14 @@ function Capture({
           <button
             className="text-button"
             aria-expanded={showEarlier}
+            aria-controls={showEarlier ? earlierId : undefined}
             onClick={() => setShowEarlier(!showEarlier)}
           >
             {earlier.length} to re-check from earlier visits
-            {showEarlier ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
+            {showEarlier ? <ChevronUp aria-hidden="true" size={16} /> : <ChevronDown aria-hidden="true" size={16} />}
           </button>
           {showEarlier && (
-            <ul>
+            <ul id={earlierId}>
               {earlier.map((f) => (
                 <li key={f.id}>
                   <strong>{f.title || "Untitled finding"}</strong>
@@ -261,7 +263,7 @@ function Capture({
       <label
         className={"primary onsite-shoot" + (rejected ? " field-error" : "")}
       >
-        <Camera size={24} />
+        <Camera aria-hidden="true" size={24} />
         {photos.length ? "Add another photo" : "Take photo"}
         <input
           type="file"
@@ -289,7 +291,7 @@ function Capture({
                 aria-label={`Remove photo ${i + 1}`}
                 onClick={() => setPhotos(photos.filter((_, j) => j !== i))}
               >
-                <X size={16} />
+                <X aria-hidden="true" size={16} />
               </button>
             </span>
           ))}
@@ -492,19 +494,21 @@ function PriceItem({
         />
       </label>
 
-      <label className={fieldClass("title")}>
-        Title the customer sees
-        <input
-          value={title}
-          {...invalid("title")}
-          placeholder="e.g. Cabinet hinge loose"
-          onChange={(e) => {
-            setTitle(e.target.value);
-            clear("title");
-          }}
-        />
+      <div className={fieldClass("title")}>
+        <label className="field-label">
+          Title the customer sees
+          <input
+            value={title}
+            {...invalid("title")}
+            placeholder="e.g. Cabinet hinge loose"
+            onChange={(e) => {
+              setTitle(e.target.value);
+              clear("title");
+            }}
+          />
+        </label>
         <Message field="title" />
-      </label>
+      </div>
 
       <div className="segmented onsite-pricing">
         <button
@@ -526,26 +530,28 @@ function PriceItem({
         </button>
       </div>
       {f.pricing === "Quoted" ? (
-        <label className={fieldClass("price")}>
-          Price (CAD)
-          {/* The price is the one thing this screen exists to get, so the
-              number pad is already up when it opens. */}
-          <input
-            type="number"
-            inputMode="decimal"
-            min="1"
-            autoFocus
-            value={f.price ?? ""}
-            {...invalid("price")}
-            onChange={(e) => {
-              patch({
-                price: e.target.value ? Number(e.target.value) : undefined,
-              });
-              clear("price");
-            }}
-          />
+        <div className={fieldClass("price")}>
+          <label className="field-label">
+            Price (CAD)
+            {/* The price is the one thing this screen exists to get, so the
+                number pad is already up when it opens. */}
+            <input
+              type="number"
+              inputMode="decimal"
+              min="1"
+              autoFocus
+              value={f.price ?? ""}
+              {...invalid("price")}
+              onChange={(e) => {
+                patch({
+                  price: e.target.value ? Number(e.target.value) : undefined,
+                });
+                clear("price");
+              }}
+            />
+          </label>
           <Message field="price" />
-        </label>
+        </div>
       ) : (
         <p className="note">
           The customer sees this as pending assessment, with no price.
