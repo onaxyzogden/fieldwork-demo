@@ -280,7 +280,7 @@ textarea::placeholder {
   container: workspace / inline-size;
 }
 .demo-bar {
-  height: 39px;
+  min-height: 39px;
   border-bottom: 1px solid var(--surface-raised);
   background: var(--surface-raised);
   display: flex;
@@ -322,6 +322,7 @@ textarea::placeholder {
   /* "Side by side" is three words; without this it stacks into three lines on
      a phone and the chip grows to three times the height of its neighbours. */
   white-space: nowrap;
+  min-height: 32px;
 }
 .role-switch button.chosen {
   background: var(--surface-raised);
@@ -459,13 +460,13 @@ main {
   background: none;
   color: var(--muted);
   /* A 44px target on a phone (ADR 073); the demo bar's own buttons are
-     exempt below, being prototype chrome in a 39px bar. */
+     32px below, being prototype chrome in a 39px bar (ADR 083). */
   min-height: 44px;
   min-width: 44px;
   padding: var(--space-1) var(--space-3);
 }
 .demo-bar .text-button {
-  min-height: 0;
+  min-height: 32px;
 }
 .text-button:hover {
   color: var(--accent-text);
@@ -896,6 +897,22 @@ main[tabindex="-1"]:focus {
 }
 .event:last-child {
   border-bottom: 0;
+}
+/* An entry that opens its request (ADR 083): a row, not a boxed button. */
+.event-link {
+  width: 100%;
+  min-height: 44px;
+  background: none;
+  border: 0;
+  border-bottom: 1px solid var(--line);
+  border-radius: 0;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.event-link:hover strong {
+  text-decoration: underline;
 }
 .event strong {
   line-height: 1.6;

@@ -2,7 +2,7 @@
 title: "Fieldwork"
 type: entity
 created: 2026-10-07
-updated: 2026-10-08
+updated: 2026-10-15
 tags: [project, prototype, react]
 sources: 1
 ---
@@ -52,18 +52,20 @@ An interactive prototype of a handyman services platform. It has three roles, Cu
 - [[one-at-a-time]]: the interaction pattern behind every queue.
 - [[customer-chosen-time]]: how holds and the customer's chosen slot reach the operator.
 - [[customer-ux-audit-2026-10]]: the customer audit, and where each finding went.
-- [[platform-ux-audit-2026-10]]: the platform UX audit, covering every role. Its P1s and P2s are fixed (ADR 079–080).
+- [[platform-ux-audit-2026-10]]: the platform UX audit, covering every role. Closed: P1s and P2s in ADR 079–080, P3s and the Offer's Undo in ADR 083.
 - [[accessibility-audit-2026-10]]: the most recent audit, WCAG 2.1 AA across every role and both themes.
 - [[2026-10-07-wiki-in-repo]]: why this wiki is here.
 
 ## Open Questions
 - The accessibility audit is closed: its 6 majors are fixed in ADR 081, and its 17 minors in ADR 082.
-- `Assessment.tsx`'s `FindingReview` decision buttons can't be reached, because it always renders locked.
-- The platform UX audit's P3s are open, as is an undo for the operator's Offer. Instant Book's price is still a fixed $129.
+- The platform UX audit is closed (ADR 083). An Offer can be withdrawn until the contractor answers, as an assignment status `Withdrawn`; the unreachable `FindingReview` buttons are gone.
+- Instant Book's price is still a fixed $129.
+- The greeting test ("opens on Home with the decisions waiting") reads the wall clock and fails in the evening, on main too.
 - ADR 077 is complete, and each role is its own chunk (ADR 078). The operator, the default, saves only 5% of its first load, because most of the role code is the operator's. Splitting `OperatorRequests` off from the operator's home is the next size candidate, if first load ever matters.
 - Bundle-size work is parked (ADR 074–076). The catalogue and the per-role CSS were measured at 6% and 2% of the first load (ADR 076).
 
 ## History
+- 2026-10-15: ADR 083. The operator can withdraw an Offer until it is answered: Undo on the queue's "Sent" line and "Withdraw offer" on the request page. An unread offer (and its "Visit proposed") is taken back silently; a read one gets "Offer withdrawn"; an accepted one refuses. `reoffer` keeps the earlier provider and time as `previous`, so a withdrawn replacement puts the visit back. The platform audit's P3s are fixed with a shared `plural()`, one-tap decline reasons on the Work page, Activity entries that open their request, named Remove buttons, and "Your provider" until acceptance. `FindingReview` loses its unreachable buttons. There are 648 tests.
 - 2026-10-15: ADR 082 fixes the accessibility audit's 17 minors. Headings no longer skip, prices aren't headings, there is a skip link and a labelled nav, and errors describe their fields instead of being part of their names. Every lucide icon is `aria-hidden`, checked by `design:check` along with the intake's done check. There are 629 tests.
 - 2026-10-15: ADR 081 fixes the accessibility audit's 6 majors. It adds a `--field-border` token (checked at 3:1 by `design:check`), a doubled edge for whatever is chosen, `aria-pressed` and `aria-current` with an ", done" for screen readers, and `useModal`, shared by the queues, `JobMode` and `OnSite`. Toasts hold on hover or focus and can be dismissed, and an error stays until dismissed. There are 616 tests.
 - 2026-10-14: a WCAG 2.1 AA audit of the whole platform (no source changes). Text contrast passes on 16 screens in both themes, and nothing overflows at 320 px. Field borders (1.3:1), colour-only selection, unexposed selected or current state, `JobMode`/`OnSite` dialogs with no trap, and timed toasts are the majors. See [[accessibility-audit-2026-10]].

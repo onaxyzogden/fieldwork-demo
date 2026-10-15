@@ -1,3 +1,4 @@
+import { plural } from "./plural";
 import { suitableProviders } from "./suitability";
 import { hasLiveVisit } from "./aside";
 import { callBackDue, workIssue, workStatus } from "./work";
@@ -575,8 +576,18 @@ export function useWorkspaceState({
         )}
       </div>
       <p>
-        {providers.find((p) => p.id === v.providerId)?.name} · {v.duration} min
-        · {v.taskIds.length} task{v.taskIds.length !== 1 ? "s" : ""}
+        {/* The customer meets a provider once they have said yes; until
+            then an offer may yet be declined (ADR 083). */}
+        {role !== "Customer" ||
+        s.assignments.some(
+          (a) =>
+            a.visitId === v.id &&
+            a.providerId === v.providerId &&
+            a.status === "Accepted",
+        )
+          ? providers.find((p) => p.id === v.providerId)?.name
+          : "Your provider"}{" "}
+        · {v.duration} min · {plural(v.taskIds.length, "task")}
       </p>
       <small>
         {r.address}, {r.city}

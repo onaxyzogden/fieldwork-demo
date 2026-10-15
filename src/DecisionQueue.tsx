@@ -1,4 +1,4 @@
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { AlertCircle, CheckCircle2 } from "lucide-react";
 import { questionAnswers } from "./clarification";
 import { reoffer } from "./dispatch";
@@ -11,6 +11,7 @@ import {
   nextDecision,
   offerVisit,
   settleLateCancel,
+  withdrawOffer,
 } from "./decisions";
 import {
   type State,
@@ -76,10 +77,36 @@ export default function DecisionQueue({
   /* What the last screen did, said on the next one, since the screen it was
      done on is gone (ADR 080). */
   const [last, setLast] = useState("");
+  /* The offer just sent, while it can still be taken back (ADR 083). */
+  const [sent, setSent] = useState("");
+  const saidRef = useRef<HTMLParagraphElement>(null);
+  const [undone, setUndone] = useState(0);
+  useEffect(() => {
+    if (undone) saidRef.current?.focus();
+  }, [undone]);
+  const undo = () => {
+    const a = s.assignments.find((x) => x.id === sent);
+    let ok = false;
+    update((d) => {
+      ok = withdrawOffer(d, sent);
+    });
+    setLast(
+      ok
+        ? `Offer to ${nameOf(a?.providerId)} withdrawn`
+        : `${nameOf(a?.providerId)} already accepted · it can’t be withdrawn`,
+    );
+    setSent("");
+    setUndone((n) => n + 1);
+  };
   const said = last && (
-    <p className="onsite-hint dq-done" role="status">
+    <p className="onsite-hint dq-done" role="status" tabIndex={-1} ref={saidRef}>
       <CheckCircle2 aria-hidden="true" size={20} />
       {last}
+      {sent && (
+        <button className="text-button" onClick={undo}>
+          Undo<span className="sr-only"> the offer</span>
+        </button>
+      )}
     </p>
   );
 
@@ -103,12 +130,14 @@ export default function DecisionQueue({
           decision={decision}
           update={update}
           open={() => open(requestId)}
-          done={(what) => {
+          done={(what, offered) => {
             setLast(what);
+            setSent(offered || "");
             q.advance(true);
           }}
           skip={() => {
             setLast("");
+            setSent("");
             q.advance(false);
           }}
         />
@@ -147,8 +176,8 @@ function Step({
   decision: Decision;
   update: Update;
   open: () => void;
-  /** Move on, saying what was done. */
-  done: (what: string) => void;
+  /** Move on, saying what was done, and which offer it sent, if any. */
+  done: (what: string, offered?: string) => void;
   skip: () => void;
 }) {
   const r = s.requests.find((x) => x.id === requestId)!;
@@ -180,8 +209,13 @@ function Step({
   /** Run a write; move on only if it went through. */
   const act = (write: (x: State) => boolean, refusal: string) => {
     let ok = false;
+    let offered: string | undefined;
     update((x) => {
+      const had = new Set(x.assignments.map((a) => a.id));
       ok = write(x);
+      offered = x.assignments.find(
+        (a) => !had.has(a.id) && a.status === "Offered",
+      )?.id;
     });
     if (ok)
       done(
@@ -189,6 +223,7 @@ function Step({
           (/^(Re-o|O)ffer to |quote · /.test(pressed.current)
             ? "Sent: "
             : "Done: ") + pressed.current,
+        offered,
       );
     else setRefused(refusal);
   };

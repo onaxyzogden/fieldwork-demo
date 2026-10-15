@@ -3,7 +3,7 @@ title: "Platform UX audit (2026-10)"
 type: source
 ingested: 2026-10-08
 created: 2026-10-08
-updated: 2026-10-08
+updated: 2026-10-15
 source_path: "session transcript (ux-engine:ux-auditor report, four phases)"
 source_type: conversation
 tags: [audit, ux, operator, contractor, customer, accessibility]
@@ -12,7 +12,7 @@ tags: [audit, ux, operator, contractor, customer, accessibility]
 # Platform UX audit (2026-10)
 
 ## Summary
-A report-mode UX audit of the whole platform, run on `vite preview` after ADR 078 and backed by a code read and a mechanical pass. There is one report per role (Operator, Contractor, and a re-check of Customer), plus a cross-cutting report on the shell. No source was changed by the audit itself. **The 8 P1s are fixed in ADR 079 and the 15 P2s in ADR 079–080**, each pinned by a test. The P3s are open.
+A report-mode UX audit of the whole platform, run on `vite preview` after ADR 078 and backed by a code read and a mechanical pass. There is one report per role (Operator, Contractor, and a re-check of Customer), plus a cross-cutting report on the shell. No source was changed by the audit itself. **The 8 P1s are fixed in ADR 079, the 15 P2s in ADR 079–080, and the P3s and the Offer's Undo in ADR 083**, each pinned by a test. Nothing from this audit is open.
 
 The 12 fixes from [[customer-ux-audit-2026-10]] (ADR 069, 070 and 073) all hold, with no regressions.
 
@@ -22,17 +22,17 @@ The 12 fixes from [[customer-ux-audit-2026-10]] (ADR 069, 070 and 073) all hold,
 | # | Sev | Finding |
 |---|---|---|
 | 1 | P1 | `DecisionQueue` isn't on `QueueLayer`: no Escape, no Tab trap, the page behind isn't inert, and focus goes to `<body>` on close. **Fixed, ADR 079** |
-| 2 | P2 | The one-tap Offer leaves no record of what was sent, and no Undo. **Fixed, ADR 080:** "Sent: Offer to …". The Undo stays open |
+| 2 | P2 | The one-tap Offer leaves no record of what was sent, and no Undo. **Fixed, ADR 080:** "Sent: Offer to …". **ADR 083** adds the Undo as a withdraw, available until the contractor answers |
 | 3 | P2 | Three counts of the same work disagree (5, 6 and 4). **Fixed, ADR 080:** the sidebar counts Needs Action, as Home does, and the list counts its rows |
 | 4 | P2 | On mobile, the request detail's heading sits at y≈680, below the fold. **Fixed, ADR 080:** focus moves to it, and a narrow screen scrolls it to the top |
 | 5 | P2 | "← Back to Home" over a request's detail leaves Requests. **Fixed, ADR 080:** "← All requests" |
 | 6 | P2 | Contractors and Activity have no active sidebar item. **Fixed, ADR 080:** More |
-| 7 | P3 | "Needs Attention" and "Needs Action" name the same bucket |
-| 8 | P3 | Unpluralised counts |
-| 9 | P3 | The Details summary is 26 px tall |
-| 10 | P3 | Activity entries can't be opened |
+| 7 | P3 | "Needs Attention" and "Needs Action" name the same bucket. **Fixed, ADR 083** |
+| 8 | P3 | Unpluralised counts. **Fixed, ADR 083:** `plural()` |
+| 9 | P3 | The Details summary is 26 px tall. **Fixed, ADR 083:** 44 px |
+| 10 | P3 | Activity entries can't be opened. **Fixed, ADR 083:** an entry about a request opens it |
 
-Also: Demo settings appears twice, and the nav count has no text alternative.
+Also: Demo settings appears twice, and the nav count has no text alternative. Both **fixed, ADR 083**.
 
 ### Contractor
 | # | Sev | Finding |
@@ -42,11 +42,11 @@ Also: Demo settings appears twice, and the nav count has no text alternative.
 | 3 | P2 | After Accept, the waiting copy still asks for acceptance, and the badge says "Proposed". **Fixed, ADR 080:** "Accepted", waiting on the customer |
 | 4 | P2 | A photo can't be removed in `JobMode`. **Fixed, ADR 080:** remove, with an inline Undo |
 | 5 | P2 | Unsaved Availability changes are lost silently. **Fixed, ADR 080:** kept for the tab, with an "Unsaved changes" note |
-| 6 | P3 | Two different Decline UIs |
-| 7 | P3 | Chips are 31 px tall |
-| 8 | P3 | Unpluralised counts |
-| 9 | P3 | "0 photos" is ambiguous |
-| 10 | P3 | "Remove" buttons don't say what they remove |
+| 6 | P3 | Two different Decline UIs. **Fixed, ADR 083:** the queue's one-tap reasons on the Work page too |
+| 7 | P3 | Chips are 31 px tall. **Fixed, ADR 082:** 32 px |
+| 8 | P3 | Unpluralised counts. **Fixed, ADR 083** |
+| 9 | P3 | "0 photos" is ambiguous. **Fixed, ADR 083:** not shown |
+| 10 | P3 | "Remove" buttons don't say what they remove. **Fixed, ADR 083:** "Remove day off {day}" |
 
 ### Customer (re-check)
 | # | Sev | Finding |
@@ -57,11 +57,11 @@ Also: Demo settings appears twice, and the nav count has no text alternative.
 | 4 | P2 | Intake step changes drop focus to `<body>`. **Fixed, ADR 079**, with cross-cutting 1 |
 | 5 | P2 | Instant Book's payment shows no confirmation. **Fixed, ADR 080:** a toast, and focus on the new booking |
 | 6 | P2 | Continue with an empty task gives only a toast (`CustomerIntake.tsx:342`). **Fixed, ADR 080:** said under the task's textarea, with focus there |
-| 7 | P3 | Two primary buttons on home |
-| 8 | P3 | The provider is named before they accept |
-| 9 | P3 | A task's "Remove" doesn't say which task |
+| 7 | P3 | Two primary buttons on home. **Fixed, ADR 083:** Review steps down while the request shows its own |
+| 8 | P3 | The provider is named before they accept. **Fixed, ADR 083:** "Your provider" |
+| 9 | P3 | A task's "Remove" doesn't say which task. **Fixed, ADR 083:** "Remove task {n}", and the undo note quotes it |
 
-Also: a toast persists across an identity switch.
+Also: a toast persists across an identity switch. **Fixed, ADR 080** (`switching()`).
 
 ### Cross-cutting
 | # | Sev | Finding |
@@ -72,14 +72,14 @@ Also: a toast persists across an identity switch.
 | 4 | P1 | The role switch marks the current role with `.chosen` only, with no `aria-pressed` (`Shell.tsx:238`). **Fixed, ADR 079** |
 | 5 | P2 | Toasts: errors carry the success icon, the `role=status` region mounts only with a toast, and the 3.5 s timer is never cleared, so a new toast can vanish early (`Workspace.tsx:243`, `useWorkspaceState.tsx:182–193`). **Fixed, ADR 080:** an error tone in a mounted alert region, one cleared timer, 7 s for errors |
 | 6 | P2 | The sidebar says "YH Yousef's workspace" for every role (`Shell.tsx:145`). **Fixed, ADR 080** |
-| 7 | P3 | Demo-bar targets are 37 and 31 px |
-| 8 | P3 | The brand link is `href="#"` |
-| 9 | P3 | The `job-details` summary is 26 px |
+| 7 | P3 | Demo-bar targets are 37 and 31 px. **Fixed, ADR 083:** a 32 px floor in every role on desktop, 44 px on a phone; the bar already grew with its content (`typography.css`) |
+| 8 | P3 | The brand link is `href="#"`. **Fixed, ADR 082:** a `<span>` |
+| 9 | P3 | The `job-details` summary is 26 px. **Fixed, ADR 083** |
 
 Clean: contrast in both themes on every screen checked, the modals, focus styles, Assessment and Recovery. Blueprint has P3s only.
 
 ## Recommended order
-Steps 1 and 2, and the role switch, are done in ADR 079. Friction there is a confirmation where the effect reaches someone else, and an inline Undo where it stays in a draft, rather than one undoable toast: a snapshot undo would retract notifications and holds already sent. The Offer's undo stays open.
+Steps 1 and 2, and the role switch, are done in ADR 079. Friction there is a confirmation where the effect reaches someone else, and an inline Undo where it stays in a draft, rather than one undoable toast: a snapshot undo would retract notifications and holds already sent. ADR 083 gives the Offer a withdraw instead: an unread offer notice is taken back, a read one gets "Offer withdrawn", and an accepted one can't be.
 
 Step 3, honest state and announcements, is done in ADR 080 for every P2. A Declined quote gets customer wording derived from the live quote, not a status of its own.
 

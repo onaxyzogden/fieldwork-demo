@@ -225,6 +225,7 @@ export default function Availability({
                       });
                       setResult("");
                     }}
+                    aria-label={`Remove day off ${dayLabel(d)}`}
                   >
                     Remove
                   </button>

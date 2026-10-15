@@ -269,6 +269,10 @@
 .job-details summary {
   cursor: pointer;
   color: var(--muted);
+  /* A 44px target, as the app's other summaries are (ADR 083). */
+  min-height: 44px;
+  padding: var(--space-3) 0;
+  box-sizing: border-box;
 }
 .job-shots {
   display: grid;

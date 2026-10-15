@@ -1,3 +1,4 @@
+import { plural } from "./plural";
 import {
   ClipboardList,
   CircleAlert,
@@ -151,7 +152,7 @@ export function OperatorHome({
               ? `${age} min ago`
               : age < 1440
                 ? `${Math.floor(age / 60)} hr ago`
-                : `${Math.floor(age / 1440)} days ago`;
+                : `${plural(Math.floor(age / 1440), "day")} ago`;
       const moving = call && s.visits.find((v) => v.id === call.visitId);
       const undone = unfinished(s, r.id).length;
       const detail = late
@@ -303,7 +304,7 @@ export function OperatorHome({
           aria-pressed={view === "attention"}
           onClick={() => setView("attention")}
         >
-          Needs Attention <span>{needs.length}</span>
+          Needs Action <span>{needs.length}</span>
         </button>
         <button aria-pressed={view === "all"} onClick={() => setView("all")}>
           All Requests
@@ -313,7 +314,7 @@ export function OperatorHome({
         className="op-attention-list"
         aria-label={
           view === "attention"
-            ? "Requests needing attention"
+            ? "Requests needing action"
             : "All submitted requests"
         }
       >

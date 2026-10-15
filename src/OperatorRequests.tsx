@@ -1,7 +1,9 @@
+import { plural } from "./plural";
 import { AuditList } from "./QueueAside";
 import { bucket, callBackDue, feeUndecided, workIssue } from "./work";
 import {
   reviewTask,
+  cancelVisit as cancelOne,
   completeCallBack,
   heldFor,
   issueQuote,
@@ -10,6 +12,7 @@ import {
   settleLateCancel,
   suggestLateFee,
   suggestPay,
+  withdrawOffer,
 } from "./decisions";
 import { suggestTitle } from "./pmw";
 import { dayLabel } from "./intake";
@@ -342,14 +345,7 @@ export function OperatorRequests() {
   };
   const cancelVisit = (v: Visit) =>
     update((d) => {
-      d.visits.find((x) => x.id === v.id)!.status = "Cancelled";
-      d.assignments
-        .filter(
-          (a) =>
-            a.visitId === v.id && ["Offered", "Accepted"].includes(a.status),
-        )
-        .forEach((a) => (a.status = "Cancelled"));
-      log(d, "Visit cancelled · tasks available for regrouping");
+      cancelOne(d, v.id);
     }, "Visit removed; tasks available");
   /* One status line, not two. Whatever the operator must act on supersedes the
      stored request status: a work issue first, then dispatch state. */
@@ -1020,11 +1016,11 @@ export function OperatorRequests() {
                 <span>
                   <MapPin aria-hidden="true" size={16} />
                   {q.city} ·{" "}
-                  {
+                  {plural(
                     s.tasks.filter((t) => t.requestId === q.id && !t.mergedInto)
-                      .length
-                  }{" "}
-                  tasks
+                      .length,
+                    "task",
+                  )}
                 </span>
                 {badge(requestStatus(q.id))}
               </p>
@@ -1067,9 +1063,12 @@ export function OperatorRequests() {
               <span>{badge(r.mode)}</span>
             </div>
             <p>
-              {tasks.length} task{tasks.length === 1 ? "" : "s"} ·{" "}
-              {tasks.reduce((n, t) => n + t.duration, 0)} minutes estimated ·{" "}
-              {tasks.reduce((n, t) => n + t.photos.length, 0)} photos
+              {plural(tasks.length, "task")} ·{" "}
+              {tasks.reduce((n, t) => n + t.duration, 0)} minutes estimated
+              {(() => {
+                const n = tasks.reduce((n, t) => n + t.photos.length, 0);
+                return n ? ` · ${plural(n, "photo")}` : "";
+              })()}
             </p>
             <a
               className="text-button"
@@ -1403,6 +1402,24 @@ export function OperatorRequests() {
                                 : money(a.pay)}
                             </span>
                             {badge(a.status)}
+                            {/* The Offer's undo, for as long as the offer is
+                                open (ADR 083). */}
+                            {a.status === "Offered" && (
+                              <button
+                                className="text-button"
+                                onClick={() =>
+                                  update((d) => {
+                                    withdrawOffer(d, a.id);
+                                  }, "Offer withdrawn")
+                                }
+                              >
+                                Withdraw offer
+                                <span className="sr-only">
+                                  {" "}
+                                  to {providers.find((p) => p.id === a.providerId)?.name}
+                                </span>
+                              </button>
+                            )}
                             {a.status === "Offered" && (
                               <button
                                 className="text-button"
@@ -1483,7 +1500,7 @@ export function OperatorRequests() {
                       : "Assign Contractor"}
                   </h2>
                   <span className="badge">
-                    {selected.length || tasks.length} tasks · {duration} min
+                    {plural(selected.length || tasks.length, "task")} · {duration} min
                   </span>
                 </div>
                 <div className="fulfillment-request-summary">

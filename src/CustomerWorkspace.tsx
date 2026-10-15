@@ -475,7 +475,19 @@ export function CustomerWorkspace() {
           {/* Everything waiting on them, one thing at a time (ADR
               062). The number is the glance's own "Waiting on you". */}
           {customerTodos > 0 && (
-            <button className="primary full" onClick={() => setReviewing(true)}>
+            /* While the open request shows its own primary for the same
+               thing, this one steps down, so Home has one (ADR 083). */
+            <button
+              className={
+                expanded &&
+                customerTodoList.some(
+                  (t) => "requestId" in t && t.requestId === r?.id,
+                )
+                  ? "secondary full"
+                  : "primary full"
+              }
+              onClick={() => setReviewing(true)}
+            >
               {/* One thing is named, not counted (ADR 070). */}
               {customerTodos === 1
                 ? customerTodoLabel(s, customerTodoList[0])

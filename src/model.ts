@@ -186,9 +186,13 @@ export type Assignment = {
   id: string;
   visitId: string;
   providerId: string;
+  /** Offered, Accepted, Declined, Expired, Cancelled, or Withdrawn (ADR 083). */
   status: string;
   pay: number;
   expiresAt: number;
+  /** A replacement offer keeps what the visit was before it, so withdrawing the
+      offer can put the visit back (ADR 083). */
+  previous?: { providerId: string; start: string; travel: number; status: string };
 };
 export type Quote = {
   id: string;
@@ -1409,7 +1413,7 @@ export function coordinated(s: State, requestId: string) {
         (a) =>
           a.visitId === v.id &&
           a.providerId === v.providerId &&
-          !["Declined", "Expired"].includes(a.status),
+          !["Declined", "Expired", "Withdrawn"].includes(a.status),
       ),
     );
 }

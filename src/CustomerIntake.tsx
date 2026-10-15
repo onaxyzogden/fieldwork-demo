@@ -1,3 +1,4 @@
+import { plural } from "./plural";
 import React, { useEffect, useRef, useState } from "react";
 import { MapPin, Check, Plus } from "lucide-react";
 import {
@@ -420,7 +421,7 @@ export default function CustomerIntake({
       if (!selectionValid) req.preferredSlot = undefined;
       log(
         d,
-        `${req.name} submitted ${tasks.length} separate tasks · ${referral ? "referral review" : "appointment not confirmed"}`,
+        `${req.name} submitted ${plural(tasks.length, "separate task")} · ${referral ? "referral review" : "appointment not confirmed"}`,
       );
     });
     // Straight back to Home, expanded — there is no confirmation screen of
@@ -728,7 +729,7 @@ export default function CustomerIntake({
             {/* Every task is its own card in whichever stage it's currently
                 in. No separate collapsed-preview list and expanded editor —
                 what you see is what's actually there. */}
-            {all.map((t) => {
+            {all.map((t, i) => {
               const issue = getIssue(t.description);
               const isFocusTarget = t.id === r.editingTaskId;
               return (
@@ -788,6 +789,7 @@ export default function CustomerIntake({
                           <button
                             className="text-button"
                             onClick={() => remove(t)}
+                            aria-label={`Remove task ${i + 1}`}
                           >
                             Remove
                           </button>
@@ -868,7 +870,9 @@ export default function CustomerIntake({
             })}
             {removed && (
               <div role="status" className="note">
-                Task removed.{" "}
+                {removed.task.description.trim()
+                  ? `“${removed.task.description.trim()}” removed.`
+                  : "Task removed."}{" "}
                 <button
                   className="text-button"
                   onClick={() => {

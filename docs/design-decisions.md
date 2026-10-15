@@ -2365,3 +2365,94 @@ there. Phones keep 44 px.
 Out of scope, and left for later: the unreachable assessment decision
 buttons, an undo for the operator's Offer, Instant Book's fixed $129, and
 the platform audit's P3s.
+
+## ADR 083: An offer can be taken back, and the small words are right
+
+Accepted. This closes what ADR 082 left out: the assessment's unreachable
+decision buttons, an undo for the operator's Offer, and the 13 P3s of the
+platform UX audit (`wiki/sources/platform-ux-audit-2026-10.md`). It adds 19
+tests: five model tests in `withdraw.test.ts`, and fourteen screen tests in
+`workspace.test.tsx` under "Friction and wording (ADR 083)".
+
+**An offer can be withdrawn until it is answered.** A ten-second grace
+window covers only the first ten seconds. A withdraw covers the offer's whole
+life, and a real dispatch back end needs one anyway. It adds no
+delayed-commit machinery to the store or the notification diff.
+- `withdrawOffer(s, assignmentId)` in `decisions.ts` refuses unless the
+  assignment is still `Offered` and its visit `Proposed`.
+  - The assignment becomes `Withdrawn`, a new status, which
+    `status-dictionary.md` lists.
+  - A first offer's visit is cancelled.
+  - A replacement offer's visit gets back the provider, start, travel and
+    status it had. `reoffer` now keeps them on the new assignment as
+    `previous`.
+  - `reconcile` frees the time and returns the request to where it was.
+- **What the contractor sees.**
+  - If the "New job offer" notice is still unread, it is removed, along
+    with the unread "Visit proposed" beside it. Nothing is sent. To the
+    contractor, this is the same as a grace period.
+  - If they have read it, they get "Offer withdrawn", dated as the offer
+    was.
+  - Either way, the visit's own change sends the contractor nothing. No
+    "Visit cancelled" sits beside "Offer withdrawn", and an earlier
+    contractor whose declined visit is put back hears nothing either.
+  - The customer hears the visit's change, as for any visit.
+- **Where it is offered.**
+  - The queue's "Sent" line has Undo.
+  - The request page's offered assignment has "Withdraw offer".
+  - On success the line reads "Offer to X withdrawn", and focus stays on it.
+  - Once the contractor has accepted, it reads "X already accepted · it
+    can't be withdrawn".
+- `dispatchStatus` now reads the latest Declined or Expired entry, not the
+  first.
+- `cancelVisit` is lifted out of `OperatorRequests` into `decisions.ts`.
+
+**The assessment shows only what can be done.** `FindingReview` loses
+`locked`, `onDecide` and the Approve / Not now buttons, which no assessment
+could reach. A converted finding shows its price, and its state badge already
+says the decision.
+
+**The platform audit's P3s.**
+- "Needs Attention" is "Needs Action", as everywhere else.
+- A shared `plural(n, word)` (`src/plural.ts`) fixes "1 tasks", "1 photos",
+  "1 days ago" and "submitted 1 separate tasks". It covers the operator's
+  request list, the contractor's work, the visit and intake screens, and
+  the customer's visit line. A photo count of 0 is not shown.
+- `.job-details summary` is a 44 px target, like the other summaries.
+- An Activity entry about a request is a button that opens it, as Home's
+  cards do.
+- Demo settings is in the sidebar only. It no longer also appears on More.
+- The Requests nav count is `aria-hidden`, and an `.sr-only` ", 3 need
+  action" says what it counts.
+- The contractor's Work page declines with the queue's one-tap reasons, in
+  a fieldset that takes focus, instead of a sheet with a select. `REASONS`
+  is exported from `ContractorQueue`.
+- Availability's and the intake's Remove buttons name what they remove:
+  "Remove day off {day}" and "Remove task {n}". The intake's undo note
+  quotes the task it removed.
+- The customer's Home "Review" steps down to secondary while the open
+  request shows its own primary for the same thing.
+- Until the contractor accepts, the customer sees "Your provider", not a
+  name. An offer may yet be declined.
+- The demo bar uses `min-height` in place of its fixed heights.
+  `typography.css` had already made it grow with its content, so those
+  heights were dead.
+- On a desktop, its chips have a 32 px floor in every role.
+- Already done before this ADR:
+  - The contractor's chips were 32 px since ADR 082.
+  - The role-switch announcement was fixed by ADR 080's `switching()`.
+
+**A correction to ADR 082.** It said the role switch was "already 44 px".
+That held on phones and, through `.app[data-role="Operator"] button`, in the
+Operator's view. In the Customer's and Contractor's views on a desktop it was
+about 37 px. The demo bar's chips are now about 37–39 px on a desktop in
+every role, and 44 px on a phone.
+
+**What it cost.** A `Withdrawn` status, `previous` on an assignment, and a
+`.event-link` style. 648 tests; the greeting test reads the wall clock and
+fails in the evening, on main too.
+
+Out of scope, and left for later:
+- the greeting test's wall-clock dependency;
+- Instant Book's fixed $129;
+- a screen test for the intake's photo-only Continue.
