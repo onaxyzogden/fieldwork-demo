@@ -21,6 +21,7 @@ import { KEY, freshDemo } from "./store";
 import {
   approveQuote,
   declineQuote,
+  INSTANT_PRICES,
   providers,
   reconcile,
   type State,
@@ -38,6 +39,7 @@ import { plural } from "./plural";
 import { respondToOffer } from "./dispatch";
 import Blueprint from "./Blueprint";
 import { bucket } from "./work";
+import { greetingFor } from "./OperatorWork";
 
 function Harness({
   role,
@@ -108,8 +110,13 @@ const h1 = () => screen.getByRole("heading", { level: 1 });
 
 describe("Operator workspace", () => {
   it("opens on Home with the decisions waiting", () => {
-    open("Operator");
-    expect(h1().textContent).toBe("Good morning!");
+    /* The greeting follows the demo's clock, which is seeded from now, so
+       the heading is checked against that clock, not a time of day. */
+    let clock = 0;
+    open("Operator", (s) => {
+      clock = s.clock;
+    });
+    expect(h1().textContent).toBe(greetingFor(clock));
     expect(
       screen.getByRole("button", { name: /Work through \d+ decisions?/ }),
     ).toBeTruthy();
@@ -825,6 +832,25 @@ describe("State and wording (ADR 080)", () => {
     await waitFor(() =>
       expect(focused()?.textContent).toMatch(/^124 Maple Grove Drive/),
     );
+  });
+
+  it("records the catalogue job's Instant Book price (ADR 084)", async () => {
+    open("Customer", booking);
+    await instantBook();
+    fireEvent.click(screen.getByRole("button", { name: /^Pay / }));
+    const saved: State = JSON.parse(localStorage.getItem(KEY)!);
+    const quote = saved.quotes.at(-1)!;
+    const price = INSTANT_PRICES["Handyman / Doors / Adjustment"];
+    expect([quote.amount, quote.high, quote.notes]).toEqual([
+      price.amount,
+      price.amount,
+      price.notes,
+    ]);
+    expect(saved.payments.at(-1)).toMatchObject({
+      quoteId: quote.id,
+      amount: price.amount,
+      status: "Paid",
+    });
   });
 
   it("says a task is missing beside the task, not in a toast", async () => {

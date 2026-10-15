@@ -10,6 +10,8 @@ import {
   torontoParts,
   type State,
   instantEligible,
+  instantPrice,
+  INSTANT_PRICES,
 } from "./model";
 function ready() {
   const s = seed();
@@ -51,6 +53,23 @@ describe("classification and eligibility", () => {
     expect(instantEligible([t])).toBe(true);
     t.answers = { condition: "Damaged and cracked" };
     expect(instantEligible([t])).toBe(false);
+  });
+  it("prices Instant Book from the catalogue job's entry (ADR 084)", () => {
+    const t = seed().tasks[0];
+    expect(instantPrice([t])).toEqual({
+      label: "Door adjustment",
+      amount: 129,
+      notes: "Door adjustment, labour and standard materials.",
+    });
+    expect(instantPrice([t])).toBe(INSTANT_PRICES[t.category]);
+  });
+  it("offers no Instant Book price for damaged or unpriced scope", () => {
+    const damaged = seed().tasks[0];
+    damaged.answers = { condition: "Damaged and cracked" };
+    expect(instantPrice([damaged])).toBeUndefined();
+    const unpriced = { ...seed().tasks[0], category: "Handyman / Doors / Install" };
+    expect(instantEligible([unpriced])).toBe(false);
+    expect(instantPrice([unpriced])).toBeUndefined();
   });
   it("classifies simple Oakville door without exposing a taxonomy fallback", () => {
     expect(classify("My door is rubbing").category).toContain("Doors");

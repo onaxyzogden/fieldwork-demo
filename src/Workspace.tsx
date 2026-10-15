@@ -32,6 +32,7 @@ import {
   available,
   eligible,
   instantEligible,
+  instantPrice,
   accounts,
   confirmed,
 } from "./model";
@@ -389,7 +390,9 @@ export function Workspace({
                 )}
                 <p className="price-figure">
                   {money(
-                    modal === "Instant payment" ? 129 : quote?.amount || 0,
+                    modal === "Instant payment"
+                      ? instantPrice(tasks)?.amount || 0
+                      : quote?.amount || 0,
                   )}
                 </p>
                 <button
@@ -397,6 +400,7 @@ export function Workspace({
                   aria-describedby={describedBy("instant-slot")}
                   onClick={() => {
                     if (modal === "Instant payment") {
+                      const price = instantPrice(tasks);
                       if (fail) {
                         notify(
                           "Your payment didn’t go through. Try again, or use another card.",
@@ -405,6 +409,7 @@ export function Workspace({
                         return;
                       }
                       const available =
+                        !!price &&
                         r.status === "Draft" &&
                         validAddress(r) &&
                         eligible("yousef", tasks) &&
@@ -453,18 +458,17 @@ export function Workspace({
                             id: qid,
                             requestId: r.id,
                             type: "Fixed price",
-                            amount: 129,
-                            high: 129,
+                            amount: price.amount,
+                            high: price.amount,
                             status: "Approved",
-                            notes:
-                              "Door adjustment, labour and standard materials.",
+                            notes: price.notes,
                             payOnCompletion: false,
                           });
                           d.payments.push({
                             id: uid(),
                             quoteId: qid,
                             status: "Paid",
-                            amount: 129,
+                            amount: price.amount,
                             reference: uid(),
                           });
                           releaseHold(d, r.id);
@@ -473,7 +477,7 @@ export function Workspace({
                             "Instant booking confirmed · demo receipt issued",
                           );
                         },
-                        `Booked and paid · ${money(129)} · ${dateLabel(slot)}`,
+                        `Booked and paid · ${money(price.amount)} · ${dateLabel(slot)}`,
                       );
                       // Straight back to Home, same as an ordinary submit —
                       // the accordion's own visit card shows the confirmation,
@@ -508,7 +512,9 @@ export function Workspace({
                 >
                   Pay{" "}
                   {money(
-                    modal === "Instant payment" ? 129 : quote?.amount || 0,
+                    modal === "Instant payment"
+                      ? instantPrice(tasks)?.amount || 0
+                      : quote?.amount || 0,
                   )}{" "}
                   <ArrowRight aria-hidden="true" size={16} />
                 </button>
