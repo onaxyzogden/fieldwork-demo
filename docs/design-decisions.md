@@ -2548,11 +2548,13 @@ dark and 6.1:1 in light. No console errors. The roster adds no controls and
 no motion, so keyboard order and reduced motion are unchanged.
 
 **What it cost.** About 50 lines of CSS in place of 10, and 657 tests. Four
-in `concurrency.test.ts` fail on `main` as well: they pick a slot three days
-after the demo clock, so they depend on the date.
+in `concurrency.test.ts` fail on `main` as well: they depend on the machine's
+timezone (see the wiki log, 2026-10-16, "`concurrency.test.ts` independent of
+the timezone").
 
 Out of scope, and left for later:
-- `concurrency.test.ts`'s dependence on the date;
+- `concurrency.test.ts`'s dependence on the timezone (since fixed: the tests
+  take their slot from `slots()`);
 - phone and email on the roster;
 - a link from each contractor to their visits;
 - Elias's role, "Specialist · operator marked eligible", repeats the

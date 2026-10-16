@@ -3,6 +3,19 @@ title: "Wiki Log"
 type: log
 ---
 
+## [2026-10-16] session | `concurrency.test.ts` independent of the timezone
+
+- **Cause:** four tests picked "three days out at 15:00 UTC" by hand. `seed()` puts marcus's visit v5 on the same day at `setHours(10)`, which is 10:00 in the machine's own timezone. On a Toronto or New York machine, v5 runs 14:00–15:45 UTC including its wrap-up, and the test's slot starts at 14:52 UTC once travel is counted. So the scheduler refused it: correctly, since it clashes. Under `TZ=UTC` all five passed. Eastern machines failed every day except Wednesday and Thursday, when three days out is a weekend, so the test moved to Monday and v5 stayed on the weekend. It was never the date, and it was not a scheduler bug.
+- **Completed:**
+  - The tests take their slot from `slots()`, the scheduler's own list of free times, so they cannot land on a seeded visit.
+  - Corrected the "depends on the date" diagnosis in ADR 085, in [[fieldwork]] History and in the ADR 085 log entry below. Marked ADR 085 as live on `main` via PR #62 in [[fieldwork]] Current Status.
+- **Verified:**
+  - All five pass with the clock faked to every day from 12 to 18 October, under UTC, America/Toronto and Asia/Tokyo. The same probe on the old helper fails in Toronto, which shows the faked clock reproduces it.
+  - `npm test` (657 tests, all passing) and `npm run build`.
+- **Closes:** "Making `concurrency.test.ts` independent of the date" from ADR 085. Only a test changed, so there is no ADR.
+- **Deferred:** `seed()` places v5 with machine-local `setHours(10)`, while the scheduler works in Toronto time (`localTime`). Outside Toronto the demo visit lands at a shifted hour, sometimes on a weekend.
+- **Pages touched:** [[fieldwork]].
+
 ## [2026-10-16] session | ADR 085: the Contractors page in the operational register
 
 - **Completed:**
@@ -10,7 +23,7 @@ type: log
   - The page is now an h1 "Contractors", one factual line, and one roster table. It has three widths, set by the workspace container: one line per value at 64rem and wider, wrapped below that, and stacked labelled lines below 47rem. It has explicit table roles, and the credentials caveat appears once.
   - A register paragraph in `DESIGN.md`: all three roles' workspaces are operational.
   - Checked live at 320–1440px in both themes. Nothing overflows, the whole roster fits in one desktop view at 1440px, and there are no console errors.
-  - 657 tests and the build. Four `concurrency.test.ts` tests fail on `main` as well, because they depend on the date.
+  - 657 tests and the build. Four `concurrency.test.ts` tests fail on `main` as well, because they depend on the machine's timezone.
 - **Deferred:**
   - Making `concurrency.test.ts` independent of the date.
   - Phone and email on the roster.
