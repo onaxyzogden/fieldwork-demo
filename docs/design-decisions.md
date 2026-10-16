@@ -2742,3 +2742,82 @@ Out of scope, and left for later:
 - the status dictionary's Draft row, which says the customer is not shown a
   status, when the customer's badge does say "Draft";
 - tests for the list order and for the count opening the queue.
+
+## ADR 089: The contractor's workspace has one primary action, in one colour
+
+Accepted. This is the fourth application of the **register**, and the first
+to the contractor. The contractor workspace is operational: the contractor
+opens it to see the next job, the offers waiting on them, and what each one
+pays. The audit used the remit "the contractor sees the next job and what it
+pays, and answers each offer in one step". It found 11 issues, 6 at P2 and 5
+at P3, and all 11 are fixed. Three tests change, and two are new.
+
+**One action, one colour.**
+- Accept was green on the job detail, from two rules
+  (`.contractor-accept` in `contractor-concept.css` and again in
+  `cards.css`), while Accept job in the offer queue was amber. The same
+  action now has the same colour everywhere: Accept is a plain `.primary`,
+  and both green rules are gone.
+- With an offer open on the detail, the screen had two primaries: Accept and
+  "Review 1 offer" above it. They lead to the same offer. While an offer is
+  open, the Review button steps aside, so Accept is the screen's one primary.
+- Every offer card ended in a filled "View job" button, so the list had one
+  primary per card. "View job" is `.secondary`; Review stays the list's
+  primary.
+- The "New offers" count was drawn in the danger colour (`urgent`). An offer
+  is work on the way, not an error, so the count is neutral.
+- The pay sat on an accent fill on every card and on the detail. Accent
+  repeated on every item is decoration, so pay sits on `--surface-raised`,
+  with tabular figures.
+
+**A workspace heading says where you are.**
+- The h1 "Your Work" and its slogan "What's next, all in one place." are
+  gone. The h1 is "Your work", in sentence case. The page key stays "Your
+  Work".
+- Job titles on the cards and the detail were `--text-h2` (31.25px), larger
+  than the 25px h1. They, the week headings and the Earnings totals are now
+  `--text-intro` (20px), so every heading inside the page sits below the h1.
+- "VIEWING AS" and "NEXT JOB" were typed in capitals with wide tracking. They
+  are "Viewing as" and "Next job", untracked.
+
+**Said once.**
+- Pay had three wordings: "$110 CAD · your pay" in the queue, "Your pay:
+  $110 CAD" on the detail, and "Your pay: $110" on the card. `payLabel` in
+  `ContractorQueue.tsx` now words it once, "Your pay: $110 CAD", for all
+  three.
+- A one-task job repeated its title: the card listed the task under an h2
+  that already named it, and the detail's disclosure and the queue's details
+  repeated it again. One task now has no list, and its disclosure is "Task
+  details". A job with several tasks still lists them.
+- A task with no restriction rendered an empty paragraph. It renders nothing.
+
+**An empty state says what is true.** Today with no jobs said "You're done for
+today." when there had been nothing to do. It now says "No jobs today."; "done"
+is kept for a day whose jobs are all finished.
+
+**Past work.** "Past offers & completed work" was a disclosure even when it
+was empty, and it listed jobs in the order the offers were made. It now
+appears only when there is past work, newest first. A finished job reads
+"Completed", not the system's "Accepted".
+
+**Checked live.** No horizontal overflow at 320, 375, 768, 1024, 1280 or
+1440px in either theme, on the list, the detail, Earnings and Availability.
+Accept is amber in both themes. Pay text is 14.1:1 in light and 12.8:1 in
+dark, View job is 16.5:1 and 14.6:1, and the "Viewing as" label is 5.5:1 and
+12.1:1. The global 2px focus ring shows on every button. Operator screens are
+unchanged; their pending counts are still red. No console errors.
+
+**Left alone.** These are shared with other roles, so they are unchanged:
+`GlanceCard`; the global `.eyebrow` and `.note`; the customer's "VIEWING
+AS"; `JobWork` and its `.contractor-success` check; `.time-pill`. The
+contractor's untracked labels come from rules scoped to `.contractor-switch`
+and `.contractor-wrap`.
+
+Out of scope, and left for later:
+- the customer's "VIEWING AS" switcher, and the `GlanceLead` tracking on
+  operator screens;
+- the accent fills on `.message-bubble.sent` and `.notification-link.unread`;
+- the "Messages" in-app simulation summary;
+- the `GlanceCard` doc comment on `urgent`;
+- the glance's "City · $110", which does not use `payLabel`;
+- the pills in the light theme.

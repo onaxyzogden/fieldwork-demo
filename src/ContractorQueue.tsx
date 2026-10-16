@@ -24,6 +24,9 @@ export const REASONS = [
   "Outside my skill set",
 ];
 
+/** The pay, worded one way wherever the contractor sees it (ADR 089). */
+export const payLabel = (pay: number) => `Your pay: ${money(pay)} CAD`;
+
 export default function ContractorQueue({
   s,
   update,
@@ -123,9 +126,7 @@ function Offer({
           {tasks.length === 1 ? "" : "s"}
         </span>
       </div>
-      <p className="finding-price">
-        {money(a.pay)} <small>CAD · your pay</small>
-      </p>
+      <p className="finding-price">{payLabel(a.pay)}</p>
       <p className="onsite-hint">
         <When
           clock={s.clock}
@@ -134,10 +135,11 @@ function Offer({
         />
       </p>
       <details className="job-details">
-        <summary>Details</summary>
+        <summary>Task details</summary>
         {tasks.map((t) => (
           <div key={t.id} className="dq-detail">
-            <strong>{t.summary}</strong>
+            {/* One task is the job the h1 already names (ADR 089). */}
+            {tasks.length > 1 && <strong>{t.summary}</strong>}
             <p>“{t.description}”</p>
             {questionAnswers(t).length > 0 && (
               <dl className="task-answers">
