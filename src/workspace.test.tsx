@@ -865,6 +865,30 @@ describe("State and wording (ADR 080)", () => {
     expect(screen.getByText("Add a task before continuing.")).toBeTruthy();
     await waitFor(() => expect(focused()?.tagName).toBe("TEXTAREA"));
   });
+
+  it("asks for a description beside photos that have none (ADR 082)", async () => {
+    let id = "";
+    open("Customer", (d) => {
+      const r = d.requests.find((x) => x.status === "Draft")!;
+      r.accountId = "c2";
+      r.intakeScreen = "tasks";
+      const t = d.tasks.find((x) => x.requestId === r.id)!;
+      t.description = "";
+      t.photos = ["data:image/png;base64,iVBORw0KGgo="];
+      id = t.id;
+    });
+    go(/^New request/);
+    fireEvent.click(await screen.findByRole("button", { name: /^Continue/ }));
+    expect(toasts().textContent).toBe("");
+    const message = screen.getByText(
+      "Describe the task for these photos before continuing.",
+    );
+    const description = document.getElementById("task-description-" + id)!;
+    await waitFor(() => expect(focused()).toBe(description));
+    expect(description.getAttribute("aria-describedby")).toContain(message.id);
+    /* It stays on the tasks screen rather than going on to booking. */
+    expect(screen.queryByRole("heading", { name: /appointments/ })).toBeNull();
+  });
 });
 
 describe("Accessibility (ADR 081)", () => {

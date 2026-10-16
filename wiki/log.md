@@ -3,6 +3,16 @@ title: "Wiki Log"
 type: log
 ---
 
+## [2026-10-15] session | A screen test for the intake's photo-only Continue
+
+- **Completed:**
+  - One test in `workspace.test.tsx`. A draft task with photos and no description, on Continue, shows "Describe the task for these photos before continuing." beside the task, with no toast. Focus goes to that task's description, which names the message in `aria-describedby`, and the intake stays on the tasks screen.
+  - Checked that the test fails when the photo-only branch in `CustomerIntake.advance()` is disabled.
+  - 656 tests pass.
+- **Closes:** the deferred item from ADR 082–084. No code changed, so there is no ADR.
+- **Still deferred:** `OperatorRequests` as its own chunk.
+- **Pages touched:** [[fieldwork]].
+
 ## [2026-10-15] session | ADR 084: the greeting's clock, Instant Book's price list
 
 - **Decided:**
