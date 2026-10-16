@@ -46,6 +46,7 @@ the words change.
 
 | Customer sees | Internal status |
 |---|---|
+| `Received` | Submitted |
 | `In review` | Needs Review |
 | `Matching you with a provider` | Awaiting Provider Acceptance |
 | `Quote ready` | Awaiting Quote Approval |
@@ -74,7 +75,7 @@ Stored on `Request.status`. **Written only by `reconcile()`** except the initial
 | Status | Set by | Condition | Customer sees |
 |---|---|---|---|
 | `Draft` | intake | Created, not yet submitted | *(not shown; the request is still being written)* |
-| `Submitted` | `reconcile()` | Submitted, nothing else true yet | `Submitted` |
+| `Submitted` | `reconcile()` | Submitted, nothing else true yet | `Received` |
 | `Needs Review` | `reconcile()` | Any task unreviewed or needing clarification | `In review` |
 | `Information requested` | `reconcile()` | Operator asked a question, customer has not replied | `Waiting on your reply` |
 | `Awaiting Quote Approval` | `reconcile()` | A live quote exists, not yet approved | `Quote ready` |
