@@ -3,6 +3,21 @@ title: "Wiki Log"
 type: log
 ---
 
+## [2026-10-16] session | ADR 098: the customer can ask for a fresh link
+
+- **Completed:**
+  - Closes the gap ADR 096 and 097 left: the customer saw "Link withdrawn" in their record and could do nothing but call.
+  - `requestFreshLink` (model, ADR 036): only a Sent walkthrough whose link is withdrawn or expired, once; logs the customer as actor. The ask lives on `access.freshLinkRequestedAt`, so `issueAccess` clears it.
+  - The customer's record shows "Ask for a fresh link" (no confirmation); once asked, the badge reads "Fresh link requested" and takes focus. Their counts and queue do not move.
+  - `freshLinkIds` sorts asked-about walkthroughs first, oldest ask first. The operator's lead, row badge and card heading read "Fresh link requested", with "Sarah Lin asked for a fresh link today." Still three counts; no notification.
+- **Verified:**
+  - `tsc`, `npm run build`, and `npm test` (688 tests, all passing; four new).
+  - Live: Sarah Lin asked for PMW-0001 after it was withdrawn; the operator saw the lead, the badge and the card sentence; a fresh link restored "Waiting on the customer" and Sarah's "Open assessment". At 320 to 1440px in both themes: no overflow, ask button 44px, lowest contrast 6.1:1 (button) and 5.2:1 (badge). No console errors.
+- **Found and fixed during the work:** `localeCompare` sorts "~" before digits, so the "asked first" sentinel sorted backwards; replaced with a plain comparison. Focus after asking was moved in a frame callback that ran before the re-render; it now moves in an effect after the commit.
+- **Correction:** [[fieldwork]] still said ADR 097's PR was open. It merged as PR #75 (`e4ecafa`).
+- **Deferred:** an operator notification for the ask; the ask on the guest assessment page's record; a Sent walkthrough with no link at all; the h096 Prettier stash, still droppable.
+- **Pages touched:** [[fieldwork]].
+
 ## [2026-10-16] session | ADR 097: a dead link is the operator's move, not the customer's
 
 - **Completed:**
