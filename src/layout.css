@@ -586,29 +586,6 @@ button.badge {
   min-height: 220px;
   object-fit: cover;
 }
-.map-label {
-  position: absolute;
-  bottom: 9px;
-  left: 12px;
-  background: var(--overlay);
-  color: var(--muted);
-  padding: var(--space-1) var(--space-2);
-  border-radius: var(--radius-sm);
-}
-.map-expand {
-  position: absolute;
-  right: 10px;
-  top: 10px;
-  display: grid;
-  place-items: center;
-  /* 32 px, the desktop floor for a target (ADR 082); 44 px on a phone. */
-  width: 32px;
-  height: 32px;
-  background: var(--panel);
-  border: 1px solid var(--panel);
-  border-radius: var(--radius-sm);
-  color: var(--muted);
-}
 footer {
   display: flex;
   justify-content: space-between;

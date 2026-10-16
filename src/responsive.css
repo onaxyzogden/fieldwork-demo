@@ -633,15 +633,13 @@ main button,
   .heading > .primary,
   .photo-add,
   .role-switch button,
-  .map-expand,
   .primary,
   .secondary,
   .icon-button,
   .text-button {
     min-height: 44px;
   }
-  .icon-button,
-  .map-expand {
+  .icon-button {
     min-width: 44px;
   }
   .photo-add {

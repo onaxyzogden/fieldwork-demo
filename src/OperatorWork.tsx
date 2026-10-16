@@ -8,14 +8,13 @@ import {
   ChevronRight,
   CalendarDays,
 } from "lucide-react";
-import { useState, type ReactNode } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import {
   type State,
   providers,
   dateLabel,
   money,
   timeLabel,
-  torontoParts,
 } from "./model";
 import {
   bucket,
@@ -68,7 +67,6 @@ export function OperatorHome({
   const visits = todaysVisits(s, s.clock, (v) =>
     ["Confirmed", "In Progress", "Completed"].includes(v.status),
   );
-  const greeting = greetingFor(s.clock);
   const cards = (list: typeof needs) =>
     list.map((r) => {
       const dispatch = requestDispatch(s, r.id);
@@ -110,7 +108,8 @@ export function OperatorHome({
                       ? "Quote declined"
                       : r.status === "Awaiting Quote Approval"
                         ? "Quote awaiting approval"
-                        : r.status);
+                        : /* The system's word, shown in sentence case. */
+                          r.status.charAt(0) + r.status.slice(1).toLowerCase());
       const tone =
         late || call || issue || dispatch.includes("Needs reassignment")
           ? "issue"
@@ -168,7 +167,13 @@ export function OperatorHome({
                       : `${taskList.length} task${taskList.length === 1 ? "" : "s"} · Est. ${taskList.reduce((n, t) => n + t.duration, 0)} min`;
       return (
         <button
-          className={"op-request-bento op-tone-" + tone}
+          className={
+            "op-request-bento op-tone-" +
+            tone +
+            /* Accent marks the rows that are the operator's to act on
+               (ADR 092); the rest sit neutral, as in the request list. */
+            (bucket(s, r.id) === "Needs Action" ? "" : " quiet")
+          }
           key={r.id}
           onClick={() => open(r.id)}
         >
@@ -191,18 +196,17 @@ export function OperatorHome({
     });
   return (
     <div className="op-home">
+      {/* The page names itself, as the sidebar does (ADR 092). */}
       <header className="role-greeting">
-        <h1>{greeting}</h1>
-        <p>Here’s what needs your attention.</p>
+        <h1>Home</h1>
       </header>
+      {/* One way to Today: "All of today" on the strip below (ADR 092). */}
       <Glance
         date={glanceDate(s.clock)}
-        onDate={today}
         metrics={[
           {
             label: "Scheduled visits",
             value: visits.length,
-            onClick: today,
           },
           {
             label: "Active contractors",
@@ -220,12 +224,10 @@ export function OperatorHome({
                 )
                 .map((v) => v.providerId),
             ).size,
-            onClick: today,
           },
           {
-            label: "Pending decisions",
+            label: "Needs action",
             value: needs.length,
-            urgent: true,
             onClick: () => {
               setView("attention");
               document
@@ -282,8 +284,8 @@ export function OperatorHome({
                     (state === "Done"
                       ? " green"
                       : ["Running late", "Unfinished"].includes(state)
-                        ? " warning"
-                        : "")
+                        ? ""
+                        : " quiet")
                   }
                 >
                   {state}
@@ -298,10 +300,10 @@ export function OperatorHome({
           aria-pressed={view === "attention"}
           onClick={() => setView("attention")}
         >
-          Needs Action <span>{needs.length}</span>
+          Needs action <span>{needs.length}</span>
         </button>
         <button aria-pressed={view === "all"} onClick={() => setView("all")}>
-          All Requests
+          All requests
         </button>
       </div>
       <section
@@ -338,26 +340,44 @@ export function OperatorHome({
   );
 }
 
-/** The Home heading for the demo's clock, in Toronto time (ADR 084). */
-export function greetingFor(clock: number) {
-  const hour = Number(torontoParts(new Date(clock)).hour);
-  return hour < 12
-    ? "Good morning!"
-    : hour < 18
-      ? "Good afternoon!"
-      : "Good evening!";
-}
+/** A date key as the heading says it: "Monday, October 19". */
+const longDay = (key: string) =>
+  new Date(key + "T12:00:00Z").toLocaleDateString("en-CA", {
+    timeZone: "America/Toronto",
+    weekday: "long",
+    month: "long",
+    day: "numeric",
+  });
 
 export function OperatorToday({
   s,
   open,
   update,
   mapView,
-}: Props & { mapView: ReactNode }) {
+  requests,
+}: Props & {
+  mapView: (stops: number, route: boolean) => ReactNode;
+  requests: () => void;
+}) {
   const [provider, setProvider] = useState("all");
   const [day, setDay] = useState(dayKey(s.clock));
   const [selected, setSelected] = useState("");
   const [map, setMap] = useState(false);
+  const heading = useRef<HTMLHeadingElement>(null);
+  const panel = useRef<HTMLElement>(null);
+  const toHeading = useRef(false);
+  /* When the control that was pressed goes away, focus goes where the
+     person looks next (ADR 092): the new day's heading, or the progress. */
+  useEffect(() => {
+    if (toHeading.current) heading.current?.focus();
+    toHeading.current = false;
+  }, [day]);
+  useEffect(() => {
+    if (!selected) return;
+    panel.current?.scrollIntoView?.({ block: "start" });
+    panel.current?.focus();
+  }, [selected]);
+  const name = providers.find((p) => p.id === provider)?.name;
   const visits = s.visits
     .filter(
       (v) =>
@@ -367,12 +387,21 @@ export function OperatorToday({
     )
     .sort((a, b) => +new Date(a.start) - +new Date(b.start));
   const v = visits.find((v) => v.id === selected);
+  const next = s.visits
+    .filter(
+      (v) =>
+        v.status !== "Cancelled" &&
+        dayKey(v.start) > day &&
+        (provider === "all" || v.providerId === provider),
+    )
+    .sort((a, b) => a.start.localeCompare(b.start))[0];
   return (
     <>
       <div className="heading">
         <div>
-          <h1>Today</h1>
-          <p>What’s happening, in appointment order.</p>
+          <h1 ref={heading} tabIndex={-1}>
+            {day === dayKey(s.clock) ? "Today" : longDay(day)}
+          </h1>
         </div>
       </div>
       <section className="card panel operator-day">
@@ -400,26 +429,36 @@ export function OperatorToday({
             />
           </label>
         </div>
-        <div className="op-view-switch" role="group" aria-label="Today view">
-          <button aria-pressed={!map} onClick={() => setMap(false)}>
-            Timeline
-          </button>
-          <button aria-pressed={map} onClick={() => setMap(true)}>
-            Map
-          </button>
-        </div>
-        <p>
-          {day} ·{" "}
-          {provider === "all"
-            ? "All providers · combined totals, separate routes"
-            : providers.find((p) => p.id === provider)?.name}
-        </p>
-        {map && (
+        {visits.length > 0 && (
+          <>
+            <div
+              className="op-view-switch"
+              role="group"
+              aria-label="Today view"
+            >
+              <button aria-pressed={!map} onClick={() => setMap(false)}>
+                Timeline
+              </button>
+              <button aria-pressed={map} onClick={() => setMap(true)}>
+                Map
+              </button>
+            </div>
+            {/* The facts every visit shares, said once (ADR 092). */}
+            <p>
+              {plural(visits.length, "visit")} ·{" "}
+              {provider === "all"
+                ? plural(new Set(visits.map((v) => v.providerId)).size, "provider")
+                : name}{" "}
+              · 15 min buffer between visits
+            </p>
+          </>
+        )}
+        {map && visits.length > 0 && (
           <section className="operator-route-card">
-            <h3>
-              {provider === "all" ? "Provider locations" : "Today’s route"}
-            </h3>
-            {mapView}
+            <h2 className="look-h3">
+              {provider === "all" ? "Provider locations" : `${name}’s route`}
+            </h2>
+            {mapView(visits.length, provider !== "all")}
             <p>
               Illustrative map · simulated travel.{" "}
               {provider === "all"
@@ -434,6 +473,7 @@ export function OperatorToday({
                   className="secondary"
                   target="_blank"
                   rel="noreferrer"
+                  aria-label={`${r.address} · Open in Maps, opens in a new tab`}
                   href={
                     "https://www.google.com/maps/search/?api=1&query=" +
                     encodeURIComponent(r.address + ", " + r.city)
@@ -449,6 +489,7 @@ export function OperatorToday({
           {!map &&
             visits.map((v) => {
               const r = s.requests.find((r) => r.id === v.requestId)!;
+              const status = workStatus(v);
               return (
                 <div className="work-task operator-timeline-entry" key={v.id}>
                   <time className="operator-time" dateTime={v.start}>
@@ -465,7 +506,20 @@ export function OperatorToday({
                         ? "▶"
                         : "●"}
                   </span>
-                  <span className="badge">{workStatus(v)}</span>
+                  {/* Accent only where the visit is the operator's to act
+                      on (ADR 092). */}
+                  <span
+                    className={
+                      "badge" +
+                      (status === "Completed"
+                        ? " green"
+                        : status === "Issue"
+                          ? ""
+                          : " quiet")
+                    }
+                  >
+                    {status.charAt(0) + status.slice(1).toLowerCase()}
+                  </span>
                   <p>
                     {s.tasks.find((t) => v.taskIds.includes(t.id))?.summary} ·{" "}
                     {providers.find((p) => p.id === v.providerId)?.name}
@@ -479,79 +533,64 @@ export function OperatorToday({
                   {v.execution?.eta && !v.execution.startedAt && (
                     <p>Simulated ETA {dateLabel(v.execution.eta)}</p>
                   )}
-                  <small>{v.travel} min travel · 15 min buffer</small>
+                  <small>{v.travel} min travel</small>
                   <div className="actions row">
-                    <button
-                      className="secondary"
-                      onClick={() => setSelected(v.id)}
-                    >
-                      View progress
-                    </button>
+                    {/* A proposed visit has no work to follow yet. */}
+                    {["Confirmed", "In Progress", "Completed"].includes(
+                      v.status,
+                    ) && (
+                      <button
+                        className="secondary"
+                        id={"progress-" + v.id}
+                        onClick={() => setSelected(v.id)}
+                      >
+                        View progress
+                      </button>
+                    )}
                     <button className="text-button" onClick={() => open(r.id)}>
                       Open request
                     </button>
-                    {map && (
-                      <a
-                        target="_blank"
-                        rel="noreferrer"
-                        href={
-                          "https://www.google.com/maps/search/?api=1&query=" +
-                          encodeURIComponent(r.address + ", " + r.city)
-                        }
-                      >
-                        Open map ↗
-                      </a>
-                    )}
                   </div>
                 </div>
               );
             })}
         </div>
-        <div className="operator-day-totals">
-          <div>
-            <Clock3 aria-hidden="true" size={20} />
-            <strong>
-              {Math.round(
-                (visits
-                  .filter((v) => v.status !== "Proposed")
-                  .reduce((n, v) => n + v.duration, 0) /
-                  60) *
-                  10,
-              ) / 10}{" "}
-              hrs
-            </strong>
-            <span>Booked work time</span>
+        {/* Both totals count the same visits: the ones listed. */}
+        {visits.length > 0 && (
+          <div className="operator-day-totals">
+            <div>
+              <Clock3 aria-hidden="true" size={20} />
+              <strong>
+                {Math.round(
+                  (visits.reduce((n, v) => n + v.duration, 0) / 60) * 10,
+                ) / 10}{" "}
+                hrs
+              </strong>
+              <span>Work time</span>
+            </div>
+            <div>
+              <CalendarDays aria-hidden="true" size={20} />
+              <strong>{visits.reduce((n, v) => n + v.travel, 0)} min</strong>
+              <span>Simulated travel</span>
+            </div>
           </div>
-          <div>
-            <CalendarDays aria-hidden="true" size={20} />
-            <strong>{visits.reduce((n, v) => n + v.travel, 0)} min</strong>
-            <span>Simulated travel · includes proposed</span>
-          </div>
-        </div>
+        )}
         {!visits.length && (
           <div>
             <p>
-              No visits for this date. Choose another date or plan a visit from
-              Requests.
+              No visits on this date. Choose another date, or plan a visit from{" "}
+              <button className="text-button" onClick={requests}>
+                Requests
+              </button>
+              .
             </p>
-            {s.visits
-              .filter((v) => v.status !== "Cancelled" && dayKey(v.start) >= day)
-              .sort((a, b) => a.start.localeCompare(b.start))[0] && (
+            {next && (
               <button
                 className="secondary"
-                onClick={() =>
-                  setDay(
-                    dayKey(
-                      s.visits
-                        .filter(
-                          (v) =>
-                            v.status !== "Cancelled" && dayKey(v.start) >= day,
-                        )
-                        .sort((a, b) => a.start.localeCompare(b.start))[0]
-                        .start,
-                    ),
-                  )
-                }
+                onClick={() => {
+                  toHeading.current = true;
+                  setDay(dayKey(next.start));
+                }}
               >
                 Next scheduled day
               </button>
@@ -560,12 +599,26 @@ export function OperatorToday({
         )}
       </section>
       {v && (
-        <>
-          <button className="text-button" onClick={() => setSelected("")}>
+        <section
+          ref={panel}
+          tabIndex={-1}
+          aria-label="Visit progress"
+          className="operator-progress"
+        >
+          <button
+            className="text-button"
+            onClick={() => {
+              /* Back to the button that opened it, if it is still shown. */
+              (
+                document.getElementById("progress-" + v.id) ?? heading.current
+              )?.focus();
+              setSelected("");
+            }}
+          >
             Close progress
           </button>
           <JobWork s={s} provider="yousef" update={update} visit={v} />
-        </>
+        </section>
       )}
     </>
   );

@@ -39,7 +39,6 @@ import { plural } from "./plural";
 import { respondToOffer } from "./dispatch";
 import Blueprint from "./Blueprint";
 import { bucket } from "./work";
-import { greetingFor } from "./OperatorWork";
 
 function Harness({
   role,
@@ -110,13 +109,9 @@ const h1 = () => screen.getByRole("heading", { level: 1 });
 
 describe("Operator workspace", () => {
   it("opens on Home with the decisions waiting", () => {
-    /* The greeting follows the demo's clock, which is seeded from now, so
-       the heading is checked against that clock, not a time of day. */
-    let clock = 0;
-    open("Operator", (s) => {
-      clock = s.clock;
-    });
-    expect(h1().textContent).toBe(greetingFor(clock));
+    /* The page names itself, as the sidebar does (ADR 092). */
+    open("Operator");
+    expect(h1().textContent).toBe("Home");
     expect(
       screen.getByRole("button", { name: /Work through \d+ decisions?/ }),
     ).toBeTruthy();
@@ -248,6 +243,31 @@ describe("Operator workspace", () => {
     go(/^More/);
     expect(h1().textContent).toBe("More");
     expect(screen.getByRole("button", { name: "Activity →" })).toBeTruthy();
+  });
+
+  /* "Next scheduled day" goes away once pressed; focus goes to the heading,
+     which names the day it opened (ADR 092). */
+  it("moves to the next scheduled day and focuses its heading", () => {
+    let when = "";
+    open("Operator", (s) => {
+      when = new Date(s.clock + 3 * 86_400_000).toISOString();
+      for (const v of s.visits) v.start = when;
+    });
+    go(/^Today/);
+    expect(screen.getByText(/No visits on this date/)).toBeTruthy();
+    fireEvent.click(screen.getByRole("button", { name: "Next scheduled day" }));
+    expect(h1().textContent).toBe(
+      new Date(when).toLocaleDateString("en-CA", {
+        timeZone: "America/Toronto",
+        weekday: "long",
+        month: "long",
+        day: "numeric",
+      }),
+    );
+    expect(document.activeElement).toBe(h1());
+    expect(
+      screen.queryByRole("button", { name: "Next scheduled day" }),
+    ).toBeNull();
   });
 
   it("lists the contractors from More", () => {

@@ -2461,7 +2461,8 @@ Out of scope, and left for later:
 
 Accepted. This closes two items that ADR 083 left for later, and adds 7
 tests: four in `greeting.test.ts`, two in `model.test.ts`, and one screen
-test in `workspace.test.tsx`.
+test in `workspace.test.tsx`. ADR 092 retires the greeting: Home's heading is
+"Home". The price list stands.
 
 **The greeting test passes at any hour.**
 - The operator's Home greeting comes from the demo's clock, and `seed()`
@@ -2983,3 +2984,102 @@ Out of scope, and left for later:
 - a draft request offers "Assign this job", which is a product question;
 - the README still says "Do It Myself";
 - focus returns to the detail heading, not to the button that opened a dialog.
+
+## ADR 092: The operator's Home and Today in the register
+
+Accepted. This is the seventh application of the **register**, and the first to
+the operator's Home and Today pages, with the `RouteMap` and `GlanceCard` as
+they use them. The audit used the remit "the operator sees what today holds
+and what needs them first, and gets to it in one step". It found 12 issues:
+2 at P1, 7 at P2 and 3 at P3, and 9 more under "Also found". All 12 are fixed,
+with the eight "Also found" items in scope; the ninth is on Walkthroughs. One
+test changes, one is new, and `greeting.test.ts` is removed with the greeting.
+
+**The heading says which day it is.** Today's h1 said "Today" on any date, with
+"2026-10-19" under it. That is the worst case the page guards against: the
+operator misreads which day is on screen. The h1 is "Today" only on today, and
+otherwise the day in words, "Monday, October 19". The ISO date is gone.
+
+**Focus goes where the person looks next.** That was the other P1 finding.
+"Next scheduled day" removes itself when pressed, and focus fell to `<body>`.
+It now moves to the h1, which names the day it opened. "View progress" opened
+a panel below the section, out of view, with focus left on the button. The
+panel scrolls into view and takes focus, and "Close progress" hands focus back
+to the button that opened it. "View progress" shows only once a visit is
+confirmed; on a proposed visit its panel had nothing to show.
+
+**The page names itself.** Home's h1 was "Good morning!" over the slogan
+"Here's what needs your attention." It is "Home", the sidebar's name, as in
+ADR 088 to 090. This retires the greeting of ADR 084 and its four tests. Today
+loses "What's happening, in appointment order." Its line is a fact, "1 visit ·
+1 provider · 15 min buffer between visits", where it said "All providers ·
+combined totals, separate routes".
+
+**One state, one word, one number.** Home showed its count of decisions three
+times under three names: "Pending decisions" in red, "Work through 4
+decisions", and "Needs Action 4" on a red fill. The metric is "Needs action",
+the name of the list it scrolls to, and has no `urgent`; the tab count sits on
+the raised surface. A count is not an alarm. The tabs are "Needs action" and
+"All requests". A card whose title fell back to a status shows it in sentence
+case, "Needs review"; the status itself is unchanged.
+
+**One move, one control.** Four controls on Home went to Today: the date, the
+"Scheduled visits" and "Active contractors" metrics, and "All of today". "All
+of today" stays. The other three are plain text.
+
+**Accent follows whose move it is.**
+- Every Home card had an amber icon tile, including those waiting on a
+  contractor, and late or declined cards had a red one. ADR 090's rule now
+  holds on Home: accent for a card in Needs action, neutral otherwise. A late
+  job keeps its alert icon on the accent tile, not red. Red is for errors.
+- Every Today entry had an amber line, dot and "Proposed" badge. The line and
+  dots are structure, so they are neutral. A badge is green when done, accent
+  when running late or unfinished, and neutral otherwise. The Today strip on
+  Home follows the same rule.
+- The day totals sat on the accent tint. They are on the raised surface.
+
+**Totals count what the list shows.** "Booked work time" left out proposed
+visits, but "Simulated travel" counted them, so a day read "0 hrs" beside "12
+min". Both count every visit listed, and the first is "Work time". The totals,
+and the Timeline/Map switch, show only when the day has visits.
+
+**A map says only what it knows.** `RouteMap` always drew three numbered
+stops and a route. It now draws one pin per visit, and a route only when one
+provider is chosen; with all providers, the heading is "Provider locations"
+and no route is drawn. Its label names the count, "Illustrative map, 1 visit".
+The "Illustrative map · simulated travel" overlay repeated the caption and is
+gone, as is the button that opened Today from Today. "LAKE ONTARIO" was drawn
+in the colour of the water and is now muted text. Each "Open in Maps" link's
+`aria-label` names the address and the new tab.
+
+**Small things.**
+- The map's heading was an h3 under the h1. It is an h2 at h3 size.
+- Home's two h2s were 14px and 25px. The Today strip's heading is 14px, like
+  "Today at a glance".
+- An empty day says "plan a visit from Requests", and "Requests" is now a link.
+- Each entry said "15 min buffer"; it is said once, above them. The entry
+  keeps its travel time, which is what differs.
+- A dead "Open map ↗" link inside timeline entries is removed.
+
+**Checked live.** No horizontal overflow and no target under 44px at 320, 375,
+768, 1024, 1280 or 1440px in either theme, on Home, an empty Today, a Today
+timeline and the map. The lowest text contrast is 5.2:1 in both themes: on
+Home in dark, and on Home and the timeline in light. Today in dark is at least
+6.8:1. "Next scheduled day" puts focus on
+"Monday, October 19" at every width, with the global 2px focus ring. No
+console errors. The rules are scoped to `.op-home` and `.op-today`; the
+removed `.map-label` and `.map-expand` were used only by `RouteMap`, so the
+Contractor and Customer screens do not change.
+
+**Left alone.**
+- The status words are the system's names, as in ADR 090 and 091.
+- The shared `GlanceCard`, `.eyebrow`, `.note` and `badgeTone`. Home passes
+  different props to `GlanceCard`; the component is unchanged.
+- The `--map-label` token is now unused but kept, for a later token cleanup.
+
+Out of scope, and left for later:
+- Walkthroughs still pass `urgent` to `GlanceCard`, so its count stays red;
+- `RouteMap` is declared inside `OperatorWorkspace`, so it remounts on each
+  render;
+- at 320px the Provider and Date fields sit close, and the h1 "Monday, October
+  19" wraps to two lines.

@@ -142,7 +142,8 @@
 .operator-timeline-entry {
   position: relative;
   margin-left: var(--space-25) !important;
-  border-left: 2px solid var(--accent-text) !important;
+  /* The line and dots are structure, not state: neutral (ADR 092). */
+  border-left: 2px solid var(--border-strong) !important;
   padding-left: var(--space-6) !important;
 }
 .operator-time {
@@ -156,9 +157,9 @@
   position: absolute;
   left: -12px;
   top: 1rem;
-  background: var(--accent-soft);
-  color: var(--accent-text);
-  border: 1px solid var(--accent-text);
+  background: var(--surface-raised);
+  color: var(--muted);
+  border: 1px solid var(--border-strong);
   border-radius: var(--radius-pill);
   width: 24px;
   height: 24px;
@@ -186,7 +187,7 @@
   border: 1px solid var(--line);
   border-radius: var(--radius-lg);
   padding: var(--space-4);
-  background: var(--accent-soft);
+  background: var(--surface-raised);
 }
 .operator-day-totals span {
   font-size: var(--text-label);
@@ -219,6 +220,8 @@
    never the operator's to act on, so it is always neutral (ADR 091). */
 :root[data-theme] .queue-item .badge.quiet,
 :root[data-theme] .operator-summary .badge.quiet,
+:root[data-theme] .op-today .badge.quiet,
+:root[data-theme] .operator-timeline-entry .badge.quiet,
 :root[data-theme] .operator-concept .visit-card .badge:not(.green):not(.red),
 :root[data-theme] .operator-concept .assignment-row .badge:not(.green):not(.red) {
   background: transparent;
