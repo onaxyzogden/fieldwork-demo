@@ -65,6 +65,7 @@ An interactive prototype of a handyman services platform. It has three roles, Cu
 - Bundle-size work is parked (ADR 074–076). The catalogue and the per-role CSS were measured at 6% and 2% of the first load (ADR 076).
 
 ## History
+- 2026-10-16: ADR 086. The seeded offer v5 starts at 10:00 Toronto time on the first weekday at least three days out, on a machine in any timezone. It used to use machine-local `setHours(10)` and could fall on a weekend. There are 658 tests.
 - 2026-10-16: ADR 085, the first register audit. The operator's Contractors page is now operational: the h1 is "Contractors" with a factual line under it, and the page is one roster table that lines up rate, hours, next day off and restricted work. It stacks into labelled lines below 47rem of workspace. The eyebrow, the slogan and the per-card badges are gone, and the credentials caveat is said once. `DESIGN.md` declares every role's workspace operational. There are 657 tests. Four in `concurrency.test.ts` fail on `main` too, because they depend on the machine's timezone.
 - 2026-10-15: a screen test pins the intake's photo-only Continue (ADR 082's inline error and focus). There are 656 tests.
 - 2026-10-15: ADR 084. The greeting is a pure `greetingFor(clock)`, so the suite passes at any hour. Instant Book's $129 moved into an `INSTANT_PRICES` table keyed by catalogue category, which every price display and record reads. `instantEligible` requires a priced category. There are 655 tests, all passing.

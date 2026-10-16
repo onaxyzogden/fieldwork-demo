@@ -1,4 +1,4 @@
-import { describe, it, expect } from "vitest";
+import { describe, it, expect, vi } from "vitest";
 import {
   seed,
   classify,
@@ -255,5 +255,35 @@ describe("provider-aware scheduling", () => {
   it("creates Toronto times independently of host timezone", () => {
     expect(torontoParts(localTime("2026-09-08", 10)).hour).toBe("10");
     expect(torontoParts(localTime("2026-12-08", 10)).hour).toBe("10");
+  });
+  it("seeds marcus's offer at 10:00 Toronto on a weekday, in any timezone", () => {
+    // Midday in Toronto on Sunday 11 October 2026, then each day of that week.
+    // Three days out from Wednesday to Saturday is a weekend or rolls past one.
+    const sunday = Date.parse("2026-10-11T16:00:00Z");
+    const expected = ["14", "15", "16", "19", "19", "19", "20"];
+    try {
+      for (const tz of [
+        "UTC",
+        "America/Toronto",
+        "Asia/Tokyo",
+        "Pacific/Honolulu",
+      ]) {
+        vi.stubEnv("TZ", tz);
+        expected.forEach((day, i) => {
+          vi.spyOn(Date, "now").mockReturnValue(sunday + i * 86400000);
+          const s = seed();
+          const v = s.visits.find((v) => v.id === "v5")!;
+          const p = torontoParts(new Date(v.start));
+          expect([tz, p.day, p.hour, p.minute]).toEqual([tz, day, "10", "00"]);
+          const city = s.requests.find((r) => r.id === v.requestId)!.city;
+          expect(available(s, "marcus", v.duration, city, v.start, v.id)).toBe(
+            true,
+          );
+        });
+      }
+    } finally {
+      vi.unstubAllEnvs();
+      vi.restoreAllMocks();
+    }
   });
 });
