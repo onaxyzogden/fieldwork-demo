@@ -3,6 +3,19 @@ title: "Wiki Log"
 type: log
 ---
 
+## [2026-10-16] session | ADR 094: the customer's and contractor's queues say what is still waiting
+
+- **Completed:**
+  - The item ADR 093 left for later: the customer's ("Waiting on you") and contractor's ("Offers") queues ended on the shared `AllCaughtUp`, which said "All caught up · 0 done" after every item was skipped.
+  - `AllCaughtUp` takes `left`, `waiting` and `where`. The caller counts what is still waiting, skipped items included, as `DecisionQueue` does. With some left, the h1 is "End of the queue" and the line is "1 done. 2 still waiting on you, on Home." or "2 offers still waiting, under Offers."; "All caught up" and its tick show only when nothing is left, now saying where anything new will show instead of "here".
+  - `DESIGN.md` cites ADR 094; the rule sentence "An end screen says what is still waiting" was already there.
+- **Verified:**
+  - `tsc`, `npm run build`, and `npm test` (670 tests, all passing; three new).
+  - Live at 320, 375, 768, 1024, 1280 and 1440px in both themes: both queues, skipped through, end on "End of the queue" with focus on the h1; no overflow, no target under 44px, lowest contrast 8.2:1 dark and 5.7:1 light. The operator's queue unchanged. No console errors.
+- **Correction:** [[fieldwork]] still said ADR 093's PR was open. It merged as PR #71 (`29765cd`).
+- **Deferred:** `PropertyRecord`'s h3s under the next step's h2; the desktop queue's repeated name and hidden description; "Open as the customer" on a dead link.
+- **Pages touched:** [[fieldwork]], [[one-at-a-time]].
+
 ## [2026-10-16] session | ADR 093: the operator's Walkthroughs and the decision queue in the register
 
 - **Completed:**
