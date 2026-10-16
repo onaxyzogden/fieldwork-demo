@@ -3,6 +3,20 @@ title: "Wiki Log"
 type: log
 ---
 
+## [2026-10-16] session | ADR 095: a link that no longer works is not offered
+
+- **Completed:**
+  - The item ADR 093 left for later: once the customer's link was withdrawn or expired, the Sent card still offered "Copy link" and "Open as the customer", both leading to ADR 047's refusal page, under the heading "Waiting on the customer".
+  - The card hides both while the link is dead. With nothing approved, the h2 is "Link withdrawn" or "Link expired", the line says "The customer can't open the assessment until you issue a fresh link.", and "Issue a fresh link" is the primary; once issued, focus goes to "Copy link". With approvals, "Convert" stays first and the muted line says the link is dead.
+  - The operator's `PropertyRecord` shows "Link withdrawn" or "Link expired" as plain text instead of a dead "Open assessment" link.
+  - `DESIGN.md` gains "A link that no longer works is not offered." and cites ADR 095.
+- **Verified:**
+  - `tsc`, `npm run build`, and `npm test` (675 tests, all passing; five new). One ADR 093 assertion now checks the "Link withdrawn" heading instead of the dropped muted line.
+  - Live at 320, 375, 768, 1024, 1280 and 1440px in both themes: no overflow, no target under 44px, lowest contrast 7.7:1 dark and 6.1:1 light; focus on "Issue a fresh link" after withdrawing and on "Copy link" after a fresh one. Customer and contractor screens unchanged. No console errors.
+- **Correction:** [[fieldwork]] still said ADR 094's PR was open. It merged as PR #72 (`82cf204`).
+- **Deferred:** the customer's side of a dead link (`customerQueue` and the glance still count it, and its "Review assessment" and "Open assessment" links lead to the refusal page; changes ADR 062, so its own session); `PropertyRecord`'s h3s; the desktop queue's repeated name and hidden description; the `GlanceLead` eyebrow; `.badge.neutral`; no ready-to-convert walkthrough in the seed.
+- **Pages touched:** [[fieldwork]].
+
 ## [2026-10-16] session | ADR 094: the customer's and contractor's queues say what is still waiting
 
 - **Completed:**
