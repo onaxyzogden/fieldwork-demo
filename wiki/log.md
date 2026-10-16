@@ -3,6 +3,21 @@ title: "Wiki Log"
 type: log
 ---
 
+## [2026-10-16] session | ADR 096: an assessment waits on the customer only while its link works
+
+- **Completed:**
+  - The customer's side of a dead link, which ADR 095 left for its own decision because it changes ADR 062. Once a link was withdrawn or expired, the customer's glance still counted the assessment, the Home button still said "Review your assessment for ...", the queue still held it, and the record said "Awaiting your approval" beside a dead "Open assessment" link.
+  - `customerGlance` keeps a Sent assessment only while `linkState(s, w, clock)` is "live". The queue is built from the glance (ADR 062), so the count, the label and the queue still agree; an open queue skips the item as it skips any that leaves.
+  - The customer's `PropertyRecord` reads "Link withdrawn" or "Link expired" (the operator's words) in place of "Awaiting your approval", and hides "Open assessment".
+  - `CustomerQueue`'s `w.access &&` guard is gone, since the queue holds only assessments with a live link.
+- **Verified:**
+  - `tsc`, `npm run build`, and `npm test` (679 tests, all passing; four new). ADR 062's queue-equals-count test passes unchanged.
+  - Live as Sarah Lin (c1, PMW-0001): withdrawing took "Waiting on you" from 1 to 0 and removed the review button; with the queue open, the withdrawal moved it to "All caught up" with focus on the heading; a fresh link brought everything back. At 320, 375, 768, 1024, 1280 and 1440px in both themes: no overflow, no target under 44px, lowest record contrast 7.7:1 dark and 5.2:1 light. No console errors.
+- **Correction:** [[fieldwork]] still said ADR 095's PR was open. It merged as PR #73 (`7bf92bb`).
+- **Note:** running Prettier over the touched files reformatted unrelated lines and switched them to LF; that attempt was stashed (`git stash list`: "h096 prettier-mangled attempt") and the edits re-applied without it. The stash can be dropped.
+- **Deferred:** the operator's mirror (`walkthroughGlance` still counts a dead-link walkthrough as with the customer, and can suggest chasing it); a customer action to ask for a fresh link; `PropertyRecord`'s h3s; the desktop queue's repeated name and hidden description; the `GlanceLead` eyebrow; `.badge.neutral`; no ready-to-convert walkthrough in the seed.
+- **Pages touched:** [[fieldwork]].
+
 ## [2026-10-16] session | ADR 095: a link that no longer works is not offered
 
 - **Completed:**

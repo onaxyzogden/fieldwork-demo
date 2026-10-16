@@ -118,14 +118,23 @@ export default function PropertyRecord({
               <span className="badge">{w.status}</span>
             ) : (
               <span className="row record-links">
+                {/* A link that no longer works is not offered, and an
+                    assessment the customer cannot open is not awaiting them
+                    (ADR 096). */}
                 <span className="badge">
-                  {customerAssessmentText(w.status)}
+                  {w.status === "Sent" && linkState(s, w) === "revoked"
+                    ? "Link withdrawn"
+                    : w.status === "Sent" && linkState(s, w) === "expired"
+                      ? "Link expired"
+                      : customerAssessmentText(w.status)}
                 </span>
-                {w.status !== "Draft" && w.access && w.id !== current && (
-                  <a className="link" href={assessmentLink(w.access.token)}>
-                    Open assessment
-                  </a>
-                )}
+                {w.status !== "Draft" &&
+                  linkState(s, w) === "live" &&
+                  w.id !== current && (
+                    <a className="link" href={assessmentLink(w.access!.token)}>
+                      Open assessment
+                    </a>
+                  )}
               </span>
             )}
           </div>

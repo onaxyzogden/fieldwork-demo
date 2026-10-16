@@ -3272,4 +3272,44 @@ errors.
 - The customer's side: `customerQueue` and the customer's glance still count a
   Sent assessment whose link is dead, and its "Review assessment" and "Open
   assessment" links lead to the refusal page. Changing what the customer's
-  queue holds changes ADR 062, so it waits for its own decision.
+  queue holds changes ADR 062, so it waits for its own decision (done in ADR
+  096).
+
+## ADR 096: An assessment waits on the customer only while its link works
+
+Accepted. Amends ADR 062. ADR 095 left the customer's side for its own
+decision: once the operator withdrew a link or it expired, the customer's
+glance still counted the assessment as "Waiting on you", the Home button still
+said "Review your assessment for ...", and the queue still held it, with
+"Review assessment" leading to the refusal page from ADR 047. The maintenance
+record said "Awaiting your approval" beside an "Open assessment" link that
+went to the same place. The customer could do nothing about any of it; the
+next move was the operator's. Four tests are new.
+
+**An assessment waits on the customer only while its link works.**
+`customerGlance` keeps a Sent assessment with an undecided finding only while
+`linkState` is "live", read at the glance's own clock. ADR 062's rule holds as
+before: the queue is built from the glance, so the count, the button's label
+and the queue still agree, and a queue already open skips the assessment as
+soon as its link is withdrawn, as it skips any item that leaves.
+`linkState` takes an optional clock for this.
+
+In the customer's maintenance record, a Sent assessment whose link is dead
+reads "Link withdrawn" or "Link expired", the operator's words for the same
+state (ADR 095), in place of "Awaiting your approval", and "Open assessment"
+is not offered. A fresh link from the operator brings the to-do, the count and
+the link back.
+
+**Checked live.** As Sarah Lin, withdrawing PMW-0001's link took "Waiting on
+you" from 1 to 0 and removed "Review your assessment for 124 Maple Grove
+Drive"; with the queue open, the withdrawal moved it to "All caught up" with
+focus on the heading. A fresh link brought both back. At 320, 375, 768, 1024,
+1280 and 1440px in both themes the record shows "Link withdrawn" with no link,
+nothing overflows and no target is under 44px. The lowest text contrast in the
+record is 7.7:1 in dark and 5.2:1 in light. No console errors.
+
+**Left alone.**
+- The refusal page (ADR 047), which still answers an old link opened directly.
+- The operator's mirror: `walkthroughGlance` still counts a Sent walkthrough
+  with a dead link as with the customer, and can still suggest chasing it.
+- The customer has no way to ask for a fresh link from the record.

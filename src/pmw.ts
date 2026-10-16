@@ -353,12 +353,17 @@ export function revokeAccess(s: State, walkthroughId: string) {
 }
 
 export type LinkState = "live" | "expired" | "revoked" | "none";
-export const linkState = (s: State, w: Walkthrough): LinkState =>
+/** `clock` for a caller that is handed its own, as the glances are. */
+export const linkState = (
+  s: State,
+  w: Walkthrough,
+  clock: number = s.clock,
+): LinkState =>
   !w.access
     ? "none"
     : w.access.revokedAt
       ? "revoked"
-      : w.access.expiresAt <= s.clock
+      : w.access.expiresAt <= clock
         ? "expired"
         : "live";
 

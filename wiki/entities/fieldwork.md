@@ -55,7 +55,8 @@ An interactive prototype of a handyman services platform. It has three roles, Cu
 - ADR 092 (the operator's Home and Today in the register) is live on `main` via PR #70 (2026-10-16), merged as `1042549`. It is the seventh register audit.
 - ADR 093 (the operator's Walkthroughs and the decision queue in the register) is live on `main` via PR #71 (2026-10-16), merged as `29765cd`. It is the eighth register audit, and with it every operator screen has had one.
 - ADR 094 (the customer's and contractor's queues say what is still waiting) is live on `main` via PR #72 (2026-10-16), merged as `82cf204`.
-- ADR 095 (a link that no longer works is not offered) is on branch `claude/dead-link-not-offered`, in a PR that is open and not merged.
+- ADR 095 (a link that no longer works is not offered) is live on `main` via PR #73 (2026-10-16), merged as `7bf92bb`.
+- ADR 096 (an assessment waits on the customer only while its link works) is on branch `claude/customer-dead-link`, in a PR that is open and not merged.
 - Local dev uses Vite on 5173 and the preview build on 4173 (`.claude/launch.json`, untracked).
 
 ## Connections
@@ -74,6 +75,7 @@ An interactive prototype of a handyman services platform. It has three roles, Cu
 - Bundle-size work is parked (ADR 074–076). The catalogue and the per-role CSS were measured at 6% and 2% of the first load (ADR 076).
 
 ## History
+- 2026-10-16: ADR 096, amending ADR 062. `customerGlance` keeps a Sent assessment only while `linkState` is live at the glance's clock, so the customer's "Waiting on you" count, the review button and the queue drop a withdrawn or expired one together, and an open queue skips it. The customer's record reads "Link withdrawn" or "Link expired" with no "Open assessment" link. `linkState` takes an optional clock. There are 679 tests.
 - 2026-10-16: ADR 095. While the customer's link is withdrawn or expired, the Sent walkthrough card hides "Copy link" and "Open as the customer"; with nothing approved its h2 is "Link withdrawn" or "Link expired" and "Issue a fresh link" is the primary, handing focus to "Copy link" once issued. The operator's property record shows the link's state as plain text instead of a dead "Open assessment" link. There are 675 tests.
 - 2026-10-16: ADR 094. The shared `AllCaughtUp` takes the number still waiting from its caller, so the customer's and contractor's queues, skipped through, end on "End of the queue" with "2 still waiting on you, on Home." or "2 offers still waiting, under Offers." "All caught up" and its tick show only when nothing is left, and say where anything new will show. There are 670 tests.
 - 2026-10-16: ADR 093, the eighth register audit, on the operator's Walkthroughs and the decision queue. After skips the queue ends on "End of the queue" with how many still need a decision; "All caught up" shows only when none are left. Opening a walkthrough focuses its h1, and coming back focuses its row. "Withdraw this link", and "Issue a fresh link" while the link still works, ask first with Keep it focused. The page is "Walkthroughs" with no label or slogan; groups are captioned Draft, Sent and Converted, and rows carry only "Ready to convert". That count is no longer red, accent marks only the operator's move, and a draft's findings carry no state. The Sent card's notes are plain text and the developer note is gone. Queue buttons that leave it all say "Open request"; the quote's in-place one says "Change price". There are 667 tests.

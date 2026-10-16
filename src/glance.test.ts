@@ -6,9 +6,12 @@ import {
   createWalkthrough,
   findingState,
   findingsFor,
+  issueAccess,
+  revokeAccess,
   seedWalkthroughs,
   sendWalkthrough,
 } from "./pmw";
+import { customerQueue } from "./roleQueues";
 import { dayKey } from "./work";
 import {
   contractorGlance,
@@ -181,6 +184,37 @@ describe("the customer's glance", () => {
     // Decided, and it stops waiting on anyone.
     findingsFor(s, w.id).forEach((f) => (f.decision = "Not Now"));
     expect(customerGlance(s, id, s.clock).waiting).toBe(before);
+  });
+
+  it("does not count an assessment whose link no longer works (ADR 096)", () => {
+    const s = seed();
+    seedWalkthroughs(s);
+    const property = s.properties[0];
+    const id = property.accountId;
+    const before = customerGlance(s, id, s.clock).waiting;
+    const w = createWalkthrough(s, property.id);
+    addFinding(s, w.id, { title: "Loose railing", price: 200 });
+    sendWalkthrough(s, w.id);
+    const queued = () =>
+      customerQueue(s, id, s.clock).some(
+        (t) => t.kind === "assessment" && t.walkthroughId === w.id,
+      );
+    expect(customerGlance(s, id, s.clock).waiting).toBe(before + 1);
+    expect(queued()).toBe(true);
+
+    // Withdrawn: the operator's to replace, not the customer's to review.
+    revokeAccess(s, w.id);
+    expect(customerGlance(s, id, s.clock).waiting).toBe(before);
+    expect(queued()).toBe(false);
+
+    // A fresh link brings it back.
+    issueAccess(s, w.id);
+    expect(customerGlance(s, id, s.clock).waiting).toBe(before + 1);
+
+    // Expired, by the glance's own clock.
+    const at = w.access!.expiresAt;
+    expect(customerGlance(s, id, at - 1).assessmentIds).toContain(w.id);
+    expect(customerGlance(s, id, at).assessmentIds).not.toContain(w.id);
   });
 
   it("never counts another account's requests or visits", () => {
