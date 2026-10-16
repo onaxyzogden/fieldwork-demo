@@ -3,6 +3,19 @@ title: "Wiki Log"
 type: log
 ---
 
+## [2026-10-16] session | ADR 097: a dead link is the operator's move, not the customer's
+
+- **Completed:**
+  - The operator's mirror of ADR 096. The walkthrough glance still counted a Sent walkthrough with a withdrawn or expired link under With customer, and the lead could suggest chasing it, though the customer could not open it.
+  - `walkthroughGlance` splits With customer by `linkState(s, w, clock)`: a dead link goes to a new `freshLinkIds` bucket (oldest sent first) and the chase skips it. Ready to convert still wins (ADR 095). One bucket per walkthrough still holds.
+  - The Walkthroughs glance leads with the oldest dead-link walkthrough, eyebrow "Link withdrawn" or "Link expired", opening the card where "Issue a fresh link" is the primary. Its row carries the same badge. The card keeps three counts.
+- **Verified:**
+  - `tsc`, `npm run build`, and `npm test` (684 tests, all passing; five new).
+  - Live as the operator: withdrawing PMW-0001's link put "Link withdrawn" in the lead, With customer 2 to 1, badge on the row; the lead opened the card. A fresh link reverted all three. At 320, 375, 768, 1024, 1280 and 1440px in both themes: no overflow, lead and row at least 95px, lowest contrast 10.9:1 dark and 5.2:1 light. No console errors.
+- **Correction:** [[fieldwork]] still said ADR 096's PR was open. It merged as PR #74 (`7712366`). The session plan said ADR 097 amends ADR 060; the walkthrough glance is ADR 053, and the ADR says so.
+- **Deferred:** a Sent walkthrough with no link at all (still With customer); a dead-link badge on a ready row; a customer action to ask for a fresh link; the h096 Prettier stash, still droppable.
+- **Pages touched:** [[fieldwork]].
+
 ## [2026-10-16] session | ADR 096: an assessment waits on the customer only while its link works
 
 - **Completed:**
