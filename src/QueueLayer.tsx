@@ -99,20 +99,35 @@ export function QueueLayer({
   );
 }
 
-/** The end of a queue: what was done, and the way back. */
+/**
+ * The end of a queue: what was done, what is still waiting, and the way back.
+ * A skipped item is still waiting, so the queue is not "all caught up" until
+ * nothing is (ADR 094, as the operator's in ADR 093).
+ */
 export function AllCaughtUp({
   handled,
+  left,
+  waiting,
+  where,
   close,
 }: {
   handled: number;
+  /** How many still wait on this person, skipped ones included. */
+  left: number;
+  /** What is still waiting and where, said when `left` is more than 0. */
+  waiting: string;
+  /** Where anything new shows, such as "on Home". */
+  where: string;
   close: () => void;
 }) {
   return (
     <>
-      <h1 tabIndex={-1}>All caught up</h1>
+      <h1 tabIndex={-1}>{left ? "End of the queue" : "All caught up"}</h1>
       <p className="onsite-hint dq-done">
-        <CheckCircle2 aria-hidden="true" size={20} />
-        {handled} done. Anything new will show here.
+        {!left && <CheckCircle2 aria-hidden="true" size={20} />}
+        {left
+          ? `${handled ? `${handled} done. ` : ""}${waiting}`
+          : `${handled} done. Anything new will show ${where}.`}
       </p>
       <div className="onsite-bar">
         <button className="primary full" onClick={close}>

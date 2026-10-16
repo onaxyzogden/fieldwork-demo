@@ -1873,3 +1873,63 @@ describe("Walkthroughs and the decision queue (ADR 093)", () => {
     expect(dialog.textContent).not.toMatch(/0 decisions handled/);
   });
 });
+
+describe("The customer's and contractor's end screens (ADR 094)", () => {
+  /** Skip, or act with `act`, until the queue has nothing left to show. */
+  const runThrough = (dialog: HTMLElement, act?: string) => {
+    for (let i = 0; i < 12; i++) {
+      const next =
+        (act && within(dialog).queryByRole("button", { name: act })) ||
+        within(dialog).queryByRole("button", { name: /^Skip/ });
+      if (!next) break;
+      fireEvent.click(next);
+    }
+  };
+  const h1Text = (dialog: HTMLElement) =>
+    within(dialog).getByRole("heading", { level: 1 }).textContent;
+
+  it("does not call the customer's skipped queue all caught up", () => {
+    /* Customer c2, with a quote waiting on them. */
+    open("Customer", (d) => {
+      const r = d.requests.find(
+        (x) => x.accountId === "c2" && x.status !== "Draft",
+      )!;
+      issueQuote(d, r.id, {
+        type: "Fixed price",
+        amount: 240,
+        payOnCompletion: false,
+      });
+      reconcile(d);
+    });
+    fireEvent.click(
+      screen.getByRole("button", {
+        name: /^Review your quote|^Review \d+ things waiting on you/,
+      }),
+    );
+    const dialog = screen.getByRole("dialog", { name: "Waiting on you" });
+    runThrough(dialog);
+    expect(h1Text(dialog)).toBe("End of the queue");
+    expect(dialog.textContent).toMatch(/\d+ still waiting on you, on Home\./);
+    expect(dialog.textContent).not.toMatch(/0 done/);
+  });
+
+  it("does not call the contractor's skipped offers all caught up", () => {
+    open("Contractor");
+    fireEvent.click(screen.getByRole("button", { name: "← Back to your work" }));
+    fireEvent.click(screen.getByRole("button", { name: /^Review \d+ offers?/ }));
+    const dialog = screen.getByRole("dialog", { name: "Offers" });
+    runThrough(dialog);
+    expect(h1Text(dialog)).toBe("End of the queue");
+    expect(dialog.textContent).toMatch(/\d+ offers? still waiting, under Offers\./);
+  });
+
+  it("is all caught up once every offer is answered", () => {
+    open("Contractor");
+    fireEvent.click(screen.getByRole("button", { name: "← Back to your work" }));
+    fireEvent.click(screen.getByRole("button", { name: /^Review \d+ offers?/ }));
+    const dialog = screen.getByRole("dialog", { name: "Offers" });
+    runThrough(dialog, "Accept job");
+    expect(h1Text(dialog)).toBe("All caught up");
+    expect(dialog.textContent).toMatch(/\d+ done\. Anything new will show under Offers\./);
+  });
+});

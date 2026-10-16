@@ -3191,10 +3191,46 @@ branch, so the Customer and Contractor screens do not change.
 
 Out of scope, and left for later:
 - the customer and contractor queues end on the shared `AllCaughtUp`, which
-  says "All caught up" after skips too;
+  says "All caught up" after skips too (done in ADR 094);
 - in `PropertyRecord`, the h3s "Awaiting assessment" and "Assessments" sit
   under the next step's h2;
 - on desktop the queue says the name, address and tasks twice, and hides the
   customer's own words for tasks not under review;
 - "Open as the customer" opens a dead page once the link is withdrawn or
   expired.
+
+## ADR 094: The customer's and contractor's queues say what is still waiting
+
+Accepted. ADR 093 found that a queue skipped through ended on "All caught up"
+with work still waiting, and fixed it for the operator's decision queue alone.
+The customer's queue ("Waiting on you") and the contractor's ("Offers") end
+on the shared `AllCaughtUp`, which said "All caught up" and "0 done. Anything
+new will show here." after every item was skipped. That is the same worst
+case: the person believes they are finished when they are not. Three tests
+are new.
+
+**An end screen says what is still waiting.** `AllCaughtUp` now takes the
+number still waiting (`left`), the sentence that says so (`waiting`) and where
+anything new will show (`where`). The caller counts what is still waiting
+(skipped items, and any that arrived while the queue was open), as
+`DecisionQueue` does, because the queue's own position does not know about
+skipped items. When some are left, the h1 is "End of the queue" and the
+line is the number done, if any, then what is waiting:
+- the customer: "1 done. 2 still waiting on you, on Home.";
+- the contractor: "2 offers still waiting, under Offers." ("offer" for one).
+
+"All caught up", with its tick, shows only when nothing is left, as "3 done.
+Anything new will show on Home." or "…under Offers." The old "here" named no
+place, since the queue closes on Back.
+
+**Checked live.** At 320, 375, 768, 1024, 1280 and 1440px in both themes,
+skipping through each queue ends on "End of the queue" with the count and no
+tick. Focus is on the h1, nothing overflows, and no target is under 44px.
+The lowest text contrast is 8.2:1 in dark and 5.7:1 in light. The operator's
+queue is unchanged. No console errors.
+
+**Left alone.**
+- `QueueLayer`, `useOneAtATime`, `.eyebrow`, `.note` and `badgeTone`.
+- ADR 062's contents and order of each queue, the requeue rule, and ADR
+  079's focus fallbacks.
+- `DecisionQueue` keeps its own end screen from ADR 093.
