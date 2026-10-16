@@ -95,8 +95,10 @@ export default function PropertyRecord({
                 className="link"
                 href={assessmentLink(w.access.token)}
                 target="_blank"
+                rel="noopener"
               >
                 Open assessment
+                <span className="sr-only"> (opens in a new tab)</span>
               </a>
             ) : links ? (
               <span className="badge">{w.status}</span>

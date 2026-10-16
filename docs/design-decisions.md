@@ -3083,3 +3083,118 @@ Out of scope, and left for later:
   render;
 - at 320px the Provider and Date fields sit close, and the h1 "Monday, October
   19" wraps to two lines.
+
+## ADR 093: The operator's Walkthroughs and the decision queue in the register
+
+Accepted. This is the eighth application of the **register**, and the first to
+the operator's Walkthroughs (the pipeline, the detail, on-site capture and
+pricing) and the decision queue ("Work through 4 decisions"). The audit used
+the remit "the operator sees whose move each walkthrough waits on, and makes
+each decision in one press or skips it". The worst case is the operator
+believing they are finished when they are not, or breaking a customer's link
+without meaning to. It found 12 issues: 2 at P1, 9 at P2 and 1 at P3, and 5
+more under "Also found". All 12 are fixed, with the empty state from "Also
+found"; the other four are left for later. Existing tests follow the new
+names, and six are new.
+
+**An end screen says what is still waiting.** Skipping every decision in the
+queue ended on "All caught up" and "0 decisions handled", with four still
+waiting. That is the worst case. The queue now counts the live decisions left.
+When there are some, the h1 is "End of the queue" and the line says "4 still
+need a decision, under Needs action on Home", after the number handled if any
+were. "All caught up", with its tick, shows only when none are left. The change
+is in `DecisionQueue`; the shared `AllCaughtUp` is untouched.
+
+**Focus goes where the person looks next.** That was the other P1 finding.
+Opening a walkthrough replaces the list, and "All walkthroughs" replaces the
+detail, so the pressed control was gone each way and focus fell to the top of
+the page. The detail's h1 takes focus when it opens (`tabIndex={-1}`), and the
+list puts focus back on the row of the walkthrough it was left for.
+
+**A link that stops working asks first.** "Withdraw this link" and "Issue a
+fresh link" each broke the link the customer holds in one press, and neither
+toast can undo it. Each now asks inline, as "Withdraw offer" does in ADR 091:
+"Withdraw this link? The customer's link stops working." with "Withdraw link"
+and "Keep it", and "Issue a fresh link? The customer's current link stops
+working." with "Issue fresh link" and "Keep it". "Keep it" takes focus, and
+closing hands focus back to the button that asked, or to "Issue a fresh link"
+once the withdrawn link's button is gone. A link that no longer works is
+replaced in one step, since nothing breaks.
+
+**The page names itself.** The h1 was "Property walkthroughs" under the label
+"PROACTIVE MAINTENANCE" and over the slogan "Walk a property, record what you
+see, and let the customer choose what to approve." It is "Walkthroughs", the
+sidebar's name, as in ADR 088 to 092.
+
+**One state, one word.** Each state had three names: the groups said "In
+progress", "With the customer" and "Became work", the chips Draft, Sent and
+Converted, and the glance Drafts, With customer and Ready to convert. "With
+the customer" also held walkthroughs ready to convert, so it was not the set
+the glance counted. The groups are captioned with the status itself, "Draft",
+"Sent" and "Converted", and rows no longer repeat it in a chip. A sent
+walkthrough with approvals carries one chip, "Ready to convert", the glance's
+word. The status words are unchanged.
+
+**A count is not an alarm.** "Ready to convert" was a red number. It is the
+operator's next move, so Walkthroughs no longer passes `urgent` to it. This
+closes the item ADR 092 left for later; `GlanceCard` is unchanged.
+
+**Accent follows whose move it is.** Every chip was accent: `statusTone` gave
+drafts a `neutral` class that no rule styles. One rule now holds, as in ADR
+090 and 092. A draft, and a sent walkthrough with approvals to convert, are
+accent; Converted, and a Completed finding, are green; anything waiting on the
+customer is neutral. A finding approved but not yet converted is accent. The
+group counts sit on the raised surface. The rules are scoped to `.wt-head`,
+`.wt-finding` and `.wt-group`; `badgeTone` is untouched.
+
+**Empty states say what is true.** A finding in a draft said "Pending
+decision" when nothing had been sent; a draft's findings carry no state. An
+unpriced finding also showed an "Assessment required" chip under its state
+chip, which already said so; only a quoted price is shown.
+
+**Facts, not boxes.** The Sent card stacked three or four note boxes on the
+accent tint, one of them developer copy ("It is not a secret: everything this
+prototype knows..."). That paragraph is gone, and the rest are plain muted
+text (`.wt-fact`), as is "No walkthroughs yet".
+
+**One move, one name.** In the queue, "Change", "Adjust" and "Open request"
+all left the queue for the request page, while "Adjust" on a quote changed the
+price in place. Every button that leaves the queue is "Open request", the
+in-place one is "Change price", and the error says "Open request shows every
+option."
+
+**Small things.**
+- "Open assessment" in the property record was 26px tall; on the operator's
+  screens it is 44px. It and "Open as the customer" say "(opens in a new tab)"
+  to screen readers, and "Open assessment" gains `rel="noopener"`.
+- "OLDEST UNDECIDED", "ASSESSMENT PMW-0001" and the option "Further
+  Assessment Required" are in sentence case. The stored value is unchanged.
+- The assessment label in the detail is untracked, as in ADR 091.
+
+**Checked live.** No horizontal overflow and no target under 44px at 320, 375,
+768, 1024, 1280 or 1440px in either theme, on the pipeline, a Sent detail, the
+link confirmation, a draft detail, the property record, the queue's first
+screen and its end screen. The lowest text contrast is 5.2:1 in dark (the
+desktop queue's side panel) and 5.2:1 in light; everything else in dark is at
+least 7.7:1. At every width, opening a walkthrough focuses its h1, "Keep it"
+takes focus and hands it back, the list focuses the row it was left for, and
+the end screen focuses "End of the queue". No console errors. `DecisionQueue`
+is the operator's alone, and `PropertyRecord` changes only in its operator
+branch, so the Customer and Contractor screens do not change.
+
+**Left alone.**
+- The status words are the system's names, as in ADR 090 to 092.
+- ADR 053's buckets and their precedence, ADR 059's order and suggested
+  action, and ADR 079's fallbacks.
+- The shared `GlanceCard`, `QueueLayer`, `AllCaughtUp`, `.eyebrow`, `.note`
+  and `badgeTone`.
+
+Out of scope, and left for later:
+- the customer and contractor queues end on the shared `AllCaughtUp`, which
+  says "All caught up" after skips too;
+- in `PropertyRecord`, the h3s "Awaiting assessment" and "Assessments" sit
+  under the next step's h2;
+- on desktop the queue says the name, address and tasks twice, and hides the
+  customer's own words for tasks not under review;
+- "Open as the customer" opens a dead page once the link is withdrawn or
+  expired.
