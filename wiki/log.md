@@ -3,6 +3,22 @@ title: "Wiki Log"
 type: log
 ---
 
+## [2026-10-16] session | ADR 085: the Contractors page in the operational register
+
+- **Completed:**
+  - A register audit of the operator's Contractors page against the house methodology's persuasive/operational register. Copy voice, type scale, density and accent were all persuasive. There was no motion.
+  - The page is now an h1 "Contractors", one factual line, and one roster table. It has three widths, set by the workspace container: one line per value at 64rem and wider, wrapped below that, and stacked labelled lines below 47rem. It has explicit table roles, and the credentials caveat appears once.
+  - A register paragraph in `DESIGN.md`: all three roles' workspaces are operational.
+  - Checked live at 320–1440px in both themes. Nothing overflows, the whole roster fits in one desktop view at 1440px, and there are no console errors.
+  - 657 tests and the build. Four `concurrency.test.ts` tests fail on `main` as well, because they depend on the date.
+- **Deferred:**
+  - Making `concurrency.test.ts` independent of the date.
+  - Phone and email on the roster.
+  - Linking each contractor to their visits.
+  - Elias's role text repeats the restricted-work column.
+  - Register audits of the other screens.
+- **Pages touched:** [[fieldwork]].
+
 ## [2026-10-15] session | A screen test for the intake's photo-only Continue
 
 - **Completed:**

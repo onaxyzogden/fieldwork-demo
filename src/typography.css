@@ -19,7 +19,6 @@ h1,
 }
 h2,
 .modal h2,
-.roster h2,
 .panel h2 {
   font-size: var(--text-h2);
 }
@@ -142,8 +141,11 @@ footer,
   font-size: var(--text-caption);
   line-height: 1.5;
 }
-.avatar.large {
-  font-size: var(--text-intro);
+.roster thead th,
+.roster tbody th small,
+.roster td::before,
+.roster-note {
+  font-size: var(--text-label);
 }
 .brand {
   font-size: var(--text-brand);
@@ -366,8 +368,7 @@ footer,
   }
 }
 @container workspace (max-width: 30rem) {
-  .stats,
-  .roster {
+  .stats {
     grid-template-columns: minmax(0, 1fr);
   }
   .panel,

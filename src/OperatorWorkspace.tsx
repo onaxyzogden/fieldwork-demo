@@ -1,9 +1,10 @@
 import { OperatorHome, OperatorToday } from "./OperatorWork";
 import { dayKey } from "./work";
 import { dayLabel } from "./intake";
-import { MapPin, ArrowUpRight } from "lucide-react";
+import { ShieldCheck, ArrowUpRight } from "lucide-react";
 import { providers, money, dateLabel, hoursLabel, hoursOf } from "./model";
 import { lazyScreen } from "./Recovery";
+import { plural } from "./plural";
 import { OperatorRequests } from "./OperatorRequests";
 import { useWorkspace } from "./workspaceContext";
 
@@ -178,51 +179,119 @@ export function OperatorWorkspace() {
     case "Contractors":
       return (
         <>
+          {/* An operational page: it names itself and compares, rather
+             than selling the network to the person who runs it (ADR 085). */}
           <div className="heading">
             <div>
-              <div className="eyebrow">YOUR TRUSTED NETWORK</div>
-              <h1>Good people. Great work.</h1>
+              <h1>Contractors</h1>
               <p>
-                Invite-only roster · hours set by each contractor · illustrative
-                eligibility
+                {plural(providers.length, "contractor")} · Halton / GTA ·
+                invite-only · hours set by each contractor
               </p>
             </div>
           </div>
-          <div className="roster">
-            {providers.map((p) => (
-              <section className="card panel" key={p.id}>
-                <div className="avatar large">{p.initials}</div>
-                <h2>{p.name}</h2>
-                <p>{p.role}</p>
-                <p>
-                  <MapPin aria-hidden="true" size={16} />
-                  {p.city} · Halton / GTA
-                </p>
-                <p>{p.skills}</p>
-                <h3>
-                  {money(p.rate)}
-                  <small> / hour</small>
-                </h3>
-                {/* Their own hours, as they set them (ADR 067). */}
-                <span className="badge green">
-                  Active · {hoursLabel(hoursOf(s, p.id))}
-                </span>
-                {hoursOf(s, p.id).off.some((d) => d >= dayKey(s.clock)) && (
-                  <p>
-                    Next day off:{" "}
-                    {dayLabel(
-                      hoursOf(s, p.id).off.find((d) => d >= dayKey(s.clock))!,
-                    )}
-                  </p>
-                )}
-                <p>
-                  {p.eligible
-                    ? "Restricted work eligibility marked by operator; credentials not verified by software."
-                    : "General handyman scope only."}
-                </p>
-              </section>
-            ))}
-          </div>
+          <section className="card panel">
+            {/* Explicit roles: the stacked layout below 47rem changes these
+               elements' display, which can drop table semantics in some
+               browsers (ADR 085). */}
+            <table className="roster" role="table">
+              <caption className="sr-only">
+                Contractors, with their rate, hours and restricted-work
+                eligibility
+              </caption>
+              <thead role="rowgroup">
+                <tr role="row">
+                  {[
+                    "Contractor",
+                    "Base",
+                    "Skills",
+                    "Rate",
+                    "Hours",
+                    "Next day off",
+                    "Restricted work",
+                  ].map((h) => (
+                    <th key={h} scope="col" role="columnheader">
+                      {h}
+                    </th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody role="rowgroup">
+                {providers.map((p) => {
+                  /* Their own hours, as they set them (ADR 067). */
+                  const hours = hoursLabel(hoursOf(s, p.id));
+                  const off = hoursOf(s, p.id).off.find(
+                    (d) => d >= dayKey(s.clock),
+                  );
+                  return (
+                    <tr key={p.id} role="row">
+                      <th scope="row" role="rowheader">
+                        {p.name}
+                        <small>{p.role}</small>
+                      </th>
+                      <td role="cell" data-label="Base">
+                        {p.city}
+                      </td>
+                      <td
+                        role="cell"
+                        data-label="Skills"
+                        className="roster-wrap"
+                      >
+                        {p.skills}
+                      </td>
+                      <td role="cell" data-label="Rate" className="roster-rate">
+                        {money(p.rate)} / hour
+                      </td>
+                      {/* Wraps between groups of days, never inside one. */}
+                      <td
+                        role="cell"
+                        data-label="Hours"
+                        className={
+                          hours === "No hours set"
+                            ? "roster-wrap muted"
+                            : "roster-wrap"
+                        }
+                      >
+                        <span>
+                          {hours.split(" · ").map((g, i) => (
+                            <span key={g}>
+                              {i > 0 && " · "}
+                              <span className="roster-group">{g}</span>
+                            </span>
+                          ))}
+                        </span>
+                      </td>
+                      <td
+                        role="cell"
+                        data-label="Next day off"
+                        className={off ? "" : "muted"}
+                      >
+                        {off ? dayLabel(off) : "None upcoming"}
+                      </td>
+                      <td
+                        role="cell"
+                        data-label="Restricted work"
+                        className={p.eligible ? "" : "muted"}
+                      >
+                        {p.eligible ? (
+                          <span className="roster-flag">
+                            <ShieldCheck aria-hidden="true" size={16} />
+                            Marked eligible
+                          </span>
+                        ) : (
+                          "General scope"
+                        )}
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+            <p className="roster-note">
+              Restricted-work eligibility is marked by you. Software does not
+              verify credentials.
+            </p>
+          </section>
         </>
       );
     case "Activity":

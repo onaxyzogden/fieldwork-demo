@@ -254,9 +254,32 @@ describe("Operator workspace", () => {
     open("Operator");
     go(/^More/);
     fireEvent.click(screen.getByRole("button", { name: "Contractors →" }));
-    expect(h1().textContent).toBe("Good people. Great work.");
+    expect(h1().textContent).toBe("Contractors");
     for (const name of ["Marcus Chen", "Nina Patel"])
-      expect(screen.getByRole("heading", { name })).toBeTruthy();
+      expect(
+        screen.getByRole("rowheader", { name: new RegExp(name) }),
+      ).toBeTruthy();
+  });
+
+  /* An operational page compares people; it does not sell them (ADR 085). */
+  it("compares the contractors in one roster", () => {
+    open("Operator");
+    go(/^More/);
+    fireEvent.click(screen.getByRole("button", { name: "Contractors →" }));
+    const roster = screen.getByRole("table");
+    const rows = within(roster).getAllByRole("row").slice(1);
+    expect(rows).toHaveLength(4);
+    const row = (name: string) =>
+      rows.find((r) => r.textContent?.includes(name))!;
+    expect(
+      within(row("Elias Williams")).getByText("Marked eligible"),
+    ).toBeTruthy();
+    for (const name of ["Marcus Chen", "Nina Patel"])
+      expect(within(row(name)).getByText("General scope")).toBeTruthy();
+    expect(screen.queryByRole("heading", { name: /\/ hour/ })).toBeNull();
+    expect(
+      screen.getAllByText(/Software does not verify credentials/),
+    ).toHaveLength(1);
   });
 
   it("shows the activity history from More", () => {

@@ -27,6 +27,8 @@ Tokens carry a **role**, and the role decides the pairing. `--accent`, `--succes
 
 Typography is DM Sans/Manrope with a 1.25 ratio: body 16, intro 20, H3 25, H2 31.25, H1 39.0625px, stored in rem. Labels 14px and captions 12px are intentional utility exceptions. Body line-height is 1.6, headings 1.5. Never shrink text to fit a screen.
 
+**Register.** Each surface declares a register, which sets its type, density, grid, accent, motion and voice (house methodology, Layer 1). All three roles' workspaces are *operational*. Pages name themselves, facts replace slogans, values that people compare sit in rows that line up, and accent goes only to the one primary action and to state. Motion is feedback only. The customer's intake and confirmations may speak warmly, but they do not sell. A *persuasive* surface, such as marketing, belongs outside the app. See ADR 085.
+
 ## Five primitives
 
 1. **Card:** `.card` owns border, radius, surface and padding. Existing `.panel` and portal card classes forward to the same base for compatibility. Modifiers own layout. Surface resolution is `--card-surface → --panel`; border is `--card-border → --line`. Use grouping deliberately; don't wrap every inline label. Contractor cards use a two-column thumbnail grid, not a float.
