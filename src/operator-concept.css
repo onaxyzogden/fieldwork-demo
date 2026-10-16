@@ -108,10 +108,11 @@
 .focused-fulfillment .detail > #fulfillment {
   display: block;
 }
+/* Facts about the job, not a state to act on: a neutral surface (ADR 091). */
 .fulfillment-request-summary {
   padding: var(--space-4);
   border: 1px solid var(--line);
-  background: var(--accent-soft);
+  background: var(--surface-raised);
   border-radius: var(--radius-lg);
   margin: var(--space-4) 0;
 }
@@ -213,8 +214,13 @@
   }
 }
 /* In the request list, accent marks the rows that are the operator's to act
-   on; every other status sits on a neutral chip (ADR 090). */
-:root[data-theme] .queue-item .badge.quiet {
+   on; every other status sits on a neutral chip (ADR 090). The detail's own
+   status chip follows the same rule, and a visit's or an offer's status is
+   never the operator's to act on, so it is always neutral (ADR 091). */
+:root[data-theme] .queue-item .badge.quiet,
+:root[data-theme] .operator-summary .badge.quiet,
+:root[data-theme] .operator-concept .visit-card .badge:not(.green):not(.red),
+:root[data-theme] .operator-concept .assignment-row .badge:not(.green):not(.red) {
   background: transparent;
   color: var(--muted);
   border-color: var(--line);
@@ -226,6 +232,17 @@
 .queue-empty p {
   margin: 0 0 var(--space-3);
   color: var(--muted);
+}
+/* Labels in sentence case, untracked (ADR 091). The shared .eyebrow keeps
+   its tracking elsewhere. */
+.operator-concept .eyebrow {
+  letter-spacing: 0;
+}
+/* The chosen time carries a mark as well as its border and fill. */
+.operator-concept .slot strong {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
 }
 /* Whether a waiting offer has been opened (ADR 060). */
 .op-decision-seen {

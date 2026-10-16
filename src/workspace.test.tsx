@@ -190,7 +190,7 @@ describe("Operator workspace", () => {
       screen.getByRole("button", { name: "Offer to a contractor" }),
     );
     expect(
-      screen.getByRole("heading", { level: 2, name: "Assign Contractor" }),
+      screen.getByRole("heading", { level: 2, name: "Offer to a contractor" }),
     ).toBeTruthy();
     expect(
       screen.getByRole("heading", { name: /^Recommended appointments/ }),
@@ -200,7 +200,7 @@ describe("Operator workspace", () => {
     ).toBeNull();
     fireEvent.click(screen.getByRole("button", { name: "← Back to request" }));
     expect(
-      screen.queryByRole("heading", { name: "Assign Contractor" }),
+      screen.queryByRole("heading", { name: "Offer to a contractor" }),
     ).toBeNull();
     expect(
       screen.getByRole("button", { name: "Offer to a contractor" }),
@@ -212,7 +212,7 @@ describe("Operator workspace", () => {
     go(/^Requests/);
     fireEvent.click(screen.getByRole("button", { name: "Do it myself" }));
     expect(
-      screen.getByRole("heading", { level: 2, name: "Do It Myself" }),
+      screen.getByRole("heading", { level: 2, name: "Do it myself" }),
     ).toBeTruthy();
   });
 
@@ -1506,6 +1506,11 @@ describe("Friction and wording (ADR 083)", () => {
     go(/^Requests/);
     fireEvent.click(screen.getByRole("button", { name: /^Visits/ }));
     fireEvent.click(screen.getByRole("button", { name: /^Withdraw offer/ }));
+    // The toast has no undo, so it asks first (ADR 091).
+    const dialog = screen.getByRole("dialog", { name: "Withdraw offer" });
+    fireEvent.click(
+      within(dialog).getByRole("button", { name: "Withdraw offer" }),
+    );
     expect(screen.getByText(/Offer withdrawn/)).toBeTruthy();
     expect(screen.queryByRole("button", { name: /^Withdraw offer/ })).toBeNull();
     cleanup();
@@ -1517,6 +1522,42 @@ describe("Friction and wording (ADR 083)", () => {
     go(/^Requests/);
     fireEvent.click(screen.getByRole("button", { name: /^Visits/ }));
     expect(screen.queryByRole("button", { name: /^Withdraw offer/ })).toBeNull();
+  });
+
+  it("asks before removing a visit, and keeps it when closed", () => {
+    open("Operator", offered);
+    go(/^Requests/);
+    fireEvent.click(screen.getByRole("button", { name: /^Visits/ }));
+    fireEvent.click(screen.getByRole("button", { name: "Remove visit" }));
+    let dialog = screen.getByRole("dialog", { name: "Remove visit" });
+    expect(within(dialog).getByText(/tasks\s+return to the request/)).toBeTruthy();
+    fireEvent.click(
+      within(dialog).getByRole("button", { name: "Close dialog" }),
+    );
+    expect(screen.queryByRole("dialog")).toBeNull();
+    fireEvent.click(screen.getByRole("button", { name: "Remove visit" }));
+    dialog = screen.getByRole("dialog", { name: "Remove visit" });
+    fireEvent.click(within(dialog).getByRole("button", { name: "Remove visit" }));
+    expect(screen.getByText(/Visit removed; tasks available/)).toBeTruthy();
+    expect(screen.queryByRole("button", { name: "Remove visit" })).toBeNull();
+  });
+
+  it("asks before withdrawing a question to the customer", () => {
+    open("Operator", (d) => {
+      d.requests.forEach((q) => {
+        q.operatorNote = "Is the door inside or outside?";
+        q.customerReply = null;
+      });
+    });
+    go(/^Requests/);
+    expect(screen.getByText("Waiting on customer")).toBeTruthy();
+    fireEvent.click(screen.getByRole("button", { name: "Cancel question" }));
+    const dialog = screen.getByRole("dialog", { name: "Cancel question" });
+    fireEvent.click(
+      within(dialog).getByRole("button", { name: "Withdraw question" }),
+    );
+    expect(screen.getByText(/Question withdrawn/)).toBeTruthy();
+    expect(screen.queryByText("Waiting on customer")).toBeNull();
   });
 
   it("shows a converted assessment's decisions without buttons for them", () => {
