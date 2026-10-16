@@ -332,9 +332,6 @@
   .queue .queue-item small {
     display: none;
   }
-  .roster {
-    grid-template-columns: 1fr;
-  }
   .intake {
     padding: var(--space-6);
   }
@@ -556,8 +553,7 @@ main > *,
 .event > *,
 .stats > *,
 .dashboard-grid > *,
-.bottom-grid > *,
-.roster > * {
+.bottom-grid > * {
   min-width: 0;
 }
 main,
@@ -795,4 +791,55 @@ main button,
 }
 .compare-column .toast {
   left: 50%;
+}
+
+/* With room for every column, short values keep to one line and only skills
+   and hours wrap, so the rows line up for comparison (ADR 085). */
+@container workspace (min-width: 64rem) {
+  .roster td {
+    white-space: nowrap;
+  }
+  .roster td.roster-wrap {
+    white-space: normal;
+  }
+}
+
+/* The roster's columns become labelled lines on a narrow content area, so a
+   phone still reads one contractor at a time without sideways scrolling
+   (ADR 085). The header row stays for screen readers. */
+@container workspace (max-width: 47rem) {
+  .roster thead {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+  }
+  .roster tr {
+    display: block;
+    padding: var(--space-3) 0;
+    border-bottom: 1px solid var(--line);
+  }
+  .roster tbody tr:last-child {
+    border-bottom: 0;
+  }
+  .roster tbody th,
+  .roster td {
+    display: flex;
+    gap: var(--space-3);
+    padding: var(--space-1) 0;
+    border-bottom: 0;
+  }
+  .roster tbody th {
+    display: block;
+    padding-bottom: var(--space-2);
+  }
+  .roster td::before {
+    content: attr(data-label);
+    flex: 0 0 8rem;
+    color: var(--muted);
+  }
+  .roster td {
+    white-space: normal;
+  }
 }

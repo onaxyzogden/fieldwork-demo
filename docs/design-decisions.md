@@ -2492,3 +2492,69 @@ test in `workspace.test.tsx`.
 Out of scope, and left for later:
 - `OperatorRequests` as its own chunk;
 - a screen test for the intake's photo-only Continue.
+
+## ADR 085: The Contractors page is a roster, not a pitch
+
+Accepted. This is the first application of the house methodology's
+**register** (Layer 1 of `hybrid-design-system.md`): every surface declares
+itself *persuasive* or *operational*, and the register sets the dials. The
+operator's Contractors page was written in the persuasive register for an
+operational job, and it changes to match. It adds 1 screen test and changes 1.
+
+**What the audit found.** It used the remit "the operator compares the people
+they can send: who, where, what, at what rate, when, and whether they may do
+restricted work". The verdicts per dial:
+- *Copy voice: fix.* An amber eyebrow and the h1 "Good people. Great work."
+  sold the network to the one person who runs it.
+- *Type scale: fix.* Each rate was a heading, which ADR 082 had already ruled
+  out for prices.
+- *Density and grid: fix.* Four large cards in a two-column grid. A rate or
+  an hour could not be compared without reading every card in turn, and
+  fields did not line up between cards.
+- *Accent: fix.* Amber on the eyebrow, and a green badge on every card,
+  whether or not it meant anything.
+- *Motion: keep.* There was none to remove.
+
+**What changed.**
+- The h1 is "Contractors". Under it is one factual line: the count, the
+  area, invite-only, and that each contractor sets their own hours.
+- One table: contractor and role, base, skills, rate, hours, next day off,
+  and restricted work. The rate is plain text with tabular figures. Hours
+  and day off are the contractor's own (ADR 067).
+- Restricted work is a short label. "Marked eligible" has a shield icon, and
+  everyone else reads "General scope" in muted text. The caveat that
+  software does not verify credentials is said once, under the table, not
+  on every card. Status is never colour alone.
+- No accent is spent on the page. The only colour is the text and muted
+  tokens.
+- Three widths, set by the workspace container rather than the window
+  (ADR 024's container queries):
+  - 64rem and wider: short values keep to one line, and only skills and
+    hours wrap. Hours wrap between groups of days, never inside one.
+  - Below that: cells wrap at word boundaries, and the rows still line up.
+  - Below 47rem: each contractor becomes a block of labelled lines, with the
+    header kept for screen readers. 47rem is where the wrapped table's
+    narrowest layout (about 652px) stops fitting.
+- The table elements carry explicit roles (`table`, `rowgroup`, `row`,
+  `columnheader`, `rowheader`, `cell`). The stacked layout changes their
+  `display`, and some browsers drop table semantics when that happens.
+- `.avatar.large` and the old `.roster` grid rules are removed. Nothing else
+  used them.
+
+**Checked live.** At 1440px the whole roster and its note end at 678px, so
+all four contractors can be compared without scrolling. No horizontal
+overflow at 320, 375, 768, 1024, 1280 or 1440px. Muted text is 7.7:1 in
+dark and 6.1:1 in light. No console errors. The roster adds no controls and
+no motion, so keyboard order and reduced motion are unchanged.
+
+**What it cost.** About 50 lines of CSS in place of 10, and 657 tests. Four
+in `concurrency.test.ts` fail on `main` as well: they pick a slot three days
+after the demo clock, so they depend on the date.
+
+Out of scope, and left for later:
+- `concurrency.test.ts`'s dependence on the date;
+- phone and email on the roster;
+- a link from each contractor to their visits;
+- Elias's role, "Specialist · operator marked eligible", repeats the
+  restricted-work column;
+- the rest of the app, which has not had a register audit.

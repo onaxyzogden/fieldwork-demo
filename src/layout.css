@@ -192,11 +192,6 @@ textarea::placeholder {
   width: 31px;
   height: 31px;
 }
-.avatar.large {
-  width: 54px;
-  height: 54px;
-  margin-bottom: var(--space-5);
-}
 .online {
   display: inline-block;
   width: 6px;
@@ -881,12 +876,53 @@ main[tabindex="-1"]:focus {
   border-radius: var(--radius-md);
 }
 .roster {
-  display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: var(--space-5);
+  width: 100%;
+  border-collapse: collapse;
 }
-.roster h3 {
-  margin: var(--space-5) 0;
+.roster th,
+.roster td {
+  padding: var(--space-3) var(--space-2);
+  border-bottom: 1px solid var(--line);
+  text-align: left;
+  vertical-align: top;
+}
+.roster tr > :first-child {
+  padding-left: 0;
+}
+.roster tr > :last-child {
+  padding-right: 0;
+}
+.roster thead th {
+  padding-top: 0;
+  color: var(--muted);
+  font-weight: 600;
+}
+.roster tbody tr:last-child > * {
+  border-bottom: 0;
+}
+.roster tbody th {
+  font-weight: 600;
+}
+.roster tbody th small {
+  display: block;
+  color: var(--muted);
+  font-weight: 400;
+}
+.roster-group,
+.roster-rate {
+  white-space: nowrap;
+}
+.roster-rate {
+  font-variant-numeric: tabular-nums;
+}
+.roster-flag {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+}
+.roster-note {
+  margin-top: var(--space-4);
+  color: var(--muted);
 }
 .event {
   display: flex;
