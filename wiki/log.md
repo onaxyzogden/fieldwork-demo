@@ -3,6 +3,24 @@ title: "Wiki Log"
 type: log
 ---
 
+## [2026-10-16] session | ADR 093: the operator's Walkthroughs and the decision queue in the register
+
+- **Completed:**
+  - A register audit of the operator's Walkthroughs (the pipeline, the detail, on-site capture and pricing) and the decision queue, with the remit "the operator sees whose move each walkthrough waits on, and makes each decision in one press or skips it". It found 12 issues, 2 P1, 9 P2 and 1 P3, plus 5 under "Also found". All 12 are fixed, with the empty state from "Also found".
+  - P1: skipping every decision ended on "All caught up · 0 decisions handled". The queue counts the live decisions left; with some left it says "End of the queue" and "4 still need a decision, under Needs action on Home".
+  - P1: opening a walkthrough, and "All walkthroughs", dropped focus to the top. The detail's h1 takes focus, and the list focuses the row it was left for.
+  - A link that stops working asks first: "Withdraw this link" and a live "Issue a fresh link" confirm inline with Keep it focused; a dead link is replaced in one step.
+  - The page is "Walkthroughs"; groups are Draft, Sent and Converted; "Ready to convert" is the only row chip, and no longer red. Accent marks only the operator's move; a draft's findings carry no state.
+  - The Sent card's notes are plain `.wt-fact` text; the developer "not a secret" note is gone. Queue buttons that leave it say "Open request"; the quote's in-place button says "Change price".
+  - "Open assessment" is 44px on operator screens; it and "Open as the customer" name the new tab. Labels are in sentence case.
+  - `DESIGN.md`'s register paragraph adds: an end screen says what is still waiting, and a link that stops working asks first.
+- **Verified:**
+  - `tsc`, `npm run build`, and `npm test` (667 tests, all passing; six new).
+  - Live at 320, 375, 768, 1024, 1280 and 1440px in both themes, on the pipeline, a Sent detail, the link confirmation, a draft, the property record and the queue's first and end screens: no overflow, no target under 44px, lowest contrast 5.2:1. Focus lands as designed at every width. No console errors. Customer and contractor screens unchanged.
+- **Correction:** [[fieldwork]] still said ADR 092's PR was open. It merged as PR #70 (`1042549`).
+- **Deferred:** the shared `AllCaughtUp`'s false "All caught up" for customer and contractor; `PropertyRecord`'s h3s under the next step's h2; the desktop queue's repeated name and hidden description; "Open as the customer" on a dead link.
+- **Pages touched:** [[fieldwork]], [[one-at-a-time]].
+
 ## [2026-10-16] session | ADR 092: the operator's Home and Today in the register
 
 - **Completed:**
