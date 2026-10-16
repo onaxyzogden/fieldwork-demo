@@ -70,7 +70,13 @@ export default function ContractorQueue({
           skip={() => q.advance(false)}
         />
       ) : (
-        <AllCaughtUp handled={q.handled} close={close} />
+        <AllCaughtUp
+          handled={q.handled}
+          left={offers.length}
+          waiting={`${offers.length} offer${offers.length === 1 ? "" : "s"} still waiting, under Offers.`}
+          where="under Offers"
+          close={close}
+        />
       )}
     </QueueLayer>
   );

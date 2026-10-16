@@ -80,7 +80,13 @@ export default function CustomerQueue({
           skip={() => q.advance(false)}
         />
       ) : (
-        <AllCaughtUp handled={q.handled} close={close} />
+        <AllCaughtUp
+          handled={q.handled}
+          left={todos.length}
+          waiting={`${todos.length} still waiting on you, on Home.`}
+          where="on Home"
+          close={close}
+        />
       )}
     </QueueLayer>
   );
