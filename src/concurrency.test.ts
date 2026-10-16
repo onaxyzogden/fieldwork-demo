@@ -6,19 +6,19 @@ import {
   bookVisit,
   holdSlot,
   seed,
+  slots,
   type State,
 } from "./model";
 
 const PROVIDER = "marcus";
 
-/** A weekday slot inside working hours, far enough out to be bookable. Three
- *  days out unless that is a weekend, when it is the Monday after: plain
- *  "three days out" failed every test run made on a Wednesday or Thursday. */
-function slotThreeDaysOut(s: State) {
-  const d = new Date(s.clock + 3 * 86400000);
-  while ([0, 6].includes(d.getUTCDay())) d.setUTCDate(d.getUTCDate() + 1);
-  d.setUTCHours(15, 0, 0, 0);
-  return d.toISOString();
+/** A slot the scheduler itself says is free. A hand-picked "three days out at
+ *  15:00 UTC" landed on the seeded visit v5 whenever the machine ran on
+ *  Toronto time, so these tests passed or failed by timezone and weekday. */
+function freeSlot(s: State) {
+  const [first] = slots(s, PROVIDER, 60, "Oakville");
+  expect(first, "the scheduler found no free slot").toBeDefined();
+  return first.start;
 }
 
 /**
@@ -81,7 +81,7 @@ describe("two tabs writing at once", () => {
   it("does not let two tabs book the same provider at the same time", () => {
     const tabA = load();
     const tabB = load();
-    const at = slotThreeDaysOut(tabA);
+    const at = freeSlot(tabA);
 
     // Both tabs check availability against their own copy, and both agree —
     // which is the whole problem, and is why the real check is inside the
@@ -120,7 +120,7 @@ describe("two tabs writing at once", () => {
 
   it("returns the same visit for a repeated booking key", () => {
     const tab = load();
-    const at = slotThreeDaysOut(tab);
+    const at = freeSlot(tab);
     const once = (s: State) => {
       let made: { id: string } | null = null;
       const next = commit(s, (d) => {
@@ -146,7 +146,7 @@ describe("two tabs writing at once", () => {
 
   it("holds a slot while someone is booking it, and lets it go when it lapses", () => {
     const tab = load();
-    const at = slotThreeDaysOut(tab);
+    const at = freeSlot(tab);
     const held = commit(tab, (d) => {
       holdSlot(d, {
         requestId: "r1",
@@ -174,7 +174,7 @@ describe("two tabs writing at once", () => {
 
   it("gives the hold back once the visit exists", () => {
     const tab = load();
-    const at = slotThreeDaysOut(tab);
+    const at = freeSlot(tab);
     const after = commit(tab, (d) => {
       holdSlot(d, {
         requestId: "r1",
