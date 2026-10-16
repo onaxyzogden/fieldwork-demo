@@ -1,5 +1,10 @@
 import { type State, money, dateLabel } from "./model";
-import { findingEvidence, findingState, propertyRecord } from "./pmw";
+import {
+  findingEvidence,
+  findingState,
+  linkState,
+  propertyRecord,
+} from "./pmw";
 import { assessmentLink } from "./store";
 import { customerAssessmentText } from "./customerText";
 
@@ -91,15 +96,24 @@ export default function PropertyRecord({
               {w.assessmentId} · {dateLabel(w.sentAt || w.date)}
             </small>
             {links && w.status !== "Draft" && w.access?.token ? (
-              <a
-                className="link"
-                href={assessmentLink(w.access.token)}
-                target="_blank"
-                rel="noopener"
-              >
-                Open assessment
-                <span className="sr-only"> (opens in a new tab)</span>
-              </a>
+              linkState(s, w) === "live" ? (
+                <a
+                  className="link"
+                  href={assessmentLink(w.access.token)}
+                  target="_blank"
+                  rel="noopener"
+                >
+                  Open assessment
+                  <span className="sr-only"> (opens in a new tab)</span>
+                </a>
+              ) : (
+                /* A link that no longer works is not offered (ADR 095). */
+                <span className="muted">
+                  {linkState(s, w) === "revoked"
+                    ? "Link withdrawn"
+                    : "Link expired"}
+                </span>
+              )
             ) : links ? (
               <span className="badge">{w.status}</span>
             ) : (

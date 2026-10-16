@@ -32,6 +32,7 @@ import {
   convertApproved,
   createWalkthrough,
   decide,
+  revokeAccess,
   sendWalkthrough,
 } from "./pmw";
 import Assessment from "./Assessment";
@@ -1811,7 +1812,7 @@ describe("Walkthroughs and the decision queue (ADR 093)", () => {
     );
     fireEvent.click(screen.getByRole("button", { name: "Withdraw this link" }));
     fireEvent.click(screen.getByRole("button", { name: "Withdraw link" }));
-    expect(screen.getByText(/This link has been withdrawn/)).toBeTruthy();
+    expect(screen.getByRole("heading", { name: "Link withdrawn" })).toBeTruthy();
     expect(focused()).toBe(
       screen.getByRole("button", { name: "Issue a fresh link" }),
     );
@@ -1931,5 +1932,108 @@ describe("The customer's and contractor's end screens (ADR 094)", () => {
     runThrough(dialog, "Accept job");
     expect(h1Text(dialog)).toBe("All caught up");
     expect(dialog.textContent).toMatch(/\d+ done\. Anything new will show under Offers\./);
+  });
+});
+
+describe("A link that no longer works is not offered (ADR 095)", () => {
+  const focused = () => document.activeElement;
+  const row = (id: string) =>
+    screen
+      .getAllByRole("button")
+      .find((b) => b.classList.contains("queue-item") && b.textContent!.includes(id))!;
+  /** A walkthrough sent to the customer, with one quoted finding, then `then`. */
+  const sent =
+    (into: { id: string }, then: (d: State, wId: string, fId: string) => void) =>
+    (d: State) => {
+      const w = createWalkthrough(d, "p2");
+      const f = addFinding(d, w.id, {
+        title: "Door rubbing against frame",
+        proposed: "Adjust the sticking door",
+        price: 180,
+      });
+      sendWalkthrough(d, w.id);
+      then(d, w.id, f.id);
+      into.id = w.assessmentId;
+    };
+  const withdrawn = (d: State, wId: string) => {
+    revokeAccess(d, wId);
+  };
+  const openIt = async (made: { id: string }) => {
+    go(/^Walkthroughs/);
+    await screen.findByRole("heading", { level: 1, name: "Walkthroughs" });
+    fireEvent.click(row(made.id));
+  };
+  const offered = () => [
+    screen.queryByRole("button", { name: /Copy link/ }),
+    screen.queryByRole("button", { name: /Open as the customer/ }),
+  ];
+
+  it("does not offer a withdrawn link, and says so in the heading", async () => {
+    const made = { id: "" };
+    open("Operator", sent(made, withdrawn));
+    await openIt(made);
+    expect(offered()).toEqual([null, null]);
+    expect(screen.getByRole("heading", { name: "Link withdrawn" })).toBeTruthy();
+    expect(screen.getByText(/until you issue a fresh link/)).toBeTruthy();
+    expect(screen.queryByText("Waiting on the customer")).toBeNull();
+    expect(
+      screen.getByRole("button", { name: "Issue a fresh link" }).className,
+    ).toBe("primary");
+  });
+
+  it("does not offer an expired link", async () => {
+    const made = { id: "" };
+    open(
+      "Operator",
+      sent(made, (d, wId) => {
+        d.walkthroughs.find((x) => x.id === wId)!.access!.expiresAt = d.clock;
+      }),
+    );
+    await openIt(made);
+    expect(offered()).toEqual([null, null]);
+    expect(screen.getByRole("heading", { name: "Link expired" })).toBeTruthy();
+  });
+
+  it("hands focus to Copy link once a fresh link replaces it", async () => {
+    const made = { id: "" };
+    open("Operator", sent(made, withdrawn));
+    await openIt(made);
+    fireEvent.click(screen.getByRole("button", { name: "Issue a fresh link" }));
+    expect(focused()).toBe(screen.getByRole("button", { name: /Copy link/ }));
+    expect(screen.getByText("Waiting on the customer")).toBeTruthy();
+    expect(
+      screen.getByRole("button", { name: "Issue a fresh link" }).className,
+    ).toBe("text-button");
+  });
+
+  it("keeps Convert first when findings are approved", async () => {
+    const made = { id: "" };
+    open(
+      "Operator",
+      sent(made, (d, wId, fId) => {
+        decide(d, fId, "Approved");
+        revokeAccess(d, wId);
+      }),
+    );
+    await openIt(made);
+    expect(offered()).toEqual([null, null]);
+    expect(
+      screen.getByRole("heading", { name: /1 approved · ready to convert/ }),
+    ).toBeTruthy();
+    expect(screen.getByText(/This link has been withdrawn/)).toBeTruthy();
+    expect(
+      screen.getByRole("button", { name: "Issue a fresh link" }).className,
+    ).toBe("text-button");
+  });
+
+  it("does not link the record to a withdrawn assessment", async () => {
+    const made = { id: "" };
+    open("Operator", sent(made, withdrawn));
+    await openIt(made);
+    const item = [...document.querySelectorAll<HTMLElement>(".record-item")].find(
+      (x) => x.textContent!.includes(made.id),
+    )!;
+    expect(item.querySelector("a")).toBeNull();
+    expect(item.textContent).toMatch(/Link withdrawn/);
   });
 });
