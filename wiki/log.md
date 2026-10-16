@@ -3,6 +3,25 @@ title: "Wiki Log"
 type: log
 ---
 
+## [2026-10-16] session | ADR 090: the operator's request list in the register
+
+- **Completed:**
+  - A register audit of the operator's Requests page, with the remit "the operator sees what is theirs to act on, finds any request in one step, and opens it". It found 10 issues, 1 P1, 7 P2 and 2 P3, and all 10 are fixed. PR #68, open.
+  - P1: the search input had only a placeholder; it has `aria-label="Search requests"`.
+  - The page names itself: the h1 is "Requests", as in the sidebar. The eyebrow "INTAKE & FULFILLMENT", the slogan and the accent count badge are gone; one line says how much of the list shows ("4 of 7 requests").
+  - Accent follows whose move it is: rows in Needs Action keep the accent chip, every other status sits on `.badge.quiet` (scoped to `.queue-item` in `operator-concept.css`). `Review` is out of `badgeTone`'s red pattern, so "Needs Review", and the customer's "In review" over the same status, are no longer red.
+  - "All requests" sorts by bucket, Needs Action first and History last (`BUCKET_ORDER`, stable sort, display only; `bucket()` unchanged, ADR 011).
+  - An empty search or filter says "No requests match." and offers "Show all requests", which resets both and hands focus to the search.
+  - The detail's "← All requests" / "Request Details" header is gone: it duplicated the list when wide and "Browse requests" when narrow.
+  - Filter options are sentence case, with the bucket strings as values.
+  - `DESIGN.md`'s register paragraph adds: accent in a list marks only what is the person's to act on, red is for errors not review, and an empty filtered list offers the way back.
+- **Verified:**
+  - `npm run build`, and `npm test` (662 tests, all passing). One test rewritten (no back button beside the list), three changed (the h1 twice, the count line), two new (the empty state, and the order with its chip colours).
+  - Live at 320, 375, 768, 1024, 1280 and 1440px in both themes, on the list, the detail and the empty state. Nothing overflows. Accent chips 5.2:1 light and 8.7:1 dark; quiet chips 5.7:1 and 8.6:1, 5.4:1 and 6.1:1 on the selected row. The focus ring shows on "Show all requests". No console errors. Contractor screens unchanged; the customer's only change is the "In review" chip.
+- **Correction:** [[fieldwork]] still said ADR 089's PR was open. It merged as PR #67 (`597edd3`).
+- **Deferred:** the draft reference "JALS3PZ3" shown as a request's name; a narrow screen opening on a request rather than the list; red for Declined and Cancelled, which are outcomes, not errors; the "All Requests" button on operator Home, in title case; the status-dictionary words in title case (left as the system's names); the badges on the request detail.
+- **Pages touched:** [[fieldwork]].
+
 ## [2026-10-16] session | ADR 089: the contractor workspace in the register
 
 - **Completed:**
