@@ -3197,7 +3197,7 @@ Out of scope, and left for later:
 - on desktop the queue says the name, address and tasks twice, and hides the
   customer's own words for tasks not under review;
 - "Open as the customer" opens a dead page once the link is withdrawn or
-  expired.
+  expired (done in ADR 095).
 
 ## ADR 094: The customer's and contractor's queues say what is still waiting
 
@@ -3234,3 +3234,42 @@ queue is unchanged. No console errors.
 - ADR 062's contents and order of each queue, the requeue rule, and ADR
   079's focus fallbacks.
 - `DecisionQueue` keeps its own end screen from ADR 093.
+
+## ADR 095: A link that no longer works is not offered
+
+Accepted. ADR 093 left one item for later: once the customer's link was
+withdrawn or had expired, the Sent card still offered "Copy link" and "Open as
+the customer". Both led to the refusal page from ADR 047, so the operator could
+copy a dead link into a message, or preview a page the customer would never
+see. The heading still said "Waiting on the customer", which was no longer
+true: the customer could not act until the operator did. Five tests are new.
+
+**A link that no longer works is not offered.** While the link is withdrawn or
+expired, the Sent card hides "Copy link" and "Open as the customer".
+- With nothing approved, the h2 is "Link withdrawn" or "Link expired" and the
+  line under it is "The customer can't open the assessment until you issue a
+  fresh link." The muted line that said the same thing is dropped.
+- "Issue a fresh link" is then the card's one move, so it is the primary
+  button. Issued from there it acts in one step (ADR 093: nothing breaks), and
+  focus goes to "Copy link", the next move, as the controls come back.
+- With findings approved, the h2 stays "N approved · ready to convert" and
+  "Convert" stays the primary; the muted line still says the link is
+  withdrawn or expired, and "Issue a fresh link" stays a text button.
+
+In the operator's property record, an assessment whose link is not live shows
+"Link withdrawn" or "Link expired" as plain text instead of an "Open
+assessment" link.
+
+**Checked live.** At 320, 375, 768, 1024, 1280 and 1440px in both themes, a
+Sent walkthrough withdrawn shows the one primary button with focus on it, and
+a fresh link brings back "Copy link" with focus on it. Nothing overflows and no
+target is under 44px. The lowest text contrast is 7.7:1 in dark and 6.1:1 in
+light. The customer's and contractor's screens are unchanged. No console
+errors.
+
+**Left alone.**
+- The customer's refusal page (ADR 047) and `LinkControls`' asking (ADR 093).
+- The customer's side: `customerQueue` and the customer's glance still count a
+  Sent assessment whose link is dead, and its "Review assessment" and "Open
+  assessment" links lead to the refusal page. Changing what the customer's
+  queue holds changes ADR 062, so it waits for its own decision.

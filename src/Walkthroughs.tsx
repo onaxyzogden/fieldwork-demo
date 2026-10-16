@@ -721,6 +721,18 @@ function NextStep({
       ?.writeText(link)
       .then(() => notify("Assessment link copied"))
       .catch(() => notify(link));
+  /* A link that no longer works is not offered, and the card says so
+     (ADR 095). Once a fresh one replaces it, focus goes to Copy link, the
+     next move. */
+  const dead = state === "revoked" || state === "expired";
+  const copyButton = useRef<HTMLButtonElement>(null);
+  const handOn = useRef(false);
+  useEffect(() => {
+    if (handOn.current && state === "live") {
+      handOn.current = false;
+      copyButton.current?.focus();
+    }
+  }, [state]);
 
   if (w.status === "Converted")
     return (
@@ -758,14 +770,21 @@ function NextStep({
           <h2 className="look-h3">
             {totals.approved.length
               ? `${totals.approved.length} approved · ready to convert`
-              : "Waiting on the customer"}
+              : dead
+                ? state === "revoked"
+                  ? "Link withdrawn"
+                  : "Link expired"
+                : "Waiting on the customer"}
           </h2>
           <p>
             {totals.approved.length
               ? `${money(totals.subtotal)} plus ${money2(totals.tax)} tax.`
-              : "The customer opens the link below to review the findings. Nothing is scheduled until they approve and a payment method is on file."}
+              : dead
+                ? "The customer can’t open the assessment until you issue a fresh link."
+                : "The customer opens the link below to review the findings. Nothing is scheduled until they approve and a payment method is on file."}
           </p>
         </div>
+        {(totals.approved.length > 0 || !dead) && (
         <div className="op-decision-actions">
           {totals.approved.length > 0 && (
             <button
@@ -779,14 +798,23 @@ function NextStep({
               Convert {totals.approved.length} approved
             </button>
           )}
-          <button className="secondary" onClick={copy}>
-            <Copy aria-hidden="true" size={16} /> Copy link
-          </button>
-          <button className="text-button" onClick={() => window.open(link)}>
-            <ExternalLink aria-hidden="true" size={16} /> Open as the customer
-            <span className="sr-only"> (opens in a new tab)</span>
-          </button>
+          {!dead && (
+            <>
+              <button ref={copyButton} className="secondary" onClick={copy}>
+                <Copy aria-hidden="true" size={16} /> Copy link
+              </button>
+              <button
+                className="text-button"
+                onClick={() => window.open(link)}
+              >
+                <ExternalLink aria-hidden="true" size={16} /> Open as the
+                customer
+                <span className="sr-only"> (opens in a new tab)</span>
+              </button>
+            </>
+          )}
         </div>
+        )}
         {/* Facts about the link, said plainly, not on tinted boxes
             (ADR 093). */}
         {totals.approved.length > 0 && leftover > 0 && (
@@ -799,6 +827,8 @@ function NextStep({
         )}
         {/* The one thing here the operator genuinely could not find out
             before: whether the assessment was ever opened. */}
+        {/* With nothing approved, the heading already says it. */}
+        {!(dead && !totals.approved.length) && (
         <p className="wt-fact">
           {state === "revoked"
             ? "This link has been withdrawn. Issue a fresh one if the customer still needs it."
@@ -808,6 +838,7 @@ function NextStep({
                 ? `Opened ${opens.length} time${opens.length === 1 ? "" : "s"} · last ${dateLabel(opens[opens.length - 1])}`
                 : "Not opened yet."}
         </p>
+        )}
         {/* Only an organization has a choice to make. An individual's sole
             contact approves their own work and there is nobody else it could
             be, so asking would be theatre. */}
@@ -840,16 +871,18 @@ function NextStep({
         )}
         <LinkControls
           live={state === "live"}
+          primary={dead && !totals.approved.length}
           withdraw={() =>
             update((d) => {
               revokeAccess(d, w.id);
             }, "Link withdrawn")
           }
-          fresh={() =>
+          fresh={() => {
+            handOn.current = dead;
             update((d) => {
               issueAccess(d, w.id);
-            }, "Fresh link issued")
-          }
+            }, "Fresh link issued");
+          }}
         />
       </section>
     );
@@ -906,13 +939,17 @@ function NextStep({
  * the customer holds, and neither toast can undo it, so each asks first with
  * Keep it focused (ADR 093). A link that no longer works is replaced in one
  * step. Focus comes back to the button that asked, or to the one left.
+ * When a dead link is all the card is about, replacing it is the card's one
+ * move, so it is the primary (ADR 095).
  */
 function LinkControls({
   live,
+  primary = false,
   withdraw,
   fresh,
 }: {
   live: boolean;
+  primary?: boolean;
   withdraw: () => void;
   fresh: () => void;
 }) {
@@ -973,7 +1010,7 @@ function LinkControls({
       )}
       <button
         ref={freshButton}
-        className="text-button"
+        className={primary ? "primary" : "text-button"}
         onClick={() => (live ? ask("fresh") : fresh())}
       >
         Issue a fresh link
