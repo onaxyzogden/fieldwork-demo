@@ -130,7 +130,7 @@ describe("Operator workspace", () => {
   it("shows a request with its assignment actions", () => {
     open("Operator");
     go(/^Requests/);
-    expect(h1().textContent).toBe("Service requests");
+    expect(h1().textContent).toBe("Requests");
     expect(
       screen.getByRole("heading", { level: 2 }).textContent,
     ).toBe("38 Lakeshore Road West");
@@ -746,9 +746,9 @@ describe("State and wording (ADR 080)", () => {
     )
       .getAllByRole("button")
       .filter((b) => b.classList.contains("queue-item"));
-    expect(
-      screen.getByText(/^\d+ requests?$/).textContent,
-    ).toBe(`${list.length} request${list.length === 1 ? "" : "s"}`);
+    expect(screen.getByText(/^\d+ of \d+ requests?$/).textContent).toBe(
+      `${list.length} of ${d.requests.length} requests`,
+    );
   });
 
   it("marks More as current on the pages under it", () => {
@@ -762,12 +762,55 @@ describe("State and wording (ADR 080)", () => {
     ).toBe("page");
   });
 
-  it("goes back to the request list, not Home", () => {
+  /* ADR 090: one way back to the list, not two. */
+  it("has no separate back button beside the request list", () => {
     open("Operator");
     go(/^Requests/);
-    fireEvent.click(screen.getByRole("button", { name: "← All requests" }));
-    expect(h1().textContent).toBe("Service requests");
-    expect(focused()).toBe(screen.getByPlaceholderText("Search requests…"));
+    expect(screen.queryByRole("button", { name: "← All requests" })).toBeNull();
+    expect(screen.queryByText("Request Details")).toBeNull();
+  });
+
+  it("says when nothing matches, and offers the whole list", () => {
+    open("Operator");
+    go(/^Requests/);
+    const search = screen.getByRole("textbox", { name: "Search requests" });
+    fireEvent.change(search, { target: { value: "no such request" } });
+    expect(screen.getByText("No requests match.")).toBeTruthy();
+    fireEvent.click(screen.getByRole("button", { name: "Show all requests" }));
+    expect((search as HTMLInputElement).value).toBe("");
+    expect(focused()).toBe(search);
+    expect(
+      (screen.getByRole("combobox", { name: "Filter requests" }) as HTMLSelectElement)
+        .value,
+    ).toBe("All requests");
+    expect(screen.getByText(/^\d+ requests?$/)).toBeTruthy();
+  });
+
+  it("lists every request with what needs the operator first", () => {
+    const d = freshDemo();
+    open("Operator");
+    go(/^Requests/);
+    fireEvent.change(screen.getByRole("combobox", { name: "Filter requests" }), {
+      target: { value: "All requests" },
+    });
+    const chips = [...document.querySelectorAll(".queue-item .badge")];
+    expect(chips).toHaveLength(d.requests.length);
+    const needs = d.requests.filter(
+      (r) => bucket(d, r.id) === "Needs Action",
+    ).length;
+    /* Accent for the rows that are the operator's to act on, first; the
+       rest on a neutral chip. "Needs Review" is work, not an error. */
+    chips.slice(0, needs).forEach((c) => {
+      expect(c.classList.contains("quiet")).toBe(false);
+      expect(c.classList.contains("red")).toBe(false);
+    });
+    chips.slice(needs).forEach((c) =>
+      expect(
+        c.classList.contains("quiet") ||
+          c.classList.contains("green") ||
+          c.classList.contains("red"),
+      ).toBe(true),
+    );
   });
 
   it("moves focus to the request chosen from the list", () => {
@@ -1543,7 +1586,7 @@ describe("Friction and wording (ADR 083)", () => {
     fireEvent.click(
       within(screen.getByRole("main")).getAllByRole("button", { name: /·/ })[0],
     );
-    expect(h1().textContent).toBe("Service requests");
+    expect(h1().textContent).toBe("Requests");
   });
 
   it("keeps Demo settings in the sidebar only", () => {

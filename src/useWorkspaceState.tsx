@@ -507,7 +507,7 @@ export function useWorkspaceState({
   const badgeTone = (status: string) =>
     /Confirmed|Accepted|Paid|Instant/.test(status)
       ? "green"
-      : /Review|Declined|Expired|Failed|Cancelled/.test(status)
+      : /Declined|Expired|Failed|Cancelled/.test(status)
         ? "red"
         : "";
   const badge = (status: string) => (
