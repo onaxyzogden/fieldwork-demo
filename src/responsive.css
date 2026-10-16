@@ -101,7 +101,9 @@
   height: 32px;
   border-radius: var(--radius-md);
   background: var(--surface-raised);
-  color: var(--accent);
+  /* Muted, not accent: one per task would spend accent on decoration
+     (ADR 088). */
+  color: var(--muted);
   display: flex;
   align-items: center;
   justify-content: center;

@@ -10,6 +10,8 @@ import { type Request, type State, coordinated, quoted } from "./model";
 
 export const customerStatusText = (status: string) =>
   ({
+    /* The tracker's first step says Received; so does the badge. */
+    Submitted: "Received",
     "Needs Review": "In review",
     "Awaiting Provider Acceptance": "Matching you with a provider",
     "Awaiting Quote Approval": "Quote ready",

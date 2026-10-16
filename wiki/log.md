@@ -3,6 +3,21 @@ title: "Wiki Log"
 type: log
 ---
 
+## [2026-10-16] session | ADR 088: the customer workspace home in the register
+
+- **Completed:**
+  - A register audit of the customer workspace home, with the remit "the customer sees what needs them, what's coming, and how each request stands". It found 9 issues, 6 P2 and 3 P3, and all 9 are fixed.
+  - The P2s: "Waiting on you" is not red, and when the waiting item is an assessment it opens the review queue. Notes inside a customer request sit on `--surface-raised`, not the accent fill. The h1 is "My bookings", and the slogan and subline are gone. A draft's title no longer repeats "Draft". Requests are ordered by what the customer acts on first (display only; `ownRequests` keeps creation order for `startOrResumeRequest`). The row header is a grid, so the badge and chevron hold the edge, and under a 420px container the badge drops under the place line.
+  - The P3s: labels are sentence case with no tracking. Task icons are `--muted`. `Submitted` maps to "Received" in `customerStatusText`, and `docs/status-dictionary.md` records it.
+  - The fallback title "Request · ID" is now "Your request".
+  - `DESIGN.md`'s register line now says a customer's own list runs in the order they act on it, each state has one word, and labels are sentence case.
+- **Verified:**
+  - `npm run build`, and `npm test` (658 tests, all passing). Three assertions changed: two for the h1, one for the "Additional charge" label.
+  - Live at 320, 375, 768, 1024, 1280 and 1440px in both themes. Nothing overflows. Notes are 14.1:1 in light and 12.8:1 in dark; labels 5.9:1 and 10.9:1; task icons 5.2:1 and 6.8:1. The "Waiting on you" button opens the queue and moves focus to its heading. The focus ring shows on the count and the row heads. No console errors. The quote, charge and question panels are not in the seed, so they were checked in code only.
+- **Left alone:** `GlanceCard`, shared by every role, and the global `.note` rule in `primitives.css`.
+- **Correction:** [[fieldwork]] still said ADR 087's PR was open. It merged as PR #65.
+- **Deferred:** the shared "Today at a glance" heading when the next visit is days away; the global `.note` accent fill on operator screens; the status dictionary's Draft row, which says the customer sees no status; tests for the list order and for the count opening the queue.
+- **Pages touched:** [[fieldwork]].
 ## [2026-10-16] session | ADR 087: the customer intake in the register
 
 - **Completed:**

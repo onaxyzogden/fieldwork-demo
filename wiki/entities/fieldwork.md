@@ -47,7 +47,8 @@ An interactive prototype of a handyman services platform. It has three roles, Cu
 - A platform-wide UX audit ran on 2026-10-08, after ADR 078: 8 P1s, 15 P2s and 15 P3s across the three roles and the shell, The P1s are fixed in ADR 079, and the P2s in ADR 080 (PR #56, merged). The P3s are open. See [[platform-ux-audit-2026-10]].
 - A WCAG 2.1 AA audit ran on 2026-10-14, after ADR 080: 0 critical, 6 major and 17 minor. The majors are fixed in ADR 081 (PR #57, merged) and the minors in ADR 082. See [[accessibility-audit-2026-10]].
 - ADR 085 (the Contractors page in the operational register) is live on `main` via PR #62 (2026-10-16). It is the first register audit. The other screens have not had one.
-- ADR 087 (the customer intake in the register) is on branch `claude/intake-register`, with its PR open and not merged. It is the second register audit, and the first on a customer surface.
+- ADR 087 (the customer intake in the register) is live on `main` via PR #65 (2026-10-16). It is the second register audit, and the first on a customer surface.
+- ADR 088 (the customer workspace home in the register) is on branch `claude/home-register`, with its PR open and not merged. It is the third register audit. The operator's other screens and the contractor's workspace have not had one.
 - Local dev uses Vite on 5173 and the preview build on 4173 (`.claude/launch.json`, untracked).
 
 ## Connections
@@ -66,6 +67,7 @@ An interactive prototype of a handyman services platform. It has three roles, Cu
 - Bundle-size work is parked (ADR 074–076). The catalogue and the per-role CSS were measured at 6% and 2% of the first load (ADR 076).
 
 ## History
+- 2026-10-16: ADR 088, the third register audit, on the customer workspace home. The h1 is "My bookings", as the sidebar names it. Requests run in the order the customer acts on them: waiting on them, scheduled, in hand, drafts, closed. "Waiting on you" is no longer red and opens the review queue when no request row waits. Labels are sentence case. `Submitted` reads "Received" to the customer. Task icons are muted, notes inside a customer request sit on `--surface-raised`, and the request row is a grid that keeps its badge and chevron at the edge. There are 658 tests.
 - 2026-10-16: ADR 087, the second register audit, on the customer intake. Instant Book shows real times first, the times read best fit first and then in time order (grouped by day in "See more times"), and customer surfaces no longer show review or booking-mode badges. "Recommended" and the visit length are said once. The gradient map is a one-line address confirmation. Time pills are 44px. There are 658 tests.
 - 2026-10-16: ADR 086. The seeded offer v5 starts at 10:00 Toronto time on the first weekday at least three days out, on a machine in any timezone. It used to use machine-local `setHours(10)` and could fall on a weekend. There are 658 tests.
 - 2026-10-16: ADR 085, the first register audit. The operator's Contractors page is now operational: the h1 is "Contractors" with a factual line under it, and the page is one roster table that lines up rate, hours, next day off and restricted work. It stacks into labelled lines below 47rem of workspace. The eyebrow, the slogan and the per-card badges are gone, and the credentials caveat is said once. `DESIGN.md` declares every role's workspace operational. There are 657 tests. Four in `concurrency.test.ts` fail on `main` too, because they depend on the machine's timezone.

@@ -170,8 +170,16 @@
   flex: 0 1 auto;
   min-width: 0;
 }
-.customer-wrap .customer-portal-heading p {
-  margin-bottom: 0;
+/* Routine notes on a request sit on a neutral surface. The accent fill
+   stays for what asks something of the customer: the question card and
+   the primary action (ADR 088). */
+:root[data-theme] .customer-wrap .request-accordion .note {
+  background: var(--surface-raised);
+}
+/* Sentence-case labels read as words, not a stamp (ADR 088). */
+.customer-wrap .op-glance-lead .eyebrow,
+.customer-wrap .request-accordion .eyebrow {
+  letter-spacing: 0;
 }
 .customer-wrap .portal-task {
   margin: var(--space-4) 0;

@@ -2663,3 +2663,82 @@ Out of scope, and left for later:
 - the customer workspace's "Home, handled." and its eyebrows, which have
   not had a register audit;
 - offering the soonest times, not only the best-scored ones.
+
+## ADR 088: The customer's home is a list of their bookings, in the order they act on it
+
+Accepted. This is the third application of the **register**, and the second
+to a customer surface. The customer workspace home is a workspace: the
+customer comes back to it to see what needs them, what is coming and how each
+request stands. It is warm, as the intake is, but it does not sell. The audit
+used the remit "the customer sees what needs them, what's coming, and how
+each request stands". It found 9 issues, and all 9 are fixed. Three test
+assertions change, for the new heading and one label.
+
+**The order the customer acts in.**
+- Requests were listed in creation order, oldest first. They now run: what
+  waits on the customer, then what has a date, then what is in hand, then
+  their own drafts, then what is closed. The ranks come from the same
+  `customerAtAGlance` ids that drive the counts above the list. This is
+  display only: `ownRequests` keeps creation order, because
+  `startOrResumeRequest` reads it.
+- The "Waiting on you" count was red (`urgent`) and could not be pressed when
+  the waiting item was an assessment rather than a request. A quote to
+  approve is not an error, and the primary button below already carries it,
+  so the count is no longer red. When there is no request row to open, the
+  count opens the same review queue the button opens.
+
+**A workspace heading says where you are.**
+- The h1 "Home, handled." and its subline "Your requests and upcoming
+  visits." are gone. The h1 is "My bookings", as the sidebar names the page.
+- Labels were typed in capitals with wide tracking: "NEXT VISIT", "YOUR
+  QUOTE" or "YOUR ESTIMATE", "ADDITIONAL CHARGE", "WE HAVE A QUESTION" or "WE
+  ASKED". They are now sentence case, with no letter-spacing, in the glance
+  lead and inside a request.
+
+**Said once.**
+- A draft's title read "Draft · Bedroom door is sticking…" over a badge that
+  also said Draft. The title is now the customer's own words.
+- A request with no address fell back to "Request · " and its id in
+  capitals. It now reads "Your request".
+- One state had three words: the badge said "Submitted", the tracker said
+  "Received", and the note said "We're matching…". `customerStatusText` now
+  maps `Submitted` to "Received", which the status dictionary records. The
+  notifications use the same map, so they say "Received" too.
+
+**Accent for the action and for state.**
+- Every task's wrench icon was accent-coloured, four amber icons on one
+  request and about 2:1 on white. It is `--muted`, 5.2:1 in light and 6.8:1
+  in dark.
+- Every `.note` takes the accent fill app-wide (`primitives.css`), so an open
+  request stacked its progress line, preference and notes as amber blocks,
+  the same fill as the badges. Inside a customer request, notes now sit on
+  `--surface-raised`. The question card and the primary action keep accent.
+  The global rule is unchanged, because operator screens have not been
+  audited for it.
+
+**The row holds its edge.** `.accordion-head` was a wrapping flex row, so the
+badge and chevron dropped to wherever the title left room; on the draft row
+at 375px the chevron sat alone on a third line at the left. It is now a grid:
+title, badge, chevron. Under a 420px workspace container the badge moves under
+the place line and the chevron stays top right.
+
+**Checked live.** No horizontal overflow at 320, 375, 768, 1024, 1280 or
+1440px in either theme. Badges and chevrons line up on every row when wide;
+at 420px and under the chevron stays 16px from the right edge. Note text is
+14.1:1 in light and 12.8:1 in dark. The sentence-case labels are 5.9:1 in
+light and 10.9:1 in dark. Sarah Lin's "Waiting on you" is a button; it opens
+the review queue and moves focus to the queue's heading. The count and the
+row heads show the global 2px focus ring. No console errors. The quote,
+charge and question panels are not in the seed, so their label changes were
+checked in code only.
+
+**Left alone.** `GlanceCard` is shared by every role, so it is unchanged; the
+customer's colour change comes from dropping `urgent`, not from the card.
+
+Out of scope, and left for later:
+- the shared "Today at a glance" heading, when the customer's next visit may
+  be days away;
+- the global `.note` accent fill on operator screens;
+- the status dictionary's Draft row, which says the customer is not shown a
+  status, when the customer's badge does say "Draft";
+- tests for the list order and for the count opening the queue.

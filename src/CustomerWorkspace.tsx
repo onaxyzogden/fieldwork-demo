@@ -183,6 +183,21 @@ export function CustomerWorkspace() {
      a button that would do nothing. */
   const openFirst = (ids: string[]) =>
     ids.length ? () => openRequestRow(ids[0]) : undefined;
+  /* The list reads in the order the customer acts on it: what waits on
+     them, then what has a date, then what is in hand, then their own
+     drafts, then what is closed. Display only — ownRequests keeps creation
+     order, which startOrResumeRequest reads (ADR 088). */
+  const rank = (x: Request) =>
+    customerAtAGlance.waitingIds.includes(x.id)
+      ? 0
+      : customerAtAGlance.scheduledIds.includes(x.id)
+        ? 1
+        : customerAtAGlance.inProgressIds.includes(x.id)
+          ? 2
+          : x.status === "Draft"
+            ? 3
+            : 4;
+  const listed = [...ownRequests].sort((a, b) => rank(a) - rank(b));
   /* The customer's own status badge never shows the raw dispatch/operator
      status string — "Awaiting Provider Acceptance" is jargon to the one
      person with no stake in that state machine, and it clashed with the
@@ -211,7 +226,7 @@ export function CustomerWorkspace() {
     return (
       <div className="card panel quote" id={idPrefix + "charge"}>
         <div className="row between">
-          <span className="eyebrow">ADDITIONAL CHARGE</span>
+          <span className="eyebrow">Additional charge</span>
           <span className={"badge " + badgeTone(c.status)}>
             {customerQuoteText(c.status)}
           </span>
@@ -269,7 +284,7 @@ export function CustomerWorkspace() {
           {/* The pricing path is how the operator priced it; to the customer
               it is a quote, or an estimate when it is a range. */}
           <span className="eyebrow">
-            {quote.type === "Estimated range" ? "YOUR ESTIMATE" : "YOUR QUOTE"}
+            {quote.type === "Estimated range" ? "Your estimate" : "Your quote"}
           </span>
           <span className={"badge " + badgeTone(quote.status)}>
             {customerQuoteText(quote.status)}
@@ -402,10 +417,11 @@ export function CustomerWorkspace() {
         />
       ) : (
         <>
+          {/* Named as the sidebar names it. A workspace heading says where
+              you are; it does not sell (ADR 088). */}
           <div className="heading role-greeting customer-portal-heading">
             <div>
-              <h1>Home, handled.</h1>
-              <p>Your requests and upcoming visits.</p>
+              <h1>My bookings</h1>
             </div>
           </div>
           {/* Visit day, live (ADR 066): one line per visit today,
@@ -450,15 +466,20 @@ export function CustomerWorkspace() {
                   onClick={() => openRequestRow(customerNext.requestId)}
                 />
               ) : (
-                <GlanceLead when="NEXT VISIT" what="Nothing scheduled yet." />
+                <GlanceLead when="Next visit" what="Nothing scheduled yet." />
               )
             }
             metrics={[
               {
                 label: "Waiting on you",
                 value: customerAtAGlance.waiting,
-                urgent: customerAtAGlance.waiting > 0,
-                onClick: openFirst(customerAtAGlance.waitingIds),
+                /* Not urgent red: a quote to approve is not an error, and
+                   the button below already carries it. An assessment has
+                   no row to open, so the count opens the queue the button
+                   opens (ADR 088). */
+                onClick:
+                  openFirst(customerAtAGlance.waitingIds) ??
+                  (customerTodos ? () => setReviewing(true) : undefined),
               },
               {
                 label: "Upcoming visits",
@@ -512,15 +533,15 @@ export function CustomerWorkspace() {
                 No requests yet. Start one and it will appear here.
               </p>
             )}
-            {ownRequests.map((x) => {
+            {listed.map((x) => {
               const open = r.id === x.id && expanded;
               const count = s.tasks.filter(
                 (t) => t.requestId === x.id && !t.mergedInto,
               ).length;
               const title =
+                /* The badge says Draft; the title is their own words. */
                 x.status === "Draft"
-                  ? "Draft · " +
-                    (s.tasks
+                  ? (s.tasks
                       .find(
                         (t) =>
                           t.requestId === x.id &&
@@ -530,7 +551,7 @@ export function CustomerWorkspace() {
                       ?.description.slice(0, 60) ||
                       x.address ||
                       "Photos added")
-                  : x.address || "Request · " + x.id.toUpperCase();
+                  : x.address || "Your request";
               return (
                 <section className="card request-accordion-item" key={x.id}>
                   <button
@@ -666,8 +687,8 @@ export function CustomerWorkspace() {
                         >
                           <span className="eyebrow">
                             {r.customerReply
-                              ? "WE ASKED"
-                              : "WE HAVE A QUESTION"}
+                              ? "We asked"
+                              : "We have a question"}
                           </span>
                           <p>{r.operatorNote}</p>
                           {r.customerReply ? (

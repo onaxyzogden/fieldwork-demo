@@ -1204,9 +1204,11 @@ main[tabindex="-1"]:focus {
    allowed a share. A long status badge ("Matching you with a provider") used
    to take its natural width and leave the address to shrink into a ribbon one
    word per line; now the badge drops to a line of its own instead. */
+/* A grid, so the badge and chevron hold the right edge on every row
+   instead of wrapping to wherever the title leaves room (ADR 088). */
 .accordion-head {
-  display: flex;
-  flex-wrap: wrap;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto;
   align-items: center;
   gap: var(--space-3);
   width: 100%;
@@ -1239,6 +1241,23 @@ main[tabindex="-1"]:focus {
 }
 .accordion-head .chevron.open {
   transform: rotate(180deg);
+}
+/* Narrow: the badge goes under the place line; the chevron stays top
+   right. */
+@container workspace (max-width: 420px) {
+  .accordion-head {
+    grid-template-columns: minmax(0, 1fr) auto;
+    row-gap: var(--space-2);
+  }
+  .accordion-head .badge {
+    grid-row: 2;
+    grid-column: 1;
+    justify-self: start;
+  }
+  .accordion-head .chevron {
+    grid-row: 1;
+    grid-column: 2;
+  }
 }
 .request-accordion-item > div {
   padding: 0 var(--space-5) var(--space-5);

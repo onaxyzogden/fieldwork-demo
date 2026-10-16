@@ -301,7 +301,7 @@ describe("Operator workspace", () => {
 describe("Customer workspace", () => {
   it("opens on My bookings", () => {
     open("Customer");
-    expect(h1().textContent).toBe("Home, handled.");
+    expect(h1().textContent).toBe("My bookings");
     expect(
       sidebar()
         .getByRole("button", { name: "My bookings", hidden: true })
@@ -399,7 +399,7 @@ describe("Switching roles", () => {
     fireEvent.click(screen.getByRole("button", { name: "Contractor" }));
     expect(h1().textContent).toBe("Your Work");
     fireEvent.click(screen.getByRole("button", { name: "Customer" }));
-    expect(h1().textContent).toBe("Home, handled.");
+    expect(h1().textContent).toBe("My bookings");
   });
 });
 
@@ -493,7 +493,7 @@ describe("Focus and friction (ADR 079)", () => {
     });
     go(/^My bookings/);
     const card = screen
-      .getByText("ADDITIONAL CHARGE")
+      .getByText("Additional charge")
       .closest<HTMLElement>(".panel")!;
     fireEvent.click(within(card).getByRole("button", { name: "Decline" }));
     expect(screen.queryByText("Charge declined")).toBeNull();
