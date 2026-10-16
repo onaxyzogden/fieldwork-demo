@@ -2,7 +2,7 @@
 title: "Fieldwork"
 type: entity
 created: 2026-10-07
-updated: 2026-10-15
+updated: 2026-10-16
 tags: [project, prototype, react]
 sources: 1
 ---
@@ -50,7 +50,8 @@ An interactive prototype of a handyman services platform. It has three roles, Cu
 - ADR 087 (the customer intake in the register) is live on `main` via PR #65 (2026-10-16). It is the second register audit, and the first on a customer surface.
 - ADR 088 (the customer workspace home in the register) is live on `main` via PR #66 (2026-10-16). It is the third register audit.
 - ADR 089 (the contractor workspace in the register) is live on `main` via PR #67 (2026-10-16), merged as `597edd3`. It is the fourth register audit, and the first on the contractor.
-- ADR 090 (the operator's request list in the register) is on branch `claude/requests-register`, in PR #68, open and not merged. It is the fifth register audit. The operator's request detail, Home, Today and Walkthroughs have not had one.
+- ADR 090 (the operator's request list in the register) is live on `main` via PR #68 (2026-10-16), merged as `1fd0181`. It is the fifth register audit.
+- ADR 091 (the operator's request detail in the register) is on branch `claude/request-detail-register`, in a PR that is open and not merged. It is the sixth register audit. The operator's Home, Today and Walkthroughs have not had one.
 - Local dev uses Vite on 5173 and the preview build on 4173 (`.claude/launch.json`, untracked).
 
 ## Connections
@@ -69,6 +70,7 @@ An interactive prototype of a handyman services platform. It has three roles, Cu
 - Bundle-size work is parked (ADR 074–076). The catalogue and the per-role CSS were measured at 6% and 2% of the first load (ADR 076).
 
 ## History
+- 2026-10-16: ADR 091, the sixth register audit, on the operator's request detail and fulfilment. Remove visit, Withdraw offer and Cancel question each ask first in a dialog, since their toasts have no undo. The detail's status chip follows ADR 090 (accent only in Needs Action); the booking mode is plain text, and visit and offer chips are neutral. Facts leave the accent tint. The Maps link, the Tasks heading, task names, the slot line and the minutes are said once, and a tab shows a count only above 0. A rejected override time is an inline field error. Eyebrows, the fulfilment headings ("Offer to a contractor", "Do it myself") and buttons are sentence case. There are 664 tests.
 - 2026-10-16: ADR 090, the fifth register audit, on the operator's request list. The h1 is "Requests", with one factual line ("4 of 7 requests") in place of the eyebrow, slogan and accent count. Accent marks only the rows in Needs Action; other statuses sit on a neutral `.badge.quiet` chip. "Needs Review" is not red: `Review` is out of the shared `badgeTone` red pattern, so the customer's "In review" is not red either. "All requests" sorts by bucket (`BUCKET_ORDER`). An empty search or filter says "No requests match." and offers "Show all requests". The detail's "← All requests" header is gone. The search has an `aria-label`, and filter options are sentence case. There are 662 tests.
 - 2026-10-16: ADR 089, the fourth register audit, on the contractor workspace. Accept is amber everywhere, as the one primary: the green `.contractor-accept` rules are gone, Review steps aside while an offer is open, View job is secondary, and New offers is not red. Pay sits on `--surface-raised` and is worded once by `payLabel`. The h1 is "Your work", with no slogan, and headings inside the page are `--text-intro`, below it. Labels are sentence case. A one-task job says its title once. An empty Today says "No jobs today." Past work appears only when there is some, newest first, and a finished job reads "Completed". There are 660 tests.
 - 2026-10-16: ADR 088, the third register audit, on the customer workspace home. The h1 is "My bookings", as the sidebar names it. Requests run in the order the customer acts on them: waiting on them, scheduled, in hand, drafts, closed. "Waiting on you" is no longer red and opens the review queue when no request row waits. Labels are sentence case. `Submitted` reads "Received" to the customer. Task icons are muted, notes inside a customer request sit on `--surface-raised`, and the request row is a grid that keeps its badge and chevron at the edge. There are 658 tests.
