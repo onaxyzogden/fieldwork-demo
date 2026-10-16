@@ -2037,3 +2037,66 @@ describe("A link that no longer works is not offered (ADR 095)", () => {
     expect(item.textContent).toMatch(/Link withdrawn/);
   });
 });
+
+describe("The customer is not sent to a link that no longer works (ADR 096)", () => {
+  /** A walkthrough sent to the signed-in customer (c2), then `then`. */
+  const sent =
+    (into: { id: string }, then: (d: State, wId: string) => void = () => {}) =>
+    (d: State) => {
+      const p = d.properties.find((x) => x.accountId === "c2")!;
+      const w = createWalkthrough(d, p.id);
+      addFinding(d, w.id, {
+        title: "Door rubbing against frame",
+        proposed: "Adjust the sticking door",
+        price: 180,
+      });
+      sendWalkthrough(d, w.id);
+      then(d, w.id);
+      into.id = w.assessmentId;
+    };
+  const item = (id: string) =>
+    [...document.querySelectorAll<HTMLElement>(".record-item")].find((x) =>
+      x.textContent!.includes(id),
+    )!;
+  const review = () =>
+    screen.queryByRole("button", { name: /^Review your assessment/ });
+
+  it("offers a live assessment", async () => {
+    const made = { id: "" };
+    open("Customer", sent(made));
+    await screen.findByRole("heading", { level: 1 });
+    expect(review()).toBeTruthy();
+    expect(item(made.id).querySelector("a")?.textContent).toMatch(
+      /Open assessment/,
+    );
+  });
+
+  it("does not offer a withdrawn one, and says so in the record", async () => {
+    const made = { id: "" };
+    open(
+      "Customer",
+      sent(made, (d, wId) => {
+        revokeAccess(d, wId);
+      }),
+    );
+    await screen.findByRole("heading", { level: 1 });
+    expect(review()).toBeNull();
+    expect(item(made.id).querySelector("a")).toBeNull();
+    expect(item(made.id).textContent).toMatch(/Link withdrawn/);
+    expect(item(made.id).textContent).not.toMatch(/Awaiting your approval/);
+  });
+
+  it("does not offer an expired one", async () => {
+    const made = { id: "" };
+    open(
+      "Customer",
+      sent(made, (d, wId) => {
+        d.walkthroughs.find((x) => x.id === wId)!.access!.expiresAt = d.clock;
+      }),
+    );
+    await screen.findByRole("heading", { level: 1 });
+    expect(review()).toBeNull();
+    expect(item(made.id).querySelector("a")).toBeNull();
+    expect(item(made.id).textContent).toMatch(/Link expired/);
+  });
+});

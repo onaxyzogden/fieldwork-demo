@@ -15,7 +15,7 @@ import type { Assignment, State, Visit, Walkthrough } from "./model";
 import { confirmed, providers, timeLabel } from "./model";
 import { countdown } from "./countdown";
 import { dayKey, unresolved } from "./work";
-import { findingsFor, findingState, quotable } from "./pmw";
+import { findingsFor, findingState, linkState, quotable } from "./pmw";
 
 export type ContractorTab = "Offers" | "Today" | "Upcoming";
 
@@ -154,7 +154,9 @@ export function customerGlance(
 
   /* An assessment sent to this account and still holding an undecided finding
      is waiting on the customer just as much as an unapproved quote is, and it
-     is the one that would otherwise be invisible from this screen. */
+     is the one that would otherwise be invisible from this screen. Only while
+     its link works, though: a withdrawn or expired link is the operator's to
+     replace, and the customer can do nothing with it (ADR 096). */
   const properties = new Set(
     s.properties.filter((p) => p.accountId === accountId).map((p) => p.id),
   );
@@ -163,6 +165,7 @@ export function customerGlance(
       (w) =>
         w.status === "Sent" &&
         properties.has(w.propertyId) &&
+        linkState(s, w, clock) === "live" &&
         findingsFor(s, w.id).some(
           (f) => findingState(s, f) === "Pending decision",
         ),

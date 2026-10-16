@@ -143,13 +143,11 @@ function Step({
         </p>
         <div className="onsite-bar">
           {/* Leaves the queue for the assessment's own one-at-a-time flow
-              (ADR 058), which is why assessments come last. Sending creates
-              the link, so a sent assessment has one. */}
-          {w.access && (
-            <a className="primary full" href={assessmentLink(w.access.token)}>
-              Review assessment
-            </a>
-          )}
+              (ADR 058), which is why assessments come last. The queue holds
+              an assessment only while its link works (ADR 096). */}
+          <a className="primary full" href={assessmentLink(w.access!.token)}>
+            Review assessment
+          </a>
           <div className="row job-secondary">
             <button className="text-button" onClick={skip}>
               Skip
