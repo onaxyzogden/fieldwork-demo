@@ -440,7 +440,7 @@ export default function CustomerIntake({
       day: "numeric",
     });
   /* The best fit leads; the rest run in time order, so a customer looking
-     for Tuesday afternoon can find it (ADR 086). Display only: the scoring
+     for Tuesday afternoon can find it (ADR 087). Display only: the scoring
      in intakeOptions is unchanged. */
   const byTime = options
     .slice(1)
@@ -493,7 +493,7 @@ export default function CustomerIntake({
   );
   /* The booking step's two sections. Instant Book puts its real times
      first, so on a phone the decision is on the first screen; Request to
-     Book asks for wishes first, then offers times (ADR 086). */
+     Book asks for wishes first, then offers times (ADR 087). */
   const preferences = (
     <>
       {/* Stated preference. A vertical list of the next 10 days rather than
@@ -576,7 +576,7 @@ export default function CustomerIntake({
       ) : (
         <>
           {/* What happens next, said once in words, not a tinted mode label;
-              and the visit length once, not on every card (ADR 086). */}
+              and the visit length once, not on every card (ADR 087). */}
           {options.length > 0 && (
             <p>
               {instant
@@ -868,7 +868,7 @@ export default function CustomerIntake({
               </label>
             </details>
             {/* A plain confirmation of where we're coming, not a picture of
-                a map that isn't there (ADR 086). */}
+                a map that isn't there (ADR 087). */}
             {validAddress(r) && (
               <p className="customer-location-confirm">
                 <MapPin aria-hidden="true" size={16} />
@@ -1039,7 +1039,7 @@ export default function CustomerIntake({
                       </div>
                       {/* No review badge: whether the operator has looked yet
                           is theirs to track, and the customer can do nothing
-                          about it (ADR 086). The note below says what saving
+                          about it (ADR 087). The note below says what saving
                           means. */}
                       <div className="task-card-done-actions">
                         <button
@@ -1168,7 +1168,7 @@ export default function CustomerIntake({
       >
         <div className="row between">
           {/* The page's section size: a dialog heading never outranks the
-              page it opens from (ADR 086). */}
+              page it opens from (ADR 087). */}
           <h2 className="look-h3">More times</h2>
           <button className="text-button" onClick={() => setMore(false)}>
             Close

@@ -139,12 +139,12 @@
   background: var(--accent-soft);
 }
 /* A plain label, not a tinted chip: accent is for the primary action and
-   for state (ADR 086). */
+   for state (ADR 087). */
 .time-recommendation {
   color: var(--muted);
   font-size: var(--text-label);
 }
-/* More times, by day (ADR 086). */
+/* More times, by day (ADR 087). */
 .intake-day h3 {
   margin: var(--space-5) 0 0;
   font-size: var(--text-body);

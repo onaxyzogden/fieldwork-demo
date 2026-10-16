@@ -1354,8 +1354,13 @@ export function seed(): State {
     // item — the TV and the replacement tiles.
     materials: (a[2] as MaterialsResponsibility) ?? "To be confirmed",
   }));
-  const start = new Date(clock + 3 * 86400000);
-  start.setHours(10, 0, 0, 0);
+  // marcus's offer: 10:00 in Toronto, like every time the scheduler makes, on
+  // the first weekday at least three days out, inside his default hours.
+  let ahead = clock + 3 * 86400000;
+  while (["Sat", "Sun"].includes(torontoParts(new Date(ahead)).weekday))
+    ahead += 86400000;
+  const day = torontoParts(new Date(ahead));
+  const start = localTime(`${day.year}-${day.month}-${day.day}`, 10);
   return {
     requests,
     tasks,

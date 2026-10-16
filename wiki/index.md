@@ -6,7 +6,7 @@ updated: 2026-10-16
 
 # Wiki Index
 
-A catalog of every wiki page. Read this first at the start of each session. Conventions are in [[SCHEMA]]. Product decisions (ADR 001–086) are in `docs/design-decisions.md`.
+A catalog of every wiki page. Read this first at the start of each session. Conventions are in [[SCHEMA]]. Product decisions (ADR 001–087) are in `docs/design-decisions.md`.
 
 ## Entities
 

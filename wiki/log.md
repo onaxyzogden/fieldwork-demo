@@ -3,7 +3,7 @@ title: "Wiki Log"
 type: log
 ---
 
-## [2026-10-16] session | ADR 086: the customer intake in the register
+## [2026-10-16] session | ADR 087: the customer intake in the register
 
 - **Completed:**
   - A register audit of the customer intake (address, tasks, timing). The intake may speak warmly but does not sell. The audit found 11 issues, 2 P1, 3 P2 and 6 P3, and all 11 are fixed.
@@ -12,11 +12,22 @@ type: log
   - The P3s: "Recommended" appears once, as a muted label. The visit length is said once. The 150px gradient is now a one-line address confirmation, and its four tokens are removed. The photo button no longer uses accent. The dialog h2 is `look-h3`.
   - `DESIGN.md`'s register line now says customer surfaces never show the operator's working state, and compared lists come in a readable order.
 - **Verified:**
-  - `npm run build`, and `npm test` (657 tests, all passing). No assertions changed.
+  - `npm run build`, and `npm test` (658 tests after merging ADR 086, all passing). No assertions changed.
   - Live at 320, 375, 768, 1024, 1280 and 1440px in both themes, on all three steps. Nothing overflows. "Recommended" is 6.1:1 in light and about 7.5:1 in dark. Time pills are 44px. No console errors. Request to Book was checked by marking the task unreviewed in the demo state.
 - **Correction:** the audit listed `.task-number` as an intake element. It is only used by `OperatorRequests`, so it is untouched.
 - **Deferred:** a regression test for the time order; the "Send for referral review" copy; the customer workspace's "Home, handled." and its eyebrows; offering the soonest times as well as the best-scored ones.
 - **Pages touched:** [[fieldwork]], [[index]].
+## [2026-10-16] session | ADR 086: the seeded offer v5 in Toronto time, on a weekday
+
+- **Cause:** `seed()` placed marcus's offer v5 with machine-local `setHours(10)`, three days after the clock. In UTC it showed at 06:00 Toronto time. On a Wednesday or Thursday it fell on a weekend, outside marcus's default Mon–Fri hours.
+- **Completed:**
+  - v5 starts at `localTime(day, 10)`, where `day` is the first Toronto weekday at least three days out.
+  - One test in `model.test.ts` fakes `Date.now` for each day of a week under UTC, America/Toronto, Asia/Tokyo and Pacific/Honolulu (via `vi.stubEnv("TZ")`). It checks the day, 10:00, and that `available()` accepts the offer for marcus. It fails on the old seed even on a Toronto machine.
+  - r3's preference stays three days out, weekend or not. It is the customer's choice, intake offers weekends, and nothing books it.
+- **Verified:** `npm test` (658 tests, all passing), and the vitest suite under `TZ=UTC` and `TZ=Asia/Tokyo`. `npm run build` is clean.
+- **Closes:** the `seed()` item deferred by the `concurrency.test.ts` session below.
+- **Deferred:** `model.ts` is not Prettier-clean on `main`. Only the changed lines were formatted.
+- **Pages touched:** [[fieldwork]].
 
 ## [2026-10-16] session | `concurrency.test.ts` independent of the timezone
 

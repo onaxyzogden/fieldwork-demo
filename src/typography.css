@@ -432,7 +432,7 @@ footer,
 }
 /* The intake is operational (ADR 085): its step headings take the H2 size
    at every width, so on a phone the step's choices start on the first
-   screen (ADR 086). */
+   screen (ADR 087). */
 .customer-intake .customer-heading h1 {
   max-width: 22ch;
   font-size: var(--text-h2);

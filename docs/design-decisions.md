@@ -2561,7 +2561,40 @@ Out of scope, and left for later:
   restricted-work column;
 - the rest of the app, which has not had a register audit.
 
-## ADR 086: The intake speaks warmly, and does not sell
+## ADR 086: The demo's seeded offer keeps Toronto time, on a weekday
+
+Accepted. This closes the item left by PR #63, and adds 1 test in
+`model.test.ts`.
+
+**What was wrong.**
+- `seed()` put marcus's offer v5 three days after the demo clock with
+  `setHours(10)`. That is 10:00 in the machine's own timezone. The scheduler
+  works in Toronto time everywhere else (`torontoParts`, `localTime`).
+- In UTC the offer showed at 06:00, and in Tokyo or Honolulu it moved by
+  hours and sometimes by a day.
+- Nothing skipped weekends. Seeded on a Wednesday or Thursday, the
+  offer fell on a Saturday or Sunday. Marcus works Monday to Friday by
+  default (ADR 067), so the demo opened with an offer outside his own hours.
+
+**What changed.**
+- v5 starts at `localTime(day, 10)`, the way `slots()` builds its times,
+  so it is 10:00 in Toronto on any machine.
+- `day` is the first Toronto weekday at least three days out. A weekend
+  rolls forward to Monday.
+- The test fakes `Date.now` at midday Toronto for each day of one week,
+  under UTC, America/Toronto, Asia/Tokyo and Pacific/Honolulu. It checks the
+  day and the hour, and that the offer fits marcus's hours by `available()`.
+
+**What stays.** r3's stated preference is still the Toronto date three days
+out, weekend or not. It is the customer's own choice, and intake offers
+weekend days too (`upcomingDays`). It is shown but never booked, and it is a
+different request and customer, so it does not need to sit beside v5.
+
+Out of scope, and left for later:
+- `model.ts` is not Prettier-clean on `main`. This change formats only its
+  own lines.
+
+## ADR 087: The intake speaks warmly, and does not sell
 
 Accepted. This is the second application of the **register**, and the first
 to a customer surface. The customer intake is the one place in the app where
