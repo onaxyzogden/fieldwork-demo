@@ -3313,7 +3313,8 @@ record is 7.7:1 in dark and 5.2:1 in light. No console errors.
 - The operator's mirror: `walkthroughGlance` still counts a Sent walkthrough
   with a dead link as with the customer, and can still suggest chasing it
   (done in ADR 097).
-- The customer has no way to ask for a fresh link from the record.
+- The customer has no way to ask for a fresh link from the record (done in
+  ADR 098).
 
 ## ADR 097: A dead link is the operator's move, not the customer's
 
@@ -3352,3 +3353,50 @@ lead and the badge is 10.9:1 in dark and 5.2:1 in light. No console errors.
   card does not call it dead.
 - A ready walkthrough's row shows only "Ready to convert", even when its link
   is dead; the card says so once opened.
+
+## ADR 098: The customer can ask for a fresh link
+
+Accepted. Amends ADR 096 and ADR 097. ADR 096 stopped offering the customer a
+link that no longer works, and ADR 097 made the dead link the operator's move.
+Between the two, the customer could see "Link withdrawn" in their maintenance
+record and do nothing about it but call. Four tests are new.
+
+**One button, once.** While a sent assessment's link is withdrawn or expired,
+the customer's record shows "Ask for a fresh link" beside the badge. It asks
+for no confirmation, as it changes nothing the customer cannot take back by
+waiting. Once asked, the badge reads "Fresh link requested", the button is
+gone, and focus moves to the badge, as the control that held it has removed
+itself. The customer's counts and queue do not change: the assessment is
+still not theirs to act on (ADR 096). `requestFreshLink` holds the rule in
+the model (ADR 036). It refuses a live link, a draft, and a second ask, and
+logs the ask with the customer as its actor.
+
+**The request lives on the link.** `access.freshLinkRequestedAt` sits beside
+`revokedAt`. Issuing a fresh link rebuilds `access`, so the request clears
+itself the moment it is answered, and there is nothing to dismiss.
+
+**The operator sees who asked.** `freshLinkIds` puts the walkthroughs a
+customer asked about first, oldest ask first, then the rest as before. The
+glance leads with one under the eyebrow "Fresh link requested" and the
+sentence "Sarah Lin asked for a fresh link today." (the account's name and
+how long ago). The row's badge and the card's heading say the same, and the
+card adds that the customer can't open the assessment until the operator
+issues one. Still three counts, and no notification: the glance is where the
+operator already looks, and a notification here would need a request, a
+visit, or an assignment the walkthrough does not have.
+
+**Checked live.** Sarah Lin asked from her record for PMW-0001 after it was
+withdrawn; the record read "Fresh link requested" with focus on it, and her
+glance counts did not move. As the operator, the lead, the row and the card
+all read "Fresh link requested" with "Sarah Lin asked for a fresh link
+today." Issuing a fresh link brought back "Waiting on the customer" and, in
+Sarah's record, "Open assessment". At 320, 375, 768, 1024, 1280 and 1440px in
+both themes nothing overflows, the ask button is 44px tall, and the lowest
+text contrast is 6.1:1 on the button and 5.2:1 on the badge. No console
+errors. Focus first went nowhere in the live check, as a frame callback ran
+before the record re-rendered; it now moves in an effect after the commit.
+
+**Left alone.**
+- No notification to the operator (see above).
+- The record on the guest assessment page is not given the ask; only the
+  customer's own workspace offers it.

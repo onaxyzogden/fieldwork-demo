@@ -357,6 +357,9 @@ export type Walkthrough = {
     token: string;
     expiresAt: number;
     revokedAt?: string;
+    /** When the customer asked for a fresh link from their record (ADR 098).
+     *  Lives on the link, so issuing a fresh one clears it. */
+    freshLinkRequestedAt?: string;
     /** Every time the link was opened. Answers "did they ever look at it?" */
     opens: string[];
   };

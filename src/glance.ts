@@ -255,7 +255,8 @@ export type WalkthroughGlance = {
   draftIds: string[];
   withCustomerIds: string[];
   readyToConvertIds: string[];
-  /** Oldest sent first, as `withCustomerIds` is. */
+  /** Those the customer asked about first, oldest request first (ADR 098);
+   *  then oldest sent first, as `withCustomerIds` is. */
   freshLinkIds: string[];
   /** The oldest assessment still waiting on the customer — the one to chase. */
   chase: { walkthrough: Walkthrough; daysSent: number; opens: number } | null;
@@ -293,7 +294,15 @@ export function walkthroughGlance(s: State, clock: number): WalkthroughGlance {
       .map((w) => w.id),
     withCustomerIds: withCustomer.map((w) => w.id),
     readyToConvertIds: readyToConvert.map((w) => w.id),
-    freshLinkIds: undecided.filter(dead).map((w) => w.id),
+    freshLinkIds: undecided
+      .filter(dead)
+      .sort((a, b) => {
+        /* Asked first, oldest ask first; the rest keep their order. */
+        const x = a.access?.freshLinkRequestedAt;
+        const y = b.access?.freshLinkRequestedAt;
+        return x && y ? (x < y ? -1 : x > y ? 1 : 0) : x ? -1 : y ? 1 : 0;
+      })
+      .map((w) => w.id),
     chase: oldest
       ? {
           walkthrough: oldest,

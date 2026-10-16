@@ -65,6 +65,20 @@ type Props = {
 /* Accent only where the walkthrough is the operator's to move: a draft to
    finish, or approvals to convert. Converted is green, and a walkthrough
    waiting on the customer is neutral (ADR 093). */
+/** "Sarah Lin asked for a fresh link today.", once the customer has asked
+ *  (ADR 098). */
+const askedForLink = (s: State, w: Walkthrough) => {
+  const at = w.access?.freshLinkRequestedAt;
+  if (!at) return null;
+  const property = s.properties.find((p) => p.id === w.propertyId);
+  const name =
+    accounts.find((a) => a.id === property?.accountId)?.name ?? "The customer";
+  const days = Math.max(0, Math.floor((+s.clock - Date.parse(at)) / 86_400_000));
+  const when =
+    days === 0 ? "today" : days === 1 ? "yesterday" : `${days} days ago`;
+  return `${name} asked for a fresh link ${when}.`;
+};
+
 const statusTone = (w: Walkthrough, ready: boolean) =>
   w.status === "Converted"
     ? "green"
@@ -167,7 +181,11 @@ function WalkthroughList({
   const fresh = s.walkthroughs.find((w) => w.id === pipeline.freshLinkIds[0]);
   const freshProperty = s.properties.find((p) => p.id === fresh?.propertyId);
   const deadWord = (w: Walkthrough) =>
-    linkState(s, w) === "revoked" ? "Link withdrawn" : "Link expired";
+    w.access?.freshLinkRequestedAt
+      ? "Fresh link requested"
+      : linkState(s, w) === "revoked"
+        ? "Link withdrawn"
+        : "Link expired";
   const first = (ids: string[]) =>
     ids.length ? () => open(ids[0]) : undefined;
   const ago = (days: number) =>
@@ -244,7 +262,10 @@ function WalkthroughList({
             <GlanceLead
               when={deadWord(fresh)}
               what={`${fresh.assessmentId} · ${freshProperty?.address ?? ""}`}
-              where="The customer can’t open it until you issue a fresh link."
+              where={
+                askedForLink(s, fresh) ??
+                "The customer can’t open it until you issue a fresh link."
+              }
               onClick={() => open(fresh.id)}
             />
           ) : pipeline.chase ? (
@@ -788,16 +809,20 @@ function NextStep({
             {totals.approved.length
               ? `${totals.approved.length} approved · ready to convert`
               : dead
-                ? state === "revoked"
-                  ? "Link withdrawn"
-                  : "Link expired"
+                ? w.access?.freshLinkRequestedAt
+                  ? "Fresh link requested"
+                  : state === "revoked"
+                    ? "Link withdrawn"
+                    : "Link expired"
                 : "Waiting on the customer"}
           </h2>
           <p>
             {totals.approved.length
               ? `${money(totals.subtotal)} plus ${money2(totals.tax)} tax.`
               : dead
-                ? "The customer can’t open the assessment until you issue a fresh link."
+                ? w.access?.freshLinkRequestedAt
+                  ? `${askedForLink(s, w)} The customer can’t open the assessment until you issue one.`
+                  : "The customer can’t open the assessment until you issue a fresh link."
                 : "The customer opens the link below to review the findings. Nothing is scheduled until they approve and a payment method is on file."}
           </p>
         </div>

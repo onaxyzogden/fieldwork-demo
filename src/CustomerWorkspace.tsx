@@ -1,4 +1,5 @@
 import PropertyRecord from "./PropertyRecord";
+import { requestFreshLink } from "./pmw";
 import { bucket } from "./work";
 import { useState, type ReactNode } from "react";
 import CustomerQueue, { QUOTE_REASONS } from "./CustomerQueue";
@@ -764,7 +765,15 @@ export function CustomerWorkspace() {
               <summary>
                 <strong>Maintenance record · {p.address}</strong>
               </summary>
-              <PropertyRecord s={s} propertyId={p.id} />
+              <PropertyRecord
+                s={s}
+                propertyId={p.id}
+                onAskFreshLink={(id) =>
+                  update((d) => {
+                    requestFreshLink(d, id);
+                  })
+                }
+              />
             </details>
           ))}
         </>

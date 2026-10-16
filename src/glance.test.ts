@@ -8,6 +8,7 @@ import {
   findingsFor,
   issueAccess,
   revokeAccess,
+  requestFreshLink,
   seedWalkthroughs,
   sendWalkthrough,
 } from "./pmw";
@@ -516,6 +517,32 @@ describe("the walkthrough pipeline's glance", () => {
     findingsFor(s, w.id)[0].decision = "Approved";
     revokeAccess(s, w.id);
     expect(bucketOf(s, w.id)).toEqual(["ready to convert"]);
+  });
+
+  it("lets the customer ask for a fresh link once, and only while it is dead (ADR 098)", () => {
+    const { s, w } = sent();
+    expect(requestFreshLink(s, w.id)).toBe(false);
+    revokeAccess(s, w.id);
+    expect(requestFreshLink(s, w.id)).toBe(true);
+    expect(s.events[0]).toMatchObject({ actor: "Customer", to: "requested" });
+    expect(requestFreshLink(s, w.id)).toBe(false);
+    issueAccess(s, w.id);
+    expect(w.access!.freshLinkRequestedAt).toBeUndefined();
+    const draft = createWalkthrough(s, s.properties[0].id);
+    expect(requestFreshLink(s, draft.id)).toBe(false);
+  });
+
+  it("puts the one the customer asked about first (ADR 098)", () => {
+    const { s, w: newer } = sent();
+    revokeAccess(s, newer.id);
+    const older = createWalkthrough(s, s.properties[0].id);
+    addFinding(s, older.id, { title: "Old", price: 50 });
+    sendWalkthrough(s, older.id);
+    older.sentAt = new Date(s.clock - 5 * DAY).toISOString();
+    revokeAccess(s, older.id);
+    expect(walkthroughGlance(s, s.clock).freshLinkIds).toEqual([older.id, newer.id]);
+    requestFreshLink(s, newer.id);
+    expect(walkthroughGlance(s, s.clock).freshLinkIds).toEqual([newer.id, older.id]);
   });
 
   it("chases the oldest live assessment, past a dead one", () => {

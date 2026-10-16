@@ -1,3 +1,4 @@
+import { useEffect, useRef } from "react";
 import { type State, money, dateLabel } from "./model";
 import {
   findingEvidence,
@@ -18,6 +19,7 @@ export default function PropertyRecord({
   propertyId,
   links = false,
   current,
+  onAskFreshLink,
 }: {
   s: State;
   propertyId: string;
@@ -27,7 +29,23 @@ export default function PropertyRecord({
   links?: boolean;
   /** The assessment this record is shown on, which needs no link to itself. */
   current?: string;
+  /** The customer's copy only: ask for a fresh link to an assessment they can
+   *  no longer open (ADR 098). */
+  onAskFreshLink?: (walkthroughId: string) => void;
 }) {
+  const deadLink = (w: State["walkthroughs"][number]) => {
+    const state = linkState(s, w);
+    return w.status === "Sent" && (state === "revoked" || state === "expired");
+  };
+  /* Once the ask is recorded, focus goes to what the record now says, as the
+     button it replaced is gone (ADR 098). */
+  const asked = useRef<string | null>(null);
+  useEffect(() => {
+    if (!asked.current) return;
+    const badge = document.getElementById(`link-${asked.current}`);
+    asked.current = null;
+    badge?.focus();
+  });
   const record = propertyRecord(s, propertyId);
   if (!record.walkthroughs.length) return null;
   const groups = [
@@ -121,8 +139,10 @@ export default function PropertyRecord({
                 {/* A link that no longer works is not offered, and an
                     assessment the customer cannot open is not awaiting them
                     (ADR 096). */}
-                <span className="badge">
-                  {w.status === "Sent" && linkState(s, w) === "revoked"
+                <span className="badge" id={`link-${w.id}`} tabIndex={-1}>
+                  {deadLink(w) && w.access?.freshLinkRequestedAt
+                    ? "Fresh link requested"
+                    : w.status === "Sent" && linkState(s, w) === "revoked"
                     ? "Link withdrawn"
                     : w.status === "Sent" && linkState(s, w) === "expired"
                       ? "Link expired"
@@ -134,6 +154,21 @@ export default function PropertyRecord({
                     <a className="link" href={assessmentLink(w.access!.token)}>
                       Open assessment
                     </a>
+                  )}
+                {/* The customer's own move while the link is dead: ask for
+                    another, once. Focus goes to what it now says (ADR 098). */}
+                {onAskFreshLink &&
+                  deadLink(w) &&
+                  !w.access?.freshLinkRequestedAt && (
+                    <button
+                      className="text-button"
+                      onClick={() => {
+                        asked.current = w.id;
+                        onAskFreshLink(w.id);
+                      }}
+                    >
+                      Ask for a fresh link
+                    </button>
                   )}
               </span>
             )}

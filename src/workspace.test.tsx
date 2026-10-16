@@ -33,6 +33,7 @@ import {
   createWalkthrough,
   decide,
   revokeAccess,
+  requestFreshLink,
   sendWalkthrough,
 } from "./pmw";
 import Assessment from "./Assessment";
@@ -2155,5 +2156,62 @@ describe("A dead link is the operator's move, not the customer's (ADR 097)", () 
     expect(metric.querySelector("strong")!.textContent).toBe(
       String(withCustomer),
     );
+  });
+});
+
+describe("The customer can ask for a fresh link, and the operator sees it (ADR 098)", () => {
+  /** A walkthrough sent to the signed-in customer (c2, Daniel Brooks), then
+   *  withdrawn, then `then`. */
+  const withdrawn =
+    (into: { id: string }, then: (d: State, wId: string) => void = () => {}) =>
+    (d: State) => {
+      const p = d.properties.find((x) => x.accountId === "c2")!;
+      const w = createWalkthrough(d, p.id);
+      addFinding(d, w.id, {
+        title: "Door rubbing against frame",
+        proposed: "Adjust the sticking door",
+        price: 180,
+      });
+      sendWalkthrough(d, w.id);
+      revokeAccess(d, w.id);
+      then(d, w.id);
+      into.id = w.assessmentId;
+    };
+  const item = (id: string) =>
+    [...document.querySelectorAll<HTMLElement>(".record-item")].find((x) =>
+      x.textContent!.includes(id),
+    )!;
+  const ask = (id: string) =>
+    within(item(id)).queryByRole("button", { name: "Ask for a fresh link" });
+
+  it("asks from the record, once, and focus lands on what it now says", async () => {
+    const made = { id: "" };
+    open("Customer", withdrawn(made));
+    await screen.findByRole("heading", { level: 1 });
+    fireEvent.click(ask(made.id)!);
+    expect(item(made.id).textContent).toMatch(/Fresh link requested/);
+    expect(ask(made.id)).toBeNull();
+    await waitFor(() =>
+      expect(document.activeElement?.textContent).toBe("Fresh link requested"),
+    );
+  });
+
+  it("leads the operator's glance as a request, with who asked", async () => {
+    const made = { id: "" };
+    open(
+      "Operator",
+      withdrawn(made, (d, wId) => {
+        requestFreshLink(d, wId);
+      }),
+    );
+    go(/^Walkthroughs/);
+    await screen.findByRole("heading", { level: 1, name: "Walkthroughs" });
+    const lead = document.querySelector<HTMLElement>(".op-glance-lead")!;
+    expect(lead.textContent).toMatch(/^Fresh link requested/);
+    expect(lead.textContent).toContain("Daniel Brooks asked for a fresh link today.");
+    const row = screen
+      .getAllByRole("button")
+      .find((b) => b.classList.contains("queue-item") && b.textContent!.includes(made.id))!;
+    expect(row.querySelector(".badge")?.textContent).toBe("Fresh link requested");
   });
 });
