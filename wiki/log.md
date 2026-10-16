@@ -3,6 +3,26 @@ title: "Wiki Log"
 type: log
 ---
 
+## [2026-10-16] session | ADR 089: the contractor workspace in the register
+
+- **Completed:**
+  - A register audit of the contractor workspace (Your work, its job detail, the offer queue, the identity switcher, Earnings), with the remit "the contractor sees the next job and what it pays, and answers each offer in one step". It found 11 issues, 6 P2 and 5 P3, and all 11 are fixed.
+  - One action, one colour: Accept was green on the detail (from `.contractor-accept` in both `contractor-concept.css` and `cards.css`) and amber in the queue. Both green rules are gone, so Accept is a plain `.primary`.
+  - One primary per screen: "Review N offers" steps aside while an offer is open on the detail; "View job" on each card is `.secondary`; the "New offers" count is no longer `urgent`.
+  - Pay: an accent fill on every card is decoration, so pay sits on `--surface-raised` with tabular figures. `payLabel` (`ContractorQueue.tsx`) words it once, "Your pay: $110 CAD", replacing three wordings.
+  - Headings: the h1 is "Your work" with no slogan (the page key stays "Your Work"). Job titles, week headings and Earnings totals drop from `--text-h2` (31.25px) to `--text-intro` (20px), below the 25px h1. "VIEWING AS" and "NEXT JOB" are sentence case, untracked, via contractor-scoped rules.
+  - Said once: a one-task job has no task list on its card, and its disclosures read "Task details". An unrestricted task renders no empty paragraph.
+  - An empty Today says "No jobs today." "You're done for today." is kept for a day whose jobs are finished.
+  - Past work appears only when there is some, newest first, and a finished job reads "Completed", not "Accepted".
+  - `DESIGN.md`'s register line now says one action has one colour, a screen has one primary, and headings sit below the h1.
+- **Verified:**
+  - `npm run build`, and `npm test` (660 tests, all passing). Three tests changed (the h1, "Switching roles", and the queue-focus test, which now steps back to the list first). Two are new: Review is the list's one primary, and past work stays hidden until it exists.
+  - Live at 320, 375, 768, 1024, 1280 and 1440px in both themes, on the list, the detail, Earnings and Availability. Nothing overflows. Pay is 14.1:1 in light and 12.8:1 in dark; View job 16.5:1 and 14.6:1; "Viewing as" 5.5:1 and 12.1:1. The focus ring shows on every button. Operator screens are unchanged, their pending counts still red. No console errors.
+- **Left alone:** shared code: `GlanceCard`, the global `.eyebrow` and `.note`, the customer's "VIEWING AS", `JobWork` and `.contractor-success`, `.time-pill`.
+- **Correction:** [[fieldwork]] still said ADR 088's PR was open. It merged as PR #66.
+- **Deferred:** the customer's "VIEWING AS" switcher; `GlanceLead` tracking on operator screens; the accent fills on `.message-bubble.sent` and `.notification-link.unread`; the "Messages" in-app simulation summary; the `GlanceCard` doc comment on `urgent`; the now-dead `.contractor-success` check shared with `JobWork`; the glance's "City · $110", which does not use `payLabel`; a light-theme review of the pills.
+- **Pages touched:** [[fieldwork]].
+
 ## [2026-10-16] session | ADR 088: the customer workspace home in the register
 
 - **Completed:**
