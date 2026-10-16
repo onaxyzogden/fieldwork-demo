@@ -238,7 +238,12 @@ export function customerGlance(
  *   This wins over "with customer" when a walkthrough has both, because
  *   conversion works per approval: the approved half can be acted on now
  *   without waiting for the undecided half.
- * - withCustomer — sent, a finding still undecided, nothing approved waiting.
+ * - withCustomer — sent, a finding still undecided, nothing approved waiting,
+ *   and a link the customer can open.
+ * - freshLink — the same, but the link was withdrawn or has expired: the
+ *   customer can do nothing until the operator issues a fresh one, so it is the
+ *   operator's move, not the customer's (ADR 097). Ready to convert still wins,
+ *   as Convert stays first on the card (ADR 095).
  *
  * Converted walkthroughs are history and belong to none. A sent walkthrough
  * whose findings were all deferred also belongs to none: nobody owes anything.
@@ -250,6 +255,8 @@ export type WalkthroughGlance = {
   draftIds: string[];
   withCustomerIds: string[];
   readyToConvertIds: string[];
+  /** Oldest sent first, as `withCustomerIds` is. */
+  freshLinkIds: string[];
   /** The oldest assessment still waiting on the customer — the one to chase. */
   chase: { walkthrough: Walkthrough; daysSent: number; opens: number } | null;
 };
@@ -270,9 +277,15 @@ export function walkthroughGlance(s: State, clock: number): WalkthroughGlance {
     findingsFor(s, w.id).some((f) => findingState(s, f) === "Pending decision");
   const readyToConvert = sent.filter(hasApprovedWaiting);
   const ready = new Set(readyToConvert.map((w) => w.id));
-  const withCustomer = sent
+  const undecided = sent
     .filter((w) => !ready.has(w.id) && hasUndecided(w))
     .sort((a, b) => (a.sentAt ?? a.date).localeCompare(b.sentAt ?? b.date));
+  /* Dead as the card reads it: withdrawn or expired. */
+  const dead = (w: Walkthrough) => {
+    const state = linkState(s, w, clock);
+    return state === "revoked" || state === "expired";
+  };
+  const withCustomer = undecided.filter((w) => !dead(w));
   const oldest = withCustomer[0];
   return {
     draftIds: s.walkthroughs
@@ -280,6 +293,7 @@ export function walkthroughGlance(s: State, clock: number): WalkthroughGlance {
       .map((w) => w.id),
     withCustomerIds: withCustomer.map((w) => w.id),
     readyToConvertIds: readyToConvert.map((w) => w.id),
+    freshLinkIds: undecided.filter(dead).map((w) => w.id),
     chase: oldest
       ? {
           walkthrough: oldest,

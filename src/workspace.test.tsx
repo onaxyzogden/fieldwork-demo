@@ -39,6 +39,7 @@ import Assessment from "./Assessment";
 import { plural } from "./plural";
 import { respondToOffer } from "./dispatch";
 import Blueprint from "./Blueprint";
+import { walkthroughGlance } from "./glance";
 import { bucket } from "./work";
 
 function Harness({
@@ -2098,5 +2099,61 @@ describe("The customer is not sent to a link that no longer works (ADR 096)", ()
     expect(review()).toBeNull();
     expect(item(made.id).querySelector("a")).toBeNull();
     expect(item(made.id).textContent).toMatch(/Link expired/);
+  });
+});
+
+describe("A dead link is the operator's move, not the customer's (ADR 097)", () => {
+  /** A walkthrough sent today with one quoted finding, then withdrawn. */
+  const withdrawn = (into: { id: string }) => (d: State) => {
+    const w = createWalkthrough(d, "p2");
+    addFinding(d, w.id, {
+      title: "Door rubbing against frame",
+      proposed: "Adjust the sticking door",
+      price: 180,
+    });
+    sendWalkthrough(d, w.id);
+    revokeAccess(d, w.id);
+    into.id = w.assessmentId;
+  };
+  const toList = async () => {
+    go(/^Walkthroughs/);
+    await screen.findByRole("heading", { level: 1, name: "Walkthroughs" });
+  };
+  const row = (id: string) =>
+    screen
+      .getAllByRole("button")
+      .find((b) => b.classList.contains("queue-item") && b.textContent!.includes(id))!;
+  const lead = () => document.querySelector<HTMLElement>(".op-glance-lead")!;
+
+  it("leads with it ahead of the oldest undecided, and opens it", async () => {
+    const made = { id: "" };
+    open("Operator", withdrawn(made));
+    await toList();
+    expect(lead().textContent).toMatch(/^Link withdrawn/);
+    expect(lead().textContent).toContain(made.id);
+    expect(lead().textContent).toMatch(/until you issue a fresh link/);
+    fireEvent.click(lead().querySelector("button")!);
+    expect(
+      await screen.findByRole("button", { name: "Issue a fresh link" }),
+    ).toBeTruthy();
+  });
+
+  it("marks its row and leaves it out of With customer", async () => {
+    const made = { id: "" };
+    let withCustomer = 0;
+    open("Operator", (d) => {
+      withCustomer = walkthroughGlance(d, d.clock).withCustomerIds.length;
+      withdrawn(made)(d);
+    });
+    await toList();
+    expect(row(made.id).querySelector(".badge")?.textContent).toBe(
+      "Link withdrawn",
+    );
+    const metric = [...document.querySelectorAll(".op-metrics > *")].find(
+      (m) => m.textContent!.includes("With customer"),
+    )!;
+    expect(metric.querySelector("strong")!.textContent).toBe(
+      String(withCustomer),
+    );
   });
 });

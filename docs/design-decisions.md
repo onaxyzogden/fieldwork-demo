@@ -3311,5 +3311,44 @@ record is 7.7:1 in dark and 5.2:1 in light. No console errors.
 **Left alone.**
 - The refusal page (ADR 047), which still answers an old link opened directly.
 - The operator's mirror: `walkthroughGlance` still counts a Sent walkthrough
-  with a dead link as with the customer, and can still suggest chasing it.
+  with a dead link as with the customer, and can still suggest chasing it
+  (done in ADR 097).
 - The customer has no way to ask for a fresh link from the record.
+
+## ADR 097: A dead link is the operator's move, not the customer's
+
+Accepted. Amends ADR 053. ADR 096 took a walkthrough with a withdrawn or
+expired link off the customer's to-do list, and left the operator's side as it
+was: the walkthrough glance still counted it under With customer, and the lead
+could still say "Oldest undecided" about it, which invites chasing a customer
+who cannot open the assessment. The next move is the operator's, to issue a
+fresh link. Five tests are new.
+
+**A fourth bucket, not a fourth number.** `walkthroughGlance` splits ADR 053's
+With customer by `linkState`, read at the glance's own clock. A walkthrough
+whose link works stays With customer and can be chased. One whose link was
+withdrawn or has expired moves to `freshLinkIds`, oldest sent first, and the
+chase skips it. Ready to convert still wins over both, as Convert stays first
+on the card while the link is dead (ADR 095). Each walkthrough is still in at
+most one bucket. The card keeps its three counts.
+
+**The lead names it first.** While any walkthrough needs a fresh link, the
+glance leads with the oldest, under the eyebrow "Link withdrawn" or "Link
+expired" (the card's own words), with its number and address and "The customer
+can’t open it until you issue a fresh link." It opens the walkthrough, where
+"Issue a fresh link" is the primary. The oldest undecided comes back to the
+lead once no link is dead. In the list, the walkthrough's row carries the same
+words as a badge, as a ready one carries "Ready to convert".
+
+**Checked live.** Withdrawing PMW-0001's link put "Link withdrawn" in the lead,
+took With customer from 2 to 1 and badged the row; the lead opened the card on
+"Link withdrawn". A fresh link brought back "Oldest undecided", 2 and no badge.
+At 320, 375, 768, 1024, 1280 and 1440px in both themes nothing overflows, the
+lead and the row are at least 95px tall, and the lowest text contrast in the
+lead and the badge is 10.9:1 in dark and 5.2:1 in light. No console errors.
+
+**Left alone.**
+- A Sent walkthrough with no link at all still counts as With customer, as the
+  card does not call it dead.
+- A ready walkthrough's row shows only "Ready to convert", even when its link
+  is dead; the card says so once opened.
