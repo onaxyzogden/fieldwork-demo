@@ -34,19 +34,31 @@
   border-radius: var(--radius-md);
   margin: 0 var(--space-4) var(--space-3) 0;
 }
+/* Every heading inside the page sits below its 25px h1, the job titles and
+   week headings included (ADR 089). */
+.contractor-wrap .panel h2,
 .contractor-offer-card h2 {
-  font-size: var(--text-h2);
+  font-size: var(--text-intro);
 }
-.contractor-offer-card > .primary {
+.contractor-offer-card > .secondary {
   width: 100%;
 }
+/* Pay is on every card, so it sits on a neutral surface: an accent fill
+   repeated on every item is decoration (ADR 089). */
 .contractor-pay {
-  background: var(--accent-soft);
+  background: var(--surface-raised);
   border: 1px solid var(--line);
   padding: var(--space-4);
   border-radius: var(--radius-md);
   font-size: var(--text-intro);
+  font-variant-numeric: tabular-nums;
   clear: both;
+}
+/* Labels in sentence case, untracked (ADR 089). The shared .eyebrow and
+   GlanceLead keep their tracking elsewhere. */
+.contractor-switch .eyebrow,
+.contractor-wrap .op-glance-lead .eyebrow {
+  letter-spacing: 0;
 }
 .contractor-success {
   text-align: center;
@@ -62,11 +74,6 @@
   color: var(--on-accent);
   font-size: var(--text-h1);
   margin: var(--space-4) auto;
-}
-.contractor-wrap .contractor-accept {
-  background: var(--success-fill);
-  border-color: var(--success-fill);
-  color: var(--on-accent);
 }
 .contractor-wrap .work-task {
   border: 1px solid var(--line);
@@ -177,7 +184,7 @@
 }
 .earnings-totals strong {
   display: block;
-  font-size: var(--text-h2);
+  font-size: var(--text-intro);
   font-variant-numeric: tabular-nums;
 }
 .earnings-totals small {

@@ -338,13 +338,28 @@ describe("Customer workspace", () => {
 });
 
 describe("Contractor workspace", () => {
-  it("opens on Your Work with the offer to review", () => {
+  it("opens on Your work with the offer to review", () => {
     open("Contractor");
-    expect(h1().textContent).toBe("Your Work");
+    expect(h1().textContent).toBe("Your work");
     expect(screen.getByRole("heading", { name: "TV mounting" })).toBeTruthy();
-    expect(screen.getByRole("heading", { name: /^Your pay: \$110/ })).toBeTruthy();
+    expect(
+      screen.getByRole("heading", { name: "Your pay: $110 CAD" }),
+    ).toBeTruthy();
     expect(screen.getByRole("button", { name: "Accept job" })).toBeTruthy();
     expect(screen.getByRole("button", { name: "Decline" })).toBeTruthy();
+    // The open offer's Accept is the one primary; the queue button steps aside.
+    expect(screen.queryByRole("button", { name: /^Review \d+ offer/ })).toBeNull();
+  });
+
+  it("lists offers with Review as the one primary action", () => {
+    open("Contractor");
+    fireEvent.click(screen.getByRole("button", { name: "← Back to your work" }));
+    expect(
+      screen.getByRole("button", { name: "Review 1 offer" }).className,
+    ).toContain("primary");
+    expect(
+      screen.getByRole("button", { name: "View job" }).className,
+    ).not.toContain("primary");
   });
 
   it("switches who it is viewing as", () => {
@@ -365,6 +380,18 @@ describe("Contractor workspace", () => {
     expect(screen.queryByRole("button", { name: "Accept job" })).toBeNull();
     expect(
       screen.getByRole("heading", { name: "1 task in this visit" }),
+    ).toBeTruthy();
+  });
+
+  it("keeps past work out of sight until there is some", () => {
+    open("Contractor");
+    expect(screen.queryByText("Past offers & completed work")).toBeNull();
+    fireEvent.click(screen.getByRole("button", { name: "Decline" }));
+    fireEvent.click(screen.getByRole("button", { name: "Too far" }));
+    fireEvent.click(screen.getByRole("button", { name: "← Back to your work" }));
+    expect(screen.getByText("Past offers & completed work")).toBeTruthy();
+    expect(
+      screen.getByRole("button", { name: "TV mounting · Declined · Too far" }),
     ).toBeTruthy();
   });
 
@@ -397,7 +424,7 @@ describe("Switching roles", () => {
   it("goes from the operator to the contractor's home", () => {
     open("Operator");
     fireEvent.click(screen.getByRole("button", { name: "Contractor" }));
-    expect(h1().textContent).toBe("Your Work");
+    expect(h1().textContent).toBe("Your work");
     fireEvent.click(screen.getByRole("button", { name: "Customer" }));
     expect(h1().textContent).toBe("My bookings");
   });
@@ -510,6 +537,8 @@ describe("Focus and friction (ADR 079)", () => {
 
   it("moves focus into the queue's decline reasons and back", () => {
     open("Contractor");
+    // The page opens on the only offer; the queue is reached from the list.
+    fireEvent.click(screen.getByRole("button", { name: "← Back to your work" }));
     fireEvent.click(
       screen.getByRole("button", { name: /^Review \d+ offers?/ }),
     );

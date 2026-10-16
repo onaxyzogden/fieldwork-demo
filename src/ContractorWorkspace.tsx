@@ -20,8 +20,13 @@ export function ContractorWorkspace() {
       {/* Same pill idiom as the customer switcher. Yousef is included:
           he takes jobs as well as dispatching them, so he is a real
           contractor identity, not just the operator. */}
-      <div className="identity-switch" role="group" aria-label="Viewing as">
-        <span className="eyebrow">VIEWING AS</span>
+      <div
+        className="identity-switch contractor-switch"
+        role="group"
+        aria-label="Viewing as"
+      >
+        {/* Sentence case, untracked: a label, not a stamp (ADR 089). */}
+        <span className="eyebrow">Viewing as</span>
         {providers.map((p) => (
           <button
             key={p.id}

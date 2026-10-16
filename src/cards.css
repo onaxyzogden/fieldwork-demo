@@ -42,10 +42,6 @@
   background: var(--accent);
   color: var(--on-accent);
 }
-:root[data-theme] .contractor-accept {
-  background: var(--success-fill);
-  color: var(--on-accent);
-}
 .contractor-check {
   background: var(--success-fill);
   color: var(--on-accent);

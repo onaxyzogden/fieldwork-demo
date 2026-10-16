@@ -1,7 +1,14 @@
 import { plural } from "./plural";
 import { questionAnswers } from "./clarification";
 import { useState, useEffect } from "react";
-import { type State, type Visit, money, dateLabel, accountName } from "./model";
+import {
+  type Assignment,
+  type State,
+  type Visit,
+  money,
+  dateLabel,
+  accountName,
+} from "./model";
 import { dayKey, workStatus } from "./work";
 import { respondToOffer, tripLabel } from "./dispatch";
 import { MessageThread } from "./NotificationUI";
@@ -18,7 +25,7 @@ import {
   type ContractorTab,
 } from "./glance";
 import { JobWork, type Props } from "./JobWork";
-import { REASONS } from "./ContractorQueue";
+import { REASONS, payLabel } from "./ContractorQueue";
 import { useSwapFocus } from "./useSwapFocus";
 export default function ContractorWork({
   s,
@@ -143,12 +150,25 @@ export default function ContractorWork({
   const glance = contractorGlance(s, provider, +s.clock);
   const nextVisit = glance.next?.visit;
   const nextRequest = s.requests.find((r) => r.id === nextVisit?.requestId);
+  /* What is behind the contractor, newest first: their order, not the order
+     the offers were made in (ADR 089). */
+  const past = mine
+    .flatMap((a) => {
+      const v = s.visits.find((v) => v.id === a.visitId);
+      return v &&
+        (["Declined", "Expired"].includes(a.status) ||
+          (a.status === "Accepted" && !!v.execution?.finishedAt))
+        ? [{ a, v }]
+        : [];
+    })
+    .sort((x, y) => y.v.start.localeCompare(x.v.start));
   return (
     <div className="contractor-wrap">
       <div className="heading role-greeting">
         <div>
-          <h1>Your Work</h1>
-          <p>What’s next, all in one place.</p>
+          {/* The page key stays "Your Work"; the page names itself in
+              sentence case, with no slogan under it (ADR 089). */}
+          <h1>Your work</h1>
         </div>
       </div>
       <Glance
@@ -181,14 +201,15 @@ export default function ContractorWork({
               }}
             />
           ) : (
-            <GlanceLead when="NEXT JOB" what="Nothing accepted yet." />
+            <GlanceLead when="Next job" what="Nothing accepted yet." />
           )
         }
         metrics={[
+          /* An offer is work on the way, not an error, so it is not drawn
+             in the danger colour (ADR 089). */
           {
             label: "New offers",
             value: glance.offers,
-            urgent: glance.offers > 0,
             onClick: () => setTab("Offers"),
           },
           {
@@ -203,8 +224,10 @@ export default function ContractorWork({
           },
         ]}
       />
-      {/* The same count as the Offers tab, because it is the same list. */}
-      {glance.offers > 0 && (
+      {/* The same count as the Offers tab, because it is the same list. While
+          an offer is open below, its Accept is the screen's one primary
+          action, so this steps aside (ADR 089). */}
+      {glance.offers > 0 && a?.status !== "Offered" && (
         <button className="primary full" onClick={() => setReviewing(true)}>
           Review {glance.offers} offer{glance.offers === 1 ? "" : "s"}
         </button>
@@ -256,7 +279,7 @@ export default function ContractorWork({
               <p className="muted">
                 {tripLabel(v.providerId, r.city, v.travel)}
               </p>
-              <h3 className="contractor-pay">Your pay: {money(a.pay)} CAD</h3>
+              <h3 className="contractor-pay">{payLabel(a.pay)}</h3>
               <p>
                 <When
                   clock={s.clock}
@@ -268,7 +291,11 @@ export default function ContractorWork({
                 const t = s.tasks.find((t) => t.id === id)!;
                 return (
                   <details className="work-task" key={id}>
-                    <summary>{t.summary}</summary>
+                    {/* One task is the job the h2 already names, so its
+                        disclosure is labelled for what it holds (ADR 089). */}
+                    <summary>
+                      {v.taskIds.length === 1 ? "Task details" : t.summary}
+                    </summary>
                     <p>{t.description}</p>
                     <dl className="task-answers">
                       {questionAnswers(t).map((row) => (
@@ -278,9 +305,7 @@ export default function ContractorWork({
                         </div>
                       ))}
                     </dl>
-                    <p>
-                      {t.restricted ? "Specialist eligibility required" : ""}
-                    </p>
+                    {t.restricted && <p>Specialist eligibility required</p>}
                     <div className="work-photos">
                       {t.photos.map((p, i) => (
                         <a href={p} target="_blank" rel="noreferrer" key={i}>
@@ -325,7 +350,7 @@ export default function ContractorWork({
               ) : (
                 <div className="row actions">
                   <button
-                    className="primary grow contractor-accept"
+                    className="primary grow"
                     onClick={() => respond("Accepted")}
                   >
                     Accept job
@@ -446,19 +471,28 @@ export default function ContractorWork({
                       {r.address}, {r.city} · Navigate ↗
                     </a>
                   )}
-                  <ul className="contractor-task-list">
-                    {s.tasks
-                      .filter((t) => v.taskIds.includes(t.id))
-                      .map((t) => (
-                        <li key={t.id}>{t.summary}</li>
-                      ))}
-                  </ul>
+                  {/* The h2 is the first task, so one task needs no list
+                      repeating it (ADR 089). */}
+                  {v.taskIds.length > 1 && (
+                    <ul className="contractor-task-list">
+                      {s.tasks
+                        .filter((t) => v.taskIds.includes(t.id))
+                        .map((t) => (
+                          <li key={t.id}>{t.summary}</li>
+                        ))}
+                    </ul>
+                  )}
                   <p>
                     {v.duration} minutes
                     {photoCount(s, v.taskIds)}
                   </p>
-                  <h3 className="contractor-pay">Your pay: {money(a.pay)}</h3>
-                  <button className="primary" onClick={() => setSelected(a.id)}>
+                  <h3 className="contractor-pay">{payLabel(a.pay)}</h3>
+                  {/* Secondary: a filled button on every card is decoration,
+                      and the primary is the page's own (ADR 089). */}
+                  <button
+                    className="secondary"
+                    onClick={() => setSelected(a.id)}
+                  >
                     View job
                   </button>
                 </section>
@@ -469,9 +503,14 @@ export default function ContractorWork({
               !s.visits.find((v) => v.id === a.visitId)?.execution?.finishedAt,
           ) && (
             <section className="card panel">
+              {/* Done only when there was something to finish: today's list
+                  keeps its finished jobs, so an empty one means no jobs
+                  (ADR 089). */}
               <h2>
                 {tab === "Today"
-                  ? "You’re done for today."
+                  ? assignments.length
+                    ? "You’re done for today."
+                    : "No jobs today."
                   : tab === "Offers"
                     ? "You’re all caught up."
                     : "Nothing scheduled yet."}
@@ -485,39 +524,32 @@ export default function ContractorWork({
               </p>
             </section>
           )}
-          <details className="card panel">
-            <summary>Past offers & completed work</summary>
-            {mine
-              .filter(
-                (a) =>
-                  ["Declined", "Expired"].includes(a.status) ||
-                  (a.status === "Accepted" &&
-                    !!s.visits.find((v) => v.id === a.visitId)?.execution
-                      ?.finishedAt),
-              )
-              .map((a) => (
+          {past.length > 0 && (
+            <details className="card panel">
+              <summary>Past offers & completed work</summary>
+              {past.map(({ a, v }) => (
                 <button
                   className="queue-item"
                   key={a.id}
                   onClick={() => setSelected(a.id)}
                 >
-                  {
-                    s.tasks.find((t) =>
-                      s.visits
-                        .find((v) => v.id === a.visitId)
-                        ?.taskIds.includes(t.id),
-                    )?.summary
-                  }{" "}
-                  · {a.status}
+                  {s.tasks.find((t) => v.taskIds.includes(t.id))?.summary} ·{" "}
+                  {pastStatus(a)}
                   {a.declineReason && ` · ${a.declineReason}`}
                 </button>
               ))}
-          </details>
+            </details>
+          )}
         </>
       )}
     </div>
   );
 }
+
+/** One word for where a past job ended. A finished job is still "Accepted"
+ *  underneath, which is the system's word, not the contractor's (ADR 089). */
+const pastStatus = (a: Assignment) =>
+  a.status === "Accepted" ? "Completed" : a.status;
 
 /** " · 3 photos", or nothing when there are none (ADR 083). */
 const photoCount = (s: State, taskIds: string[]) => {
