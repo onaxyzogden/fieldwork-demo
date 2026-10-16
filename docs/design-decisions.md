@@ -2593,3 +2593,73 @@ different request and customer, so it does not need to sit beside v5.
 Out of scope, and left for later:
 - `model.ts` is not Prettier-clean on `main`. This change formats only its
   own lines.
+
+## ADR 087: The intake speaks warmly, and does not sell
+
+Accepted. This is the second application of the **register**, and the first
+to a customer surface. The customer intake is the one place in the app where
+a warm voice belongs, because the person filling it in is asking for help
+with their home. A warm voice is not the persuasive register: the intake
+explains and confirms, but it does not sell, and it does not show the
+customer the operator's working state. The audit used the remit "the
+customer says where, what and when, and leaves knowing what happens next".
+It found 11 issues, and all 11 are fixed. No tests change.
+
+**The order of a comparison.**
+- On a phone, Instant Book put the timing constraints above the real
+  appointments, so the times a customer can book were below the fold. Real
+  times now come first. Request to Book keeps preferences first, because
+  there are no times to show until someone has reviewed the job.
+- The step h1 is `--text-h2` in the intake. The summary of the earlier steps
+  already says where the customer is, so the heading does not need the
+  page-title size.
+- The times were shown in score order, which reads as no order at all. The
+  best fit still leads, marked "Recommended". The rest run in time order, and
+  "See more times" groups them by day under a small heading. This is display
+  only: the scoring in `intakeOptions` is unchanged.
+
+**No internal state on a customer surface.**
+- The amber "Needs review" or "Reviewed" badge on each task is gone. Review
+  is the operator's step, not something the customer can act on.
+- The "Instant Book" or "Request to Book" badge is gone. The copy under the
+  heading already says which one this is, in the customer's words.
+- The note on the tasks step reads "Saving your answers doesn't book or
+  approve the work yet." An earlier draft said someone would look at the
+  details first, which is not true for a job that Instant Book reviews
+  automatically.
+- The fallback when no times can be offered reads "We need to check a few
+  details before we can offer times. Tell us what generally works for you."
+  It used to talk about scope needing review.
+
+**Said once, and at the size of what it is.**
+- "Recommended" appeared twice on the first card. It is now once, as a plain
+  muted label, not a pill.
+- "60 min visit · Available appointment" was repeated on every card. The
+  length of a visit is said once, above the list and in the dialog's
+  subtitle. A card repeats its day only where the day is not already the
+  heading, and screen readers still hear the day on every card.
+- The 150px gradient that stood in for a map is now a one-line
+  confirmation: a pin and the address. `--gradient-location` and the
+  `--map-land`, `--map-water` and `--map-road` tokens it used are removed.
+- `.time-pill` is 44px tall with label-size text, so it is a target the
+  thumb can hit.
+- The photo button loses its accent-soft background. Accent is kept for the
+  primary action and for state.
+- The dialog's h2 takes `look-h3`, so it does not compete with the page h1.
+
+**Checked live.** At 375 by 812, the first appointment starts about 370px
+below the step indicator. In the demo, the prototype's role switcher pushes
+it just under the fold. No horizontal overflow at 320, 375, 768, 1024, 1280
+or 1440px in either theme, on the address, tasks or timing step. "Recommended"
+is 6.1:1 in light and about 7.5:1 in dark. Time pills measure 44px. No
+console errors. The global `:focus-visible` ring covers every new target.
+
+**Corrected from the audit.** The report listed `.task-number` as an
+intake element. It is only used in `OperatorRequests`, so it is left alone.
+
+Out of scope, and left for later:
+- a regression test for the time order;
+- the copy for "Send for referral review";
+- the customer workspace's "Home, handled." and its eyebrows, which have
+  not had a register audit;
+- offering the soonest times, not only the best-scored ones.

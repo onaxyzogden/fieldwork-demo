@@ -27,7 +27,7 @@ Tokens carry a **role**, and the role decides the pairing. `--accent`, `--succes
 
 Typography is DM Sans/Manrope with a 1.25 ratio: body 16, intro 20, H3 25, H2 31.25, H1 39.0625px, stored in rem. Labels 14px and captions 12px are intentional utility exceptions. Body line-height is 1.6, headings 1.5. Never shrink text to fit a screen.
 
-**Register.** Each surface declares a register, which sets its type, density, grid, accent, motion and voice (house methodology, Layer 1). All three roles' workspaces are *operational*. Pages name themselves, facts replace slogans, values that people compare sit in rows that line up, and accent goes only to the one primary action and to state. Motion is feedback only. The customer's intake and confirmations may speak warmly, but they do not sell. A *persuasive* surface, such as marketing, belongs outside the app. See ADR 085.
+**Register.** Each surface declares a register, which sets its type, density, grid, accent, motion and voice (house methodology, Layer 1). All three roles' workspaces are *operational*. Pages name themselves, facts replace slogans, values that people compare sit in rows that line up, and accent goes only to the one primary action and to state. Motion is feedback only. The customer's intake and confirmations may speak warmly, but they do not sell, and they never show the customer the operator's working state (review, booking mode, scoring). What the customer can act on comes first, and a list they compare is in an order they can read. A *persuasive* surface, such as marketing, belongs outside the app. See ADR 085 and 087.
 
 ## Five primitives
 

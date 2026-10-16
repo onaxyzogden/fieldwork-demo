@@ -432,7 +432,33 @@ export default function CustomerIntake({
   };
   const timeLabel = (o: { start: string; duration: number }) =>
     `${dateLabel(o.start)} – ${new Date(+new Date(o.start) + o.duration * 60000).toLocaleTimeString("en-CA", { timeZone: "America/Toronto", hour: "numeric", minute: "2-digit" })}`;
-  const slotButton = (o: (typeof options)[number], i: number) => (
+  const dayOf = (start: string) =>
+    new Date(start).toLocaleDateString("en-CA", {
+      timeZone: "America/Toronto",
+      weekday: "short",
+      month: "short",
+      day: "numeric",
+    });
+  /* The best fit leads; the rest run in time order, so a customer looking
+     for Tuesday afternoon can find it (ADR 087). Display only: the scoring
+     in intakeOptions is unchanged. */
+  const byTime = options
+    .slice(1)
+    .sort((a, b) => +new Date(a.start) - +new Date(b.start));
+  const days = byTime.reduce<{ day: string; times: typeof options }[]>(
+    (all, o) => {
+      const day = dayOf(o.start);
+      const last = all[all.length - 1];
+      if (last?.day === day) last.times.push(o);
+      else all.push({ day, times: [o] });
+      return all;
+    },
+    [],
+  );
+  const visitLength = options[0]?.duration;
+  /* In the dialog the day is a heading above its times, so the card keeps it
+     for a screen reader only. */
+  const slotButton = (o: (typeof options)[number], showDay = true) => (
     <button
       key={o.start}
       className={
@@ -445,14 +471,11 @@ export default function CustomerIntake({
         choose(o);
       }}
     >
-      {i === 0 && <span className="time-recommendation">Recommended</span>}
-      <strong>
-        {new Date(o.start).toLocaleDateString("en-CA", {
-          timeZone: "America/Toronto",
-          weekday: "short",
-          month: "short",
-          day: "numeric",
-        })}
+      {o === options[0] && (
+        <span className="time-recommendation">Recommended</span>
+      )}
+      <strong className={showDay ? undefined : "sr-only"}>
+        {dayOf(o.start)}
       </strong>
       <span>
         {new Date(o.start).toLocaleTimeString("en-CA", {
@@ -466,12 +489,183 @@ export default function CustomerIntake({
           { timeZone: "America/Toronto", hour: "numeric", minute: "2-digit" },
         )}
       </span>
-      <small>
-        {i === 0 ? "Recommended · " : ""}
-        {o.duration} min visit ·{" "}
-        {instant ? "Available appointment" : "Preferred time—not confirmed"}
-      </small>
     </button>
+  );
+  /* The booking step's two sections. Instant Book puts its real times
+     first, so on a phone the decision is on the first screen; Request to
+     Book asks for wishes first, then offers times (ADR 087). */
+  const preferences = (
+    <>
+      {/* Stated preference. A vertical list of the next 10 days rather than
+          a calendar modal: the same data, far less to build and to use. This
+          is a wish, not a booking, and submitting with nothing chosen is a
+          perfectly good answer. */}
+      <section className="customer-timing-section">
+        {/* Instant Book has real times above, so a wish list beside them
+            does nothing (ADR 070). Request to Book's days start where the
+            bookable times do, two days out: today and tomorrow are never
+            offered, so they are not asked for either. */}
+        {!instant && (
+          <>
+            <h2 className="look-h3">Days that suit you</h2>
+            {/* Each row expands in place to its own Morning/Afternoon/Evening
+            toggles the moment it's picked — not a separate summary block
+            collecting every selected day's toggles afterward. */}
+            <div className="date-list">
+              {upcomingDays(s.clock + 2 * 86400000).map((d) => {
+                const slot = r.preferredSlots?.find((p) => p.date === d.date);
+                return (
+                  <div key={d.date}>
+                    <button
+                      className={"date-chip" + (slot ? " selected" : "")}
+                      aria-pressed={!!slot}
+                      onClick={() => togglePreferredDay(d.date)}
+                    >
+                      {d.label}
+                      {slot && <Check aria-hidden="true" size={16} />}
+                    </button>
+                    {slot && (
+                      <div className="time-pills">
+                        {dayParts.map((part) => (
+                          <button
+                            key={part}
+                            className={
+                              "time-pill" +
+                              (slot.times.includes(part) ? " selected" : "")
+                            }
+                            aria-pressed={slot.times.includes(part)}
+                            aria-label={`${part} on ${d.date}`}
+                            onClick={() => togglePreferredTime(d.date, part)}
+                          >
+                            {part}
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          </>
+        )}
+        <label className="field">
+          Timing constraints
+          <textarea
+            value={r.timingConstraints || ""}
+            placeholder="Baby is napping from 3–4pm. Please do not arrive during those times."
+            onChange={(e) =>
+              patchRequest({ timingConstraints: e.target.value })
+            }
+          />
+        </label>
+      </section>
+    </>
+  );
+  const appointments = (
+    <section className="customer-timing-section">
+      <h2 className="look-h3">
+        {referral ? "Referral review" : "Available appointments"}
+      </h2>
+      {referral ? (
+        <p className="warning">
+          This includes a service we do not book through the platform. Send it
+          for operator review; no appointment or referral is promised.
+        </p>
+      ) : !validAddress(r) ? (
+        <p>Add your service address to see timing options.</p>
+      ) : (
+        <>
+          {/* What happens next, said once in words, not a tinted mode label;
+              and the visit length once, not on every card (ADR 087). */}
+          {options.length > 0 && (
+            <p>
+              {instant
+                ? `Each visit is ${visitLength} min.`
+                : `Choose a preference. Each visit is ${visitLength} min. We’ll review the details and confirm the appointment separately.`}
+            </p>
+          )}
+          {selectionValid && (
+            <p role="status">
+              <strong>
+                {instant ? "Selected appointment" : "Preferred time"}:
+              </strong>{" "}
+              {timeLabel(selected!)}
+            </p>
+          )}
+          {options.length > 0 ? (
+            <>
+              <div className="intake-times" ref={timesRef}>
+                {[
+                  options[0],
+                  ...byTime.filter((o) => options.slice(1, 3).includes(o)),
+                ].map((o) => slotButton(o))}
+              </div>
+              {options.length > 3 && (
+                <button
+                  className="secondary full"
+                  onClick={() => setMore(true)}
+                >
+                  See more times
+                </button>
+              )}
+              {!instant && (
+                <button
+                  className="text-button"
+                  onClick={() =>
+                    patchRequest({
+                      preferredSlot: undefined,
+                      timing: "Weekdays · flexible",
+                    })
+                  }
+                >
+                  Keep my timing flexible
+                </button>
+              )}
+            </>
+          ) : (
+            <p>
+              {tasks.reduce((n, t) => n + t.duration, 0) > 405
+                ? "This work may need multiple visits. The operator will coordinate the split and timing."
+                : "We need to check a few details before we can offer times. Tell us what generally works for you."}
+            </p>
+          )}
+          {!instant && !selectionValid && (
+            <label className="field">
+              General time preference
+              <select
+                value={
+                  [
+                    "Weekdays · flexible",
+                    "Weekdays · 9 AM–12 PM",
+                    "Weekdays · 1–5 PM",
+                    "Weekdays · 5–9 PM",
+                    "Any day · flexible",
+                  ].includes(r.timing)
+                    ? r.timing
+                    : "Weekdays · flexible"
+                }
+                onChange={(e) =>
+                  patchRequest({
+                    timing: e.target.value,
+                    preferredSlot: undefined,
+                  })
+                }
+              >
+                {[
+                  "Weekdays · flexible",
+                  "Weekdays · 9 AM–12 PM",
+                  "Weekdays · 1–5 PM",
+                  "Weekdays · 5–9 PM",
+                  "Any day · flexible",
+                ].map((t) => (
+                  <option key={t}>{t}</option>
+                ))}
+              </select>
+            </label>
+          )}
+        </>
+      )}
+    </section>
   );
   return (
     <div className="customer-intake">
@@ -673,15 +867,15 @@ export default function CustomerIntake({
                 />
               </label>
             </details>
+            {/* A plain confirmation of where we're coming, not a picture of
+                a map that isn't there (ADR 087). */}
             {validAddress(r) && (
-              <div className="customer-location-preview">
-                <MapPin aria-hidden="true" size={32} />
-                <strong>
-                  {r.address}
-                  <br />
-                  {r.city}
-                </strong>
-              </div>
+              <p className="customer-location-confirm">
+                <MapPin aria-hidden="true" size={16} />
+                <span>
+                  {r.address}, {r.city}
+                </span>
+              </p>
             )}
           </section>
           <div className="intake-bottom">
@@ -843,15 +1037,11 @@ export default function CustomerIntake({
                         <small>{t.description}</small>
                         {photos(t)}
                       </div>
+                      {/* No review badge: whether the operator has looked yet
+                          is theirs to track, and the customer can do nothing
+                          about it (ADR 087). The note below says what saving
+                          means. */}
                       <div className="task-card-done-actions">
-                        <span
-                          className={
-                            "badge " +
-                            (t.reviewed ? "badge-success" : "badge-urgent")
-                          }
-                        >
-                          {t.reviewed ? "Reviewed" : "Needs review"}
-                        </span>
                         <button
                           className="text-button"
                           onClick={() => reopen(t, "details")}
@@ -899,8 +1089,7 @@ export default function CustomerIntake({
               Add another task
             </button>
             <small>
-              Saved details are ready for review; they do not mean the work is
-              approved.
+              Saving your answers doesn’t book or approve the work yet.
             </small>
           </section>
           <div className="intake-bottom">
@@ -928,175 +1117,9 @@ export default function CustomerIntake({
                 : "Optional — select any dates and times that work. We’ll do our best to match."}
             </p>
           </header>
-          {/* Stated preference. A vertical list of the next 10 days rather than
-              a calendar modal: the same data, far less to build and to use. This
-              is a wish, not a booking, and submitting with nothing chosen is a
-              perfectly good answer. */}
-          <section className="customer-timing-section">
-            {/* Instant Book has real times below, so a wish list beside them
-                does nothing (ADR 070). Request to Book's days start where the
-                bookable times do, two days out: today and tomorrow are never
-                offered, so they are not asked for either. */}
-            {!instant && (
-              <>
-                <h2 className="look-h3">Days that suit you</h2>
-                {/* Each row expands in place to its own Morning/Afternoon/Evening
-                toggles the moment it's picked — not a separate summary block
-                collecting every selected day's toggles afterward. */}
-                <div className="date-list">
-                  {upcomingDays(s.clock + 2 * 86400000).map((d) => {
-                    const slot = r.preferredSlots?.find(
-                      (p) => p.date === d.date,
-                    );
-                    return (
-                      <div key={d.date}>
-                        <button
-                          className={"date-chip" + (slot ? " selected" : "")}
-                          aria-pressed={!!slot}
-                          onClick={() => togglePreferredDay(d.date)}
-                        >
-                          {d.label}
-                          {slot && <Check aria-hidden="true" size={16} />}
-                        </button>
-                        {slot && (
-                          <div className="time-pills">
-                            {dayParts.map((part) => (
-                              <button
-                                key={part}
-                                className={
-                                  "time-pill" +
-                                  (slot.times.includes(part) ? " selected" : "")
-                                }
-                                aria-pressed={slot.times.includes(part)}
-                                aria-label={`${part} on ${d.date}`}
-                                onClick={() =>
-                                  togglePreferredTime(d.date, part)
-                                }
-                              >
-                                {part}
-                              </button>
-                            ))}
-                          </div>
-                        )}
-                      </div>
-                    );
-                  })}
-                </div>
-              </>
-            )}
-            <label className="field">
-              Timing constraints
-              <textarea
-                value={r.timingConstraints || ""}
-                placeholder="Baby is napping from 3–4pm. Please do not arrive during those times."
-                onChange={(e) =>
-                  patchRequest({ timingConstraints: e.target.value })
-                }
-              />
-            </label>
-          </section>
-          <section className="customer-timing-section">
-            <h2 className="look-h3">
-              {referral ? "Referral review" : "Available appointments"}
-            </h2>
-            {referral ? (
-              <p className="warning">
-                This includes a service we do not book through the platform.
-                Send it for operator review; no appointment or referral is
-                promised.
-              </p>
-            ) : !validAddress(r) ? (
-              <p>Add your service address to see timing options.</p>
-            ) : (
-              <>
-                <span className="badge">
-                  {instant ? "Instant Book" : "Request to Book"}
-                </span>
-                {!instant && (
-                  <p>
-                    Choose a preference. We’ll review the details and confirm
-                    the appointment separately.
-                  </p>
-                )}
-                {selectionValid && (
-                  <p role="status">
-                    <strong>
-                      {instant ? "Selected appointment" : "Preferred time"}:
-                    </strong>{" "}
-                    {timeLabel(selected!)}
-                  </p>
-                )}
-                {options.length > 0 ? (
-                  <>
-                    <div className="intake-times" ref={timesRef}>
-                      {options.slice(0, 3).map(slotButton)}
-                    </div>
-                    {options.length > 3 && (
-                      <button
-                        className="secondary full"
-                        onClick={() => setMore(true)}
-                      >
-                        See more times
-                      </button>
-                    )}
-                    {!instant && (
-                      <button
-                        className="text-button"
-                        onClick={() =>
-                          patchRequest({
-                            preferredSlot: undefined,
-                            timing: "Weekdays · flexible",
-                          })
-                        }
-                      >
-                        Keep my timing flexible
-                      </button>
-                    )}
-                  </>
-                ) : (
-                  <p>
-                    {tasks.reduce((n, t) => n + t.duration, 0) > 405
-                      ? "This work may need multiple visits. The operator will coordinate the split and timing."
-                      : "The scope or provider availability needs review. Tell us your general preference."}
-                  </p>
-                )}
-                {!instant && !selectionValid && (
-                  <label className="field">
-                    General time preference
-                    <select
-                      value={
-                        [
-                          "Weekdays · flexible",
-                          "Weekdays · 9 AM–12 PM",
-                          "Weekdays · 1–5 PM",
-                          "Weekdays · 5–9 PM",
-                          "Any day · flexible",
-                        ].includes(r.timing)
-                          ? r.timing
-                          : "Weekdays · flexible"
-                      }
-                      onChange={(e) =>
-                        patchRequest({
-                          timing: e.target.value,
-                          preferredSlot: undefined,
-                        })
-                      }
-                    >
-                      {[
-                        "Weekdays · flexible",
-                        "Weekdays · 9 AM–12 PM",
-                        "Weekdays · 1–5 PM",
-                        "Weekdays · 5–9 PM",
-                        "Any day · flexible",
-                      ].map((t) => (
-                        <option key={t}>{t}</option>
-                      ))}
-                    </select>
-                  </label>
-                )}
-              </>
-            )}
-          </section>
+          {!instant && preferences}
+          {appointments}
+          {instant && preferences}
           <div className="intake-bottom">
             {instant ? (
               <>
@@ -1144,15 +1167,30 @@ export default function CustomerIntake({
         onClose={() => setMore(false)}
       >
         <div className="row between">
-          <h2>More times</h2>
+          {/* The page's section size: a dialog heading never outranks the
+              page it opens from (ADR 087). */}
+          <h2 className="look-h3">More times</h2>
           <button className="text-button" onClick={() => setMore(false)}>
             Close
           </button>
         </div>
         <p>
           {instant ? "Available appointments" : "Preferred times—not confirmed"}
+          {visitLength ? ` · ${visitLength} min each` : ""}
         </p>
-        <div className="intake-times">{options.map(slotButton)}</div>
+        {options[0] && (
+          <div className="intake-times">{slotButton(options[0])}</div>
+        )}
+        {/* The rest by day, in time order: the day once as a heading, then
+            its times. */}
+        {days.map((d) => (
+          <section className="intake-day" key={d.day}>
+            <h3>{d.day}</h3>
+            <div className="intake-times">
+              {d.times.map((o) => slotButton(o, false))}
+            </div>
+          </section>
+        ))}
       </dialog>
     </div>
   );
