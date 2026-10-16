@@ -352,6 +352,29 @@ export function revokeAccess(s: State, walkthroughId: string) {
   return true;
 }
 
+/**
+ * The customer asks for a fresh link to an assessment they can no longer open
+ * (ADR 098). Only while it is sent and its link was withdrawn or has expired;
+ * asking again changes nothing. Issuing a fresh link answers it.
+ */
+export function requestFreshLink(s: State, walkthroughId: string) {
+  const w = s.walkthroughs.find((x) => x.id === walkthroughId);
+  if (!w?.access || w.status !== "Sent" || w.access.freshLinkRequestedAt)
+    return false;
+  const state = linkState(s, w);
+  if (state !== "revoked" && state !== "expired") return false;
+  w.access.freshLinkRequestedAt = new Date(s.clock).toISOString();
+  log(s, `Assessment ${w.assessmentId} fresh link requested`, {
+    actor: "Customer",
+    entity: "walkthrough",
+    entityId: w.id,
+    field: "access",
+    from: state,
+    to: "requested",
+  });
+  return true;
+}
+
 export type LinkState = "live" | "expired" | "revoked" | "none";
 /** `clock` for a caller that is handed its own, as the glances are. */
 export const linkState = (
