@@ -3,6 +3,18 @@ title: "Wiki Log"
 type: log
 ---
 
+## [2026-10-16] session | ADR 086: the seeded offer v5 in Toronto time, on a weekday
+
+- **Cause:** `seed()` placed marcus's offer v5 with machine-local `setHours(10)`, three days after the clock. In UTC it showed at 06:00 Toronto time. On a Wednesday or Thursday it fell on a weekend, outside marcus's default Mon–Fri hours.
+- **Completed:**
+  - v5 starts at `localTime(day, 10)`, where `day` is the first Toronto weekday at least three days out.
+  - One test in `model.test.ts` fakes `Date.now` for each day of a week under UTC, America/Toronto, Asia/Tokyo and Pacific/Honolulu (via `vi.stubEnv("TZ")`). It checks the day, 10:00, and that `available()` accepts the offer for marcus. It fails on the old seed even on a Toronto machine.
+  - r3's preference stays three days out, weekend or not. It is the customer's choice, intake offers weekends, and nothing books it.
+- **Verified:** `npm test` (658 tests, all passing), and the vitest suite under `TZ=UTC` and `TZ=Asia/Tokyo`. `npm run build` is clean.
+- **Closes:** the `seed()` item deferred by the `concurrency.test.ts` session below.
+- **Deferred:** `model.ts` is not Prettier-clean on `main`. Only the changed lines were formatted.
+- **Pages touched:** [[fieldwork]].
+
 ## [2026-10-16] session | `concurrency.test.ts` independent of the timezone
 
 - **Cause:** four tests picked "three days out at 15:00 UTC" by hand. `seed()` puts marcus's visit v5 on the same day at `setHours(10)`, which is 10:00 in the machine's own timezone. On a Toronto or New York machine, v5 runs 14:00–15:45 UTC including its wrap-up, and the test's slot starts at 14:52 UTC once travel is counted. So the scheduler refused it: correctly, since it clashes. Under `TZ=UTC` all five passed. Eastern machines failed every day except Wednesday and Thursday, when three days out is a weekend, so the test moved to Monday and v5 stayed on the weekend. It was never the date, and it was not a scheduler bug.
