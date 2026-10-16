@@ -1177,9 +1177,9 @@ main[tabindex="-1"]:focus {
   color: var(--muted);
   border-radius: var(--radius-sm);
   padding: var(--space-2) var(--space-1);
-  font-size: var(--text-caption);
+  font-size: var(--text-label);
   text-align: center;
-  min-height: 36px;
+  min-height: 44px;
 }
 .time-pill.selected {
   border-color: var(--accent);

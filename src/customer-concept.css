@@ -63,7 +63,7 @@
   min-height: 44px;
   border: 1px solid var(--line);
   border-radius: var(--radius-md);
-  background: var(--accent-soft);
+  background: var(--surface-raised);
   padding: var(--space-3);
 }
 .customer-intake .primary.full {
@@ -109,28 +109,17 @@
 .saved-addresses .slot small {
   color: var(--muted);
 }
-.customer-location-preview {
-  min-height: 150px;
-  border-radius: var(--radius-lg);
-  border: 1px solid var(--line);
-  padding: var(--space-5);
+.customer-location-confirm {
   display: flex;
-  flex-wrap: wrap;
   align-items: center;
-  gap: var(--space-4);
+  gap: var(--space-2);
+  margin: var(--space-4) 0 0;
   color: var(--text);
-  background: var(--gradient-location);
+  overflow-wrap: anywhere;
 }
-.customer-location-preview strong {
-  background: var(--map-label);
-  padding: var(--space-3);
-  border-radius: var(--radius-md);
-  overflow-wrap: break-word;
-}
-.customer-location-preview small {
-  flex-basis: 100%;
-  background: var(--map-label);
-  padding: var(--space-1);
+.customer-location-confirm svg {
+  flex-shrink: 0;
+  color: var(--muted);
 }
 .customer-intake .intake-times {
   grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -149,12 +138,19 @@
   border: 2px solid var(--accent-text);
   background: var(--accent-soft);
 }
+/* A plain label, not a tinted chip: accent is for the primary action and
+   for state (ADR 086). */
 .time-recommendation {
-  background: var(--accent-soft);
-  color: var(--accent-text);
-  border-radius: var(--radius-sm);
-  padding: var(--space-1) var(--space-2);
+  color: var(--muted);
   font-size: var(--text-label);
+}
+/* More times, by day (ADR 086). */
+.intake-day h3 {
+  margin: var(--space-5) 0 0;
+  font-size: var(--text-body);
+}
+.intake-day .intake-times {
+  margin-top: var(--space-2);
 }
 /* Below 900px the sidebar is a drawer and the content area is the whole
    window, so this threshold still means what it meant as a window rule. */

@@ -14,15 +14,6 @@
 .customer-wrap .portal-task {
   --card-surface: var(--bg);
 }
-.customer-location-preview {
-  background: var(--gradient-location);
-  color: var(--text);
-}
-.customer-location-preview strong,
-.customer-location-preview small {
-  background: var(--map-label);
-  color: var(--text);
-}
 .contractor-offer-card {
   display: grid;
   grid-template-columns: minmax(0, 1fr);
