@@ -3,6 +3,23 @@ title: "Wiki Log"
 type: log
 ---
 
+## [2026-10-16] session | ADR 091: the operator's request detail in the register
+
+- **Completed:**
+  - A register audit of the operator's request detail, its four tabs and the fulfilment screen, with the remit "the operator sees what this request needs, decides in one step, and books it". It found 12 issues, 1 P1, 5 P2 and 6 P3, plus 7 under "Also found". All 12 are fixed, with five of the seven.
+  - P1: "Remove visit / regroup tasks" removed a visit and its offer in one click, with no undo. It is "Remove visit" and asks first. "Withdraw offer" and "Cancel question" ask too. The three dialogs live in the modal host in `Workspace.tsx`.
+  - Accent follows whose move it is: the status chip uses ADR 090's rule, the booking mode is text, visit and offer chips are neutral (the scoped `.badge.quiet` rule now covers `.operator-summary`, `.visit-card` and `.assignment-row`), and the fulfilment summary is on `--surface-raised`.
+  - Said once: "Open in Maps ↗", no "Tasks 4" h3, "Select for a separate visit", no task list on contractor cards, one line for the slots' buffer and fit, "min" everywhere, no "0" tab counts.
+  - A rejected override time is an inline field error, not a toast.
+  - Sentence case: the eyebrows (untracked by a rule scoped to `.operator-concept`), "Offer to a contractor" / "Do it myself", "Ask the customer", "Review tasks". The chosen slot carries a check mark.
+  - `DESIGN.md`'s register paragraph adds: a shared fact is said once, an error is said at its field, and a removal whose toast has no undo asks first.
+- **Verified:**
+  - `npm run build`, and `npm test` (664 tests, all passing). Two tests changed (the fulfilment headings, the withdraw confirmation), two new (removing a visit asks and survives Close; withdrawing a question asks).
+  - Live at 320, 375, 768, 1024, 1280 and 1440px in both themes, on the detail with Tasks open and on fulfilment: no overflow, no target under 44px. Accent chip 5.2:1 light and 8.7:1 dark; neutral chips and muted lines 6.1:1 and 7.7:1; eyebrows 5.9:1 and 10.9:1. The dialogs, the inline override error and the focus ring checked. No console errors.
+- **Correction:** [[fieldwork]] still said ADR 090's PR was open. It merged as PR #68 (`1fd0181`).
+- **Deferred:** a draft request offering "Assign this job" (a product question); the classification options (system taxonomy); the README's "Do It Myself"; focus returning to the heading rather than the trigger after a dialog; the shared `.eyebrow`, `.note` and `badgeTone`.
+- **Pages touched:** [[fieldwork]].
+
 ## [2026-10-16] session | ADR 090: the operator's request list in the register
 
 - **Completed:**

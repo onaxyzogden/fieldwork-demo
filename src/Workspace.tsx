@@ -5,7 +5,13 @@ import "./onsite.css";
 import "./work.css";
 /* Then the state, whose imports keep the order Workspace had (ADR 077). */
 import { useWorkspaceState } from "./useWorkspaceState";
-import { cancelBooking, lateFor, rescheduleVisit } from "./decisions";
+import {
+  cancelBooking,
+  cancelVisit,
+  lateFor,
+  rescheduleVisit,
+  withdrawOffer,
+} from "./decisions";
 import { validAddress } from "./intake";
 import React, { useState } from "react";
 import {
@@ -638,7 +644,7 @@ export function Workspace({
                           }}
                         >
                           {provider === "yousef"
-                            ? "Confirm Do It Myself"
+                            ? "Do it myself"
                             : "Send replacement offer"}
                         </button>
                       </>
@@ -761,6 +767,73 @@ export function Workspace({
                   }}
                 >
                   Decline request
+                </button>
+              </>
+            )}
+            {/* The request page's three removals. Their toasts have no
+                undo, so each asks first (ADR 091). */}
+            {modal === "Remove visit" && (
+              <>
+                <p>
+                  Remove this visit? Any offer on it is cancelled, and its tasks
+                  return to the request to regroup.
+                </p>
+                <button
+                  className="primary"
+                  onClick={() => {
+                    update((d) => {
+                      cancelVisit(d, reschedule);
+                    }, "Visit removed; tasks available");
+                    setModal("");
+                  }}
+                >
+                  Remove visit
+                </button>
+              </>
+            )}
+            {modal === "Withdraw offer" &&
+              (() => {
+                const a = s.assignments.find(
+                  (x) => x.visitId === reschedule && x.status === "Offered",
+                );
+                const name = providers.find((p) => p.id === a?.providerId)
+                  ?.name;
+                return (
+                  <>
+                    <p>
+                      Withdraw the offer to {name ?? "the contractor"}? They
+                      can no longer accept it.
+                    </p>
+                    <button
+                      className="primary"
+                      onClick={() => {
+                        if (a)
+                          update((d) => {
+                            withdrawOffer(d, a.id);
+                          }, "Offer withdrawn");
+                        setModal("");
+                      }}
+                    >
+                      Withdraw offer
+                    </button>
+                  </>
+                );
+              })()}
+            {modal === "Cancel question" && (
+              <>
+                <p>Withdraw your question to the customer?</p>
+                <button
+                  className="primary"
+                  onClick={() => {
+                    update((d) => {
+                      const req = d.requests.find((x) => x.id === r.id)!;
+                      req.operatorNote = null;
+                      req.customerReply = null;
+                    }, "Question withdrawn");
+                    setModal("");
+                  }}
+                >
+                  Withdraw question
                 </button>
               </>
             )}

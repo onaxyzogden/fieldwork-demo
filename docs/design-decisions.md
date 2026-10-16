@@ -2891,3 +2891,95 @@ Out of scope, and left for later:
 - a narrow screen opens on a request rather than on the list;
 - red for Declined and Cancelled, which are outcomes, not errors;
 - the "All Requests" button on operator Home, in title case.
+
+## ADR 091: The operator's request detail in the register
+
+Accepted. This is the sixth application of the **register**, and the second to
+the operator's Requests page: the detail beside the list, its four tabs, and
+the fulfilment screen it opens. The audit used the remit "the operator sees
+what this request needs, decides in one step, and books it". It found 12
+issues: 1 at P1, 5 at P2 and 6 at P3, and 7 more under "Also found". All 12
+are fixed, with five of the seven; two are left for later. Two tests change
+and two are new.
+
+**A removal asks first.** "Remove visit / regroup tasks" removed a visit and
+cancelled its offer or booking in one click, and the toast that reported it
+had no undo. That was the P1 finding. It is now "Remove visit", and it opens a
+dialog that says what happens: any offer is cancelled and the tasks return to
+the request. "Withdraw offer" and "Cancel question" acted in one click too.
+Both can be redone by sending again, but their toasts have no undo either, so
+they ask in the same way. The three dialogs use the modal host in
+`Workspace.tsx`, like "Decline request". Closing one leaves everything as it
+was.
+
+**Accent follows whose move it is.**
+- The summary card had two amber chips, the status and the booking mode. The
+  mode is a fact, so it is plain text in the meta line. The status chip
+  follows the list's rule from ADR 090: accent while the request is in Needs
+  Action, a neutral chip otherwise. Green and red keep their meaning.
+- A visit's "Proposed" or "Offered" chip, and an offer's status, mean the
+  operator is waiting on a contractor. They are neutral chips now. The scoped
+  `.badge.quiet` rule in `operator-concept.css` covers them; `badgeTone` is
+  unchanged.
+- The fulfilment summary sat on the accent tint, and its "4 tasks · 240 min"
+  was an amber badge. Both are facts: the card is on the raised surface and
+  the line is muted text.
+- Each open task carried an amber duration badge. It is gone; the row above it
+  already gives the minutes.
+
+**Say it once.**
+- The Maps link repeated the address under the address heading. It reads
+  "Open in Maps ↗", and its `aria-label` names the address and the new tab.
+- The Tasks panel opened with an h3, "Tasks 4", under the tab of the same name.
+  The heading is gone; the panel keeps its name, and the hint is its first line.
+- A task's checkbox repeated the task's name. It reads "Select for a separate
+  visit", and its `aria-label` names the task.
+- Each contractor card listed the job's tasks again. The list is gone, and
+  "Why this provider?" keeps the reasons for each task.
+- Every slot repeated "15 min buffer" and the work and fit line. One line under
+  "Recommended appointments" says it for all of them; each slot keeps its time
+  and its driving.
+- Minutes were "240 minutes estimated" in one place and "240 min" elsewhere.
+  Both are "min".
+- A tab showed "0" beside its name. A count shows only when it is above 0.
+
+**An error stays at its field.** A rejected override time was reported in a
+toast while the input kept the time, so the field looked accepted. The error
+is now said under the field, with `aria-invalid` and `aria-describedby`, and
+clears when a valid time is entered.
+
+**Names and case.**
+- The fulfilment heading was "Assign Contractor" or "Do It Myself", but the
+  button that opens it says "Offer to a contractor". The heading uses the
+  button's words: "Offer to a contractor" or "Do it myself". The reassign
+  dialog's "Confirm Do It Myself" is "Do it myself".
+- The eyebrows were capitals: "SERVICE REQUEST / R2", "WAITING ON CUSTOMER",
+  "CUSTOMER'S CHOICE". They are "Request R2", "Waiting on customer", "Customer
+  answered", "Customer's choice" and "Best route fit", untracked by a rule
+  scoped to `.operator-concept`.
+- "Need More Info" is "Ask the customer". "Review tasks / split visit" is
+  "Review tasks".
+- The chosen time carries a check mark, as a chosen contractor does, as well
+  as its border and fill.
+
+**Checked live.** No horizontal overflow and no target under 44px at 320, 375,
+768, 1024, 1280 or 1440px in either theme, on the detail with the Tasks panel
+open and on fulfilment. The accent status chip and the slot eyebrows are
+5.2:1 in light and 8.7:1 in dark. The neutral chips and muted lines are 6.1:1
+and 7.7:1, and the eyebrows 5.9:1 and 10.9:1. The dialogs open with their own
+text, and closing one keeps the visit. The override error shows inline and
+clears. The global 2px focus ring shows. No console errors. `.operator-concept`
+is used only on the Requests screen, so no other screen changes.
+
+**Left alone.**
+- The status words ("Awaiting Provider Acceptance") are the system's names,
+  as in ADR 090.
+- The shared `.eyebrow`, `.note` and `badgeTone`. The rules here are scoped to
+  the operator's Requests screen.
+- The classification options ("Handyman / Doors / Adjustment") are the
+  system's taxonomy.
+
+Out of scope, and left for later:
+- a draft request offers "Assign this job", which is a product question;
+- the README still says "Do It Myself";
+- focus returns to the detail heading, not to the button that opened a dialog.

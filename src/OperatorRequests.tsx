@@ -3,7 +3,6 @@ import { AuditList } from "./QueueAside";
 import { bucket, callBackDue, feeUndecided, workIssue } from "./work";
 import {
   reviewTask,
-  cancelVisit as cancelOne,
   completeCallBack,
   heldFor,
   issueQuote,
@@ -12,7 +11,6 @@ import {
   settleLateCancel,
   suggestLateFee,
   suggestPay,
-  withdrawOffer,
 } from "./decisions";
 import { suggestTitle } from "./pmw";
 import { dayLabel } from "./intake";
@@ -352,10 +350,6 @@ export function OperatorRequests() {
     );
     setModal("Reassign visit");
   };
-  const cancelVisit = (v: Visit) =>
-    update((d) => {
-      cancelOne(d, v.id);
-    }, "Visit removed; tasks available");
   /* One status line, not two. Whatever the operator must act on supersedes the
      stored request status: a work issue first, then dispatch state. */
   const requestStatus = (id: string) => {
@@ -448,7 +442,7 @@ export function OperatorRequests() {
         className={className}
         onClick={() => setModal("Request information")}
       >
-        {r.operatorNote ? "Ask something else" : "Need More Info"}
+        {r.operatorNote ? "Ask something else" : "Ask the customer"}
       </button>
     );
     let closed = false;
@@ -1066,7 +1060,7 @@ export function OperatorRequests() {
             <div className="panel-title">
               <div>
                 <span className="eyebrow">
-                  SERVICE REQUEST / {r.id.toUpperCase()}
+                  Request {r.id.toUpperCase()}
                 </span>
                 <h2 ref={detailHeading} tabIndex={-1}>
                   {r.address || r.name}
@@ -1075,33 +1069,45 @@ export function OperatorRequests() {
                   <MapPin aria-hidden="true" size={16} /> {r.city} · {r.name}
                 </p>
               </div>
-              {badge(requestStatus(r.id))}
+              {/* Accent only when the request is the operator's to act
+                  on, as in the list beside it (ADR 090, ADR 091). */}
+              <span
+                className={
+                  "badge " +
+                  (badgeTone(requestStatus(r.id)) ||
+                    (buckets.get(r.id) === "Needs Action" ? "" : "quiet"))
+                }
+              >
+                {requestStatus(r.id)}
+              </span>
             </div>
             <div className="detail-meta">
               <span>
                 <Clock aria-hidden="true" size={16} />
                 {r.timing}
               </span>
-              <span>{badge(r.mode)}</span>
+              <span>{r.mode}</span>
             </div>
             <p>
               {plural(tasks.length, "task")} ·{" "}
-              {tasks.reduce((n, t) => n + t.duration, 0)} minutes estimated
+              {tasks.reduce((n, t) => n + t.duration, 0)} min
               {(() => {
                 const n = tasks.reduce((n, t) => n + t.photos.length, 0);
                 return n ? ` · ${plural(n, "photo")}` : "";
               })()}
             </p>
+            {/* The address is the heading; the link says only what it does. */}
             <a
               className="text-button"
               target="_blank"
               rel="noreferrer"
+              aria-label={`Open ${r.address}, ${r.city} in Maps (new tab)`}
               href={
                 "https://www.google.com/maps/search/?api=1&query=" +
                 encodeURIComponent(r.address + ", " + r.city)
               }
             >
-              {r.address}, {r.city} · Open in Maps ↗
+              Open in Maps ↗
             </a>
           </section>
           {decisionCard()}
@@ -1126,7 +1132,7 @@ export function OperatorRequests() {
               }
             >
               <span className="eyebrow">
-                {r.customerReply ? "CUSTOMER ANSWERED" : "WAITING ON CUSTOMER"}
+                {r.customerReply ? "Customer answered" : "Waiting on customer"}
               </span>
               <p>{r.operatorNote}</p>
               {r.customerReply ? (
@@ -1134,15 +1140,10 @@ export function OperatorRequests() {
                   <strong>Reply:</strong> {r.customerReply}
                 </p>
               ) : (
+                /* The toast has no undo, so withdrawing asks first. */
                 <button
                   className="text-button"
-                  onClick={() =>
-                    update((d) => {
-                      const req = d.requests.find((x) => x.id === r.id)!;
-                      req.operatorNote = null;
-                      req.customerReply = null;
-                    }, "Question withdrawn")
-                  }
+                  onClick={() => setModal("Cancel question")}
                 >
                   Cancel question
                 </button>
@@ -1173,18 +1174,19 @@ export function OperatorRequests() {
                   onClick={() => setRequestTab(name)}
                 >
                   {name}
-                  {n !== undefined && <span className="count">{n}</span>}
+                  {!!n && <span className="count">{n}</span>}
                 </button>
               ))}
             </div>
             {tab === "Tasks" && (
-              <section className="card panel" id="review-tasks">
-                <div className="panel-title">
-                  <h3>
-                    Tasks <span className="count">{tasks.length}</span>
-                  </h3>
-                  <small>Select tasks to group into a separate visit</small>
-                </div>
+              <section
+                className="card panel"
+                id="review-tasks"
+                aria-label="Tasks"
+              >
+                <p className="muted">
+                  Select tasks to group into a separate visit.
+                </p>
                 {tasks.map((t) => (
                   <details className="task-review" key={t.id}>
                     <summary>
@@ -1194,23 +1196,21 @@ export function OperatorRequests() {
                       {t.summary} · {t.duration} min
                       {!t.reviewed ? " · Needs review" : ""}
                     </summary>
-                    <div className="row between">
-                      <label className="row">
-                        <input
-                          type="checkbox"
-                          checked={selected.includes(t.id)}
-                          onChange={(e) =>
-                            setSelected(
-                              e.target.checked
-                                ? [...selected, t.id]
-                                : selected.filter((x) => x !== t.id),
-                            )
-                          }
-                        />
-                        <strong>{t.summary}</strong>
-                      </label>
-                      <span className="badge">{t.duration} min</span>
-                    </div>
+                    <label className="row">
+                      <input
+                        type="checkbox"
+                        aria-label={"Select " + t.summary + " for a separate visit"}
+                        checked={selected.includes(t.id)}
+                        onChange={(e) =>
+                          setSelected(
+                            e.target.checked
+                              ? [...selected, t.id]
+                              : selected.filter((x) => x !== t.id),
+                          )
+                        }
+                      />
+                      Select for a separate visit
+                    </label>
                     <p>“{t.description}”</p>
                     <TaskAnswers task={t} />
                     {t.restricted && (
@@ -1429,11 +1429,10 @@ export function OperatorRequests() {
                             {a.status === "Offered" && (
                               <button
                                 className="text-button"
-                                onClick={() =>
-                                  update((d) => {
-                                    withdrawOffer(d, a.id);
-                                  }, "Offer withdrawn")
-                                }
+                                onClick={() => {
+                                  setReschedule(v.id);
+                                  setModal("Withdraw offer");
+                                }}
                               >
                                 Withdraw offer
                                 <span className="sr-only">
@@ -1456,11 +1455,16 @@ export function OperatorRequests() {
                             )}
                           </div>
                         ))}
+                      {/* Its tasks return to the request to regroup; the
+                          toast has no undo, so it asks first. */}
                       <button
                         className="text-button"
-                        onClick={() => cancelVisit(v)}
+                        onClick={() => {
+                          setReschedule(v.id);
+                          setModal("Remove visit");
+                        }}
                       >
-                        Remove visit / regroup tasks
+                        Remove visit
                       </button>
                     </div>
                   ))}
@@ -1518,10 +1522,10 @@ export function OperatorRequests() {
                 <div className="panel-title">
                   <h2>
                     {fulfillmentKind === "self"
-                      ? "Do It Myself"
-                      : "Assign Contractor"}
+                      ? "Do it myself"
+                      : "Offer to a contractor"}
                   </h2>
-                  <span className="badge">
+                  <span className="muted">
                     {plural(selected.length || tasks.length, "task")} · {duration} min
                   </span>
                 </div>
@@ -1571,9 +1575,6 @@ export function OperatorRequests() {
                             /hr
                           </small>
                           <small>
-                            {c.match.checks.map((x) => x.title).join(" · ")}
-                          </small>
-                          <small>
                             {/* Agrees with the list below, which puts
                               the customer's time first (ADR 072). */}
                             {theirs
@@ -1612,7 +1613,7 @@ export function OperatorRequests() {
                         showTasks();
                       }}
                     >
-                      Review tasks / split visit
+                      Review tasks
                     </button>
                   </div>
                 )}
@@ -1640,6 +1641,13 @@ export function OperatorRequests() {
                   Recommended appointments{" "}
                   <span className="muted">· simulated routing</span>
                 </h3>
+                {!!opts.length && (
+                  <p className="muted">
+                    Each time fits the provider’s schedule and the customer’s
+                    preference: {duration} min of work, travel, and a 15 min
+                    buffer.
+                  </p>
+                )}
                 <Message field="slot" />
                 <div
                   className="slot-grid"
@@ -1661,18 +1669,19 @@ export function OperatorRequests() {
                       }}
                     >
                       {o.start === chosenTime ? (
-                        <span className="eyebrow">CUSTOMER’S CHOICE</span>
+                        <span className="eyebrow">Customer’s choice</span>
                       ) : (
                         i === 0 && (
-                          <span className="eyebrow">BEST ROUTE FIT</span>
+                          <span className="eyebrow">Best route fit</span>
                         )
                       )}
-                      <strong>{dateLabel(o.start)}</strong>
-                      <small>+{o.travel} min driving · 15 min buffer</small>
-                      <small>
-                        {duration} min work · fits provider schedule and
-                        customer preference
-                      </small>
+                      <strong>
+                        {dateLabel(o.start)}
+                        {(slot || opts[0]?.start) === o.start && (
+                          <Check aria-hidden="true" size={16} />
+                        )}
+                      </strong>
+                      <small>+{o.travel} min driving</small>
                     </button>
                   ))}
                 </div>
@@ -1698,11 +1707,15 @@ export function OperatorRequests() {
                     change provider.
                   </p>
                 )}
-                <label className="mini-field actions">
-                  Override proposed time
-                  <input
-                    type="datetime-local"
-                    onChange={(e) => {
+                {/* A conflict is said beside the field, where it can be
+                    fixed, not in a toast that leaves (ADR 091). */}
+                <div className={fieldClass("override", "mini-field actions")}>
+                  <label className="field-label">
+                    Override proposed time
+                    <input
+                      type="datetime-local"
+                      {...invalid("override")}
+                      onChange={(e) => {
                       const x = new Date(e.target.value);
                       if (!Number.isFinite(+x)) return;
                       if (
@@ -1717,19 +1730,22 @@ export function OperatorRequests() {
                           r.id,
                         )
                       ) {
+                        clear("override");
                         setOverride(x.toISOString());
                         setSlot(x.toISOString());
                         notify(
                           "Valid override selected; travel and buffers checked.",
                         );
                       } else
-                        notify(
+                        invalidate(
+                          "override",
                           "That time conflicts with working hours, preferences, or an existing visit.",
-                          "error",
                         );
                     }}
-                  />
-                </label>
+                    />
+                  </label>
+                  <Message field="override" />
+                </div>
                 {provider !== "yousef" && (
                   <div className="mini-field">
                     <label className="field-label">
