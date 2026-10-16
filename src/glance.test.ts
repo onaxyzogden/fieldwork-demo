@@ -414,6 +414,7 @@ describe("the walkthrough pipeline's glance", () => {
       g.draftIds.includes(id) && "draft",
       g.withCustomerIds.includes(id) && "with customer",
       g.readyToConvertIds.includes(id) && "ready to convert",
+      g.freshLinkIds.includes(id) && "fresh link",
     ].filter(Boolean);
   };
 
@@ -481,13 +482,51 @@ describe("the walkthrough pipeline's glance", () => {
 
   it("never puts one walkthrough in two buckets, whatever its findings say", () => {
     const decisions = ["Pending", "Approved", "Not Now"] as const;
-    for (const a of decisions)
-      for (const b of decisions) {
-        const { s, w } = sent(2);
-        const [f1, f2] = findingsFor(s, w.id);
-        f1.decision = a;
-        f2.decision = b;
-        expect(bucketOf(s, w.id).length, `${a} + ${b}`).toBeLessThanOrEqual(1);
-      }
+    for (const dead of [false, true])
+      for (const a of decisions)
+        for (const b of decisions) {
+          const { s, w } = sent(2);
+          const [f1, f2] = findingsFor(s, w.id);
+          f1.decision = a;
+          f2.decision = b;
+          if (dead) revokeAccess(s, w.id);
+          expect(
+            bucketOf(s, w.id).length,
+            `${a} + ${b}${dead ? ", withdrawn" : ""}`,
+          ).toBeLessThanOrEqual(1);
+        }
+  });
+
+  it("puts an assessment whose link is dead on the operator, not the customer (ADR 097)", () => {
+    const { s, w } = sent();
+    revokeAccess(s, w.id);
+    expect(bucketOf(s, w.id)).toEqual(["fresh link"]);
+    expect(walkthroughGlance(s, s.clock).chase).toBeNull();
+    issueAccess(s, w.id);
+    expect(bucketOf(s, w.id)).toEqual(["with customer"]);
+    // Expired, by the glance's own clock.
+    const at = w.access!.expiresAt;
+    expect(walkthroughGlance(s, at - 1).withCustomerIds).toEqual([w.id]);
+    expect(walkthroughGlance(s, at).freshLinkIds).toEqual([w.id]);
+  });
+
+  it("keeps a part-approved assessment ready to convert though its link is dead", () => {
+    // Convert stays first on the card while the link is dead (ADR 095).
+    const { s, w } = sent(2);
+    findingsFor(s, w.id)[0].decision = "Approved";
+    revokeAccess(s, w.id);
+    expect(bucketOf(s, w.id)).toEqual(["ready to convert"]);
+  });
+
+  it("chases the oldest live assessment, past a dead one", () => {
+    const { s, w: live } = sent();
+    const dead = createWalkthrough(s, s.properties[0].id);
+    addFinding(s, dead.id, { title: "Old", price: 50 });
+    sendWalkthrough(s, dead.id);
+    dead.sentAt = new Date(s.clock - 5 * DAY).toISOString();
+    revokeAccess(s, dead.id);
+    const g = walkthroughGlance(s, s.clock);
+    expect(g.chase?.walkthrough.id).toBe(live.id);
+    expect(g.freshLinkIds).toEqual([dead.id]);
   });
 });

@@ -162,6 +162,12 @@ function WalkthroughList({
   const chaseProperty = s.properties.find(
     (p) => p.id === pipeline.chase?.walkthrough.propertyId,
   );
+  /* A dead link is the operator's own move, so it leads ahead of chasing a
+     customer, who can do nothing with it (ADR 097). */
+  const fresh = s.walkthroughs.find((w) => w.id === pipeline.freshLinkIds[0]);
+  const freshProperty = s.properties.find((p) => p.id === fresh?.propertyId);
+  const deadWord = (w: Walkthrough) =>
+    linkState(s, w) === "revoked" ? "Link withdrawn" : "Link expired";
   const first = (ids: string[]) =>
     ids.length ? () => open(ids[0]) : undefined;
   const ago = (days: number) =>
@@ -180,6 +186,7 @@ function WalkthroughList({
      and its rows carry no status chip of their own (ADR 093). */
   const groups = ["Draft", "Sent", "Converted"] as const;
   const ready = new Set(pipeline.readyToConvertIds);
+  const needsLink = new Set(pipeline.freshLinkIds);
   const returned = useRef<HTMLButtonElement>(null);
   useEffect(() => {
     returned.current?.focus();
@@ -233,7 +240,14 @@ function WalkthroughList({
       <Glance
         date={glanceDate(+s.clock)}
         lead={
-          pipeline.chase ? (
+          fresh ? (
+            <GlanceLead
+              when={deadWord(fresh)}
+              what={`${fresh.assessmentId} · ${freshProperty?.address ?? ""}`}
+              where="The customer can’t open it until you issue a fresh link."
+              onClick={() => open(fresh.id)}
+            />
+          ) : pipeline.chase ? (
             <GlanceLead
               when="Oldest undecided"
               what={`${pipeline.chase.walkthrough.assessmentId} · ${chaseProperty?.address ?? ""}`}
@@ -441,6 +455,9 @@ function WalkthroughList({
                     <strong>{w.assessmentId}</strong>
                     {ready.has(w.id) && (
                       <span className="badge">Ready to convert</span>
+                    )}
+                    {needsLink.has(w.id) && (
+                      <span className="badge">{deadWord(w)}</span>
                     )}
                   </p>
                   <small>
