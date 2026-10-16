@@ -1,7 +1,7 @@
 import { OperatorHome, OperatorToday } from "./OperatorWork";
 import { dayKey } from "./work";
 import { dayLabel } from "./intake";
-import { ShieldCheck, ArrowUpRight } from "lucide-react";
+import { ShieldCheck } from "lucide-react";
 import { providers, money, dateLabel, hoursLabel, hoursOf } from "./model";
 import { lazyScreen } from "./Recovery";
 import { plural } from "./plural";
@@ -25,12 +25,18 @@ export function OperatorWorkspace() {
     r,
     role,
   } = useWorkspace();
-  function RouteMap() {
+  /* One pin per listed visit, in appointment order; the dashed route only
+     joins them when they are one provider's day (ADR 092). */
+  function RouteMap({ stops, route }: { stops: number; route: boolean }) {
+    const pins = Array.from({ length: stops }, (_, i) => [
+      stops === 1 ? 350 : 110 + (i * 480) / (stops - 1),
+      150 - 35 * Math.sin(i * 1.3),
+    ]);
     return (
       <div className="route-map">
         <svg
           viewBox="0 0 700 300"
-          aria-label="Illustrative Oakville route map"
+          aria-label={`Illustrative map, ${plural(stops, "visit")}`}
           role="img"
         >
           <defs>
@@ -61,18 +67,16 @@ export function OperatorWorkspace() {
             stroke="var(--line)"
             strokeWidth="11"
           />
-          <path
-            d="M130 179 L232 130 349 166 445 103 553 129"
-            fill="none"
-            stroke="var(--accent-text)"
-            strokeWidth="4"
-            strokeDasharray="7 5"
-          />
-          {[
-            [130, 179],
-            [349, 166],
-            [553, 129],
-          ].map(([x, y], i) => (
+          {route && stops > 1 && (
+            <path
+              d={"M" + pins.map(([x, y]) => `${x} ${y}`).join(" L")}
+              fill="none"
+              stroke="var(--accent-text)"
+              strokeWidth="4"
+              strokeDasharray="7 5"
+            />
+          )}
+          {pins.map(([x, y], i) => (
             <g key={i}>
               <circle
                 cx={x}
@@ -106,7 +110,7 @@ export function OperatorWorkspace() {
           <text
             x="440"
             y="273"
-            fill="var(--surface-raised)"
+            fill="var(--muted)"
             fontSize="11"
             letterSpacing="3"
           >
@@ -116,14 +120,6 @@ export function OperatorWorkspace() {
             QEW
           </text>
         </svg>
-        <span className="map-label">Illustrative map · simulated travel</span>
-        <button
-          className="map-expand"
-          aria-label="Open route view"
-          onClick={() => setPage("Today")}
-        >
-          <ArrowUpRight aria-hidden="true" size={16} />
-        </button>
       </div>
     );
   }
@@ -168,7 +164,8 @@ export function OperatorWorkspace() {
       return (
         <OperatorToday
           s={s}
-          mapView={<RouteMap />}
+          mapView={(n, route) => <RouteMap stops={n} route={route} />}
+          requests={() => setPage("Requests")}
           update={update}
           open={(id) => {
             choose(id);

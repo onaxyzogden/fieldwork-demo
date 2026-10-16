@@ -3,6 +3,27 @@ title: "Wiki Log"
 type: log
 ---
 
+## [2026-10-16] session | ADR 092: the operator's Home and Today in the register
+
+- **Completed:**
+  - A register audit of the operator's Home and Today, with `RouteMap` and `GlanceCard` as they use them, and the remit "the operator sees what today holds and what needs them first, and gets to it in one step". It found 12 issues, 2 P1, 7 P2 and 3 P3, plus 9 under "Also found". All 12 are fixed, with the eight "Also found" items in scope.
+  - P1: Today's h1 said "Today" on any date. It is "Today" only on today, otherwise the long date; the ISO line is gone.
+  - P1: "Next scheduled day" removed itself and dropped focus to `<body>`. Focus goes to the h1 (`tabIndex={-1}`), which names the day.
+  - The page names itself: Home's h1 is "Home". ADR 084's greeting, `greetingFor` and `greeting.test.ts` are retired; ADR 084 notes it.
+  - One state, one word, one number: "Needs action" (no `urgent`), a neutral tab count, tabs in sentence case, a status fallback title in sentence case.
+  - One move, one control: only "All of today" goes to Today; the date and two metrics are text.
+  - Accent follows whose move it is, scoped to `.op-home` and `.op-today`: card tiles, Today strip badges and timeline badges; the timeline line, dots and totals are neutral.
+  - Totals count every listed visit ("Work time", "Simulated travel"); the buffer is said once; the switch and totals hide on an empty day.
+  - `RouteMap` takes `stops` and `route`: one pin per visit, a route only for one provider, "Provider locations" otherwise. The overlay label and the self-link button are gone, "LAKE ONTARIO" is muted, and Maps links name the new tab.
+  - "View progress" shows only for confirmed, in-progress or completed visits; its panel scrolls in and takes focus, and "Close progress" returns it.
+  - `DESIGN.md`'s register paragraph adds: a count is not an alarm, one destination has one control, a control that removes itself hands focus on, and a map draws only what it knows.
+- **Verified:**
+  - `npm run build`, and `npm test` (661 tests, all passing). The Home h1 test changed; one new test (next scheduled day focuses its heading); the four greeting tests are removed.
+  - Live at 320, 375, 768, 1024, 1280 and 1440px in both themes, on Home, an empty Today, the timeline and the map: no overflow, no target under 44px, lowest contrast 5.2:1. Focus lands on "Monday, October 19" at every width. No console errors. Contractor screens unchanged.
+- **Correction:** [[fieldwork]] still said ADR 091's PR was open. It merged as PR #69 (`0a2cda3`).
+- **Deferred:** Walkthroughs' `urgent` count (out of scope); the unused `--map-label` token; `RouteMap` declared inside `OperatorWorkspace`; the Provider and Date fields at 320px.
+- **Pages touched:** [[fieldwork]].
+
 ## [2026-10-16] session | ADR 091: the operator's request detail in the register
 
 - **Completed:**

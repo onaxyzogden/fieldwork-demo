@@ -78,6 +78,17 @@
   background: var(--success-soft);
   color: var(--success);
 }
+/* On Home the tile follows the row (ADR 092): accent where the request is
+   the operator's to act on, neutral where it waits on someone else. Danger
+   is for errors, and a late job is not one. */
+.op-home .op-tone-issue .op-status-icon {
+  background: var(--accent-soft);
+  color: var(--accent-text);
+}
+.op-home .op-request-bento.quiet:not(.op-tone-complete) .op-status-icon {
+  background: var(--surface-raised);
+  color: var(--muted);
+}
 :focus-visible {
   outline: 2px solid var(--focus);
   outline-offset: 2px;

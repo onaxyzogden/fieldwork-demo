@@ -284,15 +284,6 @@
   background: var(--panel);
   border-color: var(--muted);
 }
-:root[data-theme="light"] .map-label {
-  background: var(--map-label);
-  color: var(--text);
-}
-:root[data-theme="light"] .map-expand {
-  background: var(--panel);
-  color: var(--text);
-  border-color: var(--success);
-}
 :root[data-theme="light"] .route-map svg [fill="var(--panel)"] {
   fill: var(--muted);
 }
@@ -803,9 +794,10 @@
   border-color: var(--accent-text);
   box-shadow: var(--shadow-chosen);
 }
+/* A count, not an alarm (ADR 092). */
 .op-view-switch span {
-  background: var(--danger-fill);
-  color: var(--on-accent);
+  background: var(--surface-raised);
+  color: var(--text);
   border-radius: var(--radius-md);
   padding: var(--space-1) var(--space-2);
   font-size: var(--text-caption);
@@ -817,7 +809,8 @@
 }
 .op-today h2 {
   margin: 0;
-  font-size: var(--text-h3);
+  font-size: var(--text-label);
+  font-weight: 650;
 }
 .op-today-row {
   display: flex;
