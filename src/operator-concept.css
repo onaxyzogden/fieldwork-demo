@@ -7,12 +7,6 @@
   gap: var(--space-5);
   min-width: 0;
 }
-.operator-detail-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: var(--space-4);
-}
 .operator-summary h2 {
   font-size: var(--text-h2);
 }
@@ -199,9 +193,6 @@
 /* Below 900px the sidebar is a drawer and the content area is the whole
    window, so this threshold still means what it meant as a window rule. */
 @container workspace (max-width: 600px) {
-  .operator-detail-header {
-    flex-wrap: wrap;
-  }
   .op-decision-actions > .primary,
   .op-decision-actions > .secondary {
     width: 100%;
@@ -220,6 +211,21 @@
   .operator-day-totals {
     gap: var(--space-2);
   }
+}
+/* In the request list, accent marks the rows that are the operator's to act
+   on; every other status sits on a neutral chip (ADR 090). */
+:root[data-theme] .queue-item .badge.quiet {
+  background: transparent;
+  color: var(--muted);
+  border-color: var(--line);
+}
+/* A filter or search that matches nothing says so, and offers the way back. */
+.queue-empty {
+  padding: var(--space-4) var(--space-3);
+}
+.queue-empty p {
+  margin: 0 0 var(--space-3);
+  color: var(--muted);
 }
 /* Whether a waiting offer has been opened (ADR 060). */
 .op-decision-seen {

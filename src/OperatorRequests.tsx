@@ -59,7 +59,6 @@ import { useWorkspace } from "./workspaceContext";
 import { countdown } from "./countdown";
 import FollowUp, { followUpLine } from "./FollowUp";
 import React from "react";
-import { flushSync } from "react-dom";
 import {
   authorizationDue,
   authorizePayment,
@@ -75,6 +74,9 @@ import {
 } from "./dispatch";
 import { commit } from "./store";
 
+/** bucket()'s five answers, in the order the operator acts on them. */
+const BUCKET_ORDER = ["Needs Action", "Waiting", "Scheduled", "Draft", "History"];
+
 /** The operator's Requests page: the queue, a request's detail and fulfillment (ADR 077). */
 export function OperatorRequests() {
   const {
@@ -82,6 +84,7 @@ export function OperatorRequests() {
     describedBy,
     amount,
     badge,
+    badgeTone,
     booked,
     candidates,
     choose,
@@ -149,9 +152,10 @@ export function OperatorRequests() {
     visitCard,
     visits,
   } = useWorkspace();
-  /* A request chosen from the list takes focus at its heading, and "All
-     requests" hands it back to the search (ADR 080). */
+  /* A request chosen from the list takes focus at its heading (ADR 080). */
   const detailHeading = React.useRef<HTMLHeadingElement>(null);
+  /* "Show all requests" goes once it is pressed, so it hands focus to the
+     search rather than dropping it on the page (ADR 090). */
   const searchBox = React.useRef<HTMLInputElement>(null);
   const browseButton = React.useRef<HTMLButtonElement>(null);
   const focusDetail = React.useRef(false);
@@ -171,9 +175,14 @@ export function OperatorRequests() {
     showDetail();
   }, [r.id]);
   const trail = auditFor(s, r.id);
+  const buckets = new Map(s.requests.map((q) => [q.id, bucket(s, q.id)]));
+  /* In the order the operator acts on them: what needs them first, closed
+     work last. Display only, and stable, so a single bucket keeps creation
+     order (ADR 090). */
+  const rank = (id: string) => BUCKET_ORDER.indexOf(buckets.get(id)!);
   const shown = s.requests.filter(
     (q) =>
-      (filter === "All requests" || bucket(s, q.id) === filter) &&
+      (filter === "All requests" || buckets.get(q.id) === filter) &&
       (
         q.name +
         q.city +
@@ -184,7 +193,7 @@ export function OperatorRequests() {
       )
         .toLowerCase()
         .includes(search.toLowerCase()),
-  );
+  ).sort((x, y) => rank(x.id) - rank(y.id));
   const payMethod = (s.paymentMethods ?? []).find(
     (m) => m.accountId === r.accountId,
   );
@@ -941,15 +950,16 @@ export function OperatorRequests() {
           "heading operator-request-heading " + (fulfillment ? "is-hidden" : "")
         }
       >
+        {/* The page names itself as the sidebar does, and states one fact:
+            how much of the list is showing (ADR 090). */}
         <div>
-          <div className="eyebrow">INTAKE & FULFILLMENT</div>
-          <h1>Service requests</h1>
-          <p>The right work. The right person. The right time.</p>
+          <h1>Requests</h1>
+          <p>
+            {shown.length === s.requests.length
+              ? plural(shown.length, "request")
+              : `${shown.length} of ${plural(s.requests.length, "request")}`}
+          </p>
         </div>
-        {/* Counts the list as filtered, so it matches what is shown. */}
-        <span className="badge">
-          {shown.length} request{shown.length === 1 ? "" : "s"}
-        </span>
       </div>
       <div
         className={
@@ -976,6 +986,7 @@ export function OperatorRequests() {
             <Search aria-hidden="true" size={16} />
             <input
               ref={searchBox}
+              aria-label="Search requests"
               placeholder="Search requests…"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
@@ -986,17 +997,28 @@ export function OperatorRequests() {
             value={filter}
             onChange={(e) => setFilter(e.target.value)}
           >
-            {[
-              "All requests",
-              "Needs Action",
-              "Waiting",
-              "Scheduled",
-              "Draft",
-              "History",
-            ].map((x) => (
-              <option key={x}>{x}</option>
+            {["All requests", ...BUCKET_ORDER].map((x) => (
+              /* The value is the bucket's name; the label is sentence case. */
+              <option key={x} value={x}>
+                {x[0] + x.slice(1).toLowerCase()}
+              </option>
             ))}
           </select>
+          {shown.length === 0 && (
+            <div className="queue-empty">
+              <p>No requests match.</p>
+              <button
+                className="secondary"
+                onClick={() => {
+                  setSearch("");
+                  setFilter("All requests");
+                  searchBox.current?.focus();
+                }}
+              >
+                Show all requests
+              </button>
+            </div>
+          )}
           {shown.map((q) => (
             <button
               key={q.id}
@@ -1022,24 +1044,24 @@ export function OperatorRequests() {
                     "task",
                   )}
                 </span>
-                {badge(requestStatus(q.id))}
+                {/* Accent marks what is the operator's to act on; the rest
+                    sit on a neutral chip (ADR 090). */}
+                <span
+                  className={
+                    "badge " +
+                    (badgeTone(requestStatus(q.id)) ||
+                      (buckets.get(q.id) === "Needs Action" ? "" : "quiet"))
+                  }
+                >
+                  {requestStatus(q.id)}
+                </span>
               </p>
             </button>
           ))}
         </section>
+        {/* No "← All requests" here: the list is beside the detail when wide,
+            and "Browse requests" opens it when narrow (ADR 090). */}
         <div className="detail">
-          <div className="operator-detail-header">
-            <button
-              className="secondary"
-              onClick={() => {
-                flushSync(() => setShowRequestQueue(true));
-                searchBox.current?.focus();
-              }}
-            >
-              ← All requests
-            </button>
-            <strong>Request Details</strong>
-          </div>
           <section className="card panel operator-summary">
             <div className="panel-title">
               <div>

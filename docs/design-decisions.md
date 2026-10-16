@@ -2821,3 +2821,73 @@ Out of scope, and left for later:
 - the `GlanceCard` doc comment on `urgent`;
 - the glance's "City · $110", which does not use `payLabel`;
 - the pills in the light theme.
+
+## ADR 090: The operator's request list in the register
+
+Accepted. This is the fifth application of the **register**, and the first to
+the operator's Requests page, the screen the operator works from all day. The
+audit used the remit "the operator sees what is theirs to act on, finds any
+request in one step, and opens it". It found 10 issues: 1 at P1, 7 at P2 and
+2 at P3. All 10 are fixed. One test is rewritten, three change, and two
+are new.
+
+**The page names itself.** The eyebrow "INTAKE & FULFILLMENT", the h1
+"Service requests" and the slogan under it are gone. The h1 is "Requests", as
+in the sidebar. The line under it states one fact, how much of the list is
+showing: "4 of 7 requests", or "7 requests" when all of them show. That line
+replaces the count, which sat in an accent badge beside the heading.
+
+**Accent follows whose move it is.**
+- Every status chip in the list was amber, so amber said nothing. In the
+  list, a row in Needs Action keeps the accent chip. Every other status sits
+  on a neutral chip (`.badge.quiet`, scoped to `.queue-item` in
+  `operator-concept.css`). Green and red keep their meaning.
+- "Needs Review" was red, because `badgeTone` matched `Review`. A request in
+  review is work for the operator, not an error, so `Review` is out of the red
+  pattern. `badgeTone` is shared, so the customer's "In review" chip, which
+  sits over the same status, is no longer red either. It was the same
+  misreading.
+
+**In the order the operator acts on it.** "All requests" listed requests in
+the order they were made. It now sorts by bucket: Needs Action, Waiting,
+Scheduled, Draft, History. The sort is stable, so a single bucket keeps
+creation order. `BUCKET_ORDER` gives the order once, for both the sort and the
+filter. `bucket()` is unchanged (ADR 011).
+
+**An empty list says so, and offers the way back.** A search or filter that
+matched nothing left a blank panel. It now says "No requests match." with a
+"Show all requests" button. The button clears the search, sets the filter to
+All requests, and hands focus to the search, since it disappears once it is
+pressed.
+
+**One way back.** The detail had its own "← All requests" button, under a
+"Request Details" heading. Beside the list when the screen is wide, it
+duplicated the list. When the screen is narrow, it duplicated "Browse
+requests". In fulfilment mode it was hidden. The header and its rules are
+gone.
+
+**Names and case.**
+- The search input had only a placeholder. It now has
+  `aria-label="Search requests"`, the P1 finding.
+- The filter's options were title case. They are sentence case ("Needs
+  action"), with the bucket's own string kept as the value.
+
+**Checked live.** No horizontal overflow at 320, 375, 768, 1024, 1280 or
+1440px in either theme, with the list, with the detail, or with the empty
+state. Accent chips are 5.2:1 in light and 8.7:1 in dark. Quiet chips are
+5.7:1 and 8.6:1, and 5.4:1 and 6.1:1 on the selected row. The global 2px
+focus ring shows on "Show all requests". No console errors. The contractor
+screens are unchanged. The customer's screens change only in the "In review"
+chip.
+
+**Left alone.**
+- The status words in `docs/status-dictionary.md` ("Needs Review", "Awaiting
+  Provider Acceptance") are the system's names, so their title case stays.
+- The badges on the request detail keep their colour; this audit covered the
+  list.
+
+Out of scope, and left for later:
+- the draft reference "JALS3PZ3" shown as a request's name;
+- a narrow screen opens on a request rather than on the list;
+- red for Declined and Cancelled, which are outcomes, not errors;
+- the "All Requests" button on operator Home, in title case.
