@@ -6,7 +6,6 @@ import {
   ArrowRight,
   Camera,
   AlertCircle,
-  ClipboardCheck,
   Copy,
   ExternalLink,
   Plus,
@@ -63,8 +62,24 @@ type Props = {
   openRequest: (id: string) => void;
 };
 
-const statusTone = (w: Walkthrough) =>
-  w.status === "Converted" ? "green" : w.status === "Sent" ? "" : "neutral";
+/* Accent only where the walkthrough is the operator's to move: a draft to
+   finish, or approvals to convert. Converted is green, and a walkthrough
+   waiting on the customer is neutral (ADR 093). */
+const statusTone = (w: Walkthrough, ready: boolean) =>
+  w.status === "Converted"
+    ? "green"
+    : w.status === "Draft" || ready
+      ? ""
+      : "quiet";
+
+/* A finding's chip follows the same rule: green when done, accent when it is
+   approved and waiting to be converted, neutral otherwise (ADR 093). */
+const findingTone = (state: string, f: Finding) =>
+  state === "Completed"
+    ? "green"
+    : state === "Approved" && !f.taskId
+      ? ""
+      : "quiet";
 
 export default function Walkthroughs({
   s,
@@ -73,6 +88,13 @@ export default function Walkthroughs({
   openRequest,
 }: Props) {
   const [openId, setOpenId] = useState("");
+  /* The walkthrough the list was left for, so coming back puts focus on its
+     row rather than on the page (ADR 093). */
+  const [lastId, setLastId] = useState("");
+  const choose = (id: string) => {
+    setLastId(id);
+    setOpenId(id);
+  };
   /* On site and pricing take the whole screen, and only while the
      walkthrough is still a draft — once sent there is nothing to capture. */
   const [onSite, setOnSite] = useState<OnSiteMode | "">("");
@@ -103,9 +125,10 @@ export default function Walkthroughs({
       s={s}
       update={update}
       notify={notify}
-      open={setOpenId}
+      open={choose}
+      returnTo={lastId}
       startOnSite={(id) => {
-        setOpenId(id);
+        choose(id);
         setOnSite("capture");
       }}
     />
@@ -117,12 +140,15 @@ function WalkthroughList({
   update,
   notify,
   open,
+  returnTo,
   startOnSite,
 }: {
   s: State;
   update: Props["update"];
   notify: Props["notify"];
   open: (id: string) => void;
+  /** The walkthrough just closed, whose row takes focus. */
+  returnTo: string;
   /** A new walkthrough is started on site, so it opens straight into capture. */
   startOnSite: (id: string) => void;
 }) {
@@ -150,11 +176,14 @@ function WalkthroughList({
   const [address, setAddress] = useState("");
   const [city, setCity] = useState(cities[0]);
   const [accountId, setAccountId] = useState("c2");
-  const groups = [
-    ["Draft", "In progress"],
-    ["Sent", "With the customer"],
-    ["Converted", "Became work"],
-  ] as const;
+  /* One state, one word: each group is captioned with the status itself,
+     and its rows carry no status chip of their own (ADR 093). */
+  const groups = ["Draft", "Sent", "Converted"] as const;
+  const ready = new Set(pipeline.readyToConvertIds);
+  const returned = useRef<HTMLButtonElement>(null);
+  useEffect(() => {
+    returned.current?.focus();
+  }, []);
 
   const start = () => {
     if (propertyId === "new" && !address.trim())
@@ -188,14 +217,7 @@ function WalkthroughList({
   return (
     <>
       <div className="heading">
-        <div>
-          <span className="eyebrow">PROACTIVE MAINTENANCE</span>
-          <h1>Property walkthroughs</h1>
-          <p>
-            Walk a property, record what you see, and let the customer choose
-            what to approve.
-          </p>
-        </div>
+        <h1>Walkthroughs</h1>
         <button
           className="primary"
           aria-expanded={creating}
@@ -213,7 +235,7 @@ function WalkthroughList({
         lead={
           pipeline.chase ? (
             <GlanceLead
-              when="OLDEST UNDECIDED"
+              when="Oldest undecided"
               what={`${pipeline.chase.walkthrough.assessmentId} · ${chaseProperty?.address ?? ""}`}
               where={`sent ${ago(pipeline.chase.daysSent)} · ${
                 pipeline.chase.opens
@@ -224,7 +246,7 @@ function WalkthroughList({
             />
           ) : (
             <GlanceLead
-              when="OLDEST UNDECIDED"
+              when="Oldest undecided"
               what="Nothing waiting on a customer."
             />
           )
@@ -243,7 +265,6 @@ function WalkthroughList({
           {
             label: "Ready to convert",
             value: pipeline.readyToConvertIds.length,
-            urgent: pipeline.readyToConvertIds.length > 0,
             onClick: first(pipeline.readyToConvertIds),
           },
         ]}
@@ -391,19 +412,19 @@ function WalkthroughList({
       )}
       {!s.walkthroughs.length && !creating && (
         <section className="card panel">
-          <p className="note">
+          <p className="wt-fact">
             No walkthroughs yet. Start one to record findings against a
             property.
           </p>
         </section>
       )}
-      {groups.map(([status, caption]) => {
+      {groups.map((status) => {
         const rows = s.walkthroughs.filter((w) => w.status === status);
         if (!rows.length) return null;
         return (
-          <section className="card panel" key={status}>
+          <section className="card panel wt-group" key={status}>
             <div className="panel-title">
-              <h2 className="look-h3">{caption}</h2>
+              <h2 className="look-h3">{status}</h2>
               <span className="count">{rows.length}</span>
             </div>
             {rows.map((w) => {
@@ -413,11 +434,14 @@ function WalkthroughList({
                 <button
                   className="queue-item"
                   key={w.id}
+                  ref={w.id === returnTo ? returned : undefined}
                   onClick={() => open(w.id)}
                 >
                   <p>
                     <strong>{w.assessmentId}</strong>
-                    <span className={"badge " + statusTone(w)}>{w.status}</span>
+                    {ready.has(w.id) && (
+                      <span className="badge">Ready to convert</span>
+                    )}
                   </p>
                   <small>
                     {property?.address}, {property?.city} ·{" "}
@@ -468,6 +492,12 @@ function WalkthroughDetail({
     if (removed) undo.current?.focus();
   }, [removed]);
   const draft = w.status === "Draft";
+  /* Opening a walkthrough replaces the list, and the row that had focus is
+     gone, so focus goes to the heading that names it (ADR 093). */
+  const heading = useRef<HTMLHeadingElement>(null);
+  useEffect(() => {
+    heading.current?.focus();
+  }, []);
   /* What earlier visits to this property left unresolved. Only while this one
      is still a draft: carrying into a sent assessment would change what the
      customer is already looking at. */
@@ -506,10 +536,10 @@ function WalkthroughDetail({
       <button className="text-button" onClick={back}>
         <ArrowLeft aria-hidden="true" size={16} /> All walkthroughs
       </button>
-      <div className="heading">
+      <div className="heading wt-head">
         <div>
-          <span className="eyebrow">ASSESSMENT {w.assessmentId}</span>
-          <h1>
+          <span className="eyebrow">Assessment {w.assessmentId}</span>
+          <h1 ref={heading} tabIndex={-1}>
             {property?.address}, {property?.city}
           </h1>
           <p>
@@ -517,7 +547,14 @@ function WalkthroughDetail({
             {dateLabel(w.sentAt || w.date)}
           </p>
         </div>
-        <span className={"badge " + statusTone(w)}>{w.status}</span>
+        <span
+          className={
+            "badge " +
+            statusTone(w, w.status === "Sent" && totals.approved.length > 0)
+          }
+        >
+          {w.status}
+        </span>
       </div>
 
       <NextStep
@@ -747,10 +784,13 @@ function NextStep({
           </button>
           <button className="text-button" onClick={() => window.open(link)}>
             <ExternalLink aria-hidden="true" size={16} /> Open as the customer
+            <span className="sr-only"> (opens in a new tab)</span>
           </button>
         </div>
+        {/* Facts about the link, said plainly, not on tinted boxes
+            (ADR 093). */}
         {totals.approved.length > 0 && leftover > 0 && (
-          <p className="note">
+          <p className="wt-fact">
             Converting now locks the customer’s page with {leftover} finding
             {leftover === 1 ? "" : "s"} still undecided. They are not lost: your
             next walkthrough for this property can carry{" "}
@@ -759,7 +799,7 @@ function NextStep({
         )}
         {/* The one thing here the operator genuinely could not find out
             before: whether the assessment was ever opened. */}
-        <p className="note">
+        <p className="wt-fact">
           {state === "revoked"
             ? "This link has been withdrawn. Issue a fresh one if the customer still needs it."
             : state === "expired"
@@ -768,18 +808,12 @@ function NextStep({
                 ? `Opened ${opens.length} time${opens.length === 1 ? "" : "s"} · last ${dateLabel(opens[opens.length - 1])}`
                 : "Not opened yet."}
         </p>
-        <p className="note">
-          The link carries a one-off reference rather than the assessment
-          number, so it cannot be found by counting. It is <strong>not</strong> a
-          secret: everything this prototype knows, including every link, lives
-          in the browser it is opened in.
-        </p>
         {/* Only an organization has a choice to make. An individual's sole
             contact approves their own work and there is nobody else it could
             be, so asking would be theatre. */}
         {people.length > 1 && (
           <>
-            <p className="note">
+            <p className="wt-fact">
               Who may approve for this account. Recording who approved is one
               thing; deciding who is allowed to is this.
             </p>
@@ -804,30 +838,19 @@ function NextStep({
             </ul>
           </>
         )}
-        <div className="row actions">
-          {state === "live" && (
-            <button
-              className="text-button"
-              onClick={() =>
-                update((d) => {
-                  revokeAccess(d, w.id);
-                }, "Link withdrawn")
-              }
-            >
-              Withdraw this link
-            </button>
-          )}
-          <button
-            className="text-button"
-            onClick={() =>
-              update((d) => {
-                issueAccess(d, w.id);
-              }, "Fresh link issued")
-            }
-          >
-            Issue a fresh link
-          </button>
-        </div>
+        <LinkControls
+          live={state === "live"}
+          withdraw={() =>
+            update((d) => {
+              revokeAccess(d, w.id);
+            }, "Link withdrawn")
+          }
+          fresh={() =>
+            update((d) => {
+              issueAccess(d, w.id);
+            }, "Fresh link issued")
+          }
+        />
       </section>
     );
 
@@ -878,6 +901,87 @@ function NextStep({
   );
 }
 
+/**
+ * Withdrawing the link, or replacing one that still works, breaks the link
+ * the customer holds, and neither toast can undo it, so each asks first with
+ * Keep it focused (ADR 093). A link that no longer works is replaced in one
+ * step. Focus comes back to the button that asked, or to the one left.
+ */
+function LinkControls({
+  live,
+  withdraw,
+  fresh,
+}: {
+  live: boolean;
+  withdraw: () => void;
+  fresh: () => void;
+}) {
+  const [asking, setAsking] = useState<"" | "withdraw" | "fresh">("");
+  const asked = useRef<"withdraw" | "fresh">("fresh");
+  const prev = useRef(asking);
+  const keep = useRef<HTMLButtonElement>(null);
+  const withdrawButton = useRef<HTMLButtonElement>(null);
+  const freshButton = useRef<HTMLButtonElement>(null);
+  useEffect(() => {
+    if (prev.current === asking) return;
+    prev.current = asking;
+    if (asking) keep.current?.focus();
+    else
+      (asked.current === "withdraw"
+        ? (withdrawButton.current ?? freshButton.current)
+        : freshButton.current
+      )?.focus();
+  }, [asking]);
+  const ask = (which: "withdraw" | "fresh") => {
+    asked.current = which;
+    setAsking(which);
+  };
+  if (asking)
+    return (
+      <fieldset className="job-outcomes actions">
+        <legend>
+          {asking === "withdraw"
+            ? "Withdraw this link? The customer’s link stops working."
+            : "Issue a fresh link? The customer’s current link stops working."}
+        </legend>
+        <div>
+          <button
+            className="secondary"
+            onClick={() => {
+              (asking === "withdraw" ? withdraw : fresh)();
+              setAsking("");
+            }}
+          >
+            {asking === "withdraw" ? "Withdraw link" : "Issue fresh link"}
+          </button>
+        </div>
+        <button ref={keep} className="text-button" onClick={() => setAsking("")}>
+          Keep it
+        </button>
+      </fieldset>
+    );
+  return (
+    <div className="row actions">
+      {live && (
+        <button
+          ref={withdrawButton}
+          className="text-button"
+          onClick={() => ask("withdraw")}
+        >
+          Withdraw this link
+        </button>
+      )}
+      <button
+        ref={freshButton}
+        className="text-button"
+        onClick={() => (live ? ask("fresh") : fresh())}
+      >
+        Issue a fresh link
+      </button>
+    </div>
+  );
+}
+
 function FindingCard({
   s,
   finding: f,
@@ -899,14 +1003,17 @@ function FindingCard({
   return (
     <details
       id={"finding-" + f.id}
-      className="card panel work-task"
+      className="card panel work-task wt-finding"
       open={editable}
     >
       <summary>
         <strong>
           {number} · {f.title || "Untitled finding"}
         </strong>
-        <span className="badge">{state}</span>
+        {/* A draft has no decisions yet, so its findings carry no state. */}
+        {!editable && (
+          <span className={"badge " + findingTone(state, f)}>{state}</span>
+        )}
       </summary>
       {editable ? (
         <>
@@ -982,7 +1089,9 @@ function FindingCard({
                 }
               >
                 <option>Quoted</option>
-                <option>Further Assessment Required</option>
+                <option value="Further Assessment Required">
+                  Further assessment required
+                </option>
               </select>
             </label>
             {f.pricing === "Quoted" && (
@@ -1041,15 +1150,12 @@ function FindingCard({
               <img key={i} src={src} alt={`Finding ${number} condition`} />
             ))}
           </div>
-          <p>
-            {f.pricing === "Quoted" ? (
+          {/* An unpriced finding's chip already says it needs assessment. */}
+          {f.pricing === "Quoted" && (
+            <p>
               <strong>{money(f.price || 0)} + applicable tax</strong>
-            ) : (
-              <span className="badge neutral">
-                <ClipboardCheck aria-hidden="true" size={16} /> Assessment required
-              </span>
-            )}
-          </p>
+            </p>
+          )}
           {f.customerNotes && <p className="note">{f.customerNotes}</p>}
           {f.followUpRequestedAt && (
             <p className="note">

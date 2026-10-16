@@ -222,6 +222,8 @@
 :root[data-theme] .operator-summary .badge.quiet,
 :root[data-theme] .op-today .badge.quiet,
 :root[data-theme] .operator-timeline-entry .badge.quiet,
+:root[data-theme] .wt-head .badge.quiet,
+:root[data-theme] .wt-finding .badge.quiet,
 :root[data-theme] .operator-concept .visit-card .badge:not(.green):not(.red),
 :root[data-theme] .operator-concept .assignment-row .badge:not(.green):not(.red) {
   background: transparent;
@@ -251,4 +253,25 @@
 .op-decision-seen {
   margin: 0;
   color: var(--muted);
+}
+/* Walkthroughs (ADR 093). A group's count is a count, not a state, so it is
+   neutral; facts about a link are said as plain text, not on tinted boxes;
+   the assessment label is untracked, as in ADR 091. */
+:root[data-theme] .wt-group .count {
+  background: var(--surface-raised);
+  color: var(--text);
+  border-color: var(--line);
+}
+.wt-fact {
+  margin: 0;
+  color: var(--muted);
+}
+.wt-head .eyebrow {
+  letter-spacing: 0;
+}
+/* The record's link to an assessment is a touch target (ADR 093). */
+.app[data-role="Operator"] .record-item .link {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
 }

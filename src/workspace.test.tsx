@@ -232,7 +232,7 @@ describe("Operator workspace", () => {
     open("Operator");
     go(/^Walkthroughs/);
     expect(
-      await screen.findByRole("heading", { name: "Property walkthroughs" }),
+      await screen.findByRole("heading", { name: "Walkthroughs" }),
     ).toBeTruthy();
   });
 
@@ -600,14 +600,11 @@ describe("Focus and friction (ADR 079)", () => {
       addFinding(d, w.id, { area: "Kitchen", title: "Dripping tap" });
     });
     go(/^Walkthroughs/);
-    await screen.findByRole("heading", { name: "Property walkthroughs" });
+    await screen.findByRole("heading", { name: "Walkthroughs" });
     fireEvent.click(
-      screen
+      within(screen.getByRole("heading", { name: "Draft" }).closest("section")!)
         .getAllByRole("button")
-        .find(
-          (b) =>
-            b.classList.contains("queue-item") && /Draft/.test(b.textContent!),
-        )!,
+        .find((b) => b.classList.contains("queue-item"))!,
     );
     const removes = await screen.findAllByRole("button", {
       name: /Remove finding/,
@@ -1044,14 +1041,11 @@ describe("Accessibility (ADR 081)", () => {
   };
   const openDraft = async () => {
     go(/^Walkthroughs/);
-    await screen.findByRole("heading", { name: "Property walkthroughs" });
+    await screen.findByRole("heading", { name: "Walkthroughs" });
     fireEvent.click(
-      screen
+      within(screen.getByRole("heading", { name: "Draft" }).closest("section")!)
         .getAllByRole("button")
-        .find(
-          (b) =>
-            b.classList.contains("queue-item") && /Draft/.test(b.textContent!),
-        )!,
+        .find((b) => b.classList.contains("queue-item"))!,
     );
   };
 
@@ -1329,7 +1323,7 @@ describe("Accessibility (ADR 082)", () => {
     cleanup();
     open("Operator");
     go(/^Walkthroughs/);
-    await screen.findByRole("heading", { name: "Property walkthroughs" });
+    await screen.findByRole("heading", { name: "Walkthroughs" });
     fireEvent.click(screen.getByRole("button", { name: /New walkthrough/ }));
     noSkips();
   });
@@ -1373,7 +1367,7 @@ describe("Accessibility (ADR 082)", () => {
   it("describes a field by its error, and leaves the error out of its name", async () => {
     open("Operator");
     go(/^Walkthroughs/);
-    await screen.findByRole("heading", { name: "Property walkthroughs" });
+    await screen.findByRole("heading", { name: "Walkthroughs" });
     fireEvent.click(screen.getByRole("button", { name: /New walkthrough/ }));
     fireEvent.change(screen.getByRole("combobox", { name: "Property" }), {
       target: { value: "new" },
@@ -1448,7 +1442,7 @@ describe("Accessibility (ADR 082)", () => {
     cleanup();
     open("Operator");
     go(/^Walkthroughs/);
-    await screen.findByRole("heading", { name: "Property walkthroughs" });
+    await screen.findByRole("heading", { name: "Walkthroughs" });
     const add = screen.getByRole("button", { name: /New walkthrough/ });
     expect(add.getAttribute("aria-expanded")).toBe("false");
     fireEvent.click(add);
@@ -1755,5 +1749,127 @@ describe("Friction and wording (ADR 083)", () => {
       fireEvent.click(document.querySelector(".accordion-head")!);
     expect(screen.queryByText(new RegExp("^" + name + " ·"))).toBeNull();
     expect(screen.getByText(/^Your provider ·/)).toBeTruthy();
+  });
+});
+
+describe("Walkthroughs and the decision queue (ADR 093)", () => {
+  const focused = () => document.activeElement;
+  const row = (id: string) =>
+    screen
+      .getAllByRole("button")
+      .find((b) => b.classList.contains("queue-item") && b.textContent!.includes(id))!;
+  /** A walkthrough sent to the customer, with one quoted finding. */
+  const sent = (into: { id: string }) => (d: State) => {
+    const w = createWalkthrough(d, "p2");
+    addFinding(d, w.id, {
+      title: "Door rubbing against frame",
+      proposed: "Adjust the sticking door",
+      price: 180,
+    });
+    sendWalkthrough(d, w.id);
+    into.id = w.assessmentId;
+  };
+
+  it("names the page, and captions each group with its status", async () => {
+    open("Operator");
+    go(/^Walkthroughs/);
+    expect(
+      await screen.findByRole("heading", { level: 1, name: "Walkthroughs" }),
+    ).toBeTruthy();
+    expect(screen.getByRole("heading", { name: "Draft" })).toBeTruthy();
+    for (const old of ["In progress", "With the customer", "Became work"])
+      expect(screen.queryByRole("heading", { name: old })).toBeNull();
+    for (const item of document.querySelectorAll(".queue-item"))
+      expect(item.querySelector(".badge")?.textContent ?? "").not.toMatch(
+        /^(Draft|Sent|Converted)$/,
+      );
+  });
+
+  it("focuses the walkthrough's heading, and its row on the way back", async () => {
+    const made = { id: "" };
+    open("Operator", sent(made));
+    go(/^Walkthroughs/);
+    await screen.findByRole("heading", { level: 1, name: "Walkthroughs" });
+    fireEvent.click(row(made.id));
+    expect(focused()).toBe(h1());
+    fireEvent.click(screen.getByRole("button", { name: /All walkthroughs/ }));
+    expect(focused()).toBe(row(made.id));
+  });
+
+  it("asks before withdrawing a live link, with Keep it focused", async () => {
+    const made = { id: "" };
+    open("Operator", sent(made));
+    go(/^Walkthroughs/);
+    await screen.findByRole("heading", { level: 1, name: "Walkthroughs" });
+    fireEvent.click(row(made.id));
+    fireEvent.click(screen.getByRole("button", { name: "Withdraw this link" }));
+    expect(screen.getByRole("group", { name: /stops working/ })).toBeTruthy();
+    expect(focused()).toBe(screen.getByRole("button", { name: "Keep it" }));
+    fireEvent.click(screen.getByRole("button", { name: "Keep it" }));
+    expect(focused()).toBe(
+      screen.getByRole("button", { name: "Withdraw this link" }),
+    );
+    fireEvent.click(screen.getByRole("button", { name: "Withdraw this link" }));
+    fireEvent.click(screen.getByRole("button", { name: "Withdraw link" }));
+    expect(screen.getByText(/This link has been withdrawn/)).toBeTruthy();
+    expect(focused()).toBe(
+      screen.getByRole("button", { name: "Issue a fresh link" }),
+    );
+    // A link that no longer works is replaced in one step.
+    fireEvent.click(screen.getByRole("button", { name: "Issue a fresh link" }));
+    expect(screen.queryByRole("button", { name: "Keep it" })).toBeNull();
+    expect(
+      screen.getByRole("button", { name: "Withdraw this link" }),
+    ).toBeTruthy();
+  });
+
+  it("asks before replacing a link that still works", async () => {
+    const made = { id: "" };
+    open("Operator", sent(made));
+    go(/^Walkthroughs/);
+    await screen.findByRole("heading", { level: 1, name: "Walkthroughs" });
+    fireEvent.click(row(made.id));
+    fireEvent.click(screen.getByRole("button", { name: "Issue a fresh link" }));
+    expect(
+      screen.getByRole("group", { name: /current link stops working/ }),
+    ).toBeTruthy();
+    fireEvent.click(screen.getByRole("button", { name: "Issue fresh link" }));
+    expect(focused()).toBe(
+      screen.getByRole("button", { name: "Issue a fresh link" }),
+    );
+  });
+
+  it("gives a draft's findings no decision state", async () => {
+    open("Operator", (d) => {
+      const w = createWalkthrough(d, "p1");
+      addFinding(d, w.id, { area: "Hall", title: "Loose handrail" });
+    });
+    go(/^Walkthroughs/);
+    await screen.findByRole("heading", { level: 1, name: "Walkthroughs" });
+    fireEvent.click(
+      within(screen.getByRole("heading", { name: "Draft" }).closest("section")!)
+        .getAllByRole("button")
+        .find((b) => b.classList.contains("queue-item"))!,
+    );
+    await screen.findAllByRole("button", { name: /Remove finding/ });
+    expect(screen.queryByText("Pending decision")).toBeNull();
+  });
+
+  it("does not call a queue of skipped decisions all caught up", () => {
+    open("Operator");
+    fireEvent.click(
+      screen.getByRole("button", { name: /Work through \d+ decisions?/ }),
+    );
+    const dialog = screen.getByRole("dialog", { name: "Decisions" });
+    for (let i = 0; i < 12; i++) {
+      const skip = within(dialog).queryByRole("button", { name: /^Skip/ });
+      if (!skip) break;
+      fireEvent.click(skip);
+    }
+    expect(within(dialog).getByRole("heading", { level: 1 }).textContent).toBe(
+      "End of the queue",
+    );
+    expect(dialog.textContent).toMatch(/still needs? a decision/);
+    expect(dialog.textContent).not.toMatch(/0 decisions handled/);
   });
 });

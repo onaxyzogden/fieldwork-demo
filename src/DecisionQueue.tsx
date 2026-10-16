@@ -73,6 +73,11 @@ export default function DecisionQueue({
     (id) => Boolean(live(id)),
   );
   const requestId = q.key;
+  const left = decisionQueue(s).filter((x) => live(x.requestId)).length;
+  const handled = `${q.handled} decision${q.handled === 1 ? "" : "s"} handled.`;
+  const endLine = !left
+    ? `${handled} Anything new will show on Home.`
+    : `${q.handled ? handled + " " : ""}${left} still need${left === 1 ? "s" : ""} a decision, under Needs action on Home.`;
   const decision = requestId ? live(requestId) : null;
   /* What the last screen did, said on the next one, since the screen it was
      done on is gone (ADR 080). */
@@ -143,11 +148,12 @@ export default function DecisionQueue({
         />
       ) : (
         <>
-          <h1 tabIndex={-1}>All caught up</h1>
+          {/* Skipped decisions are still waiting, so the end of the queue
+              is not "all caught up" until none are (ADR 093). */}
+          <h1 tabIndex={-1}>{left ? "End of the queue" : "All caught up"}</h1>
           <p className="onsite-hint dq-done">
-            <CheckCircle2 aria-hidden="true" size={20} />
-            {q.handled} decision{q.handled === 1 ? "" : "s"} handled. Anything
-            new will show on Home.
+            {!left && <CheckCircle2 aria-hidden="true" size={20} />}
+            {endLine}
           </p>
           <div className="onsite-bar">
             <button className="primary full" onClick={close}>
@@ -309,7 +315,7 @@ function Step({
     const give = (o: { providerId: string; start: string; pay: number }) =>
       act(
         (x) => reoffer(x, d.visitId, o.providerId, o.start, o.pay),
-        "That time is no longer free. Change opens every option.",
+        "That time is no longer free. Open request shows every option.",
       );
     const self = d.self;
     if (d.offer) {
@@ -320,7 +326,7 @@ function Step({
       };
       if (self)
         secondary.push({ label: "Do it myself", run: () => give(self) });
-      secondary.push({ label: "Change", run: open });
+      secondary.push({ label: "Open request", run: open });
     } else {
       why += " No other contractor has a time for it.";
       primary = self
@@ -329,7 +335,7 @@ function Step({
             run: () => give(self),
           }
         : { label: "Open request", run: open };
-      if (self) secondary.push({ label: "Change", run: open });
+      if (self) secondary.push({ label: "Open request", run: open });
     }
   } else if (d.kind === "review") {
     why =
@@ -340,7 +346,7 @@ function Step({
       label: "Scope looks right",
       run: () => act((x) => approveScope(x, requestId, titles) > 0, ""),
     };
-    secondary.push({ label: "Adjust", run: open });
+    secondary.push({ label: "Open request", run: open });
   } else if (d.kind === "assign") {
     const offer = (o: NonNullable<typeof d.offer>) =>
       act(
@@ -366,7 +372,7 @@ function Step({
       };
       if (self)
         secondary.push({ label: "Do it myself", run: () => offer(self) });
-      secondary.push({ label: "Change", run: open });
+      secondary.push({ label: "Open request", run: open });
     } else {
       why = "No contractor can take every task on this request.";
       primary = self
@@ -375,7 +381,7 @@ function Step({
             run: () => offer(self),
           }
         : { label: "Open request", run: open };
-      if (self) secondary.push({ label: "Change", run: open });
+      if (self) secondary.push({ label: "Open request", run: open });
     }
   } else {
     const send = () => {
@@ -405,7 +411,7 @@ function Step({
       run: send,
     };
     if (!adjusting)
-      secondary.push({ label: "Adjust", run: () => setAdjusting(true) });
+      secondary.push({ label: "Change price", run: () => setAdjusting(true) });
   }
 
   return (
