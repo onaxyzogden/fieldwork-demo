@@ -2,6 +2,7 @@ import { describe, it, expect } from "vitest";
 import { seed, reconcile, uid, accounts, type State } from "./model";
 import { execute, saveOutcome } from "./work";
 import { storePaymentMethod } from "./payments";
+import { walkthroughGlance } from "./glance";
 import {
   HST,
   addFinding,
@@ -377,6 +378,29 @@ describe("the walkthroughs the demo opens with", () => {
     expect(t.findings.every((f) => f.title && f.observed && f.proposed)).toBe(
       true,
     );
+  });
+
+  /* Without one, "Ready to convert" and the Convert button took a whole
+     approval by hand to reach, so a reviewer never saw the step the feature
+     leads to. */
+  it("opens with one assessment ready to convert, and converting it makes work", () => {
+    const s = seed();
+    const { ready } = seedWalkthroughs(s);
+    expect(ready.status).toBe("Sent");
+    expect(walkthroughGlance(s, s.clock).readyToConvertIds).toEqual([ready.id]);
+    expect(
+      findingsFor(s, ready.id).map((f) => findingState(s, f)),
+    ).toEqual(["Approved", "Approved", "Pending decision"]);
+    const request = convertApproved(s, ready.id)!;
+    expect(request.walkthroughId).toBe(ready.id);
+    // Worded so the tasks land on ordinary services, not restricted review.
+    expect(
+      s.tasks.filter((t) => t.requestId === request.id).map((t) => [t.summary, t.restricted]),
+    ).toEqual([
+      ["Handrail/Railing", false],
+      ["Faucet or fixture replacement", false],
+    ]);
+    expect(walkthroughGlance(s, s.clock).readyToConvertIds).toEqual([]);
   });
 
   it("every seeded finding hangs off a property that exists", () => {
