@@ -49,6 +49,11 @@
   .onsite-frame:has(.onsite-aside) .job-details {
     display: none;
   }
+  /* The panel's heading and first line already say who and where; the
+     decision column does not say it again (ADR 100). */
+  .onsite-frame:has(.onsite-aside) .dq-request {
+    display: none;
+  }
 }
 .onsite-aside h2 {
   font-size: var(--text-h3);
@@ -64,6 +69,10 @@
   margin: var(--space-2) 0 0;
   display: grid;
   gap: var(--space-3);
+}
+.aside-words {
+  margin: var(--space-1) 0 0;
+  color: var(--muted);
 }
 .aside-tasks .work-photos img {
   width: 64px;

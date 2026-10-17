@@ -3,6 +3,20 @@ title: "Wiki Log"
 type: log
 ---
 
+## [2026-10-17] session | The operator's side panel quotes the customer (ADR 100)
+
+- **Completed:**
+  - `asideFor` gives the operator each task's description and question answers; the customer and contractor get no description.
+  - `QueueAside` quotes the description under each task title (`.aside-words`, muted).
+  - Desktop CSS hides the column's `.dq-request` beside the panel, as it already hid `.job-details`.
+  - ADR 100; ADR 093's "says the name, address and tasks twice" item marked done; `DESIGN.md` register line updated.
+- **Verified:**
+  - `tsc`, `npm run build`, `npm test` (696 tests, all passing; one new screen test, the operator aside test extended).
+  - Live at 1440px: the name shows once, the words in the panel, 6.2:1 light and 8.5:1 dark. At 320px unchanged. No overflow, no console errors.
+- **Kept on purpose:** a task under review quotes the customer in the column as well, beside the title field.
+- **Housekeeping:** ADR 093's deferral "v5 `setHours`" was already fixed (`model.ts` uses `torontoParts` and `localTime`); no longer open.
+- **Pages touched:** [[fieldwork]].
+
 ## [2026-10-17] update | Ready-to-convert seed merged and verified live
 
 - PR #79 merged as `1a60f52`; the GitHub Pages deploy succeeded.

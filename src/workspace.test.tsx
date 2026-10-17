@@ -497,6 +497,29 @@ describe("Focus and friction (ADR 079)", () => {
     expect(muted.length).toBeGreaterThan(0);
   });
 
+  it("quotes the customer's own words in the decision queue's side panel", () => {
+    /* On desktop the column's Details toggle is hidden beside the panel, so
+       the panel is where the operator reads them (ADR 100). */
+    open("Operator");
+    fireEvent.click(
+      screen.getByRole("button", { name: /Work through \d+ decisions?/ }),
+    );
+    const dialog = screen.getByRole("dialog", { name: "Decisions" });
+    const said = new Set(freshDemo().tasks.map((t) => `“${t.description}”`));
+    for (let i = 0; i < 6; i++) {
+      const panel = within(dialog).getByRole("complementary", {
+        name: "Details",
+      });
+      const words = [...panel.querySelectorAll(".aside-words")];
+      if (words.length) {
+        for (const w of words) expect(said.has(w.textContent!)).toBe(true);
+        return;
+      }
+      fireEvent.click(within(dialog).getByRole("button", { name: /^Skip/ }));
+    }
+    throw new Error("No decision quoted the customer");
+  });
+
   it("asks why before the quote card declines, and keeps focus", () => {
     open("Customer", quoted);
     go(/^My bookings/);

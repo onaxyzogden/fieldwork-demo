@@ -9,6 +9,9 @@ import { type State, accountName, auditFor } from "./model";
  * Each role sees what it already sees elsewhere and no more. The customer is
  * not shown the operator's history. A contractor deciding on an offer gets
  * the city, not the address or the customer's notes, as on the offer screen.
+ * The operator gets the customer's own words and answers, as on the request
+ * page: on desktop the queue's Details toggle is hidden, so the panel is the
+ * only place they show (ADR 100).
  */
 export type AsideRole = "Operator" | "Customer" | "Contractor";
 
@@ -26,6 +29,7 @@ export function asideFor(
   const r = s.requests.find((x) => x.id === requestId);
   if (!r) return undefined;
   const offer = role === "Contractor";
+  const operator = role === "Operator";
   const visit = s.visits.find((v) => v.id === visitId);
   const next = s.visits
     .filter(
@@ -48,8 +52,9 @@ export function asideFor(
       .map((t) => ({
         id: t.id,
         summary: t.summary,
+        description: operator ? t.description : "",
         photos: t.photos,
-        answers: offer ? questionAnswers(t) : [],
+        answers: offer || operator ? questionAnswers(t) : [],
       })),
     notes: offer ? "" : r.notes,
     history: role === "Operator" ? auditFor(s, r.id).slice(0, 5) : [],
