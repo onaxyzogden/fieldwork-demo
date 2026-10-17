@@ -3,6 +3,13 @@ title: "Wiki Log"
 type: log
 ---
 
+## [2026-10-17] update | Ready-to-convert seed merged and verified live
+
+- PR #79 merged as `1a60f52`; the GitHub Pages deploy succeeded.
+- Verified on j.ogden.ag: a returning visitor still had three walkthroughs; "Reset all demo data" reseeded four. Walkthroughs read "Ready to convert 1", PMW-0004's row "$355 approved" and its card "2 approved · ready to convert"; Convert made one request with Handrail/Railing and Faucet or fixture replacement. No console errors.
+- **Settled:** "Opened 2 times" after one guest visit on localhost was React StrictMode running the effect twice in dev. In the production build one visit records one open; no fix needed.
+- **Pages touched:** [[fieldwork]].
+
 ## [2026-10-17] session | Seed a walkthrough that is ready to convert
 
 - **Completed:**
