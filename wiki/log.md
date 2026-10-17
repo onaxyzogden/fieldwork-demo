@@ -3,6 +3,20 @@ title: "Wiki Log"
 type: log
 ---
 
+## [2026-10-16] session | ADR 099: the ask reaches the operator; no link is the operator's move
+
+- **Completed:**
+  - Closes the three gaps ADR 098 deferred.
+  - New notification kind `fresh-link` (documentary): "Sarah Lin asked for a fresh link · PMW-0001", emitted by `deliverUpdates` when `freshLinkRequestedAt` changes; opening it goes to Walkthroughs with the card open.
+  - The guest page for a withdrawn or expired link offers the ask; once asked the heading reads "Fresh link requested" and takes focus. The guest record offers it too. `walkthroughByToken` finds the walkthrough in any link state; the log actor is "Link holder".
+  - A Sent walkthrough with no `access` reads "No link yet" on lead, row, card and customer record, counts with the dead links, and offers "Issue a link".
+- **Verified:**
+  - `tsc`, `npm run build`, and `npm test` (694 tests, all passing; six new).
+  - Live: Sarah's ask produced the bell notice and it opened the card; reissuing cleared the ask; the guest ask on the old URL worked once and notified again; PMW-0002 with no link read "No link yet" for operator and Northline. 320 and 1440px, both themes: no overflow, buttons 47px, lowest contrast 5.2:1, no console errors. Focus not checkable live (hidden pane refused focus); tests cover it.
+- **Correction:** [[fieldwork]] still said ADR 098's PR was open. It merged as PR #76 (`fdabe92`).
+- **Deferred:** the h096 Prettier stash, still droppable.
+- **Pages touched:** [[fieldwork]].
+
 ## [2026-10-16] session | ADR 098: the customer can ask for a fresh link
 
 - **Completed:**
