@@ -357,7 +357,12 @@ export function revokeAccess(s: State, walkthroughId: string) {
  * (ADR 098). Only while it is sent and its link was withdrawn or has expired;
  * asking again changes nothing. Issuing a fresh link answers it.
  */
-export function requestFreshLink(s: State, walkthroughId: string) {
+export function requestFreshLink(
+  s: State,
+  walkthroughId: string,
+  /** The account's own record, or whoever holds the link (ADR 099). */
+  actor = "Customer",
+) {
   const w = s.walkthroughs.find((x) => x.id === walkthroughId);
   if (!w?.access || w.status !== "Sent" || w.access.freshLinkRequestedAt)
     return false;
@@ -365,7 +370,7 @@ export function requestFreshLink(s: State, walkthroughId: string) {
   if (state !== "revoked" && state !== "expired") return false;
   w.access.freshLinkRequestedAt = new Date(s.clock).toISOString();
   log(s, `Assessment ${w.assessmentId} fresh link requested`, {
-    actor: "Customer",
+    actor,
     entity: "walkthrough",
     entityId: w.id,
     field: "access",
@@ -374,6 +379,11 @@ export function requestFreshLink(s: State, walkthroughId: string) {
   });
   return true;
 }
+
+/** The walkthrough a link was issued for, whether or not it still works, so
+ *  whoever holds a dead link can ask for another (ADR 099). */
+export const walkthroughByToken = (s: State, token: string) =>
+  token ? s.walkthroughs.find((x) => x.access?.token === token) : undefined;
 
 export type LinkState = "live" | "expired" | "revoked" | "none";
 /** `clock` for a caller that is handed its own, as the glances are. */

@@ -3397,6 +3397,52 @@ errors. Focus first went nowhere in the live check, as a frame callback ran
 before the record re-rendered; it now moves in an effect after the commit.
 
 **Left alone.**
-- No notification to the operator (see above).
+- No notification to the operator (see above). Since done: ADR 099.
 - The record on the guest assessment page is not given the ask; only the
-  customer's own workspace offers it.
+  customer's own workspace offers it. Since done: ADR 099.
+
+## ADR 099: The ask reaches the operator, and no link is the operator's move
+
+Accepted. Amends ADR 097 and ADR 098. ADR 098 let the customer ask for a
+fresh link but left three gaps: the operator only saw the ask if they opened
+Walkthroughs, whoever held a dead link outside the workspace could not ask,
+and a sent assessment with no link at all read "Waiting on the customer" with
+a Copy button that copied nothing. Six tests are new.
+
+**The ask is a notice.** When `access.freshLinkRequestedAt` is newly set,
+`deliverUpdates` sends the operator one notice of a new kind, `fresh-link`:
+"Sarah Lin asked for a fresh link · PMW-0001". Its urgency is documentary;
+an ask is not an emergency. The notice carries the walkthrough's id, and
+opening it goes to Walkthroughs with that card open. ADR 098 said a notice
+would need a request, a visit or an assignment; the notice now names the
+walkthrough instead, and `noticeTarget` sends it there.
+
+**Whoever holds the link can ask.** The guest page for a withdrawn or expired
+link offers "Ask for a fresh link" under the explanation, and the record on a
+live guest page offers it beside a dead link, as the customer's own record
+does. Once asked, the heading reads "Fresh link requested" and says the new
+link will come from whoever sent it; the button is gone and focus moves to
+the heading. `walkthroughByToken` finds the walkthrough whatever state its
+link is in, and `requestFreshLink` stays the one rule (ADR 036). The log
+names the actor "Link holder", as the page cannot know who opened it. The
+operator's sentence still names the account the link was sent to.
+
+**No link is the operator's move.** A sent assessment with no link counts
+with the dead ones in the glance, never as with the customer and never
+chased. The lead, the row and the card read "No link yet"; the card offers
+"Issue a link" and no Copy or Open, and the toast says "Link issued". The
+customer's record says "No link yet", with nothing to ask for, as there is no
+link to have gone dead.
+
+**Checked live.** The operator withdrew PMW-0001 and Sarah Lin asked from her
+record. The operator's bell showed "Sarah Lin asked for a fresh link ·
+PMW-0001", and opening it went to the card under "Fresh link requested".
+Issuing a fresh link cleared the ask. With that link withdrawn, its old URL
+showed "This link has been withdrawn" and the ask; asking once replaced both
+with "Fresh link requested", logged "Link holder", and reached the bell
+again. With PMW-0002's link removed, the operator's card read "No link yet"
+with "Issue a link" and no Copy, and Northline's record read "No link yet".
+At 320 and 1440px in both themes nothing overflows, the buttons are 47px
+tall, and the lowest text contrast is 5.2:1 (the record badge). No console
+errors. Focus could not be checked live, as the browser pane was hidden and
+would not take focus at all; the tests check it.

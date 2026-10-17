@@ -24,6 +24,8 @@ export function OperatorWorkspace() {
     update,
     r,
     role,
+    openWalkthrough,
+    setOpenWalkthrough,
   } = useWorkspace();
   /* One pin per listed visit, in appointment order; the dashed route only
      joins them when they are one provider's day (ADR 092). */
@@ -158,6 +160,8 @@ export function OperatorWorkspace() {
             choose(id);
             setPage("Requests");
           }}
+          opening={openWalkthrough}
+          opened={() => setOpenWalkthrough("")}
         />
       );
     case "Today":

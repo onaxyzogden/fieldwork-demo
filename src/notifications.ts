@@ -1,5 +1,6 @@
 import {
   type Channel,
+  accountName,
   type NotificationKind,
   type State,
   channelsFor,
@@ -473,6 +474,26 @@ export function deliverUpdates(before: State, after: State) {
               : `Payment ${p.status.toLowerCase()} · ${r.address}`,
       );
   }
+  /* A customer asking for a fresh link (ADR 099). The operator hears it once,
+     when the ask is recorded; issuing the link answers it. */
+  for (const w of after.walkthroughs) {
+    const at = w.access?.freshLinkRequestedAt;
+    if (!at) continue;
+    const was = before.walkthroughs.find((x) => x.id === w.id);
+    if (was?.access?.freshLinkRequestedAt === at) continue;
+    const p = after.properties.find((x) => x.id === w.propertyId);
+    Object.assign(
+      emit(
+        "Operator",
+        "",
+        "",
+        "",
+        "fresh-link",
+        `${p ? accountName(p.accountId) : "A customer"} asked for a fresh link · ${w.assessmentId}`,
+      ),
+      { walkthroughId: w.id },
+    );
+  }
 }
 export function sendMessage(
   s: State,
@@ -620,7 +641,8 @@ export type NoticeTarget =
   | "quote"
   | "charge"
   | "booking"
-  | "job";
+  | "job"
+  | "walkthrough";
 
 /**
  * The exact thing a notice is about, for the role reading it: the operator's
@@ -631,6 +653,7 @@ export function noticeTarget(
   n: { kind: string; visitId: string; chargeId?: string },
   role: "Operator" | "Customer" | "Contractor",
 ): NoticeTarget {
+  if (n.kind === "fresh-link") return "walkthrough";
   const visit = n.kind === "visit" || n.kind.startsWith("work-");
   if (n.kind === "message") return "messages";
   if (role === "Contractor") return "job";

@@ -13,6 +13,7 @@ import {
   sendWalkthrough,
 } from "./pmw";
 import { customerQueue } from "./roleQueues";
+import { deliverUpdates, inbox, noticeTarget } from "./notifications";
 import { dayKey } from "./work";
 import {
   contractorGlance,
@@ -543,6 +544,30 @@ describe("the walkthrough pipeline's glance", () => {
     expect(walkthroughGlance(s, s.clock).freshLinkIds).toEqual([older.id, newer.id]);
     requestFreshLink(s, newer.id);
     expect(walkthroughGlance(s, s.clock).freshLinkIds).toEqual([newer.id, older.id]);
+  });
+
+  it("counts a sent assessment with no link as the operator's move (ADR 099)", () => {
+    const { s, w } = sent();
+    delete w.access;
+    expect(bucketOf(s, w.id)).toEqual(["fresh link"]);
+    expect(walkthroughGlance(s, s.clock).chase).toBeNull();
+    expect(requestFreshLink(s, w.id)).toBe(false);
+  });
+
+  it("tells the operator once when a customer asks, and opens the walkthrough (ADR 099)", () => {
+    const { s, w } = sent();
+    revokeAccess(s, w.id);
+    const before = structuredClone(s);
+    requestFreshLink(s, w.id, "Link holder");
+    deliverUpdates(before, s);
+    const asks = inbox(s, "Operator").filter((n) => n.kind === "fresh-link");
+    expect(asks).toHaveLength(1);
+    expect(asks[0]).toMatchObject({ walkthroughId: w.id });
+    expect(asks[0].text).toContain(w.assessmentId);
+    expect(noticeTarget(asks[0], "Operator")).toBe("walkthrough");
+    expect(s.events[0]).toMatchObject({ actor: "Link holder", to: "requested" });
+    deliverUpdates(structuredClone(s), s);
+    expect(inbox(s, "Operator").filter((n) => n.kind === "fresh-link")).toHaveLength(1);
   });
 
   it("chases the oldest live assessment, past a dead one", () => {

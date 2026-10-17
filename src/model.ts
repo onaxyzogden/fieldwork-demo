@@ -413,6 +413,8 @@ export type State = {
     /** An additional charge this is about (ADR 066): it opens that, not
      *  the quote its kind would otherwise mean. */
     chargeId?: string;
+    /** A walkthrough this is about (ADR 099): it opens that card. */
+    walkthroughId?: string;
     assignmentId: string;
     visitId: string;
     requestId: string;
@@ -1543,6 +1545,7 @@ export const notificationKinds = [
   "message",
   "quote",
   "payment",
+  "fresh-link",
 ] as const;
 export type NotificationKind = (typeof notificationKinds)[number];
 export type Urgency = "time-sensitive" | "documentary";
@@ -1567,6 +1570,8 @@ export const urgency: Record<NotificationKind, Urgency> = {
   request: "documentary",
   quote: "documentary",
   payment: "documentary",
+  // An ask the operator answers when they next look, not an emergency.
+  "fresh-link": "documentary",
 };
 /** In-app always, plus the one that matches the urgency. */
 export const channelsFor = (kind: NotificationKind): Channel[] =>

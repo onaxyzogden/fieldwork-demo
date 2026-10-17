@@ -281,11 +281,9 @@ export function walkthroughGlance(s: State, clock: number): WalkthroughGlance {
   const undecided = sent
     .filter((w) => !ready.has(w.id) && hasUndecided(w))
     .sort((a, b) => (a.sentAt ?? a.date).localeCompare(b.sentAt ?? b.date));
-  /* Dead as the card reads it: withdrawn or expired. */
-  const dead = (w: Walkthrough) => {
-    const state = linkState(s, w, clock);
-    return state === "revoked" || state === "expired";
-  };
+  /* Dead as the card reads it: withdrawn, expired, or never issued
+     (ADR 099). */
+  const dead = (w: Walkthrough) => linkState(s, w, clock) !== "live";
   const withCustomer = undecided.filter((w) => !dead(w));
   const oldest = withCustomer[0];
   return {

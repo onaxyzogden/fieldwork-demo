@@ -22,6 +22,8 @@ import {
   requestAssessment,
   byToken,
   recordOpen,
+  requestFreshLink,
+  walkthroughByToken,
 } from "./pmw";
 import { forgetPaymentMethod, storePaymentMethod } from "./payments";
 import { FindingStep, ReviewStep, WhoStep } from "./AssessmentSteps";
@@ -99,7 +101,27 @@ export default function Assessment({
     });
   }, [w?.id]);
 
+  /* Whoever holds a dead link can ask for another, once (ADR 099). The link
+     is all that says who they are, and asking changes nothing but a time. */
+  const held = lookup.ok ? undefined : walkthroughByToken(s, token);
+  const askable =
+    held?.status === "Sent" &&
+    !lookup.ok &&
+    (lookup.reason === "revoked" || lookup.reason === "expired");
+  const deadHeading = useRef<HTMLHeadingElement>(null);
+  const askedNow = useRef(false);
+  useEffect(() => {
+    if (!askedNow.current) return;
+    askedNow.current = false;
+    deadHeading.current?.focus();
+  });
+  const askFreshLink = (id: string) =>
+    update((d) => {
+      requestFreshLink(d, id, "Link holder");
+    });
+
   if (!w || w.status === "Draft") {
+    const asked = askable && !!held?.access?.freshLinkRequestedAt;
     /* Why, not just no. "Ask for a fresh one" and "this was withdrawn" are
        different things to say to whoever is holding the link, and a blank page
        is neither. */
@@ -108,15 +130,24 @@ export default function Assessment({
           "This link is an old one",
           "Assessment links now carry a one-off reference rather than the assessment number. Ask whoever sent it for a fresh link.",
         ]
-      : !lookup.ok && lookup.reason === "expired"
+      : asked
+        ? [
+            "Fresh link requested",
+            "Whoever sent it has been told. The new link will come from them.",
+          ]
+        : !lookup.ok && lookup.reason === "expired"
         ? [
             "This link has expired",
-            "Assessment links stop working after a set period. Ask whoever sent it for a fresh one — the assessment itself is still there.",
+            askable
+              ? "Assessment links stop working after a set period. The assessment itself is still there, and you can ask for a fresh link."
+              : "Assessment links stop working after a set period. Ask whoever sent it for a fresh one — the assessment itself is still there.",
           ]
         : !lookup.ok && lookup.reason === "revoked"
           ? [
               "This link has been withdrawn",
-              "Whoever sent this assessment has withdrawn the link. Get in touch with them if you still need to see it.",
+              askable
+                ? "Whoever sent this assessment has withdrawn the link. If you still need to see it, you can ask them for a fresh one."
+                : "Whoever sent this assessment has withdrawn the link. Get in touch with them if you still need to see it.",
             ]
           : [
               "Assessment not found",
@@ -126,8 +157,21 @@ export default function Assessment({
       <main className="assessment">
         <header className="assessment-head">
           <strong className="brand-mini">PMW</strong>
-          <h1>{heading}</h1>
+          <h1 ref={deadHeading} tabIndex={-1}>
+            {heading}
+          </h1>
           <p>{detail}</p>
+          {askable && !asked && (
+            <button
+              className="primary"
+              onClick={() => {
+                askedNow.current = true;
+                askFreshLink(held!.id);
+              }}
+            >
+              Ask for a fresh link
+            </button>
+          )}
         </header>
       </main>
     );
@@ -452,7 +496,12 @@ export default function Assessment({
             <summary>
               <strong>This property's maintenance record</strong>
             </summary>
-            <PropertyRecord s={s} propertyId={property.id} current={w.id} />
+            <PropertyRecord
+              s={s}
+              propertyId={property.id}
+              current={w.id}
+              onAskFreshLink={askFreshLink}
+            />
           </details>
         )}
       </main>
