@@ -54,6 +54,9 @@ export default function QueueAside({
         {a.tasks.map((t) => (
           <li key={t.id}>
             <strong>{t.summary}</strong>
+            {t.description && (
+              <p className="aside-words">“{t.description}”</p>
+            )}
             {t.answers.length > 0 && (
               <dl className="task-answers">
                 {t.answers.map((row) => (

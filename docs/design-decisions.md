@@ -3195,7 +3195,7 @@ Out of scope, and left for later:
 - in `PropertyRecord`, the h3s "Awaiting assessment" and "Assessments" sit
   under the next step's h2;
 - on desktop the queue says the name, address and tasks twice, and hides the
-  customer's own words for tasks not under review;
+  customer's own words for tasks not under review (done in ADR 100);
 - "Open as the customer" opens a dead page once the link is withdrawn or
   expired (done in ADR 095).
 
@@ -3446,3 +3446,35 @@ At 320 and 1440px in both themes nothing overflows, the buttons are 47px
 tall, and the lowest text contrast is 5.2:1 (the record badge). No console
 errors. Focus could not be checked live, as the browser pane was hidden and
 would not take focus at all; the tests check it.
+
+## ADR 100: The operator's side panel quotes the customer
+
+Accepted. Amends ADR 068 and ADR 093. On desktop the decision queue hid its
+Details toggle beside the side panel, a rule written for the contractor's
+offer, where the panel already lists the tasks. For the operator the panel
+gave no description and no answers, so the customer's own words were nowhere
+in the queue unless a task was under review, while the name and address
+showed twice, in the column and in the panel. One test is new.
+
+**The panel quotes the customer.** For the operator, each task in the panel
+carries the customer's own words, in quotes and muted, under its title, and
+the answers to the request's questions below them, as the request page shows
+them. ADR 068's rule holds: the operator sees no more there than on the
+request page. The customer's panel and the contractor's are unchanged, and
+neither gets the words.
+
+**The column stops repeating who and where.** Beside the panel, from 1024px,
+the column drops its name-and-address line; the panel's heading and first
+line say it. Below that width there is no panel, and the column keeps both
+the line and its Details toggle.
+
+**One overlap kept.** A task under review still quotes the customer in the
+column, beside the title the operator is choosing, as well as in the panel.
+That is where the judgement is made, so the words stay next to it.
+
+**Checked live.** At 1440px Daniel Brooks's decision named him once, in the
+panel, with his four tasks each quoted beneath its title, and the next three
+decisions did the same. The quoted words are 6.2:1 on white and 8.5:1 in the
+dark theme. At 320px the column shows the name, address and Details as
+before, and nothing overflows. No console errors. No seeded request has
+question answers, so the answers are checked by a test.

@@ -17,7 +17,7 @@ describe("a request with a live visit", () => {
 });
 
 describe("the side panel beside a queue item", () => {
-  it("gives the operator who, where, the tasks, notes and the latest history", () => {
+  it("gives the operator who, where, the tasks in the customer's words, notes and the latest history", () => {
     const s = seed();
     const r = s.requests.find((x) => x.id === "r5")!;
     r.notes = "Side gate code 1234";
@@ -34,7 +34,16 @@ describe("the side panel beside a queue item", () => {
         .filter((t) => t.requestId === "r5" && !t.mergedInto)
         .map((t) => t.id),
     );
-    expect(a.tasks.every((t) => t.answers.length === 0)).toBe(true);
+    // The customer's own words and answers, which on desktop show nowhere
+    // else in the queue (ADR 100).
+    const t5 = s.tasks.find((t) => t.requestId === "r5")!;
+    expect(a.tasks[0].description).toBe(t5.description);
+    expect(a.tasks[0].answers).toContainEqual(
+      expect.objectContaining({
+        label: "Additional details",
+        value: "Bracket is in the box",
+      }),
+    );
     // Newest first, five of them, and only this request's.
     expect(a.history.map((e) => e.text)).toEqual([
       "Entry 6",
@@ -51,6 +60,8 @@ describe("the side panel beside a queue item", () => {
     log(s, "Operator changed booking mode", { requestId: "r5" });
     const a = asideFor(s, "Customer", "r5")!;
     expect(a.history).toEqual([]);
+    // Their own words are theirs already; the panel stays as it was.
+    expect(a.tasks.every((t) => !t.description && !t.answers.length)).toBe(true);
     expect(a.title).toBe("Your booking");
     expect(a.where).toMatch(/, Oakville$/);
   });
@@ -70,6 +81,7 @@ describe("the side panel beside a queue item", () => {
     const a = asideFor(s, "Contractor", "r5", "v5")!;
     expect(a.where).toBe("Oakville");
     expect(a.notes).toBe("");
+    expect(a.tasks.every((t) => t.description === "")).toBe(true);
     expect(a.tasks.map((t) => t.id)).toEqual(v.taskIds);
     expect(a.tasks[0].answers).toContainEqual(
       expect.objectContaining({
