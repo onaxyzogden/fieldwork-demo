@@ -666,13 +666,16 @@ export function propertyRecord(s: State, propertyId: string) {
 /* ── Demo content ────────────────────────────────────────────────────────── */
 
 /**
- * Two walkthroughs in the seed, because the feature opened on an empty state.
+ * Four walkthroughs in the seed, because the feature opened on an empty state.
  *
  * "No walkthroughs yet" is the correct message and the wrong first impression:
  * a reviewer clicking Walkthroughs had to do a property's worth of data entry
  * before seeing anything the feature does. One sent assessment makes the guest
  * link, the totals, the tax line and the three finding states real on arrival;
- * one draft makes the capture surface real without pre-deciding it.
+ * one on an organization's property makes the named approver real; one draft
+ * makes the capture surface real without pre-deciding it; and one the customer
+ * has partly approved makes "Ready to convert" and the Convert button real,
+ * which otherwise took a whole approval by hand to reach.
  *
  * Built with the same functions the UI calls, so seeded content cannot drift
  * into a shape the app would never produce.
@@ -741,7 +744,38 @@ export function seedWalkthroughs(s: State) {
     proposed: "Realign the strike plate and replace the latch if worn.",
     price: 140,
   });
-  return { sent, commercial, draft };
+
+  // Ready to convert. Amir has approved two findings on his page and not yet
+  // decided the third, so the operator can convert what is approved while the
+  // rest stays his to decide. Decided through decide(), as his page does.
+  const ready = createWalkthrough(s, "p5");
+  const railing = addFinding(s, ready.id, {
+    area: "Front porch",
+    title: "Railing loose at the top post",
+    observed: "The top post moves under a light push; two lag screws have backed out.",
+    proposed: "Re-anchor the deck railing post with new screws and check the run.",
+    price: 210,
+  });
+  const tap = addFinding(s, ready.id, {
+    area: "Kitchen",
+    title: "Tap dripping when closed",
+    observed: "A steady drip from the spout with the handle fully off.",
+    proposed: "Replace the faucet cartridge and reseat the handle.",
+    price: 145,
+    customerNotes: "Cartridge is a common size; no special order expected.",
+  });
+  addFinding(s, ready.id, {
+    area: "Basement",
+    title: "Dryer vent run is long and crushed",
+    observed:
+      "The foil duct is crushed behind the dryer and runs about four metres to the wall.",
+    proposed: "Replace it with a short rigid run and clean the exterior hood.",
+    price: 260,
+  });
+  sendWalkthrough(s, ready.id);
+  decide(s, railing.id, "Approved");
+  decide(s, tap.id, "Approved");
+  return { sent, commercial, draft, ready };
 }
 
 /**

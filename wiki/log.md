@@ -3,6 +3,20 @@ title: "Wiki Log"
 type: log
 ---
 
+## [2026-10-17] session | Seed a walkthrough that is ready to convert
+
+- **Completed:**
+  - `seedWalkthroughs` adds PMW-0004 on p5 (Amir Hassan, 90 Rebecca Street): three findings, sent, two approved through `decide()` as his page would, one left undecided.
+  - Walkthroughs now opens with "Ready to convert 1"; the row reads "Ready to convert · $355 approved" and the card offers "Convert 2 approved" with the undecided-finding warning.
+  - One new test: a fresh demo has exactly PMW-0004 in `readyToConvertIds`, its findings read Approved, Approved, Pending decision, and converting makes one request with two unrestricted tasks.
+- **Verified:**
+  - `tsc`, `npm run build`, and `npm test` (695 tests, all passing; one new).
+  - Live, after "Reset all demo data": the glance count, row and card as above; Amir's guest page resumes on "Item 3 of 3"; Convert made request "Walkthrough Approval" with Handrail/Railing and Faucet or fixture replacement. 320 and 1440px, both themes: no overflow, Convert 47px tall, no console errors.
+- **Found and fixed during the work:** the first wording ("structural screws", "cartridge") sent the railing to restricted electrical review and the tap to "Tell us a little more", because `classify` reads the proposed text. Reworded; the test pins the outcome.
+- **Housekeeping:** the h096 Prettier stash was dropped on 2026-10-17 (`0af444b`); it is no longer deferred.
+- **Note:** `freshDemo()` seeds only when nothing is stored, so a returning visitor sees PMW-0004 only after "Reset all demo data".
+- **Pages touched:** [[fieldwork]].
+
 ## [2026-10-17] update | ADR 099 merged and verified live
 
 - PR #77 merged as `26909f7`; the GitHub Pages deploy succeeded.
