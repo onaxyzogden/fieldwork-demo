@@ -59,7 +59,7 @@ An interactive prototype of a handyman services platform. It has three roles, Cu
 - ADR 096 (an assessment waits on the customer only while its link works) is live on `main` via PR #74 (2026-10-16), merged as `7712366`.
 - ADR 097 (a dead link is the operator's move, not the customer's) is live on `main` via PR #75 (2026-10-16), merged as `e4ecafa`.
 - ADR 098 (the customer can ask for a fresh link) is live on `main` via PR #76 (2026-10-16), merged as `fdabe92`.
-- ADR 099 (the ask reaches the operator; no link is the operator's move) is on branch `claude/fresh-link-followups`, in PR #77, open and not merged.
+- ADR 099 (the ask reaches the operator; no link is the operator's move) is live on `main` via PR #77 (2026-10-17), merged as `26909f7`, and verified on j.ogden.ag.
 - Local dev uses Vite on 5173 and the preview build on 4173 (`.claude/launch.json`, untracked).
 
 ## Connections

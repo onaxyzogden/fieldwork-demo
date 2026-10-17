@@ -3,6 +3,12 @@ title: "Wiki Log"
 type: log
 ---
 
+## [2026-10-17] update | ADR 099 merged and verified live
+
+- PR #77 merged as `26909f7`; the GitHub Pages deploy succeeded.
+- Verified on j.ogden.ag: Sarah Lin's ask reached the operator's bell and opened the PMW-0001 card; a fresh link cleared it; the old URL of a withdrawn link asked once ("Link holder") and notified again; PMW-0002 with no link read "No link yet" for the operator (with "Issue a link", no Copy) and for Northline. No console errors.
+- **Pages touched:** [[fieldwork]].
+
 ## [2026-10-16] session | ADR 099: the ask reaches the operator; no link is the operator's move
 
 - **Completed:**
