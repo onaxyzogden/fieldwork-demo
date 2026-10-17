@@ -120,6 +120,8 @@ export type WorkspaceApi = {
   setContractor: Setter<string>;
   contractorVisit: string;
   openContractorJob: (visitId: string) => void;
+  openWalkthrough: string;
+  setOpenWalkthrough: Setter<string>;
 };
 
 export const WorkspaceContext = createContext<WorkspaceApi | null>(null);

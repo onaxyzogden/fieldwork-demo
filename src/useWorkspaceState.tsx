@@ -75,6 +75,9 @@ export function useWorkspaceState({
   const [payError, setPayError] = useState(false);
   const [contractor, setContractorNow] = useState("marcus");
   const [contractorVisit, setContractorVisit] = useState("");
+  /* The walkthrough a notice asked to open, handed to the page once
+     (ADR 099). */
+  const [openWalkthrough, setOpenWalkthrough] = useState("");
   const [customer, setCustomerNow] = useState(initialCustomer);
   /* One toast at a time, on one timer (ADR 080). A new toast clears the old
      timer, so it is not cut short by the one before it. The timer waits while
@@ -318,6 +321,12 @@ export function useWorkspaceState({
       n,
       role as "Operator" | "Customer" | "Contractor",
     );
+    if (target === "walkthrough") {
+      setOpenWalkthrough(n.walkthroughId ?? "");
+      setPage("Walkthroughs");
+      setModal("");
+      return;
+    }
     if (role === "Contractor") openContractorJob(n.visitId);
     else {
       choose(n.requestId);
@@ -666,6 +675,8 @@ export function useWorkspaceState({
     contractorVisit,
     customer,
     duration,
+    openWalkthrough,
+    setOpenWalkthrough,
     expanded,
     fail,
     fieldClass,

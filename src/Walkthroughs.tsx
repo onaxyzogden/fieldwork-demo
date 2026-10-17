@@ -60,6 +60,9 @@ type Props = {
   update: (fn: (d: State) => void, msg?: string) => void;
   notify: (msg: string) => void;
   openRequest: (id: string) => void;
+  /** A walkthrough a notice asked to open, once (ADR 099). */
+  opening?: string;
+  opened?: () => void;
 };
 
 /* Accent only where the walkthrough is the operator's to move: a draft to
@@ -100,6 +103,8 @@ export default function Walkthroughs({
   update,
   notify,
   openRequest,
+  opening,
+  opened,
 }: Props) {
   const [openId, setOpenId] = useState("");
   /* The walkthrough the list was left for, so coming back puts focus on its
@@ -109,6 +114,11 @@ export default function Walkthroughs({
     setLastId(id);
     setOpenId(id);
   };
+  useEffect(() => {
+    if (!opening) return;
+    if (s.walkthroughs.some((w) => w.id === opening)) choose(opening);
+    opened?.();
+  }, [opening]);
   /* On site and pricing take the whole screen, and only while the
      walkthrough is still a draft — once sent there is nothing to capture. */
   const [onSite, setOnSite] = useState<OnSiteMode | "">("");
@@ -183,9 +193,11 @@ function WalkthroughList({
   const deadWord = (w: Walkthrough) =>
     w.access?.freshLinkRequestedAt
       ? "Fresh link requested"
-      : linkState(s, w) === "revoked"
-        ? "Link withdrawn"
-        : "Link expired";
+      : linkState(s, w) === "none"
+        ? "No link yet"
+        : linkState(s, w) === "revoked"
+          ? "Link withdrawn"
+          : "Link expired";
   const first = (ids: string[]) =>
     ids.length ? () => open(ids[0]) : undefined;
   const ago = (days: number) =>
@@ -264,7 +276,9 @@ function WalkthroughList({
               what={`${fresh.assessmentId} · ${freshProperty?.address ?? ""}`}
               where={
                 askedForLink(s, fresh) ??
-                "The customer can’t open it until you issue a fresh link."
+                (linkState(s, fresh) === "none"
+                  ? "The customer can’t open it until you issue a link."
+                  : "The customer can’t open it until you issue a fresh link.")
               }
               onClick={() => open(fresh.id)}
             />
@@ -762,7 +776,8 @@ function NextStep({
   /* A link that no longer works is not offered, and the card says so
      (ADR 095). Once a fresh one replaces it, focus goes to Copy link, the
      next move. */
-  const dead = state === "revoked" || state === "expired";
+  /* No link at all reads the same way: the operator's move (ADR 099). */
+  const dead = state === "revoked" || state === "expired" || state === "none";
   const copyButton = useRef<HTMLButtonElement>(null);
   const handOn = useRef(false);
   useEffect(() => {
@@ -811,9 +826,11 @@ function NextStep({
               : dead
                 ? w.access?.freshLinkRequestedAt
                   ? "Fresh link requested"
-                  : state === "revoked"
-                    ? "Link withdrawn"
-                    : "Link expired"
+                  : state === "none"
+                    ? "No link yet"
+                    : state === "revoked"
+                      ? "Link withdrawn"
+                      : "Link expired"
                 : "Waiting on the customer"}
           </h2>
           <p>
@@ -822,7 +839,9 @@ function NextStep({
               : dead
                 ? w.access?.freshLinkRequestedAt
                   ? `${askedForLink(s, w)} The customer can’t open the assessment until you issue one.`
-                  : "The customer can’t open the assessment until you issue a fresh link."
+                  : state === "none"
+                    ? "The customer can’t open the assessment until you issue a link."
+                    : "The customer can’t open the assessment until you issue a fresh link."
                 : "The customer opens the link below to review the findings. Nothing is scheduled until they approve and a payment method is on file."}
           </p>
         </div>
@@ -876,7 +895,9 @@ function NextStep({
             ? "This link has been withdrawn. Issue a fresh one if the customer still needs it."
             : state === "expired"
               ? "This link has expired. Issue a fresh one if the customer still needs it."
-              : opens.length
+              : state === "none"
+                ? "There is no link yet. Issue one if the customer still needs it."
+                : opens.length
                 ? `Opened ${opens.length} time${opens.length === 1 ? "" : "s"} · last ${dateLabel(opens[opens.length - 1])}`
                 : "Not opened yet."}
         </p>
@@ -913,6 +934,7 @@ function NextStep({
         )}
         <LinkControls
           live={state === "live"}
+          first={state === "none"}
           primary={dead && !totals.approved.length}
           withdraw={() =>
             update((d) => {
@@ -921,9 +943,12 @@ function NextStep({
           }
           fresh={() => {
             handOn.current = dead;
-            update((d) => {
-              issueAccess(d, w.id);
-            }, "Fresh link issued");
+            update(
+              (d) => {
+                issueAccess(d, w.id);
+              },
+              state === "none" ? "Link issued" : "Fresh link issued",
+            );
           }}
         />
       </section>
@@ -986,11 +1011,14 @@ function NextStep({
  */
 function LinkControls({
   live,
+  first = false,
   primary = false,
   withdraw,
   fresh,
 }: {
   live: boolean;
+  /** There has never been a link, so the first is not a fresh one. */
+  first?: boolean;
   primary?: boolean;
   withdraw: () => void;
   fresh: () => void;
@@ -1055,7 +1083,7 @@ function LinkControls({
         className={primary ? "primary" : "text-button"}
         onClick={() => (live ? ask("fresh") : fresh())}
       >
-        Issue a fresh link
+        {first ? "Issue a link" : "Issue a fresh link"}
       </button>
     </div>
   );

@@ -41,6 +41,7 @@ import { plural } from "./plural";
 import { respondToOffer } from "./dispatch";
 import Blueprint from "./Blueprint";
 import { walkthroughGlance } from "./glance";
+import { deliverUpdates } from "./notifications";
 import { bucket } from "./work";
 
 function Harness({
@@ -2213,5 +2214,100 @@ describe("The customer can ask for a fresh link, and the operator sees it (ADR 0
       .getAllByRole("button")
       .find((b) => b.classList.contains("queue-item") && b.textContent!.includes(made.id))!;
     expect(row.querySelector(".badge")?.textContent).toBe("Fresh link requested");
+  });
+});
+
+describe("A fresh-link ask reaches the operator; no link is the operator's move (ADR 099)", () => {
+  /** A walkthrough sent to the signed-in customer (c2, Daniel Brooks). */
+  const sentTo = (d: State) => {
+    const p = d.properties.find((x) => x.accountId === "c2")!;
+    const w = createWalkthrough(d, p.id);
+    addFinding(d, w.id, {
+      title: "Door rubbing against frame",
+      proposed: "Adjust the sticking door",
+      price: 180,
+    });
+    sendWalkthrough(d, w.id);
+    return w;
+  };
+
+  it("opens the walkthrough from the operator's notice", async () => {
+    let id = "";
+    open("Operator", (d) => {
+      const w = sentTo(d);
+      revokeAccess(d, w.id);
+      const before = structuredClone(d);
+      requestFreshLink(d, w.id);
+      deliverUpdates(before, d);
+      id = w.assessmentId;
+    });
+    fireEvent.click(
+      screen.getByRole("button", { name: /^View notifications/ }),
+    );
+    fireEvent.click(
+      within(screen.getByRole("dialog")).getByRole("button", {
+        name: new RegExp(`Daniel Brooks asked for a fresh link · ${id}`),
+      }),
+    );
+    expect(
+      await screen.findByRole("heading", { level: 2, name: "Fresh link requested" }),
+    ).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Issue a fresh link" })).toBeTruthy();
+  });
+
+  it("offers no empty link when there is none, only issuing one", async () => {
+    let id = "";
+    open("Operator", (d) => {
+      const w = sentTo(d);
+      delete w.access;
+      id = w.assessmentId;
+    });
+    go(/^Walkthroughs/);
+    await screen.findByRole("heading", { level: 1, name: "Walkthroughs" });
+    const lead = document.querySelector<HTMLElement>(".op-glance-lead")!;
+    expect(lead.textContent).toMatch(/^No link yet/);
+    fireEvent.click(lead.querySelector("button") ?? lead);
+    expect(
+      await screen.findByRole("heading", { level: 2, name: "No link yet" }),
+    ).toBeTruthy();
+    expect(screen.queryByRole("button", { name: /Copy link/ })).toBeNull();
+    fireEvent.click(screen.getByRole("button", { name: "Issue a link" }));
+    expect(
+      await screen.findByRole("heading", { level: 2, name: "Waiting on the customer" }),
+    ).toBeTruthy();
+    expect(id).toMatch(/^PMW-/);
+  });
+
+  it("tells the customer there is no link yet, not that it awaits them", async () => {
+    let id = "";
+    open("Customer", (d) => {
+      const w = sentTo(d);
+      delete w.access;
+      id = w.assessmentId;
+    });
+    await screen.findByRole("heading", { level: 1 });
+    const item = [...document.querySelectorAll<HTMLElement>(".record-item")].find(
+      (x) => x.textContent!.includes(id),
+    )!;
+    expect(item.querySelector(".badge")?.textContent).toBe("No link yet");
+    expect(
+      within(item).queryByRole("button", { name: "Ask for a fresh link" }),
+    ).toBeNull();
+  });
+
+  it("lets whoever holds a withdrawn link ask, once, from that page", async () => {
+    const s = freshDemo();
+    const w = sentTo(s);
+    const token = w.access!.token;
+    revokeAccess(s, w.id);
+    localStorage.setItem(KEY, JSON.stringify(s));
+    render(<Assessment token={token} />);
+    expect(h1().textContent).toBe("This link has been withdrawn");
+    fireEvent.click(screen.getByRole("button", { name: "Ask for a fresh link" }));
+    expect(h1().textContent).toBe("Fresh link requested");
+    expect(screen.queryByRole("button", { name: "Ask for a fresh link" })).toBeNull();
+    await waitFor(() => expect(document.activeElement).toBe(h1()));
+    const saved: State = JSON.parse(localStorage.getItem(KEY)!);
+    expect(saved.notifications?.filter((n) => n.kind === "fresh-link")).toHaveLength(1);
   });
 });

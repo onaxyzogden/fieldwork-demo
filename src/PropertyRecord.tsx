@@ -140,7 +140,9 @@ export default function PropertyRecord({
                     assessment the customer cannot open is not awaiting them
                     (ADR 096). */}
                 <span className="badge" id={`link-${w.id}`} tabIndex={-1}>
-                  {deadLink(w) && w.access?.freshLinkRequestedAt
+                  {w.status === "Sent" && !w.access
+                    ? "No link yet"
+                    : deadLink(w) && w.access?.freshLinkRequestedAt
                     ? "Fresh link requested"
                     : w.status === "Sent" && linkState(s, w) === "revoked"
                     ? "Link withdrawn"
