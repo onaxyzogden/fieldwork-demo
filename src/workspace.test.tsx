@@ -310,7 +310,42 @@ describe("Operator workspace", () => {
     open("Operator");
     go(/^More/);
     fireEvent.click(screen.getByRole("button", { name: "Activity →" }));
-    expect(h1().textContent).toBe("Activity history");
+    /* The page names itself in the nav's word, with a fact under it
+       (ADR 101). */
+    expect(h1().textContent).toBe("Activity");
+    expect(screen.getByText(/^\d+ entr(y|ies) · newest first$/)).toBeTruthy();
+  });
+
+  it("groups activity under one heading per day, with the time per row", () => {
+    /* A record runs newest first, by Toronto day; the date is said once,
+       in the heading (ADR 101). */
+    open("Operator", (d) => {
+      d.clock = +new Date("2026-10-19T14:00:00Z");
+      d.events = [
+        { id: "a", text: "Second today", at: "2026-10-19T13:30:00Z" },
+        { id: "b", text: "First today", at: "2026-10-19T12:05:00Z" },
+        { id: "c", text: "Late on Saturday", at: "2026-10-18T03:30:00Z" },
+      ];
+    });
+    go(/^More/);
+    fireEvent.click(screen.getByRole("button", { name: "Activity →" }));
+    const main = within(screen.getByRole("main"));
+    expect(
+      main.getAllByRole("heading", { level: 2 }).map((h) => h.textContent),
+    ).toEqual(["Today", "Saturday, October 17"]);
+    expect(main.getByText("3 entries · newest first")).toBeTruthy();
+    expect(main.getByText("9:30 a.m.")).toBeTruthy();
+    expect(main.queryByText(/Mon, Oct/)).toBeNull();
+  });
+
+  it("says so when there is no activity yet", () => {
+    open("Operator", (d) => {
+      d.events = [];
+    });
+    go(/^More/);
+    fireEvent.click(screen.getByRole("button", { name: "Activity →" }));
+    expect(screen.getByText("No activity yet.")).toBeTruthy();
+    expect(screen.queryByText(/newest first/)).toBeNull();
   });
 
   it("opens Demo settings from the sidebar", () => {

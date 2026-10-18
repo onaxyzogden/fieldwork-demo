@@ -927,6 +927,29 @@ main[tabindex="-1"]:focus {
 .event-link:hover strong {
   text-decoration: underline;
 }
+/* A day's heading in the activity record (ADR 101): label size, muted. */
+.panel .event-day h2 {
+  font-size: var(--text-label);
+  letter-spacing: 0;
+  color: var(--muted);
+  font-weight: 600;
+  margin-top: var(--space-5);
+}
+.panel .event-day:first-child h2 {
+  margin-top: 0;
+}
+.event-body {
+  flex: 1;
+  min-width: 0;
+}
+.event-go {
+  flex: none;
+  align-self: center;
+  color: var(--muted);
+}
+.event-empty {
+  color: var(--muted);
+}
 .event strong {
   line-height: 1.6;
 }
@@ -938,8 +961,10 @@ main[tabindex="-1"]:focus {
   width: 7px;
   height: 7px;
   border-radius: var(--radius-pill);
-  background: var(--accent);
+  /* Nothing on a record is the operator's move, so no accent (ADR 101). */
+  background: var(--muted);
   margin-top: var(--space-2);
+  flex: none;
 }
 .customer-wrap,
 .contractor-wrap {

@@ -1,12 +1,12 @@
 ---
 title: "Wiki Index"
 type: index
-updated: 2026-10-16
+updated: 2026-10-18
 ---
 
 # Wiki Index
 
-A catalog of every wiki page. Read this first at the start of each session. Conventions are in [[SCHEMA]]. Product decisions (ADR 001–087) are in `docs/design-decisions.md`.
+A catalog of every wiki page. Read this first at the start of each session. Conventions are in [[SCHEMA]]. Product decisions (ADR 001–101) are in `docs/design-decisions.md`.
 
 ## Entities
 
@@ -18,6 +18,7 @@ A catalog of every wiki page. Read this first at the start of each session. Conv
 
 | Page | Summary |
 |---|---|
+| [[focus-first]] | The design method: 12 rules, five patterns, design and audit modes; also a claude.ai skill, `focus-first-ui` (ADR 085–094, 101) |
 | [[one-at-a-time]] | Every role's queue shows one item per screen, in a fixed order, read live (ADR 057–062, 068–069) |
 | [[customer-chosen-time]] | Holds and `preferredSlot`: the customer's pick comes first while it still fits (ADR 071–072) |
 

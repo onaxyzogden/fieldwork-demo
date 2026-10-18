@@ -17,7 +17,7 @@ An interactive prototype of a handyman services platform. It has three roles, Cu
   - `npm test` runs the catalogue and status checks, then vitest: 604 tests as of 2026-10-08, 48 of them screen tests in jsdom (`workspace.test.tsx`).
   - `npm run build` runs `design:check`, `catalogue:check`, `status:check`, `tsc` and then `vite build`.
 - **Deploy:** merging to `main` runs GitHub Actions, which publishes to Pages at j.ogden.ag. The repository is public.
-- **Decisions:** ADR 001–087 are in `docs/design-decisions.md`. Business calls are in `docs/decisions.md`.
+- **Decisions:** ADR 001–101 are in `docs/design-decisions.md`. Business calls are in `docs/decisions.md`.
 - **Line endings:** most files are CRLF. Scripted edits must keep CRLF. Prettier rewrites to LF, so restore CRLF after running it.
 
 ## Architecture / Structure
@@ -62,6 +62,7 @@ An interactive prototype of a handyman services platform. It has three roles, Cu
 - ADR 099 (the ask reaches the operator; no link is the operator's move) is live on `main` via PR #77 (2026-10-17), merged as `26909f7`, and verified on j.ogden.ag.
 - The ready-to-convert seed (PMW-0004) is live on `main` via PR #79 (2026-10-17), merged as `1a60f52`, and verified on j.ogden.ag.
 - ADR 100 (the operator's side panel quotes the customer) is live on `main` via PR #81 (2026-10-17), merged as `0d0833c`, and verified on j.ogden.ag.
+- ADR 101 (the activity log is a record, grouped by day) is on branch `claude/activity-register`, in a PR against `main`, open and not merged. It is the first audit run with the [[focus-first]] method.
 - Local dev uses Vite on 5173 and the preview build on 4173 (`.claude/launch.json`, untracked).
 
 ## Connections
@@ -81,6 +82,7 @@ An interactive prototype of a handyman services platform. It has three roles, Cu
 
 ## History
 - 2026-10-17: ADR 100. On desktop the operator's decision-queue panel quotes each task in the customer's own words and lists their answers; before, the Details toggle was hidden beside the panel and the panel had neither, so the operator decided without the customer's words. The column no longer repeats the name and address beside the panel. Closes ADR 093's last open item. There are 696 tests.
+- 2026-10-18: ADR 101. The Activity page, audited with the [[focus-first]] method: the h1 is "Activity" with a count line, entries sit under one heading per Toronto day with the time alone, the dot is muted, a linked entry shows a chevron, and an empty log says "No activity yet." There are 698 tests.
 - 2026-10-17: The demo seeds a fourth walkthrough, PMW-0004 on Amir Hassan's 90 Rebecca Street: sent, two findings approved through `decide()`, one undecided. Walkthroughs opens with "Ready to convert 1" and a working "Convert 2 approved", which before took a whole approval by hand to reach. The proposed text is worded so conversion lands on Handrail/Railing and Faucet or fixture replacement, not restricted review. No ADR; seed content only. Returning visitors see it after "Reset all demo data". There are 695 tests.
 - 2026-10-16: ADR 099, amending ADR 097 and ADR 098. A customer's ask sends the operator one documentary `fresh-link` notice that opens the walkthrough's card (`walkthroughId` on the notice, `noticeTarget` "walkthrough", one-shot `openWalkthrough`). The guest page for a dead link, and the record on a live guest page, can ask too, via `walkthroughByToken`; logged as "Link holder". A Sent walkthrough with no link reads "No link yet", counts as the operator's move, and offers "Issue a link" with no empty Copy or Open. There are 694 tests.
 - 2026-10-16: ADR 098, amending ADR 096 and ADR 097. The customer's maintenance record offers "Ask for a fresh link" while a sent assessment's link is dead; the ask is held as `access.freshLinkRequestedAt`, so a fresh link clears it. `requestFreshLink` checks the rule in the model. `freshLinkIds` puts asked-about walkthroughs first, and the operator's lead, row and card read "Fresh link requested" with "Sarah Lin asked for a fresh link today." No notification. There are 688 tests.

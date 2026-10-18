@@ -1,8 +1,15 @@
-import { OperatorHome, OperatorToday } from "./OperatorWork";
+import { OperatorHome, OperatorToday, longDay } from "./OperatorWork";
 import { dayKey } from "./work";
 import { dayLabel } from "./intake";
-import { ShieldCheck } from "lucide-react";
-import { providers, money, dateLabel, hoursLabel, hoursOf } from "./model";
+import { ChevronRight, ShieldCheck } from "lucide-react";
+import {
+  providers,
+  money,
+  timeLabel,
+  hoursLabel,
+  hoursOf,
+  type AuditEntry,
+} from "./model";
 import { lazyScreen } from "./Recovery";
 import { plural } from "./plural";
 import { OperatorRequests } from "./OperatorRequests";
@@ -295,49 +302,74 @@ export function OperatorWorkspace() {
           </section>
         </>
       );
-    case "Activity":
+    case "Activity": {
+      /* A record, not a queue: newest first, under one heading per Toronto
+         day, with the time alone on each row (ADR 101). The log is already
+         newest first, so a day's entries sit together. */
+      const days: { day: string; entries: AuditEntry[] }[] = [];
+      for (const e of s.events) {
+        const day = dayKey(e.at);
+        const last = days[days.length - 1];
+        if (last?.day === day) last.entries.push(e);
+        else days.push({ day, entries: [e] });
+      }
       return (
         <>
           <div className="heading">
             <div>
-              <h1>Activity history</h1>
-              <p>A shared record of decisions and simulated notifications.</p>
+              <h1>Activity</h1>
+              {s.events.length > 0 && (
+                <p>{plural(s.events.length, "entry", "entries")} · newest first</p>
+              )}
             </div>
           </div>
           <section className="card panel">
-            {s.events.map((e) => {
-              const body = (
-                <>
-                  <span className="event-dot" />
-                  <span className="event-body">
-                    <strong>{e.text}</strong>
-                    <small>{dateLabel(e.at)}</small>
-                  </span>
-                </>
-              );
-              /* An entry about a request opens it, as Home's cards do
-                 (ADR 083). */
-              const id = e.requestId;
-              return id && s.requests.some((x) => x.id === id) ? (
-                <button
-                  className="event event-link"
-                  key={e.id}
-                  onClick={() => {
-                    choose(id);
-                    setPage("Requests");
-                  }}
-                >
-                  {body}
-                </button>
-              ) : (
-                <div className="event" key={e.id}>
-                  {body}
-                </div>
-              );
-            })}
+            {days.length === 0 && <p className="event-empty">No activity yet.</p>}
+            {days.map(({ day, entries }) => (
+              <div className="event-day" key={day}>
+                <h2>{day === dayKey(s.clock) ? "Today" : longDay(day)}</h2>
+                {entries.map((e) => {
+                  const body = (
+                    <>
+                      <span className="event-dot" />
+                      <span className="event-body">
+                        <strong>{e.text}</strong>
+                        <small>{timeLabel(e.at)}</small>
+                      </span>
+                    </>
+                  );
+                  /* An entry about a request opens it, as Home's cards do
+                     (ADR 083), and says so before it is hovered (ADR 101). */
+                  const id = e.requestId;
+                  return id && s.requests.some((x) => x.id === id) ? (
+                    <button
+                      className="event event-link"
+                      key={e.id}
+                      aria-label={`${e.text}, ${timeLabel(e.at)}, open request`}
+                      onClick={() => {
+                        choose(id);
+                        setPage("Requests");
+                      }}
+                    >
+                      {body}
+                      <ChevronRight
+                        className="event-go"
+                        size={16}
+                        aria-hidden="true"
+                      />
+                    </button>
+                  ) : (
+                    <div className="event" key={e.id}>
+                      {body}
+                    </div>
+                  );
+                })}
+              </div>
+            ))}
           </section>
         </>
       );
+    }
     case "Requests":
       return <OperatorRequests />;
     default:
