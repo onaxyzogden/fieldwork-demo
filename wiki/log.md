@@ -19,6 +19,13 @@ type: log
 - **Left alone:** entries saved before the change carry no walkthrough id, so they stay plain rows.
 - **Pages touched:** none beyond this log.
 
+## [2026-10-18] update | Contractor tab strip merged and verified live; the work-through button named
+
+- PR #85 merged as `34d175f`; the GitHub Pages deploy succeeded.
+- Verified on j.ogden.ag (dark, 588px): the contractor strip is 70px with 8px padding, a 16px corner and the panel colour, its buttons 52px, the same as the operator's switch. No horizontal overflow, no console errors.
+- The owner named the operator Home's "Work through N decisions" button as the design's signature move: it takes the person straight to what needs doing, past what is only there to observe. Recorded as a pattern on [[focus-first]].
+- **Pages touched:** [[focus-first]].
+
 ## [2026-10-18] fix | Contractor tab strip matches the operator's view switch
 
 - The contractor's Offers / Today / Upcoming strip was a darker, tighter box than the operator's Needs action / All requests switch: `--bg` instead of `--panel`, 4px padding and a 10px corner instead of 8px and 16px, and 44px buttons instead of 52px. Its `background: none` never applied, because `:root[data-theme] .segmented` outranked it.
