@@ -3,6 +3,12 @@ title: "Wiki Log"
 type: log
 ---
 
+## [2026-10-18] update | ADR 100 merged and verified live
+
+- PR #81 merged as `0d0833c`; the GitHub Pages deploy succeeded.
+- Verified on j.ogden.ag at 1440px, with the queue's skips cleared: Daniel Brooks's decision shows his name once, in the panel heading; the column's `.dq-request` is hidden; the panel quotes all four tasks in his words ("Bedroom door sticking against the frame", "Patch a small drywall hole", "Install two shelves in the office", "Fix a loose towel bar"). No horizontal overflow, no console errors.
+- **Pages touched:** [[fieldwork]].
+
 ## [2026-10-17] session | The operator's side panel quotes the customer (ADR 100)
 
 - **Completed:**
