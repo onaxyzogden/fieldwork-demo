@@ -3478,3 +3478,51 @@ decisions did the same. The quoted words are 6.2:1 on white and 8.5:1 in the
 dark theme. At 320px the column shows the name, address and Details as
 before, and nothing overflows. No console errors. No seeded request has
 question answers, so the answers are checked by a test.
+
+## ADR 101: The activity log is a record, grouped by day
+
+Accepted. Amends ADR 083 and ADR 085. The operator's Activity page was
+audited with the focus-first method, the first page audited that way. A
+record has nothing to act on, so the order that serves it is time, not the
+order of acting. The page called itself "Activity history" under a sidebar
+and a link that say "Activity", with a line under it that described the
+system rather than the page. Every entry carried an accent dot, though
+nothing on the page is the operator's move, and every entry repeated its full
+date. An entry that opens its request looked like one that does not until it
+was hovered, and an empty log showed an empty card. Two tests are new.
+
+**The page names itself.** The h1 is "Activity", the nav's word, and the line
+under it is a fact: "4 entries · newest first", or "1 entry". With no entries
+the line goes, and the card says "No activity yet."
+
+**One heading per day.** Entries sit under a label-size heading per Toronto
+day: "Today" for the demo's current day, otherwise the day in words,
+"Saturday, October 17", as the Today page says it. Each row shows its time
+alone; the date is said once, in the heading. The log is already newest
+first, so a day's entries stay together.
+
+**No accent on a record.** The dot is muted. Accent on every row says
+nothing, and it weakens amber on the pages where amber means the operator's
+move.
+
+**A link looks like one.** An entry that opens its request (ADR 083) carries a
+muted chevron at its end, and its name ends "open request", so the cue no
+longer waits for a hover.
+
+**Checked live.** On a local build the seed's four entries sat under "Today",
+each with its time alone, and the line read "4 entries · newest first".
+Offering Daniel Brooks's visit from the decision queue added a fifth entry
+with its chevron, and it opened his request. At 320, 375, 768, 1024, 1280 and
+1440px nothing overflows; the linked row is 84px tall at 1440px. The day
+heading, the times and the chevron are 6.1:1 on white and 7.7:1 in the dark
+theme. No console errors. A second day needs the demo clock to move, so the
+grouping across days, and a day that ends near midnight in Toronto, are
+checked by a test.
+
+**Left alone.** Newest first, from the log itself. The 44px target on a linked
+row. No filter by request: each request's History tab already shows its own
+trail (ADR 068), so a filter here would be a second control for the same
+thing.
+
+**Out of scope, and left for later.** An entry about a walkthrough does not
+open the walkthrough; only request entries link.

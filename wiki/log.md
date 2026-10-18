@@ -3,6 +3,21 @@ title: "Wiki Log"
 type: log
 ---
 
+## [2026-10-18] session | The activity log is a record (ADR 101), and the focus-first method page
+
+- **Completed:**
+  - Full audit of the operator's Activity page with the `focus-first-ui` skill, live and in code.
+  - `OperatorWorkspace.tsx`: h1 "Activity" with "N entries · newest first"; entries grouped by `dayKey` under a label-size h2 ("Today" or `longDay`, now exported from `OperatorWork.tsx`); `timeLabel` per row; a muted chevron and an "open request" name on linked entries; "No activity yet." when empty.
+  - `layout.css`: `.event-dot` muted; `.panel .event-day h2` at `--text-label` (it needs the `.panel` prefix to beat `.panel h2`).
+  - ADR 101; `DESIGN.md` register line gains the record rule and 101.
+  - New concept page [[focus-first]]; index ADR range brought up to 001–101.
+- **Verified:**
+  - `tsc`, `npm run build`, `design:check`, `npm test` (698 tests, all passing; two new, one updated).
+  - Local preview at 320, 375, 768, 1024, 1280 and 1440px: no overflow. Day heading, times and chevron 6.1:1 light, 7.7:1 dark. A linked entry opened Daniel Brooks's request. No console errors.
+- **Dropped from the dry run:** a filter by request; each request's History tab already gives that view (ADR 068).
+- **Left for later:** walkthrough entries don't open their walkthrough.
+- **Pages touched:** [[focus-first]], [[fieldwork]], [[index]].
+
 ## [2026-10-18] update | ADR 100 merged and verified live
 
 - PR #81 merged as `0d0833c`; the GitHub Pages deploy succeeded.

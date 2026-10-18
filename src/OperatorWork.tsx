@@ -341,7 +341,7 @@ export function OperatorHome({
 }
 
 /** A date key as the heading says it: "Monday, October 19". */
-const longDay = (key: string) =>
+export const longDay = (key: string) =>
   new Date(key + "T12:00:00Z").toLocaleDateString("en-CA", {
     timeZone: "America/Toronto",
     weekday: "long",
