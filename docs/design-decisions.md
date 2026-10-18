@@ -3526,3 +3526,52 @@ thing.
 
 **Out of scope, and left for later.** An entry about a walkthrough does not
 open the walkthrough; only request entries link.
+
+## ADR 102: An activity entry about a walkthrough opens it
+
+Accepted. Amends ADR 101. ADR 101 left walkthrough entries as plain rows,
+though a notice about the same walkthrough already opened it (ADR 099). The
+record and the notice now go to the same place.
+
+**The entry names its walkthrough.** "Assessment … sent to the customer" and
+"… approved findings from … became work" now carry the walkthrough they are
+about, as the revoke and fresh-link entries already did. Neither is a field
+change, so neither carries a field.
+
+**It opens the card, not the list.** An entry about a walkthrough that still
+exists opens that walkthrough's card directly, the way its notice does. It
+takes the request entry's form: a muted chevron at its end, and a name that
+ends "open walkthrough". An entry about a request still opens the request.
+
+**The dialog title fits a 320px phone.** At h2 size "Notifications" was wider
+than the dialog, and the modal's word breaking split it inside the word. Below
+400px a dialog's h2 steps down to h3 size; above it nothing changes.
+
+**Checked live.** On a local build a sent entry carried its chevron, read
+"Assessment PMW-0001 sent to the customer, …, open walkthrough", and opened
+the card for 124 Maple Grove Drive, showing "Waiting on the customer". At 320
+and 375px "Notifications" and "Demo settings" each sit on one line at 25px; at
+768 to 1440px they are 31.25px as before. No overflow in either theme, no
+console errors.
+
+**Left alone.** Entries saved before this change do not name their walkthrough,
+so they stay plain rows; the demo's seed has none. An entry whose walkthrough
+is gone is a plain row too, as one whose request is gone already is (ADR 101).
+
+## ADR 103: The register's source is named truly
+
+Accepted. Amends ADR 085. ADR 085 called the register "Layer 1 of
+`hybrid-design-system.md`", and `DESIGN.md` repeated "house methodology,
+Layer 1". That layer is Tokens, and the house methodology never defines a
+register. A reader who followed the pointer found nothing.
+
+**Where it lives.** The register is Fieldwork's own. It is defined in the
+Register paragraph of `DESIGN.md` and in ADR 085, and it extends the house
+methodology's Layer 0 principles (intent first, hierarchy over defaults): it
+is a principle about what a surface is for, not a token rule. `DESIGN.md` now
+says so. The wiki's concept page, `wiki/concepts/focus-first.md`, states it as its
+fifth rule.
+
+**Left alone.** ADR 085's own text, which stays as written, as every accepted
+ADR does. The house methodology itself, which lives outside this repo. Adding
+the register to it is a change for that document's own home.

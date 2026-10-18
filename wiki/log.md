@@ -3,6 +3,21 @@ title: "Wiki Log"
 type: log
 ---
 
+## [2026-10-18] lint | The register's source named truly; entity page caught up
+
+- `DESIGN.md` said the register came from "house methodology, Layer 1". The house methodology (`hybrid-design-system.md`, kept outside this repo) has Tokens as Layer 1 and never defines a register. ADR 103 (amends 085) records the correction; `DESIGN.md` now says the register is defined there and in ADR 085 and extends Layer 0. ADR 085's text is left as written.
+- The index was already current to ADR 101 (an earlier debrief wrongly said it stopped at 087). What had fallen behind was [[fieldwork]]: dated 2026-10-16, with nothing after PR #83. It now has PRs #85, #87, #88 and this one in Current Status and History.
+- [[index]]: ADR range 001–103; the [[focus-first]] row names the register, so the term can be found.
+- **Deferred:** adding a register section to the house methodology belongs to that document's own home, not this repo.
+- **Pages touched:** [[fieldwork]], [[index]].
+
+## [2026-10-18] fix | Activity opens walkthroughs; dialog title fits a 320px phone
+
+- ADR 102 (amends 101): the "sent to the customer" and "became work" entries now carry `entity: "walkthrough"` and the walkthrough's id (`pmw.ts`), and Activity links them to the walkthrough's card the way a notice does (ADR 099), with the chevron and an "open walkthrough" name. Request entries are unchanged.
+- At h2 size "Notifications" was wider than a 320px dialog and broke inside the word. Below 400px `.modal h2` takes the h3 size (`typography.css`, which loads after `responsive.css`, so the rule lives there).
+- Verified locally: the entry opened the 124 Maple Grove Drive card; dialog titles one line at 25px at 320/375px and 31.25px at 768–1440px; no overflow in either theme; no console errors; 700 tests pass.
+- **Left alone:** entries saved before the change carry no walkthrough id, so they stay plain rows.
+
 ## [2026-10-18] fix | Top-bar icons plain in every role; notifications spaced as tiles
 
 - The operator's theme and bell buttons wore a border and a panel fill that the customer's and contractor's did not: `primitives.css` styled `.icon-button` alongside `.text-button` for the operator only (since `6e558da`). Below 900px the top bar sets its icons with no gap, so the two outlines touched. The icon buttons now leave that rule and are plain in all three roles; text buttons keep it.

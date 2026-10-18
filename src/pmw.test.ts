@@ -217,6 +217,19 @@ describe("conversion into the existing pipeline", () => {
     expect(second.id).not.toBe(first.id);
     expect(s.tasks.filter((t) => t.requestId === second.id)).toHaveLength(1);
   });
+  it("names the walkthrough on the sent and converted entries, so Activity can open it", () => {
+    /* ADR 102: an entry about a walkthrough opens it. Neither is a field
+       change, so neither carries a field. */
+    const { s, w, door } = walked();
+    decide(s, door.id, "Approved");
+    convertApproved(s, w.id);
+    const about = s.events.filter((e) => e.entityId === w.id);
+    expect(about.map((e) => e.text)).toEqual([
+      `1 approved finding from ${w.assessmentId} became work`,
+      `Assessment ${w.assessmentId} sent to the customer`,
+    ]);
+    expect(about.every((e) => e.entity === "walkthrough" && !e.field)).toBe(true);
+  });
 });
 
 describe("completion returns to the property record", () => {
