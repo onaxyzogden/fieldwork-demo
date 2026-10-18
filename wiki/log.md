@@ -3,6 +3,13 @@ title: "Wiki Log"
 type: log
 ---
 
+## [2026-10-18] fix | Contractor tab strip matches the operator's view switch
+
+- The contractor's Offers / Today / Upcoming strip was a darker, tighter box than the operator's Needs action / All requests switch: `--bg` instead of `--panel`, 4px padding and a 10px corner instead of 8px and 16px, and 44px buttons instead of 52px. Its `background: none` never applied, because `:root[data-theme] .segmented` outranked it.
+- `contractor-concept.css`: `:root[data-theme] .contractor-wrap .segmented` takes the operator's box; the buttons are 52px with 12px/8px padding, so "Upcoming" stays on one line at 320px.
+- Verified locally: 70px strip and 52px buttons at 320–1440px in both themes, no overflow, no console errors; 698 tests pass.
+- **Pages touched:** none beyond this log.
+
 ## [2026-10-18] update | ADR 101 merged and verified live
 
 - PR #83 merged as `868de4f`; the GitHub Pages deploy succeeded.
