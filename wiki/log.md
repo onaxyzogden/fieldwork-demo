@@ -3,6 +3,15 @@ title: "Wiki Log"
 type: log
 ---
 
+## [2026-10-18] fix | Top-bar icons plain in every role; notifications spaced as tiles
+
+- The operator's theme and bell buttons wore a border and a panel fill that the customer's and contractor's did not: `primitives.css` styled `.icon-button` alongside `.text-button` for the operator only (since `6e558da`). Below 900px the top bar sets its icons with no gap, so the two outlines touched. The icon buttons now leave that rule and are plain in all three roles; text buttons keep it.
+- The notification list was a plain block of full-width rows split by a 1px line, so two unread fills ran together into one slab and "Mark all read" sat on the first row. `.notification-list` is now a grid with an 8px gap, rows are 10px-corner tiles with no bottom line, and "Mark all read" keeps its own width.
+- The unread row's 3px left bar had been recoloured to the hairline by the shared `:root[data-theme]` fill rule, so it could not be seen; it is the accent again (`#f0cd96` dark, `#8a5a12` light).
+- Verified locally: 320–1440px in both themes and side by side, all three roles plain 44px icons, 8px between notification tiles, no overflow, no console errors; 698 tests pass.
+- **Deferred:** at 320px the dialog heading breaks inside the word ("Notification / s").
+- **Pages touched:** none beyond this log.
+
 ## [2026-10-18] fix | Contractor tab strip matches the operator's view switch
 
 - The contractor's Offers / Today / Upcoming strip was a darker, tighter box than the operator's Needs action / All requests switch: `--bg` instead of `--panel`, 4px padding and a 10px corner instead of 8px and 16px, and 44px buttons instead of 52px. Its `background: none` never applied, because `:root[data-theme] .segmented` outranked it.
