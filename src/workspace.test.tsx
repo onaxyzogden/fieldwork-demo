@@ -2313,6 +2313,25 @@ describe("A fresh-link ask reaches the operator; no link is the operator's move 
     expect(screen.getByRole("button", { name: "Issue a fresh link" })).toBeTruthy();
   });
 
+  it("opens the walkthrough from its Activity entry (ADR 102)", async () => {
+    let id = "";
+    open("Operator", (d) => {
+      id = sentTo(d).assessmentId;
+    });
+    go(/^More/);
+    fireEvent.click(screen.getByRole("button", { name: "Activity →" }));
+    fireEvent.click(
+      screen.getByRole("button", {
+        name: new RegExp(`^Assessment ${id} sent to the customer, .*, open walkthrough$`),
+      }),
+    );
+    /* Straight onto the card, as a notice about it lands (ADR 099). */
+    expect(
+      await screen.findByRole("heading", { level: 2, name: "Waiting on the customer" }),
+    ).toBeTruthy();
+    expect(screen.getByRole("main").textContent).toContain(id);
+  });
+
   it("offers no empty link when there is none, only issuing one", async () => {
     let id = "";
     open("Operator", (d) => {

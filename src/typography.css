@@ -22,6 +22,13 @@ h2,
 .panel h2 {
   font-size: var(--text-h2);
 }
+/* At h2 size "Notifications" is wider than a 320px phone's dialog, and the
+   modal's break-word split it inside the word. One step down, it fits. */
+@media (max-width: 25rem) {
+  .modal h2 {
+    font-size: var(--text-h3);
+  }
+}
 h3,
 .panel-title h3,
 .insight h3,

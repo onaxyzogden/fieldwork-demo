@@ -305,7 +305,10 @@ export function sendWalkthrough(s: State, walkthroughId: string) {
   // Issued here because this is the moment the assessment becomes something
   // somebody outside the business can open.
   issueAccess(s, walkthroughId);
-  log(s, `Assessment ${w.assessmentId} sent to the customer`);
+  log(s, `Assessment ${w.assessmentId} sent to the customer`, {
+    entity: "walkthrough",
+    entityId: w.id,
+  });
   return true;
 }
 
@@ -582,6 +585,7 @@ export function convertApproved(s: State, walkthroughId: string) {
   log(
     s,
     `${approved.length} approved finding${approved.length === 1 ? "" : "s"} from ${w.assessmentId} became work`,
+    { entity: "walkthrough", entityId: w.id },
   );
   return request;
 }

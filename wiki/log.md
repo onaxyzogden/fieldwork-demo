@@ -3,6 +3,14 @@ title: "Wiki Log"
 type: log
 ---
 
+## [2026-10-18] fix | Activity opens walkthroughs; dialog title fits a 320px phone
+
+- ADR 102 (amends 101): the "sent to the customer" and "became work" entries now carry `entity: "walkthrough"` and the walkthrough's id (`pmw.ts`), and Activity links them to the walkthrough's card the way a notice does (ADR 099), with the chevron and an "open walkthrough" name. Request entries are unchanged.
+- At h2 size "Notifications" was wider than a 320px dialog and broke inside the word. Below 400px `.modal h2` takes the h3 size (`typography.css`, which loads after `responsive.css`, so the rule lives there).
+- Verified locally: the entry opened the 124 Maple Grove Drive card; dialog titles one line at 25px at 320/375px and 31.25px at 768–1440px; no overflow in either theme; no console errors; 700 tests pass.
+- **Left alone:** entries saved before the change carry no walkthrough id, so they stay plain rows.
+- **Pages touched:** none beyond this log.
+
 ## [2026-10-18] fix | Contractor tab strip matches the operator's view switch
 
 - The contractor's Offers / Today / Upcoming strip was a darker, tighter box than the operator's Needs action / All requests switch: `--bg` instead of `--panel`, 4px padding and a 10px corner instead of 8px and 16px, and 44px buttons instead of 52px. Its `background: none` never applied, because `:root[data-theme] .segmented` outranked it.

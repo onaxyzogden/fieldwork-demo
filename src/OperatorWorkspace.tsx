@@ -339,17 +339,39 @@ export function OperatorWorkspace() {
                     </>
                   );
                   /* An entry about a request opens it, as Home's cards do
-                     (ADR 083), and says so before it is hovered (ADR 101). */
+                     (ADR 083), and says so before it is hovered (ADR 101).
+                     One about a walkthrough opens its card, as a notice
+                     about it does (ADR 099, 102). */
                   const id = e.requestId;
-                  return id && s.requests.some((x) => x.id === id) ? (
+                  const walkthrough =
+                    e.entity === "walkthrough" &&
+                    s.walkthroughs.some((w) => w.id === e.entityId)
+                      ? e.entityId
+                      : undefined;
+                  const link =
+                    id && s.requests.some((x) => x.id === id)
+                      ? {
+                          what: "request",
+                          go: () => {
+                            choose(id);
+                            setPage("Requests");
+                          },
+                        }
+                      : walkthrough
+                        ? {
+                            what: "walkthrough",
+                            go: () => {
+                              setOpenWalkthrough(walkthrough);
+                              setPage("Walkthroughs");
+                            },
+                          }
+                        : undefined;
+                  return link ? (
                     <button
                       className="event event-link"
                       key={e.id}
-                      aria-label={`${e.text}, ${timeLabel(e.at)}, open request`}
-                      onClick={() => {
-                        choose(id);
-                        setPage("Requests");
-                      }}
+                      aria-label={`${e.text}, ${timeLabel(e.at)}, open ${link.what}`}
+                      onClick={link.go}
                     >
                       {body}
                       <ChevronRight
