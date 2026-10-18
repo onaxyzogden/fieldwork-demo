@@ -33,6 +33,7 @@ Every run starts with intent, per role: who they are, what they come to do (one 
 Friction goes only where it is needed: what reaches another person asks first; what is local gets an undo (ADR 079, 091, 093).
 
 ## Patterns
+- **The work-through button.** One primary under the glance, "Work through N decisions" (operator) or its counterpart per role, opens the queue and leaves the counts and the list for looking (rules 2, 9, 10; ADR 059, 062). The owner names it the method's signature move (2026-10-18): it takes the person straight to what needs doing, past everything that is only there to observe.
 - The decision queue with a side panel (rules 1, 2, 8, 9, 10).
 - A glance card whose counts open what they counted (rules 6, 10).
 - Needs action / All, with Needs action the default (rules 6, 7).
