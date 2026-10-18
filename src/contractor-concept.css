@@ -5,15 +5,24 @@
   background: var(--panel);
   padding: var(--space-5);
 }
-.contractor-wrap .segmented {
+/* The same box as the operator's view switch (.op-view-switch): a panel
+   with room around its options, not the darker page colour. The theme
+   prefix is needed to outrank `:root[data-theme] .segmented`. */
+:root[data-theme] .contractor-wrap .segmented {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: var(--space-2);
-  background: none;
+  padding: var(--space-2);
+  border-radius: var(--radius-lg);
+  background: var(--panel);
+  border-color: var(--line);
 }
 .contractor-wrap .segmented button {
   border-radius: var(--radius-md);
-  min-height: 44px;
+  /* The operator's buttons stand 52px, set by the count they carry; these
+     carry none, so the height is stated to keep the two strips level. */
+  min-height: 52px;
+  padding: var(--space-3) var(--space-2);
 }
 .contractor-wrap button,
 .contractor-wrap a.secondary {
