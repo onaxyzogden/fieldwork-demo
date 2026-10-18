@@ -64,7 +64,7 @@ An interactive prototype of a handyman services platform. It has three roles, Cu
 - ADR 100 (the operator's side panel quotes the customer) is live on `main` via PR #81 (2026-10-17), merged as `0d0833c`, and verified on j.ogden.ag.
 - ADR 101 (the activity log is a record, grouped by day) is live on `main` via PR #83 (2026-10-18), merged as `868de4f`, and verified on j.ogden.ag. It is the first audit run with the [[focus-first]] method.
 - The contractor's tab strip matches the operator's view switch, live on `main` via PR #85 (2026-10-18), merged as `34d175f`. No ADR.
-- Plain top-bar icons in every role and notifications spaced as tiles: PR #87, open (2026-10-18). No ADR.
+- Plain top-bar icons in every role and notifications spaced as tiles, live on `main` via PR #87 (2026-10-18), merged as `0e6e794`. No ADR.
 - ADR 102 (an activity entry about a walkthrough opens it; the dialog title fits a 320px phone): PR #88, open (2026-10-18).
 - ADR 103 (the register's source is named truly): open, stacked on #88. The register is Fieldwork's own (`DESIGN.md`, ADR 085), not a layer of the house methodology.
 - #86, #87 and #88 each add a `wiki/log.md` entry at the top, so the later merges need a one-entry conflict fix.
