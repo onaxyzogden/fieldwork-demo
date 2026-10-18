@@ -486,16 +486,27 @@
   color: var(--on-accent);
   font-weight: 700;
 }
+/* Each notification is its own tile, with room between them; a hairline
+   alone let two unread fills run together into one slab. */
+.notification-list {
+  display: grid;
+  gap: var(--space-2);
+}
+.notification-list > * {
+  margin: 0;
+}
+.notification-list > .secondary {
+  justify-self: start;
+}
 .notification-link {
   width: 100%;
   text-align: left;
   background: none;
   color: inherit;
   border: 0;
-  border-bottom: 1px solid var(--line);
   cursor: pointer;
-  padding: var(--space-4) var(--space-2);
-  border-radius: var(--radius-sm);
+  padding: var(--space-4) var(--space-3);
+  border-radius: var(--radius-md);
 }
 .notification-link.unread {
   border-left: 3px solid var(--accent-text);

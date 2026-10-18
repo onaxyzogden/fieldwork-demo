@@ -17,6 +17,14 @@ type: log
 - At h2 size "Notifications" was wider than a 320px dialog and broke inside the word. Below 400px `.modal h2` takes the h3 size (`typography.css`, which loads after `responsive.css`, so the rule lives there).
 - Verified locally: the entry opened the 124 Maple Grove Drive card; dialog titles one line at 25px at 320/375px and 31.25px at 768–1440px; no overflow in either theme; no console errors; 700 tests pass.
 - **Left alone:** entries saved before the change carry no walkthrough id, so they stay plain rows.
+
+## [2026-10-18] fix | Top-bar icons plain in every role; notifications spaced as tiles
+
+- The operator's theme and bell buttons wore a border and a panel fill that the customer's and contractor's did not: `primitives.css` styled `.icon-button` alongside `.text-button` for the operator only (since `6e558da`). Below 900px the top bar sets its icons with no gap, so the two outlines touched. The icon buttons now leave that rule and are plain in all three roles; text buttons keep it.
+- The notification list was a plain block of full-width rows split by a 1px line, so two unread fills ran together into one slab and "Mark all read" sat on the first row. `.notification-list` is now a grid with an 8px gap, rows are 10px-corner tiles with no bottom line, and "Mark all read" keeps its own width.
+- The unread row's 3px left bar had been recoloured to the hairline by the shared `:root[data-theme]` fill rule, so it could not be seen; it is the accent again (`#f0cd96` dark, `#8a5a12` light).
+- Verified locally: 320–1440px in both themes and side by side, all three roles plain 44px icons, 8px between notification tiles, no overflow, no console errors; 698 tests pass.
+- **Deferred:** at 320px the dialog heading breaks inside the word ("Notification / s").
 - **Pages touched:** none beyond this log.
 
 ## [2026-10-18] update | Contractor tab strip merged and verified live; the work-through button named

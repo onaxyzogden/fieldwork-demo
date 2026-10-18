@@ -475,6 +475,10 @@
   border-color: var(--line);
   color: inherit;
 }
+/* The hairline above also recoloured the unread bar, so it could not be seen. */
+:root[data-theme] .notification-link.unread {
+  border-left-color: var(--accent-text);
+}
 :root[data-theme] .demo-dot {
   background: var(--accent);
 }
@@ -571,8 +575,9 @@
   border-radius: var(--radius-md);
   min-height: 44px;
 }
-.app[data-role="Operator"] .text-button,
-.app[data-role="Operator"] .icon-button {
+/* The top bar's icon buttons are left out: they are chrome, plain in every
+   role, and the narrow top bar sets them with no gap between. */
+.app[data-role="Operator"] .text-button {
   border: 1px solid var(--line);
   background: var(--panel);
   padding: var(--space-2) var(--space-3);
