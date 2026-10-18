@@ -62,7 +62,7 @@ An interactive prototype of a handyman services platform. It has three roles, Cu
 - ADR 099 (the ask reaches the operator; no link is the operator's move) is live on `main` via PR #77 (2026-10-17), merged as `26909f7`, and verified on j.ogden.ag.
 - The ready-to-convert seed (PMW-0004) is live on `main` via PR #79 (2026-10-17), merged as `1a60f52`, and verified on j.ogden.ag.
 - ADR 100 (the operator's side panel quotes the customer) is live on `main` via PR #81 (2026-10-17), merged as `0d0833c`, and verified on j.ogden.ag.
-- ADR 101 (the activity log is a record, grouped by day) is on branch `claude/activity-register`, in a PR against `main`, open and not merged. It is the first audit run with the [[focus-first]] method.
+- ADR 101 (the activity log is a record, grouped by day) is live on `main` via PR #83 (2026-10-18), merged as `868de4f`, and verified on j.ogden.ag. It is the first audit run with the [[focus-first]] method.
 - Local dev uses Vite on 5173 and the preview build on 4173 (`.claude/launch.json`, untracked).
 
 ## Connections

@@ -3,6 +3,12 @@ title: "Wiki Log"
 type: log
 ---
 
+## [2026-10-18] update | ADR 101 merged and verified live
+
+- PR #83 merged as `868de4f`; the GitHub Pages deploy succeeded.
+- Verified on j.ogden.ag: the h1 reads "Activity" over "4 entries · newest first"; the seed's four entries sit under one 14px "Today" heading, each showing "3:56 a.m." alone; the dot is muted (`rgb(170, 178, 192)`). No horizontal overflow, no console errors.
+- **Pages touched:** [[fieldwork]].
+
 ## [2026-10-18] session | The activity log is a record (ADR 101), and the focus-first method page
 
 - **Completed:**
