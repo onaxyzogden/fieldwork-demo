@@ -3,6 +3,14 @@ title: "Wiki Log"
 type: log
 ---
 
+## [2026-10-18] lint | The register's source named truly; entity page caught up
+
+- `DESIGN.md` said the register came from "house methodology, Layer 1". The house methodology (`hybrid-design-system.md`, kept outside this repo) has Tokens as Layer 1 and never defines a register. ADR 103 (amends 085) records the correction; `DESIGN.md` now says the register is defined there and in ADR 085 and extends Layer 0. ADR 085's text is left as written.
+- The index was already current to ADR 101 (an earlier debrief wrongly said it stopped at 087). What had fallen behind was [[fieldwork]]: dated 2026-10-16, with nothing after PR #83. It now has PRs #85, #87, #88 and this one in Current Status and History.
+- [[index]]: ADR range 001–103; the [[focus-first]] row names the register, so the term can be found.
+- **Deferred:** adding a register section to the house methodology belongs to that document's own home, not this repo.
+- **Pages touched:** [[fieldwork]], [[index]].
+
 ## [2026-10-18] fix | Activity opens walkthroughs; dialog title fits a 320px phone
 
 - ADR 102 (amends 101): the "sent to the customer" and "became work" entries now carry `entity: "walkthrough"` and the walkthrough's id (`pmw.ts`), and Activity links them to the walkthrough's card the way a notice does (ADR 099), with the chevron and an "open walkthrough" name. Request entries are unchanged.

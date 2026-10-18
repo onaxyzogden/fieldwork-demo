@@ -3557,3 +3557,21 @@ console errors.
 **Left alone.** Entries saved before this change do not name their walkthrough,
 so they stay plain rows; the demo's seed has none. An entry whose walkthrough
 is gone is a plain row too, as one whose request is gone already is (ADR 101).
+
+## ADR 103: The register's source is named truly
+
+Accepted. Amends ADR 085. ADR 085 called the register "Layer 1 of
+`hybrid-design-system.md`", and `DESIGN.md` repeated "house methodology,
+Layer 1". That layer is Tokens, and the house methodology never defines a
+register. A reader who followed the pointer found nothing.
+
+**Where it lives.** The register is Fieldwork's own. It is defined in the
+Register paragraph of `DESIGN.md` and in ADR 085, and it extends the house
+methodology's Layer 0 principles (intent first, hierarchy over defaults): it
+is a principle about what a surface is for, not a token rule. `DESIGN.md` now
+says so. The wiki's concept page, `wiki/concepts/focus-first.md`, states it as its
+fifth rule.
+
+**Left alone.** ADR 085's own text, which stays as written, as every accepted
+ADR does. The house methodology itself, which lives outside this repo. Adding
+the register to it is a change for that document's own home.
