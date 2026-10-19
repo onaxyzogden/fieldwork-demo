@@ -3,6 +3,14 @@ title: "Wiki Log"
 type: log
 ---
 
+## [2026-10-18] session | Layer 1 router (CONTEXT.md) deployed
+
+- **Completed:** `CONTEXT.md` at the root, 27 lines, from the operator's global workspace router template. Six Workspace Map rows: `src/`, `docs/`, `catalogue/`, `scripts/`, `.claude/skills/`, `wiki/`, each "Read first" an existing file. Template rows pruned because the folder is absent: `references/`, `tasks/`, `stages/`. Rows added for `catalogue/`, `scripts/` and `.claude/skills/`. Entry points name the bootstrap chain (`index.html` → `src/main.tsx` → `src/Workspace.tsx`), the build config and `pages.yml`, and `docs/design-decisions.md` as the ADR home.
+- **Verified:** a path walk over every backticked path in `CONTEXT.md` (24 paths) found none missing. No other file touched; no code change, no tests affected.
+- **Not committed:** `CONTEXT.md` is untracked beside the already-untracked `.claude/`. A PR is the operator's call.
+- **Deferred:** per-folder routers (`src/CONTEXT.md` and the like), only if the global workspace asks for them.
+- **Pages touched:** none beyond this log.
+
 ## [2026-10-18] lint | The register's source named truly; entity page caught up
 
 - `DESIGN.md` said the register came from "house methodology, Layer 1". The house methodology (`hybrid-design-system.md`, kept outside this repo) has Tokens as Layer 1 and never defines a register. ADR 103 (amends 085) records the correction; `DESIGN.md` now says the register is defined there and in ADR 085 and extends Layer 0. ADR 085's text is left as written.
